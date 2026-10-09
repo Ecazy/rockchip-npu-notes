@@ -1,0 +1,80 @@
+# tracer: function_graph
+#
+#     TIME        CPU  TASK/PID         DURATION                  FUNCTION CALLS
+#      |          |     |    |           |   |                     |   |   |   |
+32728.322694 |   7) schedul-134284 |               |  /* RS request id=134283000000 tid=134284 mask=1 mono=32728322672846 */
+32728.322695 |   2) schedul-134287 |               |  /* RS request id=134283030000 tid=134287 mask=1 mono=32728322673430 */
+32728.322705 |   3) schedul-134286 |               |  /* RS request id=134283020000 tid=134286 mask=1 mono=32728322673430 */
+32728.322771 |   1) schedul-134285 |               |  /* RS request id=134283010000 tid=134285 mask=1 mono=32728322718054 */
+32728.324971 |   7) schedul-134284 |               |  /* RS ioctl id=134283000000 tid=134284 mask=1 mono=32728324968231 */
+32728.324974 |   7) schedul-134284 |               |  rknpu_submit_ioctl() {
+32728.324975 |   7) schedul-134284 |   0.583 us    |    ktime_get();
+32728.324977 |   7) schedul-134284 |               |    rknpu_job_schedule() {
+32728.324978 |   7) schedul-134284 |   0.583 us    |      rknpu_get_task_number();
+32728.324979 |   7) schedul-134284 |               |      rknpu_job_next.part.0() {
+32728.324980 |   7) schedul-134284 |   0.583 us    |        ktime_get();
+32728.324983 |   7) schedul-134284 |   3.208 us    |      } /* rknpu_job_next.part.0 */
+32728.324983 |   7) schedul-134284 |   5.834 us    |    } /* rknpu_job_schedule */
+32728.325897 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+32728.325901 |   0)    <idle>-0    |   1.750 us    |    rknpu_get_task_number();
+32728.325904 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+32728.325905 |   0)    <idle>-0    |   0.875 us    |    ktime_get();
+32728.325911 |   0)    <idle>-0    |   1.166 us    |    rknpu_job_next.part.0();
+32728.325912 |   0)    <idle>-0    | + 17.792 us   |  } /* rknpu_core0_irq_handler */
+32728.325917 |   7) schedul-134284 | ! 943.541 us  |  } /* rknpu_submit_ioctl */
+32728.325919 |   7) schedul-134284 |               |  /* RS return id=134283000000 tid=134284 mask=1 mono=32728325918176 */
+32728.326326 |   2) schedul-134287 |               |  /* RS ioctl id=134283030000 tid=134287 mask=1 mono=32728326315128 */
+32728.326333 |   2) schedul-134287 |               |  rknpu_submit_ioctl() {
+32728.326337 |   2) schedul-134287 |   2.334 us    |    ktime_get();
+32728.326339 |   2) schedul-134287 |               |    rknpu_job_schedule() {
+32728.326339 |   2) schedul-134287 |   1.166 us    |      rknpu_get_task_number();
+32728.326341 |   2) schedul-134287 |               |      rknpu_job_next.part.0() {
+32728.326342 |   2) schedul-134287 |   0.584 us    |        ktime_get();
+32728.326346 |   2) schedul-134287 |   4.375 us    |      } /* rknpu_job_next.part.0 */
+32728.326347 |   2) schedul-134287 |   8.750 us    |    } /* rknpu_job_schedule */
+32728.326417 |   3) schedul-134286 |               |  /* RS ioctl id=134283020000 tid=134286 mask=1 mono=32728326411669 */
+32728.326422 |   3) schedul-134286 |               |  rknpu_submit_ioctl() {
+32728.326424 |   3) schedul-134286 |   1.166 us    |    ktime_get();
+32728.326425 |   3) schedul-134286 |               |    rknpu_job_schedule() {
+32728.326426 |   3) schedul-134286 |   0.583 us    |      rknpu_get_task_number();
+32728.326428 |   3) schedul-134286 |   0.875 us    |      rknpu_job_next.part.0();
+32728.326430 |   3) schedul-134286 |   3.792 us    |    } /* rknpu_job_schedule */
+32728.326465 |   1) schedul-134285 |               |  /* RS ioctl id=134283010000 tid=134285 mask=1 mono=32728326459210 */
+32728.326471 |   1) schedul-134285 |               |  rknpu_submit_ioctl() {
+32728.326472 |   1) schedul-134285 |   0.875 us    |    ktime_get();
+32728.326474 |   1) schedul-134285 |               |    rknpu_job_schedule() {
+32728.326475 |   1) schedul-134285 |   0.875 us    |      rknpu_get_task_number();
+32728.326477 |   1) schedul-134285 |   0.875 us    |      rknpu_job_next.part.0();
+32728.326478 |   1) schedul-134285 |   3.792 us    |    } /* rknpu_job_schedule */
+32728.326870 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+32728.326873 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+32728.326875 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+32728.326876 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+32728.326883 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+32728.326884 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+32728.326888 |   0)    <idle>-0    |   4.958 us    |    } /* rknpu_job_next.part.0 */
+32728.326889 |   0)    <idle>-0    | + 19.834 us   |  } /* rknpu_core0_irq_handler */
+32728.326946 |   2) schedul-134287 | ! 613.958 us  |  } /* rknpu_submit_ioctl */
+32728.326955 |   2) schedul-134287 |               |  /* RS return id=134283030000 tid=134287 mask=1 mono=32728326950661 */
+32728.327384 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+32728.327386 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+32728.327388 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+32728.327389 |   0)    <idle>-0    |   0.875 us    |    ktime_get();
+32728.327395 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+32728.327396 |   0)    <idle>-0    |   1.167 us    |      ktime_get();
+32728.327401 |   0)    <idle>-0    |   5.834 us    |    } /* rknpu_job_next.part.0 */
+32728.327402 |   0)    <idle>-0    | + 18.084 us   |  } /* rknpu_core0_irq_handler */
+32728.327452 |   3) schedul-134286 | # 1030.167 us |  } /* rknpu_submit_ioctl */
+32728.327460 |   3) schedul-134286 |               |  /* RS return id=134283020000 tid=134286 mask=1 mono=32728327455529 */
+32728.327608 |   7) schedul-134284 |               |  /* RS done id=134283000000 tid=134284 mask=1 mono=32728327605735 */
+32728.327898 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+32728.327900 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+32728.327902 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+32728.327903 |   0)    <idle>-0    |   0.875 us    |    ktime_get();
+32728.327907 |   0)    <idle>-0    |   0.875 us    |    rknpu_job_next.part.0();
+32728.327908 |   0)    <idle>-0    | + 10.500 us   |  } /* rknpu_core0_irq_handler */
+32728.327965 |   1) schedul-134285 | # 1494.500 us |  } /* rknpu_submit_ioctl */
+32728.327974 |   1) schedul-134285 |               |  /* RS return id=134283010000 tid=134285 mask=1 mono=32728327970313 */
+32728.330328 |   2) schedul-134287 |               |  /* RS done id=134283030000 tid=134287 mask=1 mono=32728330323447 */
+32728.330957 |   3) schedul-134286 |               |  /* RS done id=134283020000 tid=134286 mask=1 mono=32728330953438 */
+32728.331521 |   1) schedul-134285 |               |  /* RS done id=134283010000 tid=134285 mask=1 mono=32728331516930 */

@@ -1,0 +1,1 @@
+scripts/run-schedule-board.sh

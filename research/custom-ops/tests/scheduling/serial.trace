@@ -1,0 +1,23 @@
+# tracer: function_graph
+#
+#     TIME        CPU  TASK/PID         DURATION                  FUNCTION CALLS
+#      |          |     |    |           |   |                     |   |   |   |
+32728.197296 |   1) schedul-134282 |               |  /* RS request id=134281000000 tid=134282 mask=1 mono=32728197251610 */
+32728.197812 |   1) schedul-134282 |               |  /* RS ioctl id=134281000000 tid=134282 mask=1 mono=32728197794685 */
+32728.197825 |   1) schedul-134282 |               |  rknpu_submit_ioctl() {
+32728.197832 |   1) schedul-134282 |   3.500 us    |    ktime_get();
+32728.197841 |   1) schedul-134282 |               |    rknpu_job_schedule() {
+32728.197846 |   1) schedul-134282 |   3.208 us    |      rknpu_get_task_number();
+32728.197853 |   1) schedul-134282 |               |      rknpu_job_next.part.0() {
+32728.197856 |   1) schedul-134282 |   2.625 us    |        ktime_get();
+32728.197867 |   1) schedul-134282 | + 14.292 us   |      } /* rknpu_job_next.part.0 */
+32728.197870 |   1) schedul-134282 | + 28.875 us   |    } /* rknpu_job_schedule */
+32728.197914 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+32728.197924 |   0)    <idle>-0    |   3.500 us    |    rknpu_get_task_number();
+32728.197931 |   0)    <idle>-0    |   2.625 us    |    rknpu_get_task_number();
+32728.197936 |   0)    <idle>-0    |   2.625 us    |    ktime_get();
+32728.197951 |   0)    <idle>-0    |   3.208 us    |    rknpu_job_next.part.0();
+32728.197956 |   0)    <idle>-0    | + 44.625 us   |  } /* rknpu_core0_irq_handler */
+32728.198114 |   1) schedul-134282 | ! 289.333 us  |  } /* rknpu_submit_ioctl */
+32728.198150 |   1) schedul-134282 |               |  /* RS return id=134281000000 tid=134282 mask=1 mono=32728198128639 */
+32728.198601 |   1) schedul-134282 |               |  /* RS done id=134281000000 tid=134282 mask=1 mono=32728198583924 */

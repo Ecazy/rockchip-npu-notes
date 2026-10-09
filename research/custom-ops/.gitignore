@@ -1,0 +1,11 @@
+# Generated builds and intermediate artifacts.
+/build*/
+/artifacts/
+/provider/
+
+# Raw hardware evidence stays local; small fixtures under tests/ are tracked.
+/results/
+
+# Locally generated source bundles.
+/*.tgz
+/*.tar.gz
