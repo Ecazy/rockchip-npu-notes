@@ -1,0 +1,817 @@
+== experiments/attn_relu_vendor.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3663 flags=0x5 task_base=0x0 task_counter=0→3663 hw=7194165 ns  ⇒ 每 task ≈ 1964.0 ns
+           subcore_tasks=[[0, 1221], [0, 1221], [0, 1221], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=0 task_number=3663 flags=0x5 task_base=0x0 task_counter=0→3663 hw=7187457 ns  ⇒ 每 task ≈ 1962.2 ns
+           subcore_tasks=[[0, 1221], [0, 1221], [0, 1221], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (9, 0, 0) → 6540
+      (12, 0, 0) → 534
+      (69, 0, 0) → 160
+      (11, 0, 0) → 24
+      (108, 0, 0) → 12
+      (25, 0, 0) → 12
+
+== experiments/results/bn_lower_20260928/em0d/tr_mul_m025_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=64166 ns  ⇒ 每 task ≈ 21388.7 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/tr_mul_m3p75_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=64166 ns  ⇒ 每 task ≈ 21388.7 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/tr_mul_mneg2_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=17208 ns  ⇒ 每 task ≈ 5736.0 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/tr_transpose_p0123_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=17791 ns  ⇒ 每 task ≈ 5930.3 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/tr_transpose_p0213_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=16333 ns  ⇒ 每 task ≈ 5444.3 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/tr_transpose_p0231_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=77874 ns  ⇒ 每 task ≈ 25958.0 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/tr_transpose_p0312_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=63875 ns  ⇒ 每 task ≈ 21291.7 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/tr_transpose_p0321_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=24 flags=0x5 task_base=0x0 task_counter=0→24 hw=45500 ns  ⇒ 每 task ≈ 1895.8 ns
+           subcore_tasks=[[0, 8], [0, 8], [0, 8], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (12, 0, 0) → 18
+      (108, 0, 0) → 6
+
+== experiments/results/bn_lower_20260928/em0d/trace_layernorm_only_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=54 flags=0x5 task_base=0x0 task_counter=0→54 hw=38208 ns  ⇒ 每 task ≈ 707.6 ns
+           subcore_tasks=[[0, 18], [0, 18], [0, 18], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (13, 0, 0) → 12
+      (69, 0, 0) → 6
+      (19, 0, 0) → 6
+      (12, 0, 0) → 6
+      (108, 0, 0) → 3
+      (126, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/trace_mul_only_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=16042 ns  ⇒ 每 task ≈ 5347.3 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/trace_mul_only_i8.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=70583 ns  ⇒ 每 task ≈ 23527.7 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/em0d/trace_transpose_only_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=19250 ns  ⇒ 每 task ≈ 6416.7 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/trace_bn_only_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=69125 ns  ⇒ 每 task ≈ 23041.7 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/trace_bn_only_i8.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=22458 ns  ⇒ 每 task ≈ 7486.0 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 3
+
+== experiments/results/bn_lower_20260928/trace_conv_bn_conv_fp16.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=6 flags=0x5 task_base=0x0 task_counter=0→6 hw=74374 ns  ⇒ 每 task ≈ 12395.7 ns
+           subcore_tasks=[[0, 2], [0, 2], [0, 2], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (122, 0, 0) → 3
+      (126, 0, 0) → 2
+      (26, 0, 0) → 1
+
+== experiments/results/bn_lower_20260928/trace_conv_bn_conv_i8.jsonl ==
+   submit: core_mask=0 task_start=1 task_number=6 flags=0x5 task_base=0x0 task_counter=0→6 hw=77583 ns  ⇒ 每 task ≈ 12930.5 ns
+           subcore_tasks=[[1, 2], [1, 2], [1, 2], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 2
+      (122, 0, 0) → 2
+      (69, 0, 0) → 1
+      (26, 0, 0) → 1
+
+== experiments/results/dpu_bn_20260928/fp_layernorm_16_int8.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=60 flags=0x5 task_base=0x0 task_counter=0→60 hw=29458 ns  ⇒ 每 task ≈ 491.0 ns
+           subcore_tasks=[[0, 20], [0, 20], [0, 20], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=0 task_number=60 flags=0x5 task_base=0x0 task_counter=0→60 hw=69124 ns  ⇒ 每 task ≈ 1152.1 ns
+           subcore_tasks=[[0, 20], [0, 20], [0, 20], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (69, 0, 0) → 24
+      (13, 0, 0) → 24
+      (21, 0, 0) → 12
+      (23, 0, 0) → 12
+      (12, 0, 0) → 12
+      (68, 0, 0) → 6
+
+== experiments/results/dpu_bn_20260928/qwen_active_bn_tasks.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=108 flags=0x5 task_base=0x0 task_counter=0→108 hw=4196457 ns  ⇒ 每 task ≈ 38856.1 ns
+           subcore_tasks=[[0, 36], [0, 36], [0, 36], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=36 task_number=21510 flags=0x5 task_base=0x0 task_counter=0→21510 hw=1381068860 ns  ⇒ 每 task ≈ 64205.9 ns
+           subcore_tasks=[[36, 7170], [36, 7170], [36, 7170], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=7206 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=586959122 ns  ⇒ 每 task ≈ 43819.3 ns
+           subcore_tasks=[[7206, 4465], [7206, 4465], [7206, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11671 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11819670 ns  ⇒ 每 task ≈ 26985.5 ns
+           subcore_tasks=[[11671, 146], [11671, 146], [11671, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11817 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13422361 ns  ⇒ 每 task ≈ 172081.6 ns
+           subcore_tasks=[[11817, 26], [11817, 26], [11817, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11843 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65967613 ns  ⇒ 每 task ≈ 44784.5 ns
+           subcore_tasks=[[11843, 491], [11843, 491], [11843, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=12334 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=574893579 ns  ⇒ 每 task ≈ 42918.5 ns
+           subcore_tasks=[[12334, 4465], [12334, 4465], [12334, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16799 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11788754 ns  ⇒ 每 task ≈ 26915.0 ns
+           subcore_tasks=[[16799, 146], [16799, 146], [16799, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16945 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13424111 ns  ⇒ 每 task ≈ 172104.0 ns
+           subcore_tasks=[[16945, 26], [16945, 26], [16945, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16971 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65971987 ns  ⇒ 每 task ≈ 44787.5 ns
+           subcore_tasks=[[16971, 491], [16971, 491], [16971, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=17462 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=608758939 ns  ⇒ 每 task ≈ 45446.7 ns
+           subcore_tasks=[[17462, 4465], [17462, 4465], [17462, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=0 task_number=108 flags=0x5 task_base=0x0 task_counter=0→108 hw=4181874 ns  ⇒ 每 task ≈ 38721.1 ns
+           subcore_tasks=[[0, 36], [0, 36], [0, 36], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=21927 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11724879 ns  ⇒ 每 task ≈ 26769.1 ns
+           subcore_tasks=[[21927, 146], [21927, 146], [21927, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22073 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13426904 ns  ⇒ 每 task ≈ 172139.8 ns
+           subcore_tasks=[[22073, 26], [22073, 26], [22073, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22099 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65730490 ns  ⇒ 每 task ≈ 44623.6 ns
+           subcore_tasks=[[22099, 491], [22099, 491], [22099, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22590 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=616944772 ns  ⇒ 每 task ≈ 46057.8 ns
+           subcore_tasks=[[22590, 4465], [22590, 4465], [22590, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27055 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12949575 ns  ⇒ 每 task ≈ 29565.2 ns
+           subcore_tasks=[[27055, 146], [27055, 146], [27055, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27201 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13497027 ns  ⇒ 每 task ≈ 173038.8 ns
+           subcore_tasks=[[27201, 26], [27201, 26], [27201, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27227 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68236172 ns  ⇒ 每 task ≈ 46324.6 ns
+           subcore_tasks=[[27227, 491], [27227, 491], [27227, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=36 task_number=21510 flags=0x5 task_base=0x0 task_counter=0→21510 hw=1251312654 ns  ⇒ 每 task ≈ 58173.5 ns
+           subcore_tasks=[[36, 7170], [36, 7170], [36, 7170], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27718 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=620326903 ns  ⇒ 每 task ≈ 46310.3 ns
+           subcore_tasks=[[27718, 4465], [27718, 4465], [27718, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32183 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13300446 ns  ⇒ 每 task ≈ 30366.3 ns
+           subcore_tasks=[[32183, 146], [32183, 146], [32183, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32329 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13780233 ns  ⇒ 每 task ≈ 176669.7 ns
+           subcore_tasks=[[32329, 26], [32329, 26], [32329, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32355 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70951561 ns  ⇒ 每 task ≈ 48168.1 ns
+           subcore_tasks=[[32355, 491], [32355, 491], [32355, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=7206 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=629438267 ns  ⇒ 每 task ≈ 46990.5 ns
+           subcore_tasks=[[7206, 4465], [7206, 4465], [7206, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11671 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12589662 ns  ⇒ 每 task ≈ 28743.5 ns
+           subcore_tasks=[[11671, 146], [11671, 146], [11671, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11817 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13443362 ns  ⇒ 每 task ≈ 172350.8 ns
+           subcore_tasks=[[11817, 26], [11817, 26], [11817, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32846 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=653946599 ns  ⇒ 每 task ≈ 48820.2 ns
+           subcore_tasks=[[32846, 4465], [32846, 4465], [32846, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11843 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=67288557 ns  ⇒ 每 task ≈ 45681.3 ns
+           subcore_tasks=[[11843, 491], [11843, 491], [11843, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37311 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13329321 ns  ⇒ 每 task ≈ 30432.2 ns
+           subcore_tasks=[[37311, 146], [37311, 146], [37311, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37457 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13805024 ns  ⇒ 每 task ≈ 176987.5 ns
+           subcore_tasks=[[37457, 26], [37457, 26], [37457, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37483 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=71237974 ns  ⇒ 每 task ≈ 48362.5 ns
+           subcore_tasks=[[37483, 491], [37483, 491], [37483, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=12334 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=625691764 ns  ⇒ 每 task ≈ 46710.8 ns
+           subcore_tasks=[[12334, 4465], [12334, 4465], [12334, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16799 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12917784 ns  ⇒ 每 task ≈ 29492.7 ns
+           subcore_tasks=[[16799, 146], [16799, 146], [16799, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16945 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13459403 ns  ⇒ 每 task ≈ 172556.4 ns
+           subcore_tasks=[[16945, 26], [16945, 26], [16945, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16971 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68197381 ns  ⇒ 每 task ≈ 46298.3 ns
+           subcore_tasks=[[16971, 491], [16971, 491], [16971, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37974 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=649626559 ns  ⇒ 每 task ≈ 48497.7 ns
+           subcore_tasks=[[37974, 4465], [37974, 4465], [37974, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42439 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13429945 ns  ⇒ 每 task ≈ 30662.0 ns
+           subcore_tasks=[[42439, 146], [42439, 146], [42439, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42585 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13784025 ns  ⇒ 每 task ≈ 176718.3 ns
+           subcore_tasks=[[42585, 26], [42585, 26], [42585, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42611 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70408775 ns  ⇒ 每 task ≈ 47799.6 ns
+           subcore_tasks=[[42611, 491], [42611, 491], [42611, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=17462 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=623948449 ns  ⇒ 每 task ≈ 46580.7 ns
+           subcore_tasks=[[17462, 4465], [17462, 4465], [17462, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=21927 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12993032 ns  ⇒ 每 task ≈ 29664.5 ns
+           subcore_tasks=[[21927, 146], [21927, 146], [21927, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22073 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13471528 ns  ⇒ 每 task ≈ 172711.9 ns
+           subcore_tasks=[[22073, 26], [22073, 26], [22073, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22099 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68533960 ns  ⇒ 每 task ≈ 46526.8 ns
+           subcore_tasks=[[22099, 491], [22099, 491], [22099, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=43102 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=649593352 ns  ⇒ 每 task ≈ 48495.2 ns
+           subcore_tasks=[[43102, 4465], [43102, 4465], [43102, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47567 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13373654 ns  ⇒ 每 task ≈ 30533.5 ns
+           subcore_tasks=[[47567, 146], [47567, 146], [47567, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47713 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13795691 ns  ⇒ 每 task ≈ 176867.8 ns
+           subcore_tasks=[[47713, 26], [47713, 26], [47713, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47739 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=71026643 ns  ⇒ 每 task ≈ 48219.0 ns
+           subcore_tasks=[[47739, 491], [47739, 491], [47739, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22590 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=622063802 ns  ⇒ 每 task ≈ 46440.0 ns
+           subcore_tasks=[[22590, 4465], [22590, 4465], [22590, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27055 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13158406 ns  ⇒ 每 task ≈ 30042.0 ns
+           subcore_tasks=[[27055, 146], [27055, 146], [27055, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27201 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13455028 ns  ⇒ 每 task ≈ 172500.4 ns
+           subcore_tasks=[[27201, 26], [27201, 26], [27201, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27227 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68490795 ns  ⇒ 每 task ≈ 46497.5 ns
+           subcore_tasks=[[27227, 491], [27227, 491], [27227, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=48230 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=645130273 ns  ⇒ 每 task ≈ 48162.0 ns
+           subcore_tasks=[[48230, 4465], [48230, 4465], [48230, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52695 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13893691 ns  ⇒ 每 task ≈ 31720.8 ns
+           subcore_tasks=[[52695, 146], [52695, 146], [52695, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52841 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13775858 ns  ⇒ 每 task ≈ 176613.6 ns
+           subcore_tasks=[[52841, 26], [52841, 26], [52841, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52867 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70597481 ns  ⇒ 每 task ≈ 47927.7 ns
+           subcore_tasks=[[52867, 491], [52867, 491], [52867, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27718 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=622678295 ns  ⇒ 每 task ≈ 46485.9 ns
+           subcore_tasks=[[27718, 4465], [27718, 4465], [27718, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32183 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13134199 ns  ⇒ 每 task ≈ 29986.8 ns
+           subcore_tasks=[[32183, 146], [32183, 146], [32183, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32329 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13456487 ns  ⇒ 每 task ≈ 172519.1 ns
+           subcore_tasks=[[32329, 26], [32329, 26], [32329, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32355 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68522294 ns  ⇒ 每 task ≈ 46518.9 ns
+           subcore_tasks=[[32355, 491], [32355, 491], [32355, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=53358 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=646751048 ns  ⇒ 每 task ≈ 48283.0 ns
+           subcore_tasks=[[53358, 4465], [53358, 4465], [53358, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57823 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13347696 ns  ⇒ 每 task ≈ 30474.2 ns
+           subcore_tasks=[[57823, 146], [57823, 146], [57823, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57969 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13775566 ns  ⇒ 每 task ≈ 176609.8 ns
+           subcore_tasks=[[57969, 26], [57969, 26], [57969, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57995 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=71151350 ns  ⇒ 每 task ≈ 48303.7 ns
+           subcore_tasks=[[57995, 491], [57995, 491], [57995, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32846 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=626009678 ns  ⇒ 每 task ≈ 46734.6 ns
+           subcore_tasks=[[32846, 4465], [32846, 4465], [32846, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37311 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13201281 ns  ⇒ 每 task ≈ 30139.9 ns
+           subcore_tasks=[[37311, 146], [37311, 146], [37311, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37457 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13457945 ns  ⇒ 每 task ≈ 172537.8 ns
+           subcore_tasks=[[37457, 26], [37457, 26], [37457, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37483 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68154506 ns  ⇒ 每 task ≈ 46269.2 ns
+           subcore_tasks=[[37483, 491], [37483, 491], [37483, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=58486 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=646524133 ns  ⇒ 每 task ≈ 48266.1 ns
+           subcore_tasks=[[58486, 4465], [58486, 4465], [58486, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=62951 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13411570 ns  ⇒ 每 task ≈ 30620.0 ns
+           subcore_tasks=[[62951, 146], [62951, 146], [62951, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63097 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13786941 ns  ⇒ 每 task ≈ 176755.7 ns
+           subcore_tasks=[[63097, 26], [63097, 26], [63097, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63123 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70441733 ns  ⇒ 每 task ≈ 47822.0 ns
+           subcore_tasks=[[63123, 491], [63123, 491], [63123, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37974 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=622136384 ns  ⇒ 每 task ≈ 46445.4 ns
+           subcore_tasks=[[37974, 4465], [37974, 4465], [37974, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42439 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12981074 ns  ⇒ 每 task ≈ 29637.2 ns
+           subcore_tasks=[[42439, 146], [42439, 146], [42439, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42585 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13533777 ns  ⇒ 每 task ≈ 173510.0 ns
+           subcore_tasks=[[42585, 26], [42585, 26], [42585, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42611 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68076923 ns  ⇒ 每 task ≈ 46216.5 ns
+           subcore_tasks=[[42611, 491], [42611, 491], [42611, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63614 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=648522987 ns  ⇒ 每 task ≈ 48415.3 ns
+           subcore_tasks=[[63614, 4465], [63614, 4465], [63614, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68079 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13614860 ns  ⇒ 每 task ≈ 31084.2 ns
+           subcore_tasks=[[68079, 146], [68079, 146], [68079, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68225 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13762442 ns  ⇒ 每 task ≈ 176441.6 ns
+           subcore_tasks=[[68225, 26], [68225, 26], [68225, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68251 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70703355 ns  ⇒ 每 task ≈ 47999.6 ns
+           subcore_tasks=[[68251, 491], [68251, 491], [68251, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=43102 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=623303331 ns  ⇒ 每 task ≈ 46532.5 ns
+           subcore_tasks=[[43102, 4465], [43102, 4465], [43102, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47567 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12883950 ns  ⇒ 每 task ≈ 29415.4 ns
+           subcore_tasks=[[47567, 146], [47567, 146], [47567, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47713 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13533777 ns  ⇒ 每 task ≈ 173510.0 ns
+           subcore_tasks=[[47713, 26], [47713, 26], [47713, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47739 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68483503 ns  ⇒ 每 task ≈ 46492.5 ns
+           subcore_tasks=[[47739, 491], [47739, 491], [47739, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68742 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=645122064 ns  ⇒ 每 task ≈ 48161.4 ns
+           subcore_tasks=[[68742, 4465], [68742, 4465], [68742, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73207 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13915274 ns  ⇒ 每 task ≈ 31770.0 ns
+           subcore_tasks=[[73207, 146], [73207, 146], [73207, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73353 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13760400 ns  ⇒ 每 task ≈ 176415.4 ns
+           subcore_tasks=[[73353, 26], [73353, 26], [73353, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73379 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70702771 ns  ⇒ 每 task ≈ 47999.2 ns
+           subcore_tasks=[[73379, 491], [73379, 491], [73379, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=48230 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=624218071 ns  ⇒ 每 task ≈ 46600.8 ns
+           subcore_tasks=[[48230, 4465], [48230, 4465], [48230, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52695 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12827368 ns  ⇒ 每 task ≈ 29286.2 ns
+           subcore_tasks=[[52695, 146], [52695, 146], [52695, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52841 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13455903 ns  ⇒ 每 task ≈ 172511.6 ns
+           subcore_tasks=[[52841, 26], [52841, 26], [52841, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52867 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68434129 ns  ⇒ 每 task ≈ 46459.0 ns
+           subcore_tasks=[[52867, 491], [52867, 491], [52867, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73870 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=647571373 ns  ⇒ 每 task ≈ 48344.3 ns
+           subcore_tasks=[[73870, 4465], [73870, 4465], [73870, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78335 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13342738 ns  ⇒ 每 task ≈ 30462.9 ns
+           subcore_tasks=[[78335, 146], [78335, 146], [78335, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78481 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13767108 ns  ⇒ 每 task ≈ 176501.4 ns
+           subcore_tasks=[[78481, 26], [78481, 26], [78481, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78507 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70796396 ns  ⇒ 每 task ≈ 48062.7 ns
+           subcore_tasks=[[78507, 491], [78507, 491], [78507, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=53358 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=622251592 ns  ⇒ 每 task ≈ 46454.0 ns
+           subcore_tasks=[[53358, 4465], [53358, 4465], [53358, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57823 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13007907 ns  ⇒ 每 task ≈ 29698.4 ns
+           subcore_tasks=[[57823, 146], [57823, 146], [57823, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57969 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13471945 ns  ⇒ 每 task ≈ 172717.2 ns
+           subcore_tasks=[[57969, 26], [57969, 26], [57969, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57995 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68461337 ns  ⇒ 每 task ≈ 46477.5 ns
+           subcore_tasks=[[57995, 491], [57995, 491], [57995, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78998 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=650070305 ns  ⇒ 每 task ≈ 48530.8 ns
+           subcore_tasks=[[78998, 4465], [78998, 4465], [78998, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83463 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13075574 ns  ⇒ 每 task ≈ 29852.9 ns
+           subcore_tasks=[[83463, 146], [83463, 146], [83463, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83609 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13836816 ns  ⇒ 每 task ≈ 177395.1 ns
+           subcore_tasks=[[83609, 26], [83609, 26], [83609, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83635 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70696647 ns  ⇒ 每 task ≈ 47995.0 ns
+           subcore_tasks=[[83635, 491], [83635, 491], [83635, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=58486 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=624088531 ns  ⇒ 每 task ≈ 46591.2 ns
+           subcore_tasks=[[58486, 4465], [58486, 4465], [58486, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=62951 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13188739 ns  ⇒ 每 task ≈ 30111.3 ns
+           subcore_tasks=[[62951, 146], [62951, 146], [62951, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63097 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13472695 ns  ⇒ 每 task ≈ 172726.9 ns
+           subcore_tasks=[[63097, 26], [63097, 26], [63097, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63123 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68596085 ns  ⇒ 每 task ≈ 46569.0 ns
+           subcore_tasks=[[63123, 491], [63123, 491], [63123, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=84126 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=647957535 ns  ⇒ 每 task ≈ 48373.1 ns
+           subcore_tasks=[[84126, 4465], [84126, 4465], [84126, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88591 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13503736 ns  ⇒ 每 task ≈ 30830.4 ns
+           subcore_tasks=[[88591, 146], [88591, 146], [88591, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88737 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13752650 ns  ⇒ 每 task ≈ 176316.0 ns
+           subcore_tasks=[[88737, 26], [88737, 26], [88737, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88763 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70987144 ns  ⇒ 每 task ≈ 48192.2 ns
+           subcore_tasks=[[88763, 491], [88763, 491], [88763, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63614 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=622247175 ns  ⇒ 每 task ≈ 46453.7 ns
+           subcore_tasks=[[63614, 4465], [63614, 4465], [63614, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68079 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12809868 ns  ⇒ 每 task ≈ 29246.3 ns
+           subcore_tasks=[[68079, 146], [68079, 146], [68079, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68225 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13455904 ns  ⇒ 每 task ≈ 172511.6 ns
+           subcore_tasks=[[68225, 26], [68225, 26], [68225, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68251 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68529919 ns  ⇒ 每 task ≈ 46524.0 ns
+           subcore_tasks=[[68251, 491], [68251, 491], [68251, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=89254 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=647619164 ns  ⇒ 每 task ≈ 48347.8 ns
+           subcore_tasks=[[89254, 4465], [89254, 4465], [89254, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93719 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13399321 ns  ⇒ 每 task ≈ 30592.1 ns
+           subcore_tasks=[[93719, 146], [93719, 146], [93719, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93865 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13811441 ns  ⇒ 每 task ≈ 177069.8 ns
+           subcore_tasks=[[93865, 26], [93865, 26], [93865, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93891 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70663397 ns  ⇒ 每 task ≈ 47972.4 ns
+           subcore_tasks=[[93891, 491], [93891, 491], [93891, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68742 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=620499568 ns  ⇒ 每 task ≈ 46323.2 ns
+           subcore_tasks=[[68742, 4465], [68742, 4465], [68742, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73207 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13043199 ns  ⇒ 每 task ≈ 29779.0 ns
+           subcore_tasks=[[73207, 146], [73207, 146], [73207, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73353 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=14067439 ns  ⇒ 每 task ≈ 180351.8 ns
+           subcore_tasks=[[73353, 26], [73353, 26], [73353, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73379 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=81148414 ns  ⇒ 每 task ≈ 55090.6 ns
+           subcore_tasks=[[73379, 491], [73379, 491], [73379, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=94382 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=651002712 ns  ⇒ 每 task ≈ 48600.4 ns
+           subcore_tasks=[[94382, 4465], [94382, 4465], [94382, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=98847 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13757775 ns  ⇒ 每 task ≈ 31410.4 ns
+           subcore_tasks=[[98847, 146], [98847, 146], [98847, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=98993 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13766525 ns  ⇒ 每 task ≈ 176493.9 ns
+           subcore_tasks=[[98993, 26], [98993, 26], [98993, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=99019 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70487524 ns  ⇒ 每 task ≈ 47853.0 ns
+           subcore_tasks=[[99019, 491], [99019, 491], [99019, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73870 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=622846252 ns  ⇒ 每 task ≈ 46498.4 ns
+           subcore_tasks=[[73870, 4465], [73870, 4465], [73870, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78335 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13139739 ns  ⇒ 每 task ≈ 29999.4 ns
+           subcore_tasks=[[78335, 146], [78335, 146], [78335, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78481 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13450945 ns  ⇒ 每 task ≈ 172448.0 ns
+           subcore_tasks=[[78481, 26], [78481, 26], [78481, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78507 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68431003 ns  ⇒ 每 task ≈ 46456.9 ns
+           subcore_tasks=[[78507, 491], [78507, 491], [78507, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=99510 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=645618809 ns  ⇒ 每 task ≈ 48198.5 ns
+           subcore_tasks=[[99510, 4465], [99510, 4465], [99510, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=103975 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13436070 ns  ⇒ 每 task ≈ 30676.0 ns
+           subcore_tasks=[[103975, 146], [103975, 146], [103975, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104121 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13798025 ns  ⇒ 每 task ≈ 176897.8 ns
+           subcore_tasks=[[104121, 26], [104121, 26], [104121, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104147 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70524274 ns  ⇒ 每 task ≈ 47878.0 ns
+           subcore_tasks=[[104147, 491], [104147, 491], [104147, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78998 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=620702275 ns  ⇒ 每 task ≈ 46338.4 ns
+           subcore_tasks=[[78998, 4465], [78998, 4465], [78998, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83463 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12860909 ns  ⇒ 每 task ≈ 29362.8 ns
+           subcore_tasks=[[83463, 146], [83463, 146], [83463, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83609 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13462320 ns  ⇒ 每 task ≈ 172593.8 ns
+           subcore_tasks=[[83609, 26], [83609, 26], [83609, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83635 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68297422 ns  ⇒ 每 task ≈ 46366.2 ns
+           subcore_tasks=[[83635, 491], [83635, 491], [83635, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104638 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=649050815 ns  ⇒ 每 task ≈ 48454.7 ns
+           subcore_tasks=[[104638, 4465], [104638, 4465], [104638, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109103 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13290822 ns  ⇒ 每 task ≈ 30344.3 ns
+           subcore_tasks=[[109103, 146], [109103, 146], [109103, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109249 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13761567 ns  ⇒ 每 task ≈ 176430.3 ns
+           subcore_tasks=[[109249, 26], [109249, 26], [109249, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109275 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=71187975 ns  ⇒ 每 task ≈ 48328.6 ns
+           subcore_tasks=[[109275, 491], [109275, 491], [109275, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=84126 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=623406913 ns  ⇒ 每 task ≈ 46540.3 ns
+           subcore_tasks=[[84126, 4465], [84126, 4465], [84126, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88591 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12738119 ns  ⇒ 每 task ≈ 29082.5 ns
+           subcore_tasks=[[88591, 146], [88591, 146], [88591, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88737 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13419029 ns  ⇒ 每 task ≈ 172038.8 ns
+           subcore_tasks=[[88737, 26], [88737, 26], [88737, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88763 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68165881 ns  ⇒ 每 task ≈ 46276.9 ns
+           subcore_tasks=[[88763, 491], [88763, 491], [88763, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109766 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=647717079 ns  ⇒ 每 task ≈ 48355.1 ns
+           subcore_tasks=[[109766, 4465], [109766, 4465], [109766, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114231 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13331946 ns  ⇒ 每 task ≈ 30438.2 ns
+           subcore_tasks=[[114231, 146], [114231, 146], [114231, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114377 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13772066 ns  ⇒ 每 task ≈ 176564.9 ns
+           subcore_tasks=[[114377, 26], [114377, 26], [114377, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114403 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70663397 ns  ⇒ 每 task ≈ 47972.4 ns
+           subcore_tasks=[[114403, 491], [114403, 491], [114403, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=89254 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=621447683 ns  ⇒ 每 task ≈ 46394.0 ns
+           subcore_tasks=[[89254, 4465], [89254, 4465], [89254, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93719 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12664036 ns  ⇒ 每 task ≈ 28913.3 ns
+           subcore_tasks=[[93719, 146], [93719, 146], [93719, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93865 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13448903 ns  ⇒ 每 task ≈ 172421.8 ns
+           subcore_tasks=[[93865, 26], [93865, 26], [93865, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93891 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68543877 ns  ⇒ 每 task ≈ 46533.5 ns
+           subcore_tasks=[[93891, 491], [93891, 491], [93891, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114894 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=647889702 ns  ⇒ 每 task ≈ 48368.0 ns
+           subcore_tasks=[[114894, 4465], [114894, 4465], [114894, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119359 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13325238 ns  ⇒ 每 task ≈ 30422.9 ns
+           subcore_tasks=[[119359, 146], [119359, 146], [119359, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119505 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13802691 ns  ⇒ 每 task ≈ 176957.6 ns
+           subcore_tasks=[[119505, 26], [119505, 26], [119505, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119531 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=71135434 ns  ⇒ 每 task ≈ 48292.9 ns
+           subcore_tasks=[[119531, 491], [119531, 491], [119531, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=94382 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=620439402 ns  ⇒ 每 task ≈ 46318.7 ns
+           subcore_tasks=[[94382, 4465], [94382, 4465], [94382, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=98847 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12810160 ns  ⇒ 每 task ≈ 29246.9 ns
+           subcore_tasks=[[98847, 146], [98847, 146], [98847, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=98993 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13456487 ns  ⇒ 每 task ≈ 172519.1 ns
+           subcore_tasks=[[98993, 26], [98993, 26], [98993, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=99019 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=67973675 ns  ⇒ 每 task ≈ 46146.4 ns
+           subcore_tasks=[[99019, 491], [99019, 491], [99019, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=120022 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=647947451 ns  ⇒ 每 task ≈ 48372.3 ns
+           subcore_tasks=[[120022, 4465], [120022, 4465], [120022, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124487 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13421195 ns  ⇒ 每 task ≈ 30642.0 ns
+           subcore_tasks=[[124487, 146], [124487, 146], [124487, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124633 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13788691 ns  ⇒ 每 task ≈ 176778.1 ns
+           subcore_tasks=[[124633, 26], [124633, 26], [124633, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124659 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70868728 ns  ⇒ 每 task ≈ 48111.8 ns
+           subcore_tasks=[[124659, 491], [124659, 491], [124659, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=99510 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=619478454 ns  ⇒ 每 task ≈ 46247.0 ns
+           subcore_tasks=[[99510, 4465], [99510, 4465], [99510, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=103975 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12981075 ns  ⇒ 每 task ≈ 29637.2 ns
+           subcore_tasks=[[103975, 146], [103975, 146], [103975, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104121 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13452695 ns  ⇒ 每 task ≈ 172470.4 ns
+           subcore_tasks=[[104121, 26], [104121, 26], [104121, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104147 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68386379 ns  ⇒ 每 task ≈ 46426.6 ns
+           subcore_tasks=[[104147, 491], [104147, 491], [104147, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=125150 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=647074211 ns  ⇒ 每 task ≈ 48307.1 ns
+           subcore_tasks=[[125150, 4465], [125150, 4465], [125150, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129615 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13499944 ns  ⇒ 每 task ≈ 30821.8 ns
+           subcore_tasks=[[129615, 146], [129615, 146], [129615, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129761 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13766233 ns  ⇒ 每 task ≈ 176490.2 ns
+           subcore_tasks=[[129761, 26], [129761, 26], [129761, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129787 task_number=681 flags=0x5 task_base=0x0 task_counter=0→681 hw=52417627 ns  ⇒ 每 task ≈ 76971.6 ns
+           subcore_tasks=[[129787, 227], [129787, 227], [129787, 227], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=130014 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=39030431 ns  ⇒ 每 task ≈ 500390.1 ns
+           subcore_tasks=[[130014, 26], [130014, 26], [130014, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=130040 task_number=78 flags=0x5 task_base=0x0 task_counter=0→78 hw=20433373 ns  ⇒ 每 task ≈ 261966.3 ns
+           subcore_tasks=[[130040, 26], [130040, 26], [130040, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104638 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=619234165 ns  ⇒ 每 task ≈ 46228.8 ns
+           subcore_tasks=[[104638, 4465], [104638, 4465], [104638, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=0 task_number=108 flags=0x5 task_base=0x0 task_counter=0→108 hw=4141915 ns  ⇒ 每 task ≈ 38351.1 ns
+           subcore_tasks=[[0, 36], [0, 36], [0, 36], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109103 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11660130 ns  ⇒ 每 task ≈ 26621.3 ns
+           subcore_tasks=[[109103, 146], [109103, 146], [109103, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109249 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13423237 ns  ⇒ 每 task ≈ 172092.8 ns
+           subcore_tasks=[[109249, 26], [109249, 26], [109249, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109275 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65682948 ns  ⇒ 每 task ≈ 44591.3 ns
+           subcore_tasks=[[109275, 491], [109275, 491], [109275, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109766 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=622759086 ns  ⇒ 每 task ≈ 46491.9 ns
+           subcore_tasks=[[109766, 4465], [109766, 4465], [109766, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114231 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12909909 ns  ⇒ 每 task ≈ 29474.7 ns
+           subcore_tasks=[[114231, 146], [114231, 146], [114231, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114377 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13511444 ns  ⇒ 每 task ≈ 173223.6 ns
+           subcore_tasks=[[114377, 26], [114377, 26], [114377, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114403 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68271755 ns  ⇒ 每 task ≈ 46348.8 ns
+           subcore_tasks=[[114403, 491], [114403, 491], [114403, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=36 task_number=21510 flags=0x5 task_base=0x0 task_counter=0→21510 hw=1250427122 ns  ⇒ 每 task ≈ 58132.4 ns
+           subcore_tasks=[[36, 7170], [36, 7170], [36, 7170], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114894 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=615522619 ns  ⇒ 每 task ≈ 45951.7 ns
+           subcore_tasks=[[114894, 4465], [114894, 4465], [114894, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119359 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13658317 ns  ⇒ 每 task ≈ 31183.4 ns
+           subcore_tasks=[[119359, 146], [119359, 146], [119359, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119505 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13772650 ns  ⇒ 每 task ≈ 176572.4 ns
+           subcore_tasks=[[119505, 26], [119505, 26], [119505, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119531 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70399025 ns  ⇒ 每 task ≈ 47793.0 ns
+           subcore_tasks=[[119531, 491], [119531, 491], [119531, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=7206 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=621365309 ns  ⇒ 每 task ≈ 46387.9 ns
+           subcore_tasks=[[7206, 4465], [7206, 4465], [7206, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11671 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13099490 ns  ⇒ 每 task ≈ 29907.5 ns
+           subcore_tasks=[[11671, 146], [11671, 146], [11671, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11817 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13454153 ns  ⇒ 每 task ≈ 172489.1 ns
+           subcore_tasks=[[11817, 26], [11817, 26], [11817, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=11843 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68539503 ns  ⇒ 每 task ≈ 46530.6 ns
+           subcore_tasks=[[11843, 491], [11843, 491], [11843, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=120022 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=648348489 ns  ⇒ 每 task ≈ 48402.3 ns
+           subcore_tasks=[[120022, 4465], [120022, 4465], [120022, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124487 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13733567 ns  ⇒ 每 task ≈ 31355.2 ns
+           subcore_tasks=[[124487, 146], [124487, 146], [124487, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124633 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13790024 ns  ⇒ 每 task ≈ 176795.2 ns
+           subcore_tasks=[[124633, 26], [124633, 26], [124633, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124659 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=70481982 ns  ⇒ 每 task ≈ 47849.3 ns
+           subcore_tasks=[[124659, 491], [124659, 491], [124659, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=12334 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=620143279 ns  ⇒ 每 task ≈ 46296.6 ns
+           subcore_tasks=[[12334, 4465], [12334, 4465], [12334, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16799 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12958616 ns  ⇒ 每 task ≈ 29585.9 ns
+           subcore_tasks=[[16799, 146], [16799, 146], [16799, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16945 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13470195 ns  ⇒ 每 task ≈ 172694.8 ns
+           subcore_tasks=[[16945, 26], [16945, 26], [16945, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=16971 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=68432462 ns  ⇒ 每 task ≈ 46457.9 ns
+           subcore_tasks=[[16971, 491], [16971, 491], [16971, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=125150 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=648476697 ns  ⇒ 每 task ≈ 48411.8 ns
+           subcore_tasks=[[125150, 4465], [125150, 4465], [125150, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129615 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=13472528 ns  ⇒ 每 task ≈ 30759.2 ns
+           subcore_tasks=[[129615, 146], [129615, 146], [129615, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129761 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13889899 ns  ⇒ 每 task ≈ 178075.6 ns
+           subcore_tasks=[[129761, 26], [129761, 26], [129761, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129787 task_number=681 flags=0x5 task_base=0x0 task_counter=0→681 hw=52215962 ns  ⇒ 每 task ≈ 76675.4 ns
+           subcore_tasks=[[129787, 227], [129787, 227], [129787, 227], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=130014 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=39026473 ns  ⇒ 每 task ≈ 500339.4 ns
+           subcore_tasks=[[130014, 26], [130014, 26], [130014, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=130040 task_number=78 flags=0x5 task_base=0x0 task_counter=0→78 hw=20489080 ns  ⇒ 每 task ≈ 262680.5 ns
+           subcore_tasks=[[130040, 26], [130040, 26], [130040, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=17462 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=593071851 ns  ⇒ 每 task ≈ 44275.6 ns
+           subcore_tasks=[[17462, 4465], [17462, 4465], [17462, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=21927 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11674713 ns  ⇒ 每 task ≈ 26654.6 ns
+           subcore_tasks=[[21927, 146], [21927, 146], [21927, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22073 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13429362 ns  ⇒ 每 task ≈ 172171.3 ns
+           subcore_tasks=[[22073, 26], [22073, 26], [22073, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22099 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65737489 ns  ⇒ 每 task ≈ 44628.3 ns
+           subcore_tasks=[[22099, 491], [22099, 491], [22099, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=22590 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=568939390 ns  ⇒ 每 task ≈ 42474.0 ns
+           subcore_tasks=[[22590, 4465], [22590, 4465], [22590, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27055 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=14667766 ns  ⇒ 每 task ≈ 33488.1 ns
+           subcore_tasks=[[27055, 146], [27055, 146], [27055, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27201 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13752525 ns  ⇒ 每 task ≈ 176314.4 ns
+           subcore_tasks=[[27201, 26], [27201, 26], [27201, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27227 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=72431171 ns  ⇒ 每 task ≈ 49172.6 ns
+           subcore_tasks=[[27227, 491], [27227, 491], [27227, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=27718 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=683658626 ns  ⇒ 每 task ≈ 51038.3 ns
+           subcore_tasks=[[27718, 4465], [27718, 4465], [27718, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32183 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11670921 ns  ⇒ 每 task ≈ 26645.9 ns
+           subcore_tasks=[[32183, 146], [32183, 146], [32183, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32329 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13424111 ns  ⇒ 每 task ≈ 172104.0 ns
+           subcore_tasks=[[32329, 26], [32329, 26], [32329, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32355 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65695115 ns  ⇒ 每 task ≈ 44599.5 ns
+           subcore_tasks=[[32355, 491], [32355, 491], [32355, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=32846 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=576837226 ns  ⇒ 每 task ≈ 43063.6 ns
+           subcore_tasks=[[32846, 4465], [32846, 4465], [32846, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37311 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12458705 ns  ⇒ 每 task ≈ 28444.5 ns
+           subcore_tasks=[[37311, 146], [37311, 146], [37311, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37457 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13452403 ns  ⇒ 每 task ≈ 172466.7 ns
+           subcore_tasks=[[37457, 26], [37457, 26], [37457, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37483 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=67259308 ns  ⇒ 每 task ≈ 45661.4 ns
+           subcore_tasks=[[37483, 491], [37483, 491], [37483, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=37974 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=578805664 ns  ⇒ 每 task ≈ 43210.6 ns
+           subcore_tasks=[[37974, 4465], [37974, 4465], [37974, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42439 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=24180376 ns  ⇒ 每 task ≈ 55206.3 ns
+           subcore_tasks=[[42439, 146], [42439, 146], [42439, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42585 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=18981471 ns  ⇒ 每 task ≈ 243352.2 ns
+           subcore_tasks=[[42585, 26], [42585, 26], [42585, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=42611 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=107499060 ns  ⇒ 每 task ≈ 72979.7 ns
+           subcore_tasks=[[42611, 491], [42611, 491], [42611, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=43102 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=571052368 ns  ⇒ 每 task ≈ 42631.8 ns
+           subcore_tasks=[[43102, 4465], [43102, 4465], [43102, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47567 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11678505 ns  ⇒ 每 task ≈ 26663.3 ns
+           subcore_tasks=[[47567, 146], [47567, 146], [47567, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47713 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13446903 ns  ⇒ 每 task ≈ 172396.2 ns
+           subcore_tasks=[[47713, 26], [47713, 26], [47713, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=47739 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=72409587 ns  ⇒ 每 task ≈ 49157.9 ns
+           subcore_tasks=[[47739, 491], [47739, 491], [47739, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=48230 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569457260 ns  ⇒ 每 task ≈ 42512.7 ns
+           subcore_tasks=[[48230, 4465], [48230, 4465], [48230, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52695 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11682588 ns  ⇒ 每 task ≈ 26672.6 ns
+           subcore_tasks=[[52695, 146], [52695, 146], [52695, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52841 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13507527 ns  ⇒ 每 task ≈ 173173.4 ns
+           subcore_tasks=[[52841, 26], [52841, 26], [52841, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=52867 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=72507378 ns  ⇒ 每 task ≈ 49224.3 ns
+           subcore_tasks=[[52867, 491], [52867, 491], [52867, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=53358 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569535134 ns  ⇒ 每 task ≈ 42518.5 ns
+           subcore_tasks=[[53358, 4465], [53358, 4465], [53358, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57823 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11672671 ns  ⇒ 每 task ≈ 26649.9 ns
+           subcore_tasks=[[57823, 146], [57823, 146], [57823, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57969 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13428779 ns  ⇒ 每 task ≈ 172163.8 ns
+           subcore_tasks=[[57969, 26], [57969, 26], [57969, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=57995 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65693740 ns  ⇒ 每 task ≈ 44598.6 ns
+           subcore_tasks=[[57995, 491], [57995, 491], [57995, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=58486 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569249512 ns  ⇒ 每 task ≈ 42497.2 ns
+           subcore_tasks=[[58486, 4465], [58486, 4465], [58486, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=62951 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=14638307 ns  ⇒ 每 task ≈ 33420.8 ns
+           subcore_tasks=[[62951, 146], [62951, 146], [62951, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63097 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13749025 ns  ⇒ 每 task ≈ 176269.6 ns
+           subcore_tasks=[[63097, 26], [63097, 26], [63097, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63123 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=69720157 ns  ⇒ 每 task ≈ 47332.1 ns
+           subcore_tasks=[[63123, 491], [63123, 491], [63123, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=63614 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=581034849 ns  ⇒ 每 task ≈ 43377.0 ns
+           subcore_tasks=[[63614, 4465], [63614, 4465], [63614, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68079 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11690172 ns  ⇒ 每 task ≈ 26689.9 ns
+           subcore_tasks=[[68079, 146], [68079, 146], [68079, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68225 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13424404 ns  ⇒ 每 task ≈ 172107.7 ns
+           subcore_tasks=[[68225, 26], [68225, 26], [68225, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68251 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65681074 ns  ⇒ 每 task ≈ 44590.0 ns
+           subcore_tasks=[[68251, 491], [68251, 491], [68251, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=68742 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569701591 ns  ⇒ 每 task ≈ 42530.9 ns
+           subcore_tasks=[[68742, 4465], [68742, 4465], [68742, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73207 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11678213 ns  ⇒ 每 task ≈ 26662.6 ns
+           subcore_tasks=[[73207, 146], [73207, 146], [73207, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73353 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13415071 ns  ⇒ 每 task ≈ 171988.1 ns
+           subcore_tasks=[[73353, 26], [73353, 26], [73353, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73379 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65720281 ns  ⇒ 每 task ≈ 44616.6 ns
+           subcore_tasks=[[73379, 491], [73379, 491], [73379, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=73870 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569639842 ns  ⇒ 每 task ≈ 42526.3 ns
+           subcore_tasks=[[73870, 4465], [73870, 4465], [73870, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78335 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11679963 ns  ⇒ 每 task ≈ 26666.6 ns
+           subcore_tasks=[[78335, 146], [78335, 146], [78335, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78481 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13422653 ns  ⇒ 每 task ≈ 172085.3 ns
+           subcore_tasks=[[78481, 26], [78481, 26], [78481, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78507 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65745073 ns  ⇒ 每 task ≈ 44633.5 ns
+           subcore_tasks=[[78507, 491], [78507, 491], [78507, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=78998 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569667550 ns  ⇒ 每 task ≈ 42528.4 ns
+           subcore_tasks=[[78998, 4465], [78998, 4465], [78998, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83463 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11674130 ns  ⇒ 每 task ≈ 26653.3 ns
+           subcore_tasks=[[83463, 146], [83463, 146], [83463, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83609 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13481278 ns  ⇒ 每 task ≈ 172836.9 ns
+           subcore_tasks=[[83609, 26], [83609, 26], [83609, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=83635 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65698116 ns  ⇒ 每 task ≈ 44601.6 ns
+           subcore_tasks=[[83635, 491], [83635, 491], [83635, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=84126 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569616217 ns  ⇒ 每 task ≈ 42524.5 ns
+           subcore_tasks=[[84126, 4465], [84126, 4465], [84126, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88591 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11667713 ns  ⇒ 每 task ≈ 26638.6 ns
+           subcore_tasks=[[88591, 146], [88591, 146], [88591, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88737 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13423528 ns  ⇒ 每 task ≈ 172096.5 ns
+           subcore_tasks=[[88737, 26], [88737, 26], [88737, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=88763 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65752073 ns  ⇒ 每 task ≈ 44638.2 ns
+           subcore_tasks=[[88763, 491], [88763, 491], [88763, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=89254 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569689008 ns  ⇒ 每 task ≈ 42530.0 ns
+           subcore_tasks=[[89254, 4465], [89254, 4465], [89254, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93719 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11681421 ns  ⇒ 每 task ≈ 26669.9 ns
+           subcore_tasks=[[93719, 146], [93719, 146], [93719, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93865 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13726734 ns  ⇒ 每 task ≈ 175983.8 ns
+           subcore_tasks=[[93865, 26], [93865, 26], [93865, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=93891 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=72508170 ns  ⇒ 每 task ≈ 49224.8 ns
+           subcore_tasks=[[93891, 491], [93891, 491], [93891, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=94382 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=582576292 ns  ⇒ 每 task ≈ 43492.1 ns
+           subcore_tasks=[[94382, 4465], [94382, 4465], [94382, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=98847 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11671504 ns  ⇒ 每 task ≈ 26647.3 ns
+           subcore_tasks=[[98847, 146], [98847, 146], [98847, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=98993 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13420028 ns  ⇒ 每 task ≈ 172051.6 ns
+           subcore_tasks=[[98993, 26], [98993, 26], [98993, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=99019 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65738948 ns  ⇒ 每 task ≈ 44629.3 ns
+           subcore_tasks=[[99019, 491], [99019, 491], [99019, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=99510 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569451135 ns  ⇒ 每 task ≈ 42512.2 ns
+           subcore_tasks=[[99510, 4465], [99510, 4465], [99510, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=103975 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11672672 ns  ⇒ 每 task ≈ 26649.9 ns
+           subcore_tasks=[[103975, 146], [103975, 146], [103975, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104121 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13515110 ns  ⇒ 每 task ≈ 173270.6 ns
+           subcore_tasks=[[104121, 26], [104121, 26], [104121, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104147 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=67276015 ns  ⇒ 每 task ≈ 45672.8 ns
+           subcore_tasks=[[104147, 491], [104147, 491], [104147, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=104638 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=577836466 ns  ⇒ 每 task ≈ 43138.2 ns
+           subcore_tasks=[[104638, 4465], [104638, 4465], [104638, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109103 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11672963 ns  ⇒ 每 task ≈ 26650.6 ns
+           subcore_tasks=[[109103, 146], [109103, 146], [109103, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109249 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13422945 ns  ⇒ 每 task ≈ 172089.0 ns
+           subcore_tasks=[[109249, 26], [109249, 26], [109249, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109275 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=72424171 ns  ⇒ 每 task ≈ 49167.8 ns
+           subcore_tasks=[[109275, 491], [109275, 491], [109275, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=109766 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=628472486 ns  ⇒ 每 task ≈ 46918.4 ns
+           subcore_tasks=[[109766, 4465], [109766, 4465], [109766, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114231 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=23464050 ns  ⇒ 每 task ≈ 53570.9 ns
+           subcore_tasks=[[114231, 146], [114231, 146], [114231, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114377 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=20030586 ns  ⇒ 每 task ≈ 256802.4 ns
+           subcore_tasks=[[114377, 26], [114377, 26], [114377, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114403 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=108671547 ns  ⇒ 每 task ≈ 73775.7 ns
+           subcore_tasks=[[114403, 491], [114403, 491], [114403, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=114894 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569862672 ns  ⇒ 每 task ≈ 42542.9 ns
+           subcore_tasks=[[114894, 4465], [114894, 4465], [114894, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119359 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=12437705 ns  ⇒ 每 task ≈ 28396.6 ns
+           subcore_tasks=[[119359, 146], [119359, 146], [119359, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119505 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13453862 ns  ⇒ 每 task ≈ 172485.4 ns
+           subcore_tasks=[[119505, 26], [119505, 26], [119505, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=119531 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=67244224 ns  ⇒ 每 task ≈ 45651.2 ns
+           subcore_tasks=[[119531, 491], [119531, 491], [119531, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=120022 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=587058579 ns  ⇒ 每 task ≈ 43826.7 ns
+           subcore_tasks=[[120022, 4465], [120022, 4465], [120022, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124487 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11674421 ns  ⇒ 每 task ≈ 26653.9 ns
+           subcore_tasks=[[124487, 146], [124487, 146], [124487, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124633 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13422945 ns  ⇒ 每 task ≈ 172089.0 ns
+           subcore_tasks=[[124633, 26], [124633, 26], [124633, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=124659 task_number=1473 flags=0x5 task_base=0x0 task_counter=0→1473 hw=65756156 ns  ⇒ 每 task ≈ 44641.0 ns
+           subcore_tasks=[[124659, 491], [124659, 491], [124659, 491], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=125150 task_number=13395 flags=0x1 task_base=0x0 task_counter=0→13395 hw=569879297 ns  ⇒ 每 task ≈ 42544.2 ns
+           subcore_tasks=[[125150, 4465], [125150, 4465], [125150, 4465], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129615 task_number=438 flags=0x5 task_base=0x0 task_counter=0→438 hw=11671796 ns  ⇒ 每 task ≈ 26647.9 ns
+           subcore_tasks=[[129615, 146], [129615, 146], [129615, 146], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129761 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=13420903 ns  ⇒ 每 task ≈ 172062.9 ns
+           subcore_tasks=[[129761, 26], [129761, 26], [129761, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=129787 task_number=681 flags=0x5 task_base=0x0 task_counter=0→681 hw=48947579 ns  ⇒ 每 task ≈ 71876.0 ns
+           subcore_tasks=[[129787, 227], [129787, 227], [129787, 227], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=130014 task_number=78 flags=0x1 task_base=0x0 task_counter=0→78 hw=38062400 ns  ⇒ 每 task ≈ 487979.5 ns
+           subcore_tasks=[[130014, 26], [130014, 26], [130014, 26], [0, 0], [0, 0]]
+   submit: core_mask=0 task_start=130040 task_number=78 flags=0x5 task_base=0x0 task_counter=0→78 hw=19598923 ns  ⇒ 每 task ≈ 251268.2 ns
+           subcore_tasks=[[130040, 26], [130040, 26], [130040, 26], [0, 0], [0, 0]]
+
+== experiments/results/pool_ic48_tr.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=190165 ns  ⇒ 每 task ≈ 63388.3 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (26, 0, 0) → 3
+
+== experiments/results/pool_mine48_tr.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=1 flags=0x5 task_base=0x0 task_counter=0→1 hw=81082 ns  ⇒ 每 task ≈ 81082.0 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (26, 0, 0) → 1
+
+== experiments/results/pool_vendor48_tr.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=83416 ns  ⇒ 每 task ≈ 27805.3 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (26, 0, 0) → 3
+
+== experiments/results/rect_kernel_20260929/tr_rect12.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=97999 ns  ⇒ 每 task ≈ 32666.3 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 1
+      (122, 0, 0) → 1
+      (26, 0, 0) → 1
+
+== experiments/results/rect_kernel_20260929/tr_rect21.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=119874 ns  ⇒ 每 task ≈ 39958.0 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 1
+      (122, 0, 0) → 1
+      (26, 0, 0) → 1
+
+== experiments/results/spatial_ohfix_20260928/tr_conv16_i8.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=16917 ns  ⇒ 每 task ≈ 5639.0 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 1
+      (122, 0, 0) → 1
+      (26, 0, 0) → 1
+
+== experiments/results/spatial_ohfix_20260928/tr_conv16x8.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=21875 ns  ⇒ 每 task ≈ 7291.7 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 1
+      (122, 0, 0) → 1
+      (26, 0, 0) → 1
+
+== experiments/results/spatial_ohfix_20260928/tr_rect12.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=97999 ns  ⇒ 每 task ≈ 32666.3 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 1
+      (122, 0, 0) → 1
+      (26, 0, 0) → 1
+
+== experiments/results/spatial_ohfix_20260928/tr_rect21.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=119874 ns  ⇒ 每 task ≈ 39958.0 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 1
+      (122, 0, 0) → 1
+      (26, 0, 0) → 1
+
+== experiments/vendor_models/tr_rect12.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=97999 ns  ⇒ 每 task ≈ 32666.3 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 1
+      (122, 0, 0) → 1
+      (26, 0, 0) → 1
+
+== experiments/vendor_models/tr_rect21.jsonl ==
+   submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=119874 ns  ⇒ 每 task ≈ 39958.0 ns
+           subcore_tasks=[[0, 1], [0, 1], [0, 1], [0, 0], [0, 0]]
+   task 描述符字段分布 (regcfg_amount, regcfg_offset, flags) → 条数:
+      (126, 0, 0) → 1
+      (122, 0, 0) → 1
+      (26, 0, 0) → 1
+

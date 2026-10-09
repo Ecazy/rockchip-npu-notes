@@ -1,0 +1,82 @@
+# §7.37 深通道 fp16 训练闭环（wgrad_real.c 参数化 IC/OC）  Wed Sep 30 13:52:11 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) 默认 ic=3/oc=16（回归基线）
+  -- fp16 pad1 B1 update --
+    == wgrad_real: ic=3 oc=16 iw=8 ih=8 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=8*8 dir=- update=1 ==
+    F16 FWD b=0 total=1024 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=27/27 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=1024 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+    COST: submits=29 fwd_tasks=2 wgrad_tasks=27 wall=0.927 ms hw=0.376 ms
+  -- int8 pad1 B1 update --
+    == wgrad_real: ic=3 oc=16 iw=8 ih=8 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=8*8 dir=wgdata_pad1 update=1 ==
+    RESULT: FWD SUBMIT FAILED (b=0)
+
+## B) 深通道 ic=64 oc=64
+  -- --fp16 --pad 1 --batch 1 --update --
+    == wgrad_real: ic=64 oc=64 iw=8 ih=8 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=8*8 dir=- update=1 ==
+    F16 FWD b=0 total=4096 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=576/576 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=4096 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+    COST: submits=578 fwd_tasks=2 wgrad_tasks=576 wall=13.542 ms hw=6.814 ms
+  -- --fp16 --pad 0 --batch 1 --update --
+    == wgrad_real: ic=64 oc=64 iw=8 ih=8 k=3x3 pad=0 batch=1 seed=20260928 ow*oh=6*6 dir=- update=1 ==
+    F16 FWD b=0 total=2304 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=576/576 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=2304 mismatch=1 (hard=0) vs CPU(W') RESULT: ULP-EXACT (<=16 ulp)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+    COST: submits=578 fwd_tasks=2 wgrad_tasks=576 wall=12.572 ms hw=6.439 ms
+  -- --fp16 --pad 0 --batch 3 --update --
+    == wgrad_real: ic=64 oc=64 iw=8 ih=8 k=3x3 pad=0 batch=3 seed=20260928 ow*oh=6*6 dir=- update=1 ==
+    F16 FWD b=0 total=2304 mismatch=0 RESULT: BIT-EXACT (fp16)
+    F16 FWD b=1 total=2304 mismatch=0 RESULT: BIT-EXACT (fp16)
+    F16 FWD b=2 total=2304 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=576/576 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=2304 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    F16 FWD2 b=1 total=2304 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    F16 FWD2 b=2 total=2304 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+    COST: submits=582 fwd_tasks=6 wgrad_tasks=576 wall=18.534 ms hw=9.140 ms
+
+## C) 深通道 ic=128 oc=32
+  -- --fp16 --pad 1 --batch 1 --update --
+    == wgrad_real: ic=128 oc=32 iw=8 ih=8 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=8*8 dir=- update=1 ==
+    F16 FWD b=0 total=2048 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=1152/1152 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=2048 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+    COST: submits=1154 fwd_tasks=2 wgrad_tasks=1152 wall=73.772 ms hw=55.156 ms
+  -- --fp16 --pad 0 --batch 2 --update --
+    == wgrad_real: ic=128 oc=32 iw=8 ih=8 k=3x3 pad=0 batch=2 seed=20260928 ow*oh=6*6 dir=- update=1 ==
+    F16 FWD b=0 total=1152 mismatch=0 RESULT: BIT-EXACT (fp16)
+    F16 FWD b=1 total=1152 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=1152/1152 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=1152 mismatch=1 (hard=0) vs CPU(W') RESULT: ULP-EXACT (<=16 ulp)
+    F16 FWD2 b=1 total=1152 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+    COST: submits=1156 fwd_tasks=4 wgrad_tasks=1152 wall=76.206 ms hw=58.211 ms
+
+## D) 深 oc ic=64 oc=128
+  -- fp16 pad1 B1 update --
+    == wgrad_real: ic=64 oc=128 iw=8 ih=8 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=8*8 dir=- update=1 ==
+    F16 FWD b=0 total=8192 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=576/576 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+    COST: submits=578 fwd_tasks=2 wgrad_tasks=576 wall=45.726 ms hw=33.385 ms
+
+## E) 边界（本轮未支持，记录以便后续移植）
+  -- 深通道 int8（ic=64 oc=64） --
+    == wgrad_real: ic=64 oc=64 iw=8 ih=8 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=8*8 dir=wgdata_pad1 update=1 ==
+    FWD b=0: total=4096 round-mismatch=3979 maxdiff=255 RESULT: MISMATCH
+    WGRAD kx=0 ky=0 ic=0 SUBMIT-FAILED
+  -- 深通道 --two-layer（ic=64 oc=64） --
+    == wgrad_real: ic=64 oc=64 iw=8 ih=8 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=8*8 dir=- update=1 ==
+    L2 F1 b=0 total=4096 mismatch=4085 max_ulp=37902 RESULT: MISMATCH (max 37902 ulp)
+    L2 F2 b=0 total=4096 mismatch=4089 max_ulp=42501 RESULT: MISMATCH (max 42501 ulp)
+    L2_WGRAD: Cin=64 exact=573/576 within_16ulp_or_abs=576/576 max_ulp=1 ULP-EXACT (<=16 ulp)
+    L2_WGRAD: Cin=64 exact=575/576 within_16ulp_or_abs=576/576 max_ulp=1 ULP-EXACT (<=16 ulp)
+      L2 F2'_MISS b=0 i=0 (oy=0 ox=0 oc=0) hw=0x7c00 ref=0x7e00 seq=0x7e00 ulp=512

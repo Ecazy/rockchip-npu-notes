@@ -1,0 +1,81 @@
+# §7.42 一次 submit 多 task 语义实测  Wed Sep 30 14:40:23 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) 基线（单 task）
+SUBMIT ret=0 errno=-  0.132 ms  hw_elapse=21583 ns
+OUT-HASH: 533d6b86  (8192 B, ic_groups=1, oc_groups=1, tiles=1)
+  RESULT: ULP-EXACT (<=16 ulp)
+
+## B) 2-task 链（task0 → OUT_OFF，task1 同几何 → OUT_OFF+256KB，task_number=2）
+CHAIN: 2 task(s)，每段 regcmd 130 entries（连续排布），输出 out@+786432 起、步长 8192；task BO dma=0xffdfc000（task_base_addr 保持 0）
+SUBMIT ret=0 errno=-  0.062 ms  hw_elapse=22749 ns
+OUT-HASH: 533d6b86  (8192 B, ic_groups=1, oc_groups=1, tiles=1)
+CHAIN-TASK1: hash=bcc31dc5 nonzero_bytes=0 diff_vs_task0=7620 UNTOUCHED
+CHAIN-SUMMARY: task(s)=2（task0 + 1 个后续）已写入=0 与 task0 逐位相同=0 RESULT: INCOMPLETE
+  RESULT: ULP-EXACT (<=16 ulp)
+
+## C) task_number 对硬件时间的影响（同一 task 重复 N 次，每档 3 次取 min）
+  task-count=1  min_hw_elapse=20416 ns
+  task-count=2  min_hw_elapse=21291 ns
+  task-count=3  min_hw_elapse=19542 ns
+  task-count=4  min_hw_elapse=20124 ns
+
+## D) 参考：task1 输出区未写入时的 hash（全零区 FNV1a）
+  fnv1a(8192 x 0x00) = bcc31dc5   # 与 B 段 CHAIN-HASH 对比
+
+## F) 多核派发（§7.43：core_mask=0x3 + 每核一个不同 task；对照 vendor 的 flags=0x5）
+  -- job-flags=7 第 1 次 --
+    MULTICORE: core_mask=0x3 (use_core_num=2) core0→task0 core1→task1
+    SUBMIT ret=0 errno=-  0.014 ms  hw_elapse=0 ns
+    OUT-HASH: 533d6b86  (8192 B, ic_groups=1, oc_groups=1, tiles=1)
+  -- job-flags=7 第 2 次 --
+    MULTICORE: core_mask=0x3 (use_core_num=2) core0→task0 core1→task1
+    SUBMIT ret=0 errno=-  0.016 ms  hw_elapse=0 ns
+    OUT-HASH: 533d6b86  (8192 B, ic_groups=1, oc_groups=1, tiles=1)
+  -- job-flags=5 第 1 次 --
+    MULTICORE: core_mask=0x3 (use_core_num=2) core0→task0 core1→task1
+    SUBMIT ret=0 errno=-  0.127 ms  hw_elapse=84000 ns
+    OUT-HASH: 533d6b86  (8192 B, ic_groups=1, oc_groups=1, tiles=1)
+  -- job-flags=5 第 2 次 --
+    MULTICORE: core_mask=0x3 (use_core_num=2) core0→task0 core1→task1
+    SUBMIT ret=0 errno=-  0.067 ms  hw_elapse=42875 ns
+    OUT-HASH: 533d6b86  (8192 B, ic_groups=1, oc_groups=1, tiles=1)
+  （判读：CHAIN-SUMMARY 的「已写入/与 task0 逐位相同」计数）
+
+## H) 仿 vendor 最小形状：N=3 个**连续** regcmd 块（§7.44）
+  -- N=3 3x3 --job-flags 5 --
+    CHAIN: 3 task(s)，每段 regcmd 260 entries（连续排布），输出 out@+786432 起、步长 8192；task BO dma=0xffdfc000（task_base_addr 保持 0）
+    SUBMIT ret=0 errno=-  0.033 ms  hw_elapse=20709 ns
+    CHAIN-TASK1: hash=bcc31dc5 nonzero_bytes=0 diff_vs_task0=7620 UNTOUCHED
+    CHAIN-TASK2: hash=bcc31dc5 nonzero_bytes=0 diff_vs_task0=7620 UNTOUCHED
+    CHAIN-SUMMARY: task(s)=3（task0 + 2 个后续）已写入=0 与 task0 逐位相同=0 RESULT: INCOMPLETE
+  -- N=3 3x3 --job-flags 7 --
+    CHAIN: 3 task(s)，每段 regcmd 260 entries（连续排布），输出 out@+786432 起、步长 8192；task BO dma=0xffdfc000（task_base_addr 保持 0）
+    SUBMIT ret=0 errno=-  0.011 ms  hw_elapse=0 ns
+    CHAIN-TASK1: hash=bcc31dc5 nonzero_bytes=0 diff_vs_task0=7620 UNTOUCHED
+    CHAIN-TASK2: hash=bcc31dc5 nonzero_bytes=0 diff_vs_task0=7620 UNTOUCHED
+    CHAIN-SUMMARY: task(s)=3（task0 + 2 个后续）已写入=0 与 task0 逐位相同=0 RESULT: INCOMPLETE
+  -- N=3 3x3 --job-flags 5 --multi-core --
+    MULTICORE: core_mask=0x7 (use_core_num=3) 核0/1/2 → task0/1/2（subcore_task[2..4]）
+    CHAIN: 3 task(s)，每段 regcmd 260 entries（连续排布），输出 out@+786432 起、步长 8192；task BO dma=0xffdfc000（task_base_addr 保持 0）
+    SUBMIT ret=0 errno=-  0.046 ms  hw_elapse=31500 ns
+    CHAIN-TASK1: hash=bcc31dc5 nonzero_bytes=0 diff_vs_task0=7620 UNTOUCHED
+    CHAIN-TASK2: hash=bcc31dc5 nonzero_bytes=0 diff_vs_task0=7620 UNTOUCHED
+    CHAIN-SUMMARY: task(s)=3（task0 + 2 个后续）已写入=0 与 task0 逐位相同=0 RESULT: INCOMPLETE
+  -- N=3 1x1 最小几何（每段仍 ~130 entries）flags=5 --
+    SUBMIT ret=0 errno=-  0.022 ms  hw_elapse=12250 ns
+    CHAIN-TASK1: hash=d2063dc5 nonzero_bytes=0 diff_vs_task0=912 UNTOUCHED
+    CHAIN-TASK2: hash=d2063dc5 nonzero_bytes=0 diff_vs_task0=912 UNTOUCHED
+    CHAIN-SUMMARY: task(s)=3（task0 + 2 个后续）已写入=0 与 task0 逐位相同=0 RESULT: INCOMPLETE
+
+## I) vendor 侧 task 块解剖（离线；见 results/multicore_vendor_20260930/vendor_regcmd_blocks.txt）
+  attn_relu 的 task 块只含 **DPU 寄存器 0x4004..0x5004**，每块 34/34/4 entries，
+  逐 task 递增 0x4020（+0x400）⇒ 多 task = **批量发射同一个 DPU 小算子**（不是 conv 链）。
+
+## G) vendor 侧口径（离线，见 results/multicore_vendor_20260930/vendor_submit_rules.txt）
+  core_mask=0(AUTO)、flags=0x5(无 PINGPONG)、task_base_addr=0、regcfg_offset=0、
+  subcore_task[0..2]={0, N/3}；task_number 最大 3663；hw=7.19 ms ⇒ ~1.96 µs/task（全部执行过）
+
+## E) 未纳入脚本（每次一个 soft reset，且历史上有楔死风险）：
+  把 sub.task_base_addr 设为 task BO 的 DMA 地址 ⇒ PC-DMA 取指超时（已实测一次，未复现重试）。

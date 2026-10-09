@@ -1,0 +1,105 @@
+{
+  "family": "attention_softmax_s196",
+  "entry_bytes": 8,
+  "reg": "0x4104",
+  "capture": "EPERF_RKNPU_REGCMD_MAX_BYTES=8192",
+  "traces": {
+    "sdpa_ramp": {
+      "bursts": [
+        954,
+        954,
+        954,
+        954
+      ],
+      "n_entries": 954,
+      "nonzero_unique": 620,
+      "min": 1,
+      "max": 16063,
+      "plateaus": 621,
+      "longest_plateau": 53,
+      "monotone_nondecr": true,
+      "fit_round_exp": {
+        "A": 1.4587901613690024,
+        "k": 0.009765671283471838,
+        "mean_abs": 0.23714585519412382,
+        "max_abs": 3.0,
+        "exact_frac": 0.8048268625393494
+      },
+      "ratio_per_71_mean": 1.9982366867428492,
+      "fit_k_ln2_over_71": {
+        "A": 1.4627903672161628,
+        "k": 0.009762636345914722,
+        "mean_abs": 0.5393494228751312,
+        "max_abs": 3,
+        "exact_frac": 0.5120671563483735
+      }
+    },
+    "sdpa_ones": {
+      "bursts": [
+        954,
+        954,
+        954,
+        954
+      ],
+      "n_entries": 954,
+      "nonzero_unique": 620,
+      "min": 1,
+      "max": 16063,
+      "plateaus": 621,
+      "longest_plateau": 53,
+      "monotone_nondecr": true,
+      "fit_round_exp": {
+        "A": 1.4587901613690024,
+        "k": 0.009765671283471838,
+        "mean_abs": 0.23714585519412382,
+        "max_abs": 3.0,
+        "exact_frac": 0.8048268625393494
+      },
+      "ratio_per_71_mean": 1.9982366867428492,
+      "fit_k_ln2_over_71": {
+        "A": 1.4627903672161628,
+        "k": 0.009762636345914722,
+        "mean_abs": 0.5393494228751312,
+        "max_abs": 3,
+        "exact_frac": 0.5120671563483735
+      }
+    },
+    "asm196_ramp": {
+      "bursts": [
+        954,
+        954,
+        954,
+        954
+      ],
+      "n_entries": 954,
+      "nonzero_unique": 620,
+      "min": 1,
+      "max": 16063,
+      "plateaus": 621,
+      "longest_plateau": 53,
+      "monotone_nondecr": true,
+      "fit_round_exp": {
+        "A": 1.4587901613690024,
+        "k": 0.009765671283471838,
+        "mean_abs": 0.23714585519412382,
+        "max_abs": 3.0,
+        "exact_frac": 0.8048268625393494
+      },
+      "ratio_per_71_mean": 1.9982366867428492,
+      "fit_k_ln2_over_71": {
+        "A": 1.4627903672161628,
+        "k": 0.009762636345914722,
+        "mean_abs": 0.5393494228751312,
+        "max_abs": 3,
+        "exact_frac": 0.5120671563483735
+      }
+    }
+  },
+  "conclusion": {
+    "shape": "geometric / exponential; value[i]=round(A*exp(k*i)); ratio per 71 idx = 2.000 => k=ln2/71",
+    "k_ln2_over_71": 0.009762636345914722,
+    "compression": "954 u32 = 3816 B -> 2 params (A,k) or 621 (idx,val) plateau pairs",
+    "input_independent": "ramp vs ones identical value set & first-appearance order",
+    "vs_fsoftmax": "fsoftmax(111) = 19-seg piecewise linear; attention(954) = smooth geometric => distinct families"
+  }
+}

@@ -1,5 +1,13 @@
 # Rockchip NPU reverse-engineering notes
 
+## Local vendor-driver research integration
+
+The local research workspace is integrated under [research/rknpu-vendor/](research/rknpu-vendor/INTEGRATION.md).
+Its integration index maps the Orange Pi 5 Plus / vendor `rknpu` 0.9.8 experiments to these
+hardware notes, preserving the original tools, evidence, corrections and driver-specific boundaries.
+Start there for the comparison findings, unresolved differences and the next experiments.
+The import provenance is recorded in [provenance.json](research/rknpu-vendor/provenance.json).
+
 ## AI disclosure
 
 The documents in rockchip-npu-notes were authored by AI, primarily Claude. They were produced as

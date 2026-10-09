@@ -1,0 +1,14 @@
+# 收官回归（第 124 轮，板上实测；二进制与数据集配对 ✓）
+
+| # | 用例 | 结果 |
+| --- | --- | --- |
+| R1 | `min_pool --iw 32 --ih 32 --ic 8 --kw 2 --kh 2 --sx 2 --sy 2 --pad 0` | `mismatch=0` ✓ |
+| R2 | `min_pool --iw 64 --ih 128 … --tile-oh 32`（旧 `ih≤63` 硬边界外） | `mismatch=0` ✓ |
+| R3 | `min_conv_exp --iw 16 --ih 16 --ic 32 --oc 32 --kw 3 --kh 3 --pad 1` | `OUT-HASH 93b5be45` ✓ |
+| R4 | 同上 + `--task-count 3 --task-blocks`（每 subcore 1 个） | `ret=0` + **同哈希** ✓ |
+| R5 | `wgrad_real`(64×64 int8) 不切分 | **BIT-EXACT** ✓ |
+| R6 | 同上 + `--tile-oh 16` | **BIT-EXACT + CLOSED-LOOP OK** ✓ |
+
+板子：soft reset 89 → 89 ✓、**楔死签名 0** ✓。
+离线自检：`rknpu_trace_report.py --check trace_report_baseline.txt` ⇒ **差异 0 处** ✓；
+台账 §7.x 章节 127 ↔ 索引条目 127 ✓（一致 ✓）；handoff 结构完好（10 `##` / 49 `###`）✓。

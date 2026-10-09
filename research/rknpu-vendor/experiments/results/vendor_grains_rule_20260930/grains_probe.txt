@@ -1,0 +1,41 @@
+# §7.32 vendor FEATURE_GRAINS 口径 = ih + kh + pad_top  Wed Sep 30 13:17:33 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) fp16 3x3p1（vendor = ih+4）：旧 52 在 ih≥54 起结构性算错
+fp16 3x3 iw16 ih54 grains=52 (旧)       RESULT: MISMATCH                             GRAINS=52  max|diff|=9.89648  max ulp=34098
+fp16 3x3 iw16 ih54 grains=58 (vendor)    RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=58  max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw16 ih54 grains=auto           RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=130 max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw16 ih64 grains=52 (旧)       RESULT: MISMATCH                             GRAINS=52  max|diff|=15.0254  max ulp=35864
+fp16 3x3 iw16 ih64 grains=68 (vendor)    RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=68  max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw16 ih64 grains=auto           RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=130 max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw16 ih100 grains=52 (旧)      RESULT: MISMATCH                             GRAINS=52  max|diff|=12.4629  max ulp=35856
+fp16 3x3 iw16 ih100 grains=104 (vendor)  RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=104 max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw16 ih100 grains=auto          RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=130 max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw8  ih100 grains=52 (旧)      RESULT: MISMATCH                             GRAINS=52  max|diff|=16.4941  max ulp=36185
+fp16 3x3 iw8  ih100 grains=104 (vendor)  RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=104 max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw8  ih100 grains=auto          RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=258 max|diff|=9.53674e-07  max ulp=4
+
+## B) 其它 kernel/pad（vendor 口径含 pad_top）
+fp16 1x1p0 iw16 ih64 grains=52 (旧)     RESULT: MISMATCH                             GRAINS=52  max|diff|=6.96484  max ulp=34090
+fp16 1x1p0 iw16 ih64 grains=65 (vendor)  RESULT: BIT-EXACT (fp16)                     GRAINS=65  max|diff|=0  max ulp=0
+fp16 1x1p0 iw16 ih64 grains=auto         RESULT: BIT-EXACT (fp16)                     GRAINS=130 max|diff|=0  max ulp=0
+fp16 5x5p2 iw16 ih64 grains=52 (旧)     RESULT: MISMATCH                             GRAINS=52  max|diff|=14.2949  max ulp=35215
+fp16 5x5p2 iw16 ih64 grains=71 (vendor)  RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=71  max|diff|=9.53674e-07  max ulp=4
+fp16 5x5p2 iw16 ih64 grains=auto         RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=130 max|diff|=9.53674e-07  max ulp=4
+
+## C) 大 tile（>2 bank，bank 由 auto-cfg 负责）
+fp16 3x3 iw16 ic64 ih100 grains=52 (旧) RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=52  max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw16 ic64 ih100 grains=104 (vendor) RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=104 max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw16 ic64 ih100 grains=auto     RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=104 max|diff|=9.53674e-07  max ulp=4
+fp16 3x3 iw16 ic128 ih24 grains=52 (旧) RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=52  max|diff|=4.76837e-07  max ulp=8
+fp16 3x3 iw16 ic128 ih24 grains=28 (vendor) RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=28  max|diff|=4.76837e-07  max ulp=8
+fp16 3x3 iw16 ic128 ih24 grains=auto     RESULT: ULP-EXACT (<=16 ulp)                 GRAINS=80  max|diff|=4.76837e-07  max ulp=8
+
+## D) int8 对照
+int8 3x3 iw16 ic128 ih64 grains=52 (旧) RESULT: BIT-EXACT (floor)                    GRAINS=52  
+int8 3x3 iw16 ic128 ih64 grains=68 (vendor) RESULT: BIT-EXACT (floor)                    GRAINS=68  
+int8 3x3 iw16 ic128 ih64 grains=auto     RESULT: BIT-EXACT (floor)                    GRAINS=80  
+int8 3x3 iw16 ic160 ih16 grains=52 (旧) RESULT: BIT-EXACT (floor)                    GRAINS=52  
+int8 3x3 iw16 ic160 ih16 grains=20 (vendor) RESULT: BIT-EXACT (floor)                    GRAINS=20  
+int8 3x3 iw16 ic160 ih16 grains=auto     RESULT: BIT-EXACT (floor)                    GRAINS=80  

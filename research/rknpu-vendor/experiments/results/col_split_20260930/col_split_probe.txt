@@ -1,0 +1,38 @@
+# §7.35 输出列切分（列 × 行 × ic）  Wed Sep 30 13:35:18 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) 单行超 bank：iw1024 ic256 ih8 1×1（行 = 512 KB = 16 bank > 可用 11）
+   # 期望：全部 BIT-EXACT 且 hash 相同（列/行/ic 的任意组合都不改变结果）
+不切分（越界）            hash=e16482e5  RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) fp16-mismatch=91450  max|diff|=6.5957  max ulp=34089                  
+tile-auto（自动列切）      hash=e86f99c0  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0 14 tile(s)  tile=4x160 
+ic-groups 4 + auto               hash=e86f99c0  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0 4 tile(s)  tile=4x640 4 group
+    IC-SPLIT: 4 partial(s), 131072 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+ic-groups 16 + auto              hash=e86f99c0  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0 2 tile(s)  tile=5x1024 8 group
+    IC-SPLIT: 8 partial(s), 131072 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+显式 --tile-ow 128             hash=e86f99c0  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0 16 tile(s)  tile=5x128 
+显式 --tile-ow 256             hash=716ae4b8  RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) fp16-mismatch=65536  max|diff|=52.002  max ulp=37711 8 tile(s)  tile=4x256 
+显式 --tile-oh 4 --tile-ow 256 hash=716ae4b8  RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) fp16-mismatch=65536  max|diff|=52.002  max ulp=37711 8 tile(s)  tile=4x256 
+
+## B) 3×3 宽输入（行字节 32 KB，×4 行 ≤ bank 时不切列）
+iw512 ic32 ih16 3x3p1 不切分  hash=102fbb80  RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) fp16-mismatch=60858  max|diff|=55.1758  max ulp=38525                  
+iw512 ic32 ih16 3x3p1 auto       hash=183bbfb5  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=10157  max|diff|=9.53674e-07  max ulp=4 2 tile(s)  tile=8x512 
+
+## C) 列切 + pad（pad 非 0 时首/末列 tile 的 pad_left 下调）
+iw256 ic64 ih8 3x3p1 不切分   hash=ba3c6e94  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=2160  max|diff|=9.53674e-07  max ulp=4                  
+iw256 ic64 ih8 3x3p1 auto        hash=ba3c6e94  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=2160  max|diff|=9.53674e-07  max ulp=4 1 tile(s)  tile=8x256 
+   # 强制列切以覆盖 pad_left 下调（首/内/末列 tile）：--tile-ow 64
+iw256 ic64 ih8 3x3p1 --tile-ow 64 hash=ba3c6e94  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=2160  max|diff|=9.53674e-07  max ulp=4 4 tile(s)  tile=8x64 
+iw256 ic64 ih8 3x3p1 --tile-ow 64 --tile-oh 4 hash=ba3c6e94  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=2160  max|diff|=9.53674e-07  max ulp=4 8 tile(s)  tile=4x64 
+
+## D) 三维：列 × 行 × ic（iw1024 ic256 ih32 1×1）
+不切分                        hash=80c00185  RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) fp16-mismatch=409498  max|diff|=6.5957  max ulp=34089                  
+ic4 + auto（列+行+ic）       hash=8e913482  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0 16 tile(s)  tile=4x640 4 group
+    IC-SPLIT: 4 partial(s), 524288 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+
+## E) 不回归：既有形状 hash 应与 §7.31/§7.33/§7.34 一致
+ic16 3x3p1 ih16                  hash=533d6b86  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=280  max|diff|=9.53674e-07  max ulp=4                  
+ic128 3x3p1 ih16 groups4         hash=3606092d  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=130  max|diff|=4.76837e-07  max ulp=2                  4 group
+    IC-SPLIT: 4 partial(s), 4096 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+ic256 ih400 1x1 groups4+tile     hash=a452fec0  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0 3 tile(s)  tile=160x16 4 group
+    IC-SPLIT: 4 partial(s), 102400 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0

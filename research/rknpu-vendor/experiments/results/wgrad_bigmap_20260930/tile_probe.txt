@@ -1,0 +1,62 @@
+# §7.49 更大特征图 + 深 ic 的训练闭环  Wed Sep 30 15:08:16 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) 默认 8x8（回归）
+    F16 FWD b=0 total=1024 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=27/27 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=1024 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+
+## B) 16x16（输入 16·16·2·IC B）
+  -- m16_ic32 -DIW=16 -DIH=16 -DIC=32 -DOC=32 --
+    F16 FWD b=0 total=8192 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=288/288 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+  -- m16_ic128 -DIW=16 -DIH=16 -DIC=128 -DOC=32 --
+    F16 FWD b=0 total=8192 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=1152/1152 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+
+## C) 32x32
+  -- m32_ic32 -DIW=32 -DIH=32 -DIC=32 -DOC=32 --
+    F16 FWD b=0 total=32768 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=288/288 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=32768 mismatch=2 (hard=0) vs CPU(W') RESULT: ULP-EXACT (<=16 ulp)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+  -- m32_ic128 -DIW=32 -DIH=32 -DIC=128 -DOC=32 --
+    F16 FWD b=0 total=32768 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=1152/1152 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=32768 mismatch=11 (hard=0) vs CPU(W') RESULT: ULP-EXACT (<=16 ulp)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+
+## E) 前向行切分（§7.53）：切分结果必须与不切分逐位一致
+  -- 16x16 IC32 不切分（对照）--
+    F16 FWD b=0 total=8192 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=288/288 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+  -- 16x16 IC32 --tile-oh 8 --
+    F16 FWD b=0 total=8192 mismatch=0 RESULT: BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+  -- 16x16 IC32 --tile-oh 4 --
+    F16 FWD b=0 total=8192 mismatch=0 RESULT: BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+  -- 16x16 IC32 --tile-oh 2 --
+    F16 FWD b=0 total=8192 mismatch=0 RESULT: BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+  -- 64x64 IC64 --tile-oh 16（输入 16 bank > 包线，靠切分）仅前向 --
+    F16 FWD b=0 total=131072 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WARN: 输入 tile 131072 B 需 4 data bank，而权重占 9 bank 后仅剩 3 ⇒ CBUF 容量越界（§7.31），硬件会静默算错；请减小 IW/IH/IC 或按行切分
+    SUBMIT skipped: CBUF 容量越界（见 WARN）⇒ 请减小 IW/IH/IC
+
+## D) pad0（OW_P0/OH_P0 路径）
+    F16 FWD b=0 total=6272 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=288/288 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=6272 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)

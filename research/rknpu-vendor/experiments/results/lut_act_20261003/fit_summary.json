@@ -1,0 +1,57 @@
+{
+  "family": "activation_lut_q15",
+  "reg": "0x4104",
+  "scale": 32767,
+  "capture": "EPERF_RKNPU_REGCMD_MAX_BYTES=4096",
+  "traces": {
+    "sigmoid_fp16": {
+      "bursts": [
+        443,
+        443,
+        443,
+        443
+      ],
+      "n_entries": 443,
+      "start": 1,
+      "n": 442,
+      "range": [
+        59,
+        9640
+      ],
+      "monotone_nondecr": true,
+      "model": "y=round(32767*sigmoid(a*i+c))",
+      "a": 0.012324184497267817,
+      "c": -6.3099898736609195,
+      "rmse": 0.14742105403832362,
+      "max_abs": 0.5190181024227059,
+      "exact_le_0.5": 0.9909502262443439
+    },
+    "tanh_fp16": {
+      "bursts": [
+        443,
+        443,
+        443,
+        443
+      ],
+      "n_entries": 443,
+      "start": 1,
+      "n": 442,
+      "range": [
+        -32611,
+        -12973
+      ],
+      "monotone_nondecr": true,
+      "model": "y=round(32767*tanh(a*i+c))",
+      "a": 0.005898464308026368,
+      "c": -3.0200106994041405,
+      "rmse": 0.14306321927564167,
+      "max_abs": 0.5129064066968567,
+      "exact_le_0.5": 0.9932126696832579
+    }
+  },
+  "conclusion": {
+    "sigmoid": "32767*sigma(0.012324*i-6.3100)  max 0.5 LSB",
+    "tanh": "32767*tanh(0.005898*i-3.0200)  max 0.5 LSB",
+    "note": "Q15 fixed-point; write order within burst = index order (monotone); overturns S7.141/S7.174 non-sigmoid conclusion"
+  }
+}

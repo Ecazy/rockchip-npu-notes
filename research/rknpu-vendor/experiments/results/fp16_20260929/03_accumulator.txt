@@ -1,0 +1,25 @@
+# §7.17 FP16 证据归档
+# 日期: 2026-09-29T23:31:28+08:00
+# 板: orangepi5plus  6.1.43-rockchip-rk3588-rknpu098  RKNPU driver: v0.9.8
+# min_conv_exp.c sha256: 58fd584ca8886c70c9e604631eb2b5373d2738494abbb4cf61a35b4be752f530
+
+########## 3) 累加器精度 + ic 对齐（--in-cancel / --ic-pad）
+
+=== 累加器精度：期望 fp32 累加 = 1.0，fp16 逐步累加 = 0.0 ===
+  ic=3:   P[oc=0 x=0 y=0] hw=1 ref=1
+  ic=8:   P[oc=0 x=0 y=0] hw=1 ref=1
+  ic=16:   P[oc=0 x=0 y=0] hw=1 ref=1
+  ic=32:   P[oc=0 x=0 y=0] hw=1 ref=1
+=== ic 对齐规则（--ic-pad 覆盖 c.ic）===
+  ic=17  ic-pad=0    RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=17  ic-pad=24   RESULT: MISMATCH       fp16-mismatch=460
+  ic=17  ic-pad=32   RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=17  ic-pad=40   RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=17  ic-pad=48   RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=17  ic-pad=64   RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=33  ic-pad=0    RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=33  ic-pad=24   RESULT: MISMATCH       fp16-mismatch=458
+  ic=33  ic-pad=32   RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=33  ic-pad=40   RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=33  ic-pad=48   RESULT: BIT-EXACT (fp16) fp16-mismatch=0
+  ic=33  ic-pad=64   RESULT: BIT-EXACT (fp16) fp16-mismatch=0

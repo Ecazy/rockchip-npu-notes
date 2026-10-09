@@ -1,0 +1,188 @@
+=== task_index=0 op_idx=1 entries=69 ===
+  DPU_S_POINTER                      = 0x0000000e  POINTER_PP_MODE=1 | EXECUTER_PP_EN=1 | POINTER_PP_EN=1
+  DPU_RDMA_RDMA_S_POINTER            = 0x0000000e  POINTER_PP_MODE=1 | EXECUTER_PP_EN=1 | POINTER_PP_EN=1
+  DPU_FEATURE_MODE_CFG               = 0x000081e5  SURF_LEN=64 | BURST_LEN=15 | OUTPUT_MODE=2 | FLYING_MODE=1
+  DPU_DATA_FORMAT                    = 0x24000001  OUT_PRECISION=1 | IN_PRECISION=1 | PROC_PRECISION=1
+  DPU_OFFSET_PEND                    = 0x00000000
+  DPU_DST_BASE_ADDR                  = 0xffff9c00  DST_BASE_ADDR=4294941696
+  DPU_DST_SURF_STRIDE                = 0x00000080  DST_SURF_STRIDE=8
+  DPU_DATA_CUBE_WIDTH                = 0x00000007  WIDTH=7
+  DPU_DATA_CUBE_HEIGHT               = 0x00000007  HEIGHT=7
+  DPU_DATA_CUBE_NOTCH_ADDR           = 0x00000000
+  DPU_DATA_CUBE_CHANNEL              = 0x00070007  ORIG_CHANNEL=7 | CHANNEL=7
+  DPU_BS_CFG                         = 0x00000053  BS_RELU_BYPASS=1 | BS_MUL_BYPASS=1 | BS_ALU_BYPASS=1 | BS_BYPASS=1
+  DPU_BS_ALU_CFG                     = 0x00000000
+  DPU_BS_MUL_CFG                     = 0x00000000
+  DPU_BS_RELUX_CMP_VALUE             = 0x00000000
+  DPU_BS_OW_CFG                      = 0x080007fe  TP_ORG_EN=1 | SIZE_E_2=7 | SIZE_E_1=7 | SIZE_E_0=7 | OD_BYPASS=1
+  DPU_BS_OW_OP                       = 0x00000000
+  DPU_WDMA_SIZE_0                    = 0x08000007  TP_PRECISION=1 | CHANNEL_WDMA=7
+  DPU_WDMA_SIZE_1                    = 0x00010003  HEIGHT_WDMA=1 | WIDTH_WDMA=3
+  DPU_BN_CFG                         = 0x00000053  BN_RELU_BYPASS=1 | BN_MUL_BYPASS=1 | BN_ALU_BYPASS=1 | BN_BYPASS=1
+  DPU_BN_ALU_CFG                     = 0x00000000
+  DPU_BN_MUL_CFG                     = 0x00000000
+  DPU_BN_RELUX_CMP_VALUE             = 0x00000000
+  DPU_EW_CFG                         = 0x00000383  EW_RELU_BYPASS=1 | EW_OP_CVT_BYPASS=1 | EW_LUT_BYPASS=1 | EW_OP_BYPASS=1 | EW_BYPASS=1
+  DPU_EW_CVT_OFFSET_VALUE            = 0x00000000
+  DPU_EW_CVT_SCALE_VALUE             = 0x00000001  EW_OP_CVT_SCALE=1
+  DPU_EW_RELUX_CMP_VALUE             = 0x00000000
+  DPU_OUT_CVT_OFFSET                 = 0x00000000
+  DPU_OUT_CVT_SCALE                  = 0x00000001  OUT_CVT_SCALE=1
+  DPU_OUT_CVT_SHIFT                  = 0x00000000
+  DPU_EW_OP_VALUE_0                  = 0x00000000
+  DPU_EW_OP_VALUE_1                  = 0x00000000
+  DPU_EW_OP_VALUE_2                  = 0x00000000
+  DPU_EW_OP_VALUE_3                  = 0x00000000
+  DPU_EW_OP_VALUE_4                  = 0x00000000
+  DPU_EW_OP_VALUE_5                  = 0x00000000
+  DPU_EW_OP_VALUE_6                  = 0x00000000
+  DPU_EW_OP_VALUE_7                  = 0x00000000
+  DPU_SURFACE_ADD                    = 0x00000400  SURF_ADD=64
+  0x40c4                             = 0x00000000
+  DPU_LUT_ACCESS_CFG                 = 0x00000000
+  DPU_LUT_ACCESS_DATA                = 0x00000000
+  DPU_LUT_CFG                        = 0x00000000
+  DPU_LUT_INFO                       = 0x00000000
+  DPU_LUT_LE_START                   = 0x00000000
+  DPU_LUT_LE_END                     = 0x00000000
+  DPU_LUT_LO_START                   = 0x00000000
+  DPU_LUT_LO_END                     = 0x00000000
+  DPU_LUT_LE_SLOPE_SCALE             = 0x00000000
+  DPU_LUT_LE_SLOPE_SHIFT             = 0x00000000
+  DPU_LUT_LO_SLOPE_SCALE             = 0x00000000
+  DPU_LUT_LO_SLOPE_SHIFT             = 0x00000000
+  DPU_RDMA_RDMA_DATA_CUBE_WIDTH      = 0x00000007  WIDTH=7
+  DPU_RDMA_RDMA_DATA_CUBE_HEIGHT     = 0x00000007  HEIGHT=7
+  DPU_RDMA_RDMA_DATA_CUBE_CHANNEL    = 0x00000007  CHANNEL=7
+  DPU_RDMA_RDMA_SRC_BASE_ADDR        = 0xffff8000  SRC_BASE_ADDR=4294934528
+  DPU_RDMA_RDMA_BRDMA_CFG            = 0x00000000
+  DPU_RDMA_RDMA_BS_BASE_ADDR         = 0x00000000
+  DPU_RDMA_RDMA_NRDMA_CFG            = 0x00000000
+  DPU_RDMA_RDMA_BN_BASE_ADDR         = 0x00000000
+  DPU_RDMA_RDMA_ERDMA_CFG            = 0x00000001  ERDMA_DISABLE=1
+  DPU_RDMA_RDMA_EW_BASE_ADDR         = 0x00000000
+  DPU_RDMA_RDMA_EW_SURF_STRIDE       = 0x00000000
+  DPU_RDMA_RDMA_FEATURE_MODE_CFG     = 0x0000f821  IN_PRECISION=1 | BURST_LEN=15 | PROC_PRECISION=1 | FLYING_MODE=1
+  DPU_RDMA_RDMA_SRC_DMA_CFG          = 0x00000000
+  DPU_RDMA_RDMA_SURF_NOTCH           = 0x00000000
+  DPU_RDMA_RDMA_PAD_CFG              = 0x00000000
+  DPU_RDMA_RDMA_WEIGHT               = 0x01010101  E_WEIGHT=1 | N_WEIGHT=1 | B_WEIGHT=1 | M_WEIGHT=1
+  DPU_RDMA_RDMA_EW_SURF_NOTCH        = 0x00000000
+  PC_BASE_ADDRESS                    = 0xffffc480  PC_SOURCE_ADDR=268434504
+  PC_REGISTER_AMOUNTS                = 0x00000037  PC_DATA_AMOUNT=55
+  PC_VERSION                         = 0x00000000
+  PC_OPERATION_ENABLE                = 0x00000018  RESERVED_0=12
+  PC_VERSION                         = 0x00000000
+=== task_index=1 op_idx=2 entries=108 ===
+  CNA_CBUF_CON0                      = 0x000000b1  WEIGHT_BANK=11 | DATA_BANK=1
+  CNA_DCOMP_REGNUM                   = 0x00000000
+  CNA_DCOMP_CTRL                     = 0x00000000
+  CNA_CONV_CON1                      = 0x00000120  PROC_PRECISION=2 | IN_PRECISION=2
+  DPU_S_POINTER                      = 0x0000000e  POINTER_PP_MODE=1 | EXECUTER_PP_EN=1 | POINTER_PP_EN=1
+  CNA_CONV_CON1                      = 0x00000120  PROC_PRECISION=2 | IN_PRECISION=2
+  CNA_CONV_CON2                      = 0x00000090  FEATURE_GRAINS=9
+  CNA_CONV_CON3                      = 0x00000009  CONV_Y_STRIDE=1 | CONV_X_STRIDE=1
+  CNA_DATA_SIZE0                     = 0x00080008  DATAIN_WIDTH=8 | DATAIN_HEIGHT=8
+  CNA_DATA_SIZE1                     = 0x00070008  DATAIN_CHANNEL_REAL=7 | DATAIN_CHANNEL=8
+  CNA_DATA_SIZE2                     = 0x00000008  DATAOUT_WIDTH=8
+  CNA_DATA_SIZE3                     = 0x00000040  DATAOUT_ATOMICS=64
+  CNA_WEIGHT_SIZE0                   = 0x00000010  WEIGHT_BYTES=16
+  CNA_WEIGHT_SIZE1                   = 0x00000010  WEIGHT_BYTES_PER_KERNEL=16
+  CNA_WEIGHT_SIZE2                   = 0x01010001  WEIGHT_WIDTH=1 | WEIGHT_HEIGHT=1 | WEIGHT_KERNELS=1
+  CNA_CBUF_CON0                      = 0x000000b1  WEIGHT_BANK=11 | DATA_BANK=1
+  CNA_CBUF_CON1                      = 0x00000002  DATA_ENTRIES=2
+  CNA_CVT_CON0                       = 0x0000000b  DATA_SIGN=1 | CVT_TYPE=1 | CVT_BYPASS=1
+  CNA_CVT_CON1                       = 0x00010000  CVT_SCALE0=1
+  CNA_CVT_CON2                       = 0x00010000  CVT_SCALE1=1
+  CNA_CVT_CON3                       = 0x00010000  CVT_SCALE2=1
+  CNA_CVT_CON4                       = 0x00010000  CVT_SCALE3=1
+  CNA_FC_CON0                        = 0x00000000
+  CNA_FC_CON1                        = 0x00000000
+  CNA_PAD_CON0                       = 0x00000000
+  CNA_FEATURE_DATA_ADDR              = 0xffff9c00  FEATURE_BASE_ADDR=4294941696
+  CNA_FC_CON2                        = 0x00000000
+  CNA_DMA_CON0                       = 0x000f000f  WEIGHT_BURST_LEN=15 | DATA_BURST_LEN=15
+  CNA_DMA_CON1                       = 0x00000020  LINE_STRIDE=32
+  CNA_DMA_CON2                       = 0x00000020  SURF_STRIDE=32
+  CNA_FC_DATA_SIZE0                  = 0x00080008  DMA_WIDTH=8 | DMA_HEIGHT=8
+  CNA_FC_DATA_SIZE1                  = 0x00000008  DMA_CHANNEL=8
+  CNA_DCOMP_CTRL                     = 0x00000000
+  CNA_DCOMP_REGNUM                   = 0x00000000
+  CNA_DCOMP_ADDR0                    = 0xffffc1c0  DECOMPRESS_ADDR0=4294951360
+  CNA_DCOMP_AMOUNT0                  = 0x00000000
+  CNA_DCOMP_AMOUNT1                  = 0x00000000
+  CNA_DCOMP_AMOUNT2                  = 0x00000000
+  CNA_DCOMP_AMOUNT3                  = 0x00000000
+  CNA_DCOMP_AMOUNT4                  = 0x00000000
+  CNA_DCOMP_AMOUNT5                  = 0x00000000
+  CNA_DCOMP_AMOUNT6                  = 0x00000000
+  CNA_DCOMP_AMOUNT7                  = 0x00000000
+  CNA_DCOMP_AMOUNT8                  = 0x00000000
+  CNA_DCOMP_AMOUNT9                  = 0x00000000
+  CNA_DCOMP_AMOUNT10                 = 0x00000000
+  CNA_DCOMP_AMOUNT11                 = 0x00000000
+  CNA_DCOMP_AMOUNT12                 = 0x00000000
+  CNA_DCOMP_AMOUNT13                 = 0x00000000
+  CNA_DCOMP_AMOUNT14                 = 0x00000000
+  CNA_DCOMP_AMOUNT15                 = 0x00000000
+  CNA_CVT_CON5                       = 0x00000000
+  CNA_PAD_CON1                       = 0x00000000
+  CORE_MISC_CFG                      = 0x00000200  PROC_PRECISION=2
+  CORE_DATAOUT_SIZE_0                = 0x00070007  DATAOUT_HEIGHT=7 | DATAOUT_WIDTH=7
+  CORE_DATAOUT_SIZE_1                = 0x0000000f  DATAOUT_CHANNEL=15
+  CORE_CLIP_TRUNCATE                 = 0x00000000
+  0x3030                             = 0x00000000
+  DPU_FEATURE_MODE_CFG               = 0x000001e4  BURST_LEN=15 | OUTPUT_MODE=2
+  DPU_DATA_FORMAT                    = 0x48000002  OUT_PRECISION=2 | IN_PRECISION=2 | PROC_PRECISION=2
+  DPU_OFFSET_PEND                    = 0x00000000
+  DPU_DST_BASE_ADDR                  = 0xffffa440  DST_BASE_ADDR=4294943808
+  DPU_DST_SURF_STRIDE                = 0x00000400  DST_SURF_STRIDE=64
+  DPU_DATA_CUBE_WIDTH                = 0x00000007  WIDTH=7
+  DPU_DATA_CUBE_HEIGHT               = 0x00000007  HEIGHT=7
+  DPU_DATA_CUBE_NOTCH_ADDR           = 0x00000000
+  DPU_DATA_CUBE_CHANNEL              = 0x0000000f  CHANNEL=15
+  DPU_BS_CFG                         = 0x00000042  BS_RELU_BYPASS=1 | BS_ALU_BYPASS=1
+  DPU_BS_ALU_CFG                     = 0x00000000
+  DPU_BS_MUL_CFG                     = 0x35a80000  BS_MUL_OPERAND=13736
+  DPU_BS_RELUX_CMP_VALUE             = 0x00000000
+  DPU_BS_OW_CFG                      = 0x00000126  SIZE_E_2=1 | SIZE_E_1=1 | SIZE_E_0=1 | OD_BYPASS=1
+  DPU_BS_OW_OP                       = 0x00000000
+  DPU_WDMA_SIZE_0                    = 0x0000000f  CHANNEL_WDMA=15
+  DPU_WDMA_SIZE_1                    = 0x00070007  HEIGHT_WDMA=7 | WIDTH_WDMA=7
+  DPU_BN_CFG                         = 0x00000042  BN_RELU_BYPASS=1 | BN_ALU_BYPASS=1
+  DPU_BN_ALU_CFG                     = 0x00000000
+  DPU_BN_MUL_CFG                     = 0xb5a80000  BN_MUL_OPERAND=46504
+  DPU_BN_RELUX_CMP_VALUE             = 0x00000000
+  DPU_EW_CFG                         = 0x00000383  EW_RELU_BYPASS=1 | EW_OP_CVT_BYPASS=1 | EW_LUT_BYPASS=1 | EW_OP_BYPASS=1 | EW_BYPASS=1
+  DPU_EW_CVT_OFFSET_VALUE            = 0x00000000
+  DPU_EW_CVT_SCALE_VALUE             = 0x00000001  EW_OP_CVT_SCALE=1
+  DPU_EW_RELUX_CMP_VALUE             = 0x00000000
+  DPU_OUT_CVT_OFFSET                 = 0x00000000
+  DPU_OUT_CVT_SCALE                  = 0x00010001  FP32TOFP16_EN=1 | OUT_CVT_SCALE=1
+  DPU_OUT_CVT_SHIFT                  = 0x00000000
+  DPU_EW_OP_VALUE_0                  = 0x00000000
+  DPU_EW_OP_VALUE_1                  = 0x00000000
+  DPU_EW_OP_VALUE_2                  = 0x00000000
+  DPU_EW_OP_VALUE_3                  = 0x00000000
+  DPU_EW_OP_VALUE_4                  = 0x00000000
+  DPU_EW_OP_VALUE_5                  = 0x00000000
+  DPU_EW_OP_VALUE_6                  = 0x00000000
+  DPU_EW_OP_VALUE_7                  = 0x00000000
+  DPU_SURFACE_ADD                    = 0x00000800  SURF_ADD=128
+  0x40c4                             = 0x00000000
+  DPU_LUT_ACCESS_CFG                 = 0x00000000
+  DPU_LUT_ACCESS_DATA                = 0x00000000
+  DPU_LUT_CFG                        = 0x00000000
+  DPU_LUT_INFO                       = 0x00000000
+  DPU_LUT_LE_START                   = 0x00000000
+  DPU_LUT_LE_END                     = 0x00000000
+  DPU_LUT_LO_START                   = 0x00000000
+  DPU_LUT_LO_END                     = 0x00000000
+  DPU_LUT_LE_SLOPE_SCALE             = 0x00000000
+  DPU_LUT_LE_SLOPE_SHIFT             = 0x00000000
+  DPU_LUT_LO_SLOPE_SCALE             = 0x00000000
+  DPU_LUT_LO_SLOPE_SHIFT             = 0x00000000
+  PC_BASE_ADDRESS                    = 0xffffc800  PC_SOURCE_ADDR=268434560
+  PC_REGISTER_AMOUNTS                = 0x00000040  PC_DATA_AMOUNT=64
+  PC_VERSION                         = 0x00000000
+  PC_OPERATION_ENABLE                = 0x0000000d  RESERVED_0=6 | OP_EN=1

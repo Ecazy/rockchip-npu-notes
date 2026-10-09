@@ -1,0 +1,25 @@
+# §7.39 带表 DPU 提交「逐次交替超时」刻画  Wed Sep 30 14:07:07 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) 现象：3 次热身 + 1 次测量（ret 序列，0=ok / -1=ETIMEDOUT）
+BS/BRDMA 表路径                 提交序列 ret=[0,-1,0]  
+BN/NRDMA 表路径                 提交序列 ret=[0,-1,0]  
+纯 conv（对照，无表）      提交序列 ret=[0,0,0]  RESULT: BIT-EXACT
+
+## B) 不变量：改 job_flags / pp_val / 表内容 / task 数，序列不变
+BS --job-flags 5                   提交序列 ret=[0,0,0]  
+BS --pp-val 0                      提交序列 ret=[0,-1,0]  
+BS --brdma-bias 0                  提交序列 ret=[0,-1,0]  
+BS --task-count 2                  提交序列 ret=[0,-1,0]  
+BS --task-count 3                  提交序列 ret=[0,-1,0]  
+
+## C) 失败提交的硬件侧证据（dmesg）
+  job timeout 计数                : 480
+  invalid irq status 计数         : 0
+  soft reset 计数                 : 480
+  require mask 分布               :     480 require mask: 0x300 
+  raw status 分布（前 5）         :     219 raw status: 0xc000002a      71 raw status: 0xc0000015      69 raw status: 0xc000000a      35 raw status: 0xc0000005      27 raw status: 0xc0000001 
+  最近一条超时明细：
+    [174387.621420] RKNPU: job timeout, flags: 0x0:
+    [174387.621436] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc000002a, require mask: 0x300, task counter: 0x0, elapsed time: 6293132us

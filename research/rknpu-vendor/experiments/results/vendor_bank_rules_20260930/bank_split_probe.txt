@@ -1,0 +1,31 @@
+# §7.38 CBUF bank 分配：vendor 口径核对 + 时序 + WEIGHT_BANK 下限  Wed Sep 30 13:59:06 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) 时序 vs bank 划分（输入需 4/8 bank；min over 8 runs，本板噪声 1.2–1.3×）
+S1 3x3 iw64 ih32 ic32: DB=4      min_hw=    52208 ns  RESULT: ULP-EXACT
+S1 3x3 iw64 ih32 ic32: DB=11     min_hw=    51624 ns  RESULT: ULP-EXACT
+S2 3x3 iw32 ih32 ic64 oc64: DB=4 min_hw=   117249 ns  RESULT: ULP-EXACT
+S2 3x3 iw32 ih32 ic64 oc64: DB=9 min_hw=   114916 ns  RESULT: ULP-EXACT
+S3 1x1 iw64 ih64 ic32: DB=8      min_hw=    80208 ns  RESULT: BIT-EXACT
+S3 1x1 iw64 ih64 ic32: DB=11     min_hw=    77875 ns  RESULT: BIT-EXACT
+
+## B) WEIGHT_BANK 下限（过小 ⇒ submit 6 s 超时；ok=0/3）
+  -- 描述符 73728 B（3 bank）：3x3 ic64 oc64 iw32 ih32 --
+WB=1 DB=11                       ok=0/3  
+WB=2 DB=10                       ok=3/3  RESULT: ULP-EXACT
+WB=3 DB=9                        ok=3/3  RESULT: ULP-EXACT
+  -- 描述符 147456 B（4.5 bank）：3x3 ic64 oc128 iw8 ih8 --
+WB=1 DB=11                       ok=0/3  
+WB=2 DB=10                       ok=3/3  RESULT: ULP-EXACT
+WB=3 DB=9                        ok=3/3  RESULT: ULP-EXACT
+  -- 描述符 663552 B（21 bank）：3x3 ic192 oc192 iw4 ih4 --
+WB=2 DB=10                       ok=0/3  
+WB=3 DB=9                        ok=3/3  RESULT: BIT-EXACT
+WB=4 DB=8                        ok=3/3  RESULT: BIT-EXACT
+
+## C) 离线判据（同目录 results/vendor_bank_rules_20260930/bank_rules.txt）
+  R1 grains == ih+kh+pad_top                : 85/85
+  R2 DATA_BANK >= ceil(in/32768)            : 85/85
+  R3 DATA_BANK + WEIGHT_BANK == 12          : 85/85
+  R4 WEIGHT_BANK == ceil(WEIGHT_SIZE0/32768): 18/18（真 vendor task）/ 0/67（Mesa 派生发射器）

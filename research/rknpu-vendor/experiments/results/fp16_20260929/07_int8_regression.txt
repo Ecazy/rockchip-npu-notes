@@ -1,0 +1,87 @@
+# §7.17 FP16 证据归档
+# 日期: 2026-09-29T23:31:31+08:00
+# 板: orangepi5plus  6.1.43-rockchip-rk3588-rknpu098  RKNPU driver: v0.9.8
+# min_conv_exp.c sha256: 58fd584ca8886c70c9e604631eb2b5373d2738494abbb4cf61a35b4be752f530
+
+########## 7) int8 硬化回归 74 例（确认 fp16 改动未回归 int8）
+
+=== A) 3x3 pad0/pad1, 17 shapes ===
+FAIL  3x3 8x8 pad0
+PASS  3x3 8x8 pad1
+PASS  3x3 16x16 pad0
+PASS  3x3 16x16 pad1
+PASS  3x3 32x32 pad0
+PASS  3x3 32x32 pad1
+PASS  3x3 16x8 pad0
+PASS  3x3 16x8 pad1
+PASS  3x3 8x16 pad0
+PASS  3x3 8x16 pad1
+PASS  3x3 12x8 pad0
+PASS  3x3 12x8 pad1
+PASS  3x3 8x12 pad0
+PASS  3x3 8x12 pad1
+PASS  3x3 16x12 pad0
+PASS  3x3 16x12 pad1
+PASS  3x3 12x16 pad0
+PASS  3x3 12x16 pad1
+PASS  3x3 20x8 pad0
+PASS  3x3 20x8 pad1
+PASS  3x3 8x20 pad0
+PASS  3x3 8x20 pad1
+PASS  3x3 11x7 pad0
+PASS  3x3 11x7 pad1
+PASS  3x3 7x11 pad0
+PASS  3x3 7x11 pad1
+PASS  3x3 9x5 pad0
+PASS  3x3 9x5 pad1
+PASS  3x3 5x9 pad0
+PASS  3x3 5x9 pad1
+PASS  3x3 16x24 pad0
+PASS  3x3 16x24 pad1
+PASS  3x3 24x16 pad0
+PASS  3x3 24x16 pad1
+=== B) IC=1 pad0/pad1, 10 shapes ===
+PASS  IC=1 3x3 8x8 pad0
+PASS  IC=1 3x3 8x8 pad1
+PASS  IC=1 3x3 16x8 pad0
+PASS  IC=1 3x3 16x8 pad1
+PASS  IC=1 3x3 8x16 pad0
+PASS  IC=1 3x3 8x16 pad1
+PASS  IC=1 3x3 12x8 pad0
+PASS  IC=1 3x3 12x8 pad1
+PASS  IC=1 3x3 8x12 pad0
+PASS  IC=1 3x3 8x12 pad1
+PASS  IC=1 3x3 16x16 pad0
+PASS  IC=1 3x3 16x16 pad1
+PASS  IC=1 3x3 24x16 pad0
+PASS  IC=1 3x3 24x16 pad1
+PASS  IC=1 3x3 16x24 pad0
+PASS  IC=1 3x3 16x24 pad1
+PASS  IC=1 3x3 7x11 pad0
+PASS  IC=1 3x3 7x11 pad1
+PASS  IC=1 3x3 11x7 pad0
+PASS  IC=1 3x3 11x7 pad1
+=== C) 1x1 pad0/pad1, 4 shapes ===
+PASS  1x1 16x8 pad0
+PASS  1x1 16x8 pad1
+PASS  1x1 8x16 pad0
+PASS  1x1 8x16 pad1
+PASS  1x1 12x16 pad0
+PASS  1x1 12x16 pad1
+PASS  1x1 8x12 pad0
+PASS  1x1 8x12 pad1
+=== D) variants (default 8x8 unless noted) ===
+PASS  3x3 ic=8 pad1
+PASS  3x3 ic=16 pad1
+PASS  3x3 ic=32 pad1
+PASS  3x3 ic=40 pad1
+PASS  3x3 ic=65 pad1
+PASS  oc=40 pad1
+PASS  stride2 pad1
+PASS  stride3 pad1
+PASS  kw3xkh1 pad1
+PASS  kw1xkh3 pad1
+PASS  pad2
+PASS  kw5xkh5 pad1
+==================================
+TOTAL: pass=73 fail=1

@@ -1,0 +1,154 @@
+########################################################################
+# RKNPU DPU ReLU 实测原始日志
+# 板：Orange Pi 5 Plus / kernel 6.1.43-rockchip-rk3588-rknpu098 / RKNPU v0.9.8
+# 日期：2026-09-27
+########################################################################
+
+========================================================================
+==== relu_r1.log —— 第一轮：ReLU 开关（被 offset=-128 钳位掩盖）
+========================================================================
+src sha256: cc6122c9df24b425
+
+########## R0 回归（不开 ReLU）
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.025 ms  hw_elapse=15167 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RELU refs: vs-max=0  vs-relu(pre-requant)=0  vs-relu(post-requant)=1024
+  RESULT: BIT-EXACT (floor)
+
+########## R1 ReLU 开启：看哪个参考命中
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --relu
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.040 ms  hw_elapse=21583 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RELU refs: vs-max=0  vs-relu(pre-requant)=0  vs-relu(post-requant)=1024
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 8 --oc 8 --relu
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.204 ms  hw_elapse=134748 ns
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=8 ic=16 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RELU refs: vs-max=0  vs-relu(pre-requant)=0  vs-relu(post-requant)=512
+  RESULT: BIT-EXACT (floor)
+
+########## R2 反例：3x3 带 pad
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --relu --iw 16 --ih 16
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.272 ms  hw_elapse=93916 ns
+  total=2048  floor-mismatch=55 (max abs diff 6)  round-mismatch=55
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RELU refs: vs-max=55  vs-relu(pre-requant)=55  vs-relu(post-requant)=2048
+  RESULT: MISMATCH
+
+###### done
+
+========================================================================
+==== relu_r2.log —— 第二轮：out-zp=128 让 ReLU 可观测
+========================================================================
+src sha256: f33091abee72953f
+
+########## S1 offset=0（out-zp=128）：ReLU 应当可观测
+### --pattern --pad 1 --pad-con1 0 --auto-fix --out-zp 128 --ic 3 --oc 16
+SUBMIT ret=0 errno=-  0.113 ms  hw_elapse=53958 ns
+-- CPU reference check (scale=16385 shift=14 offset=0) --
+  total=1024  floor-mismatch=43 (max abs diff 1)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RELU refs: vs-max=43  vs-relu(pre-requant)=43  vs-relu(post-requant)=43
+  RESULT: BIT-EXACT (round)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --out-zp 128 --ic 3 --oc 16 --relu
+SUBMIT ret=0 errno=-  0.096 ms  hw_elapse=80208 ns
+-- CPU reference check (scale=16385 shift=14 offset=0) --
+  total=1024  floor-mismatch=43 (max abs diff 6)  round-mismatch=43
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RELU refs: vs-max=43  vs-relu(pre-requant)=0  vs-relu(post-requant)=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --out-zp 128 --ic 8 --oc 8 --relu
+SUBMIT ret=0 errno=-  0.104 ms  hw_elapse=47542 ns
+-- CPU reference check (scale=16385 shift=14 offset=0) --
+  total=512  floor-mismatch=75 (max abs diff 7)  round-mismatch=75
+  CFG: ic_real=8 ic=16 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RELU refs: vs-max=75  vs-relu(pre-requant)=0  vs-relu(post-requant)=0
+  RESULT: MISMATCH
+
+########## S2 offset=-128 对照（ReLU 被钳位掩盖）
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --relu
+SUBMIT ret=0 errno=-  0.029 ms  hw_elapse=11959 ns
+-- CPU reference check (scale=16385 shift=14 offset=-128) --
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RELU refs: vs-max=0  vs-relu(pre-requant)=0  vs-relu(post-requant)=1024
+  RESULT: BIT-EXACT (floor)
+
+########## S3 iw=16 的 55 个 mismatch 是否与 ReLU 无关
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --iw 16 --ih 16
+SUBMIT ret=0 errno=-  0.106 ms  hw_elapse=48125 ns
+-- CPU reference check (scale=16385 shift=14 offset=-128) --
+  total=2048  floor-mismatch=55 (max abs diff 6)  round-mismatch=55
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RELU refs: vs-max=55  vs-relu(pre-requant)=55  vs-relu(post-requant)=2048
+  RESULT: MISMATCH
+
+###### done
+
+========================================================================
+==== relu_r3.log —— 第三轮：offset=-64/-32 区分 requant 前后；空间尺寸扫描
+========================================================================
+########## T1 offset=-64（out-zp=64）：区分 ReLU 在 requant 前/后
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --out-zp 64
+SUBMIT ret=0 errno=-  0.077 ms  hw_elapse=55124 ns
+-- CPU reference check (scale=16385 shift=14 offset=-64) --
+  total=1024  floor-mismatch=43 (max abs diff 1)  round-mismatch=0
+  RELU refs: vs-max=43  vs-relu(pre-requant)=43  vs-relu(post-requant)=1024
+  RESULT: BIT-EXACT (round)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --out-zp 64 --relu
+SUBMIT ret=0 errno=-  0.141 ms  hw_elapse=63583 ns
+-- CPU reference check (scale=16385 shift=14 offset=-64) --
+  total=1024  floor-mismatch=43 (max abs diff 6)  round-mismatch=43
+  RELU refs: vs-max=43  vs-relu(pre-requant)=0  vs-relu(post-requant)=1024
+  RESULT: MISMATCH
+
+########## T2 offset=-32
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --out-zp 96 --relu
+SUBMIT ret=0 errno=-  0.023 ms  hw_elapse=11375 ns
+-- CPU reference check (scale=16385 shift=14 offset=-32) --
+  total=1024  floor-mismatch=43 (max abs diff 6)  round-mismatch=43
+  RELU refs: vs-max=43  vs-relu(pre-requant)=0  vs-relu(post-requant)=1024
+  RESULT: MISMATCH
+
+########## T3 空间尺寸扫描（定位 iw>8 的既有偏差）
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --iw 8 --ih 8
+SUBMIT ret=0 errno=-  0.127 ms  hw_elapse=58333 ns
+-- CPU reference check (scale=16385 shift=14 offset=-128) --
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RELU refs: vs-max=0  vs-relu(pre-requant)=0  vs-relu(post-requant)=1024
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --iw 12 --ih 12
+SUBMIT ret=0 errno=-  0.091 ms  hw_elapse=62125 ns
+-- CPU reference check (scale=16385 shift=14 offset=-128) --
+  total=1536  floor-mismatch=65 (max abs diff 5)  round-mismatch=65
+  RELU refs: vs-max=65  vs-relu(pre-requant)=65  vs-relu(post-requant)=1536
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --iw 16 --ih 16
+SUBMIT ret=0 errno=-  0.123 ms  hw_elapse=55416 ns
+-- CPU reference check (scale=16385 shift=14 offset=-128) --
+  total=2048  floor-mismatch=55 (max abs diff 6)  round-mismatch=55
+  RELU refs: vs-max=55  vs-relu(pre-requant)=55  vs-relu(post-requant)=2048
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16 --iw 24 --ih 24
+SUBMIT ret=0 errno=-  0.042 ms  hw_elapse=25083 ns
+-- CPU reference check (scale=16385 shift=14 offset=-128) --
+  total=3072  floor-mismatch=77 (max abs diff 5)  round-mismatch=77
+  RELU refs: vs-max=77  vs-relu(pre-requant)=77  vs-relu(post-requant)=3072
+  RESULT: MISMATCH
+
+###### done

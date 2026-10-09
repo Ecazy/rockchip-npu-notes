@@ -1,0 +1,6 @@
+LayerNorm FP16 (1,8,8,8), axis=-1, gamma/beta distinctive
+independent fp32 reference (numpy) vs board output:
+maxdiff = 0.00704 (fp16 rounding level)
+first8 hw : 1.01367 3.52734 -1.47656 -0.48535 5.14453 -0.86279 0.28857 3.22070
+first8 ref: 1.01246  3.52491  -1.47744  -0.48485  5.14310  -0.86313  0.29041  3.22045
+VERIFIED: vendor LayerNorm lowering computes LN correctly on NPU.

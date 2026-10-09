@@ -1,0 +1,19 @@
+# §7.17 FP16 证据归档
+# 日期: 2026-09-29T23:31:30+08:00
+# 板: orangepi5plus  6.1.43-rockchip-rk3588-rknpu098  RKNPU driver: v0.9.8
+# min_conv_exp.c sha256: 58fd584ca8886c70c9e604631eb2b5373d2738494abbb4cf61a35b4be752f530
+
+########## 6) 冲激探针（ones / one-hot 分离权重与输入寻址）
+
+=== pix=8 watom=8 ===
+  ExpW hw(j) j=0..N: 2 2 2 2 2 2 2 2 0 0 0 0 0 0 0 0
+  ExpI hw(c0) c0=0..15: 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+=== pix=8 watom=16 ===
+  ExpW hw(j) j=0..N: 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+  ExpI hw(c0) c0=0..15: 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+=== pix=16 watom=16 ===
+  ExpW hw(j) j=0..N: 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+  ExpI hw(c0) c0=0..15: 2 2 2 2 2 2 2 2 0 0 0 0 0 0 0 0
+=== pix=16 watom=32 ===
+  ExpW hw(j) j=0..N: 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+  ExpI hw(c0) c0=0..15: 2 2 2 2 2 2 2 2 0 0 0 0 0 0 0 0

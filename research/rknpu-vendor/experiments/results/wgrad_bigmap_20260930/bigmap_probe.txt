@@ -1,0 +1,39 @@
+# §7.49 更大特征图 + 深 ic 的训练闭环  Wed Sep 30 14:55:07 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) 默认 8x8（回归）
+    F16 FWD b=0 total=1024 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=27/27 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=1024 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+
+## B) 16x16（输入 16·16·2·IC B）
+  -- m16_ic32 -DIW=16 -DIH=16 -DIC=32 -DOC=32 --
+    F16 FWD b=0 total=8192 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=288/288 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+  -- m16_ic128 -DIW=16 -DIH=16 -DIC=128 -DOC=32 --
+    F16 FWD b=0 total=8192 mismatch=8192 RESULT: MISMATCH
+    WGRAD16_TOTAL: coords=1152/1152 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=8192 mismatch=8192 (hard=8188) vs CPU(W') RESULT: MISMATCH
+    RESULT: MISMATCH (fp16 fwd_bad=1 wg_ok=1152/1152 upd_bad=1)
+
+## C) 32x32
+  -- m32_ic32 -DIW=32 -DIH=32 -DIC=32 -DOC=32 --
+    F16 FWD b=0 total=32768 mismatch=32766 RESULT: MISMATCH
+    WGRAD16_TOTAL: coords=288/288 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=32768 mismatch=32768 (hard=32767) vs CPU(W') RESULT: MISMATCH
+    RESULT: MISMATCH (fp16 fwd_bad=1 wg_ok=288/288 upd_bad=1)
+  -- m32_ic128 -DIW=32 -DIH=32 -DIC=128 -DOC=32 --
+    F16 FWD b=0 total=32768 mismatch=32767 RESULT: MISMATCH
+    WGRAD16_TOTAL: coords=1152/1152 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=32768 mismatch=32768 (hard=32768) vs CPU(W') RESULT: MISMATCH
+    RESULT: MISMATCH (fp16 fwd_bad=1 wg_ok=1152/1152 upd_bad=1)
+
+## D) pad0（OW_P0/OH_P0 路径）
+    F16 FWD b=0 total=6272 mismatch=0 RESULT: BIT-EXACT (fp16)
+    WGRAD16_TOTAL: coords=288/288 BIT-EXACT (fp16)
+    F16 FWD2 b=0 total=6272 mismatch=0 (hard=0) vs CPU(W') RESULT: BIT-EXACT (fp16)
+    RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)

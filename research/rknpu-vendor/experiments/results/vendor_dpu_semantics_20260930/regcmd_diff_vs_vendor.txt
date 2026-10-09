@@ -1,0 +1,87 @@
+仅 ours 0x0000 | (缺)                                                              | PC_VERSION = 0x00000000
+仅 ours 0x0008 | (缺)                                                              | PC_OPERATION_ENABLE = 0x0000001d  [RESERVED_0=14 OP_EN=1]
+仅 ours 0x0010 | (缺)                                                              | PC_BASE_ADDRESS = 0x00000000
+仅 ours 0x0014 | (缺)                                                              | PC_REGISTER_AMOUNTS = 0x00000000
+≠ 0x1010 | CNA_CONV_CON2 = 0x00000110  [FEATURE_GRAINS=17]                  | CNA_CONV_CON2 = 0x00001020  [FEATURE_GRAINS=258]
+≠ 0x1028 | CNA_DATA_SIZE2 = 0x00000001  [DATAOUT_WIDTH=1]                   | CNA_DATA_SIZE2 = 0x00000010  [DATAOUT_WIDTH=16]
+≠ 0x102c | CNA_DATA_SIZE3 = 0x00000010  [DATAOUT_ATOMICS=16]                | CNA_DATA_SIZE3 = 0x00000100  [DATAOUT_ATOMICS=256]
+≠ 0x1030 | CNA_WEIGHT_SIZE0 = 0x00010000  [WEIGHT_BYTES=65536]              | CNA_WEIGHT_SIZE0 = 0x00000100  [WEIGHT_BYTES=256]
+≠ 0x1034 | CNA_WEIGHT_SIZE1 = 0x00000100  [WEIGHT_BYTES_PER_KERNEL=256]     | CNA_WEIGHT_SIZE1 = 0x00000010  [WEIGHT_BYTES_PER_KERNEL=16]
+≠ 0x1038 | CNA_WEIGHT_SIZE2 = 0x10010100  [WEIGHT_WIDTH=16 WEIGHT_HEIGHT=1 WEIGHT_KERNELS=256] | CNA_WEIGHT_SIZE2 = 0x01010010  [WEIGHT_WIDTH=1 WEIGHT_HEIGHT=1 WEIGHT_KERNELS=16]
+≠ 0x1040 | CNA_CBUF_CON0 = 0x0000002a  [WEIGHT_BANK=2 DATA_BANK=10]         | CNA_CBUF_CON0 = 0x000000b1  [WEIGHT_BANK=11 DATA_BANK=1]
+≠ 0x1070 | CNA_FEATURE_DATA_ADDR = 0xffa60000  [FEATURE_BASE_ADDR=4289069056] | CNA_FEATURE_DATA_ADDR = 0xfff00000  [FEATURE_BASE_ADDR=4293918720]
+≠ 0x1110 | CNA_DCOMP_ADDR0 = 0xfff61080  [DECOMPRESS_ADDR0=4294316160]      | CNA_DCOMP_ADDR0 = 0xffe00000  [DECOMPRESS_ADDR0=4292870144]
+仅 ours 0x3014 | (缺)                                                              | CORE_DATAOUT_SIZE_0 = 0x000f000f  [DATAOUT_HEIGHT=15 DATAOUT_WIDTH=15]
+仅 ours 0x3018 | (缺)                                                              | CORE_DATAOUT_SIZE_1 = 0x0000001f  [DATAOUT_CHANNEL=31]
+仅 ours 0x301c | (缺)                                                              | CORE_CLIP_TRUNCATE = 0x00000000
+仅 ours 0x3030 | (缺)                                                              | 0x3030 = 0x00000000
+仅 ours 0x400c | (缺)                                                              | DPU_FEATURE_MODE_CFG = 0x000001e4  [BURST_LEN=15 OUTPUT_MODE=2]
+仅 ours 0x4010 | (缺)                                                              | DPU_DATA_FORMAT = 0x00000000
+仅 ours 0x4014 | (缺)                                                              | DPU_OFFSET_PEND = 0x00000000
+仅 ours 0x4020 | (缺)                                                              | DPU_DST_BASE_ADDR = 0xfff80000  [DST_BASE_ADDR=4294443008]
+仅 ours 0x4024 | (缺)                                                              | DPU_DST_SURF_STRIDE = 0x00001000  [DST_SURF_STRIDE=256]
+仅 ours 0x4030 | (缺)                                                              | DPU_DATA_CUBE_WIDTH = 0x0000000f  [WIDTH=15]
+仅 ours 0x4034 | (缺)                                                              | DPU_DATA_CUBE_HEIGHT = 0x0000000f  [HEIGHT=15]
+仅 ours 0x4038 | (缺)                                                              | DPU_DATA_CUBE_NOTCH_ADDR = 0x00000000
+仅 ours 0x403c | (缺)                                                              | DPU_DATA_CUBE_CHANNEL = 0x000f001f  [ORIG_CHANNEL=15 CHANNEL=31]
+仅 ours 0x4040 | (缺)                                                              | DPU_BS_CFG = 0x00020150  [BS_ALU_ALGO=2 BS_ALU_SRC=1 BS_RELU_BYPASS=1 BS_MUL_BYPASS=1]
+仅 ours 0x4044 | (缺)                                                              | DPU_BS_ALU_CFG = 0x00000000
+仅 ours 0x4048 | (缺)                                                              | DPU_BS_MUL_CFG = 0x00000000
+仅 ours 0x404c | (缺)                                                              | DPU_BS_RELUX_CMP_VALUE = 0x00000000
+仅 ours 0x4050 | (缺)                                                              | DPU_BS_OW_CFG = 0x00000124  [SIZE_E_2=1 SIZE_E_1=1 SIZE_E_0=1]
+仅 ours 0x4054 | (缺)                                                              | DPU_BS_OW_OP = 0x00000000
+仅 ours 0x4058 | (缺)                                                              | DPU_WDMA_SIZE_0 = 0x0000001f  [CHANNEL_WDMA=31]
+仅 ours 0x405c | (缺)                                                              | DPU_WDMA_SIZE_1 = 0x000f000f  [HEIGHT_WDMA=15 WIDTH_WDMA=15]
+仅 ours 0x4060 | (缺)                                                              | DPU_BN_CFG = 0x00000053  [BN_RELU_BYPASS=1 BN_MUL_BYPASS=1 BN_ALU_BYPASS=1 BN_BYPASS=1]
+仅 ours 0x4064 | (缺)                                                              | DPU_BN_ALU_CFG = 0x00000000
+仅 ours 0x4068 | (缺)                                                              | DPU_BN_MUL_CFG = 0x00000000
+仅 ours 0x406c | (缺)                                                              | DPU_BN_RELUX_CMP_VALUE = 0x00000000
+仅 ours 0x4070 | (缺)                                                              | DPU_EW_CFG = 0x00000383  [EW_RELU_BYPASS=1 EW_OP_CVT_BYPASS=1 EW_LUT_BYPASS=1 EW_OP_BYPASS=1 EW_BYPASS=1]
+仅 ours 0x4074 | (缺)                                                              | DPU_EW_CVT_OFFSET_VALUE = 0x00000000
+仅 ours 0x4078 | (缺)                                                              | DPU_EW_CVT_SCALE_VALUE = 0x00000001  [EW_OP_CVT_SCALE=1]
+仅 ours 0x407c | (缺)                                                              | DPU_EW_RELUX_CMP_VALUE = 0x00000000
+仅 ours 0x4080 | (缺)                                                              | DPU_OUT_CVT_OFFSET = 0xffffff80  [OUT_CVT_OFFSET=4294967168]
+仅 ours 0x4084 | (缺)                                                              | DPU_OUT_CVT_SCALE = 0x00004001  [OUT_CVT_SCALE=16385]
+仅 ours 0x4088 | (缺)                                                              | DPU_OUT_CVT_SHIFT = 0x0000000e  [OUT_CVT_SHIFT=14]
+仅 ours 0x4090 | (缺)                                                              | DPU_EW_OP_VALUE_0 = 0x00000000
+仅 ours 0x4094 | (缺)                                                              | DPU_EW_OP_VALUE_1 = 0x00000000
+仅 ours 0x4098 | (缺)                                                              | DPU_EW_OP_VALUE_2 = 0x00000000
+仅 ours 0x409c | (缺)                                                              | DPU_EW_OP_VALUE_3 = 0x00000000
+仅 ours 0x40a0 | (缺)                                                              | DPU_EW_OP_VALUE_4 = 0x00000000
+仅 ours 0x40a4 | (缺)                                                              | DPU_EW_OP_VALUE_5 = 0x00000000
+仅 ours 0x40a8 | (缺)                                                              | DPU_EW_OP_VALUE_6 = 0x00000000
+仅 ours 0x40ac | (缺)                                                              | DPU_EW_OP_VALUE_7 = 0x00000000
+仅 ours 0x40c0 | (缺)                                                              | DPU_SURFACE_ADD = 0x00002000  [SURF_ADD=512]
+仅 ours 0x40c4 | (缺)                                                              | 0x40c4 = 0x00000000
+仅 ours 0x4100 | (缺)                                                              | DPU_LUT_ACCESS_CFG = 0x00000000
+仅 ours 0x4104 | (缺)                                                              | DPU_LUT_ACCESS_DATA = 0x00000000
+仅 ours 0x4108 | (缺)                                                              | DPU_LUT_CFG = 0x00000000
+仅 ours 0x410c | (缺)                                                              | DPU_LUT_INFO = 0x00000000
+仅 ours 0x4110 | (缺)                                                              | DPU_LUT_LE_START = 0x00000000
+仅 ours 0x4114 | (缺)                                                              | DPU_LUT_LE_END = 0x00000000
+仅 ours 0x4118 | (缺)                                                              | DPU_LUT_LO_START = 0x00000000
+仅 ours 0x411c | (缺)                                                              | DPU_LUT_LO_END = 0x00000000
+仅 ours 0x4120 | (缺)                                                              | DPU_LUT_LE_SLOPE_SCALE = 0x00000000
+仅 ours 0x4124 | (缺)                                                              | DPU_LUT_LE_SLOPE_SHIFT = 0x00000000
+仅 ours 0x4128 | (缺)                                                              | DPU_LUT_LO_SLOPE_SCALE = 0x00000000
+仅 ours 0x412c | (缺)                                                              | DPU_LUT_LO_SLOPE_SHIFT = 0x00000000
+仅 ours 0x5004 | (缺)                                                              | DPU_RDMA_RDMA_S_POINTER = 0x0000000e  [POINTER_PP_MODE=1 EXECUTER_PP_EN=1 POINTER_PP_EN=1]
+仅 ours 0x500c | (缺)                                                              | DPU_RDMA_RDMA_DATA_CUBE_WIDTH = 0x0000000f  [WIDTH=15]
+仅 ours 0x5010 | (缺)                                                              | DPU_RDMA_RDMA_DATA_CUBE_HEIGHT = 0x0000000f  [HEIGHT=15]
+仅 ours 0x5014 | (缺)                                                              | DPU_RDMA_RDMA_DATA_CUBE_CHANNEL = 0x0000001f  [CHANNEL=31]
+仅 ours 0x5018 | (缺)                                                              | DPU_RDMA_RDMA_SRC_BASE_ADDR = 0x00000000
+仅 ours 0x501c | (缺)                                                              | DPU_RDMA_RDMA_BRDMA_CFG = 0x00000002  [BRDMA_DATA_USE=1]
+仅 ours 0x5020 | (缺)                                                              | DPU_RDMA_RDMA_BS_BASE_ADDR = 0xffdff000  [BS_BASE_ADDR=4292866048]
+仅 ours 0x5028 | (缺)                                                              | DPU_RDMA_RDMA_NRDMA_CFG = 0x00000000
+仅 ours 0x502c | (缺)                                                              | DPU_RDMA_RDMA_BN_BASE_ADDR = 0x00000000
+仅 ours 0x5034 | (缺)                                                              | DPU_RDMA_RDMA_ERDMA_CFG = 0x00000001  [ERDMA_DISABLE=1]
+仅 ours 0x5038 | (缺)                                                              | DPU_RDMA_RDMA_EW_BASE_ADDR = 0x00000000
+仅 ours 0x5040 | (缺)                                                              | DPU_RDMA_RDMA_EW_SURF_STRIDE = 0x00000000
+仅 ours 0x5044 | (缺)                                                              | DPU_RDMA_RDMA_FEATURE_MODE_CFG = 0x00007810  [BURST_LEN=15 MRDMA_DISABLE=1]
+仅 ours 0x5048 | (缺)                                                              | DPU_RDMA_RDMA_SRC_DMA_CFG = 0x00000000
+仅 ours 0x504c | (缺)                                                              | DPU_RDMA_RDMA_SURF_NOTCH = 0x00000000
+仅 ours 0x5064 | (缺)                                                              | DPU_RDMA_RDMA_PAD_CFG = 0x00000000
+仅 ours 0x5068 | (缺)                                                              | DPU_RDMA_RDMA_WEIGHT = 0x01010101  [E_WEIGHT=1 N_WEIGHT=1 B_WEIGHT=1 M_WEIGHT=1]
+仅 ours 0x506c | (缺)                                                              | DPU_RDMA_RDMA_EW_SURF_NOTCH = 0x00000000
+
+汇总: 完全相同 41，值不同 9，仅 vendor 有 0，仅 ours 有 76（共 126 个偏移）

@@ -1,0 +1,26 @@
+# §7.17 FP16 证据归档
+# 日期: 2026-09-29T23:31:30+08:00
+# 板: orangepi5plus  6.1.43-rockchip-rk3588-rknpu098  RKNPU driver: v0.9.8
+# min_conv_exp.c sha256: 58fd584ca8886c70c9e604631eb2b5373d2738494abbb4cf61a35b4be752f530
+
+########## 5) 布局搜索（pix-elems x watom）
+
+pix=8   watom=8   RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=512  max|diff|=9.5293
+pix=8   watom=16  RESULT: BIT-EXACT (fp16) SUBMIT ret=0 fp16-mismatch=0  max|diff|=0
+pix=8   watom=32  RESULT: BIT-EXACT (fp16) SUBMIT ret=0 fp16-mismatch=0  max|diff|=0
+pix=16  watom=8   RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=508  max|diff|=4.03223
+pix=16  watom=16  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=506  max|diff|=8.79297
+pix=16  watom=32  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=506  max|diff|=8.79297
+pix=32  watom=8   RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=511  max|diff|=9.5293
+pix=32  watom=16  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=500  max|diff|=6.96289
+pix=32  watom=32  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=500  max|diff|=6.96289
+--- same, ic=32 ---
+pix=8   watom=8   RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=485  max|diff|=15.0293
+pix=8   watom=16  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=357  max|diff|=5.86328
+pix=8   watom=32  RESULT: BIT-EXACT (fp16) SUBMIT ret=0 fp16-mismatch=0  max|diff|=0
+pix=16  watom=8   RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=482  max|diff|=6.23047
+pix=16  watom=16  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=485  max|diff|=11.7285
+pix=16  watom=32  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=512  max|diff|=11.7285
+pix=32  watom=8   RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=485  max|diff|=12.8301
+pix=32  watom=16  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=473  max|diff|=5.13184
+pix=32  watom=32  RESULT: MISMATCH       SUBMIT ret=0 fp16-mismatch=476  max|diff|=5.13184

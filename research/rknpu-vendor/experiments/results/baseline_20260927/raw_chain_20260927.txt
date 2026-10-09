@@ -1,0 +1,169 @@
+########################################################################
+# RKNPU 两 task 链实测原始日志
+# 板：Orange Pi 5 Plus / kernel 6.1.43-rockchip-rk3588-rknpu098 / RKNPU v0.9.8
+# 日期：2026-09-27
+########################################################################
+
+========================================================================
+==== chain_r1.log —— 第一轮：两 task submit（无链指针）全部 timeout
+========================================================================
+src sha256: aa6962e9602b8958
+
+########## C1 两 task 链（A->B->C）
+### --auto-fix --ic 16 --oc 16 --timeout 500
+== min_chain: 两个 8x8x16 conv 串联 -> 8x8x32 (ic_real=16 oc_real=16) ==
+weights: W0 2304 B, W1 2304 B, 描述符各 2304 B (w_kernels=16 oc_w=16)
+regcmd: task0 130 条 (amount=126), task1 130 条 (amount=126)
+BO: act@ffff0000 mid@fffe8000 wt@fffd8000(+16384) rc0@fffd5000 rc1@fffd3000 task_obj=0xffffff8105cac000
+SUBMIT(task_number=2) ret=-1 errno=Connection timed out  725.818 ms  hw_elapse=0 ns
+
+### --auto-fix --ic 16 --oc 16 --timeout 500 --task-base
+== min_chain: 两个 8x8x16 conv 串联 -> 8x8x32 (ic_real=16 oc_real=16) ==
+weights: W0 2304 B, W1 2304 B, 描述符各 2304 B (w_kernels=16 oc_w=16)
+regcmd: task0 130 条 (amount=126), task1 130 条 (amount=126)
+BO: act@ffff0000 mid@fffe8000 wt@fffd8000(+16384) rc0@fffd5000 rc1@fffd3000 task_obj=0xffffff8103a5b000
+SUBMIT(task_number=2) ret=-1 errno=Connection timed out  732.458 ms  hw_elapse=0 ns
+
+########## C2 小一点的通道数
+### --auto-fix --ic 3 --oc 16 --timeout 500
+== min_chain: 两个 8x8x16 conv 串联 -> 8x8x32 (ic_real=3 oc_real=16) ==
+weights: W0 2304 B, W1 2304 B, 描述符各 2304 B (w_kernels=16 oc_w=16)
+regcmd: task0 130 条 (amount=126), task1 130 条 (amount=126)
+BO: act@ffff0000 mid@fffe8000 wt@fffd8000(+16384) rc0@fffd5000 rc1@fffd3000 task_obj=0xffffff8108bc2400
+SUBMIT(task_number=2) ret=-1 errno=Connection timed out  729.190 ms  hw_elapse=0 ns
+
+###### done
+
+========================================================================
+==== chain_r2.log —— 第二轮：加 PC_BASE_ADDRESS 链指针，仍 timeout
+========================================================================
+src sha256: cd1c00b479444e9b
+
+########## D1 链指针指向下一条 regcmd
+### --auto-fix --ic 16 --oc 16 --timeout 500
+== min_chain: 两个 8x8x16 conv 串联 -> 8x8x32 (ic_real=16 oc_real=16) ==
+weights: W0 2304 B, W1 2304 B, 描述符各 2304 B (w_kernels=16 oc_w=16)
+chain ptr: task0 -> 00000000, task1 -> 00000000
+regcmd: task0 130 条 (amount=126), task1 130 条 (amount=126)
+SUBMIT(task_number=2) ret=-1 errno=Connection timed out  734.079 ms  hw_elapse=0 ns
+
+########## D2 末条自指
+### --auto-fix --ic 16 --oc 16 --timeout 500 --tail-self
+== min_chain: 两个 8x8x16 conv 串联 -> 8x8x32 (ic_real=16 oc_real=16) ==
+weights: W0 2304 B, W1 2304 B, 描述符各 2304 B (w_kernels=16 oc_w=16)
+chain ptr: task0 -> fffd3000, task1 -> fffd3000
+regcmd: task0 130 条 (amount=126), task1 130 条 (amount=126)
+SUBMIT(task_number=2) ret=-1 errno=Connection timed out  729.465 ms  hw_elapse=0 ns
+
+########## D3 对照：不写链指针（应仍 timeout）
+### --auto-fix --ic 16 --oc 16 --timeout 500 --no-chain-next
+== min_chain: 两个 8x8x16 conv 串联 -> 8x8x32 (ic_real=16 oc_real=16) ==
+weights: W0 2304 B, W1 2304 B, 描述符各 2304 B (w_kernels=16 oc_w=16)
+chain ptr: task0 -> 00000000, task1 -> 00000000
+regcmd: task0 130 条 (amount=126), task1 130 条 (amount=126)
+SUBMIT(task_number=2) ret=-1 errno=Connection timed out  732.204 ms  hw_elapse=0 ns
+
+########## D4 ic=3 版本
+### --auto-fix --ic 3 --oc 16 --timeout 500
+== min_chain: 两个 8x8x16 conv 串联 -> 8x8x32 (ic_real=3 oc_real=16) ==
+weights: W0 2304 B, W1 2304 B, 描述符各 2304 B (w_kernels=16 oc_w=16)
+chain ptr: task0 -> 00000000, task1 -> 00000000
+regcmd: task0 130 条 (amount=126), task1 130 条 (amount=126)
+SUBMIT(task_number=2) ret=-1 errno=Connection timed out  725.185 ms  hw_elapse=0 ns
+
+###### done
+
+========================================================================
+==== chain_r3.log —— 第三轮：core_mask=1 变体；subcore=0 把板子挂死
+========================================================================
+src sha256: 765ddafe4f2e4dc8
+
+########## E1 core_mask=1 各种 subcore 布局
+### --auto-fix --ic 16 --oc 16 --timeout 500 --core-mask 1
+SUBMIT(task_number=2 core_mask=0x1 subcore0={0,2}) ret=-1 errno=Connection timed out  724.851 ms  hw_elapse=0 ns
+
+### --auto-fix --ic 16 --oc 16 --timeout 500 --core-mask 1 --subcore-zero
+
+========================================================================
+==== chain_r4.log —— 第四轮：同地址双 task 也 timeout -> 定位到提交层
+========================================================================
+src sha256: ee4a04625a93f713
+
+########## F1 同地址双 task（只测提交层能否跑 2 个 task）
+### --auto-fix --ic 16 --oc 16 --timeout 400 --alias
+rc: task0@fffd5000 task1@fffd3000 contig=0
+task0.addr=fffd5000 task1.addr=fffd5000 alias=1
+SUBMIT(task_number=2 core_mask=0x0 subcore0={0,2}) ret=-1 errno=Connection timed out  620.494 ms  hw_elapse=0 ns
+
+########## F2 同一 BO 内连续排布 + 链指针
+### --auto-fix --ic 16 --oc 16 --timeout 400 --contig
+rc: task0@fffd5000 task1@fffd6000 contig=1
+task0.addr=fffd5000 task1.addr=fffd6000 alias=0
+SUBMIT(task_number=2 core_mask=0x0 subcore0={0,2}) ret=-1 errno=Connection timed out  617.596 ms  hw_elapse=0 ns
+
+########## F3 连续 + 末条自指
+### --auto-fix --ic 16 --oc 16 --timeout 400 --contig --tail-self
+rc: task0@fffd5000 task1@fffd6000 contig=1
+task0.addr=fffd5000 task1.addr=fffd6000 alias=0
+SUBMIT(task_number=2 core_mask=0x0 subcore0={0,2}) ret=-1 errno=Connection timed out  618.584 ms  hw_elapse=0 ns
+
+###### done
+
+========================================================================
+==== chain_r5.log —— 第五轮：镜像厂商 subcore 槽位；3 槽各 1 task 可跑
+========================================================================
+src sha256: 0fefdb0c1987b56d
+
+########## G1 只填第 0 个 subcore 槽
+### --auto-fix --ic 16 --oc 16 --timeout 400 --subcore-first-only
+task0.addr=fffd5000 task1.addr=fffd3000 alias=0
+SUBMIT(task_number=2 core_mask=0x0 subcore0={0,2}) ret=-1 errno=Connection timed out  616.847 ms  hw_elapse=0 ns
+
+########## G2 厂商 maxpool 形状：3 槽各 1 个 task（3 份相同 regcmd）
+### --auto-fix --ic 16 --oc 16 --timeout 400 --vendor-shape --alias --contig
+task0.addr=fffd5000 task1.addr=fffd5000 alias=1
+SUBMIT(task_number=2 core_mask=0x0 subcore0={0,1}) ret=0 errno=-  0.041 ms  hw_elapse=14875 ns
+  total=1024  mismatch=1008 (max abs diff 128)
+  RESULT: MISMATCH
+
+########## G3 对照：1 个 task（应当成功）
+### --auto-fix --ic 16 --oc 16 --timeout 400 --tasks 1 --subcore-first-only
+task0.addr=fffd5000 task1.addr=fffd3000 alias=0
+SUBMIT(task_number=1 core_mask=0x0 subcore0={0,1}) ret=0 errno=-  0.134 ms  hw_elapse=68541 ns
+  total=1024  mismatch=1008 (max abs diff 128)
+  RESULT: MISMATCH
+
+###### done
+
+========================================================================
+==== chain_r6.log —— 第六轮：修正 PC_REGISTER_AMOUNTS 后链打通，CHAIN BIT-EXACT
+========================================================================
+src sha256: dfb3cefa6b396c45
+
+########## H1 修正 PC_REGISTER_AMOUNTS 后：两 task 链
+### --auto-fix --ic 16 --oc 16 --timeout 400
+task0.addr=fffd5000 task1.addr=fffd3000 alias=0
+SUBMIT(task_number=2 core_mask=0x0 subcore0={0,2}) ret=0 errno=-  0.029 ms  hw_elapse=17208 ns
+  total=1024  mismatch=0 (max abs diff 0)
+  RESULT: CHAIN BIT-EXACT
+
+### --auto-fix --ic 16 --oc 16 --timeout 400 --contig
+task0.addr=fffd5000 task1.addr=fffd6000 alias=0
+SUBMIT(task_number=2 core_mask=0x0 subcore0={0,2}) ret=0 errno=-  0.187 ms  hw_elapse=18959 ns
+  total=1024  mismatch=0 (max abs diff 0)
+  RESULT: CHAIN BIT-EXACT
+
+### --auto-fix --ic 16 --oc 16 --timeout 400 --contig --tail-self
+task0.addr=fffd5000 task1.addr=fffd6000 alias=0
+SUBMIT(task_number=2 core_mask=0x0 subcore0={0,2}) ret=0 errno=-  0.300 ms  hw_elapse=127458 ns
+  total=1024  mismatch=0 (max abs diff 0)
+  RESULT: CHAIN BIT-EXACT
+
+########## H2 对照：单 task 是否仍正常
+### --auto-fix --ic 16 --oc 16 --timeout 400 --tasks 1
+task0.addr=fffd5000 task1.addr=fffd3000 alias=0
+SUBMIT(task_number=1 core_mask=0x0 subcore0={0,1}) ret=0 errno=-  0.233 ms  hw_elapse=74082 ns
+  total=1024  mismatch=1008 (max abs diff 128)
+  RESULT: MISMATCH
+
+###### done

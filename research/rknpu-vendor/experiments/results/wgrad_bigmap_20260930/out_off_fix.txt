@@ -1,0 +1,18 @@
+===== 32x32 ic128 =====
+OUT-OFF: 327680 (输入需求 fwd=262144 wgrad=262144)
+== wgrad_real: ic=128 oc=32 iw=32 ih=32 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=32*32 dir=- update=1 ==
+CMD: ./deep/wg8_32x32ic128 --fp16 --pad 1 --batch 1 --update 
+REQUANT: fwd scale=16385 shift=14 offset=0 | grad scale=16385 shift=17 offset=0
+opened /dev/dri/card1
+BO: act@ffeb0000 wt@ffdb0000 bias@ffdaf000 regcmd@ffdad000 task obj=0xffffff8129a05400
+===== 64x64 ic64 =====
+OUT-OFF: 1114112 (输入需求 fwd=524288 wgrad=1048576)
+== wgrad_real: ic=64 oc=32 iw=64 ih=64 k=3x3 pad=1 batch=1 seed=20260928 ow*oh=64*64 dir=- update=1 ==
+CMD: ./deep/wg8_64x64ic64 --fp16 --pad 1 --batch 1 --update 
+REQUANT: fwd scale=16385 shift=14 offset=0 | grad scale=16385 shift=17 offset=0
+opened /dev/dri/card1
+BO: act@ffdf0000 wt@ffcf0000 bias@ffcef000 regcmd@ffced000 task obj=0xffffff8106bfec00
+WARN: 输入 tile 524288 B 需 16 data bank，而权重占 3 bank 后仅剩 9 ⇒ CBUF 容量越界（§7.31），硬件会静默算错；请减小 IW/IH/IC 或按行切分
+SUBMIT skipped: CBUF 容量越界（见 WARN）⇒ 请减小 IW/IH/IC
+F16 FWD b=0 SUBMIT-FAILED
+COST: submits=0 fwd_tasks=0 wgrad_tasks=0 wall=0.000 ms hw=0.000 ms

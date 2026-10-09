@@ -1,0 +1,41 @@
+# §7.33 ic 维切分（跨 submit，host fp32 累加）  Wed Sep 30 13:22:04 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) 默认 pattern：切分 vs 不切分（hash 相同 = 逐位一致）
+ic32  1x1 不切分              hash=ae8c2925  RESULT: BIT-EXACT (fp16)           total=4096  fp16-mismatch=0  max|diff|=0  max ulp=0
+ic32  1x1 groups2                hash=ae8c2925  RESULT: BIT-EXACT (fp16)           total=4096  fp16-mismatch=0  max|diff|=0  max ulp=0
+ic32  1x1 groups4                hash=ae8c2925  RESULT: BIT-EXACT (fp16)           total=4096  fp16-mismatch=0  max|diff|=0  max ulp=0
+ic128 3x3p1 不切分            hash=3606092d  RESULT: ULP-EXACT (<=16 ulp)       total=4096  fp16-mismatch=130  max|diff|=4.76837e-07  max ulp=2
+ic128 3x3p1 groups4              hash=3606092d  RESULT: ULP-EXACT (<=16 ulp)       total=4096  fp16-mismatch=130  max|diff|=4.76837e-07  max ulp=2
+    IC-SPLIT: 4 partial(s), 4096 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+ic128 ih32 groups4               hash=853971d3  RESULT: ULP-EXACT (<=16 ulp)       total=8192  fp16-mismatch=290  max|diff|=4.76837e-07  max ulp=2
+    IC-SPLIT: 4 partial(s), 8192 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+
+## B) 压力 pattern --in-ruler（值域大、partial 量化粗）→ 暴露 ≤1 ULP 偏差
+ruler ic128 1x1 不切分        hash=935d9e10  RESULT: BIT-EXACT (fp16)           total=4096  fp16-mismatch=0  max|diff|=0  max ulp=0
+ruler ic128 1x1 groups4          hash=935d9e10  RESULT: BIT-EXACT (fp16)           total=4096  fp16-mismatch=0  max|diff|=0  max ulp=0
+    IC-SPLIT: 4 partial(s), 4096 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+ruler ic128 1x1 groups8          hash=935d9e10  RESULT: BIT-EXACT (fp16)           total=4096  fp16-mismatch=0  max|diff|=0  max ulp=0
+    IC-SPLIT: 4 partial(s), 4096 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+ruler ic96 3x3p1 不切分       hash=d15fb57a  RESULT: BIT-EXACT (fp16)           total=4096  fp16-mismatch=0  max|diff|=0  max ulp=0
+ruler ic96 3x3p1 groups2         hash=abd09732  RESULT: ULP-EXACT (<=16 ulp)       total=4096  fp16-mismatch=28  max|diff|=16  max ulp=1
+    IC-SPLIT: 2 partial(s), 4096 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+ruler ic96 3x3p1 groups3         hash=f53f0867  RESULT: ULP-EXACT (<=16 ulp)       total=4096  fp16-mismatch=43  max|diff|=16  max ulp=1
+    IC-SPLIT: 3 partial(s), 4096 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+
+## C) 真容量越界（输入+权重 > 12 bank）：ic 切分替代行切分
+ic256 ih40 不切分（越界） hash=6ac4b9b2  RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) total=10240  fp16-mismatch=2584  max|diff|=623.064  max ulp=42093
+ic256 ih40 groups4（救）      hash=7cbe7291  RESULT: ULP-EXACT (<=16 ulp)       total=10240  fp16-mismatch=360  max|diff|=4.76837e-07  max ulp=2
+    IC-SPLIT: 4 partial(s), 10240 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+ic256 ih40 groups8（救）      hash=7cbe7291  RESULT: ULP-EXACT (<=16 ulp)       total=10240  fp16-mismatch=360  max|diff|=4.76837e-07  max ulp=2
+    IC-SPLIT: 8 partial(s), 10240 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+
+## D) 整数 pattern（--in-ch-id --w-ones）：应逐位一致
+ch-id ic128 不切分            hash=0096adc5  RESULT: BIT-EXACT (fp16)           total=1024  fp16-mismatch=0  max|diff|=0  max ulp=0
+ch-id ic128 groups4              hash=0096adc5  RESULT: BIT-EXACT (fp16)           total=1024  fp16-mismatch=0  max|diff|=0  max ulp=0
+    IC-SPLIT: 4 partial(s), 1024 elems; host fp32 累加 vs fp64 累加: max ulp=0 max|diff|=0
+
+## E) 不回归：无切分的既有形状
+ic16 3x3p1 不切分             hash=533d6b86  RESULT: ULP-EXACT (<=16 ulp)       total=4096  fp16-mismatch=280  max|diff|=9.53674e-07  max ulp=4
+ic64 3x3p1 不切分             hash=55b72df8  RESULT: ULP-EXACT (<=16 ulp)       total=4096  fp16-mismatch=205  max|diff|=9.53674e-07  max ulp=4

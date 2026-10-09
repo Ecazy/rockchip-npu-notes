@@ -1,0 +1,73 @@
+# §7.36 fp16 WEIGHT_SIZE1 必须 ×2（根因）+ 权重侧非硬限  Wed Sep 30 13:44:18 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) A/B：同一失败用例，「旧 WEIGHT_SIZE1（--ws1 kw*kh*ic）」vs 修复后（默认 ×2）
+   # iw8 ih8 pad0 3x3：小输入 + 多 ic/oc 块 ⇒ 旧值让后半个 oc 块静默取错权重
+ic64 oc64 旧 ws1=576              RESULT: MISMATCH         fp16-mismatch=544  max|diff|=14.291  max ulp=36146
+    CBUF-CFG: in_size=8192 B  row_bytes=1024 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic64 oc64 修复（默认 ws1=1152） RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=106  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=8192 B  row_bytes=1024 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic96 oc32 旧 ws1=864              RESULT: MISMATCH         fp16-mismatch=188  max|diff|=12.0977  max ulp=35864
+    CBUF-CFG: in_size=12288 B  row_bytes=1536 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic96 oc32 修复（默认 ws1=1728） RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=44  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=12288 B  row_bytes=1536 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic32 oc128 旧 ws1=288             RESULT: MISMATCH         fp16-mismatch=1431  max|diff|=17.5898  max ulp=36935
+    CBUF-CFG: in_size=4096 B  row_bytes=512 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=130 (auto_cfg=1, grains_auto)
+ic32 oc128 修复（默认 ws1=576） RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=255  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=4096 B  row_bytes=512 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=130 (auto_cfg=1, grains_auto)
+ic128 oc64 旧 ws1=1152            RESULT: MISMATCH         fp16-mismatch=1063  max|diff|=52207  max ulp=50658
+    CBUF-CFG: in_size=16384 B  row_bytes=2048 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic128 oc64 修复（默认 ws1=2304） RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=85  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=16384 B  row_bytes=2048 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+
+## B) 修复后：宽 ic × oc 网格（3x3 iw8 ih8 pad0）应全 ULP-EXACT
+ic32 oc32                          RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=63  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=4096 B  row_bytes=512 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=130 (auto_cfg=1, grains_auto)
+ic64 oc32                          RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=55  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=8192 B  row_bytes=1024 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic96 oc32                          RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=44  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=12288 B  row_bytes=1536 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic128 oc32                         RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=44  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=16384 B  row_bytes=2048 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic64 oc64                          RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=106  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=8192 B  row_bytes=1024 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic96 oc64                          RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=85  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=12288 B  row_bytes=1536 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic128 oc64                         RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=85  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=16384 B  row_bytes=2048 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic16 oc128                         RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=340  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=2048 B  row_bytes=256 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=258 (auto_cfg=1, grains_auto)
+ic32 oc96                          RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=192  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=4096 B  row_bytes=512 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=130 (auto_cfg=1, grains_auto)
+ic32 oc128                         RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=255  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=4096 B  row_bytes=512 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=130 (auto_cfg=1, grains_auto)
+ic32 oc256                         RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=511  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=4096 B  row_bytes=512 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=130 (auto_cfg=1, grains_auto)
+
+## C) 权重侧不是硬限：WEIGHT_BANK 小于权重描述符 / 描述符 21 bank 仍 BIT-EXACT
+3x3 ic256 iw16 ih40 WB=2(默认DB=9) RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) fp16-mismatch=2840  max|diff|=623.066  max ulp=42098
+    CBUF-CFG: in_size=327680 B  row_bytes=8192 B  DATA_BANK=8  WEIGHT_BANK=4  GRAINS=80 (auto_cfg=1, grains_auto)
+  (retry 1: no RESULT)
+  (retry 2: no RESULT)
+  (retry 3: no RESULT)
+3x3 ic256 iw16 ih40 --weight-bank 2                          
+    CBUF-CFG: in_size=327680 B  row_bytes=8192 B  DATA_BANK=10  WEIGHT_BANK=2  GRAINS=80 (auto_cfg=1, grains_auto)
+3x3 ic192 oc192 iw4 ih4（权重 21 bank） RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+    CBUF-CFG: in_size=6144 B  row_bytes=1536 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+
+## D) oc 切分（§7.36 实现）与不切分同结果
+ic192 oc192 不切分              RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=192  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=24576 B  row_bytes=3072 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic192 oc192 oc-groups 4            RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=192  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=24576 B  row_bytes=3072 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic192 oc192 oc-groups 8            RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=192  max|diff|=4.76837e-07  max ulp=8
+    CBUF-CFG: in_size=24576 B  row_bytes=3072 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+
+## E) 不回归：既有形状 hash 应与 §7.31/§7.33/§7.34/§7.35 记录一致
+ic16 3x3p1 ih16                    RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=280  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=8192 B  row_bytes=512 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=130 (auto_cfg=1, grains_auto)
+ic128 3x3p1 ih16 groups4           RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=130  max|diff|=4.76837e-07  max ulp=2
+    CBUF-CFG: in_size=16384 B  row_bytes=1024 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+ic64 iw16 ih64 3x3p1               RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=925  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=131072 B  row_bytes=2048 B  DATA_BANK=4  WEIGHT_BANK=8  GRAINS=80 (auto_cfg=1, grains_auto)

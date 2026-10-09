@@ -1,0 +1,39 @@
+# §7.39 补充：交替相位是「设备状态相关」的（同命令不同时刻结论不同）
+# 皆：BS/BRDMA 表路径，3 次热身，打印每次 ret（0=ok, -1=ETIMEDOUT）
+#
+# 时刻 T1（本轮早段，dmesg timeout 计数 ~430）：
+#   --job-flags 7（默认）: 0,-1,0,  0,-1,0,  0,-1,0,  0,-1,0   （完美交替）
+#   --job-flags 5        : 0,-1,0
+# 时刻 T2（本轮末段，timeout 计数 480、soft reset 480）：
+#   --job-flags 7        : 0,0,0 ×5（全 OK）
+#   --job-flags 5        : -1,-1,-1（全超时）
+#
+# ⇒ 现象不是「每次进程内固定奇偶」，而是**硬件完成状态里带一个逐次推进的相位**：
+#    相位匹配 int_mask=0x300 的提交完成，不匹配的提交被驱动丢弃（IRQ 不进处理函数）。
+#    相位随提交推进（所以同一进程内表现为交替），并被 **soft reset 重置**
+#    （所以超时/复位次数会改变后续运行落在哪个相位）。
+# ⇒ 单次观测不足以判定"某配置是否修复"；必须多跑几次并与 soft reset 计数一起记录。
+
+# §7.39 追加：重启后从零态复测 + 内核 oops/楔死记录
+#
+# 【楔死】本轮为刻画现象累计了 ~480 次带表超时（每次触发 soft reset）。此后：
+#   · dmesg 出现 `Unable to handle kernel paging request ... Internal error: Oops`
+#     （在 BO 释放路径；文档 §2.4「坑二」记录的正是这条）；
+#   · 此后所有 submit 返回 `SUBMIT ret=-1 errno=Invalid argument`（EINVAL），
+#     dmesg 为 `job commit failed` + `job abort ... ret: -22`（13 次），NPU 不可用。
+#   ⇒ 与 `docs/RKNPU-构建算子-实测流程.md` §2.4 的 wedge 描述完全一致：**只能重启板卡**。
+#
+# 【恢复】`reboot` 后约 3 分钟 SSH 恢复；`RKNPU driver: v0.9.8` 正常，soft reset 计数归零；
+#   纯 conv 立即 `SUBMIT ret=0` + ULP-EXACT；带表单次 submit `ret=0` ✓。
+#
+# 【从零态复测（soft reset=0，重启后第一次带表运行）】
+#   3 次热身 + 1 次测量 = 0,-1,0,-1  ⇒ 交替**从冷态就是完美相位交替**，
+#   并伴随 2 次 soft reset（每次超时一次）。⇒ 相位在每个 submit 后翻转；soft reset/
+#   重启把相位"re-arm"到匹配位（所以复位后的下一个提交总是好）。
+#
+# 【纪律（写给下次接手）】
+#   1) 带表（BS/BRDMA、BN/NRDMA）路径的探针必须**限次**（每次超时都会 soft reset，
+#      累计 ~480 次即楔死 NPU）；需要多次采样时先重启、并在每轮之间记录 soft reset 计数。
+#   2) 一旦出现 `SUBMIT ret=-1 ... Invalid argument` + dmesg `job commit failed`，
+#      立刻停止并 `reboot`（约 3 分钟恢复），不要再继续提交。
+#   3) 纯 conv / 切分路径不受影响，可继续使用（楔死只影响 NPU 提交，SSH/系统正常）。

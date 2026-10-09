@@ -1,0 +1,60 @@
+# §7.31 CBUF bank envelope + FEATURE_GRAINS + row tiling  Wed Sep 30 13:06:19 UTC 2026
+Linux orangepi5plus 6.1.43-rockchip-rk3588-rknpu098 #1.2.0+rknpu0.9.8.1 SMP 2024-08-27 11:55:58 UTC aarch64 aarch64 aarch64 GNU/Linux
+RKNPU driver: v0.9.8
+
+## A) A/B：同一几何「旧默认（--no-auto-cfg, DATA_BANK=1/grains=52）」vs「auto-cfg」
+fp16 ic128 iw16 ih16 OLD (65536B)        RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) total=4096  fp16-mismatch=2354  max|diff|=545.566  max ulp=42098
+fp16 ic128 iw16 ih16 AUTO                RESULT: ULP-EXACT (<=16 ulp)                   total=4096  fp16-mismatch=130  max|diff|=4.76837e-07  max ulp=2
+    CBUF-CFG: in_size=65536 B  row_bytes=4096 B  DATA_BANK=2  WEIGHT_BANK=10  GRAINS=80 (auto_cfg=1, grains_auto)
+fp16 ic16  iw16 ih64 OLD (32768B)        RESULT: MISMATCH                               total=16384  fp16-mismatch=2177  max|diff|=10.9961  max ulp=35583
+fp16 ic16  iw16 ih64 AUTO                RESULT: ULP-EXACT (<=16 ulp)                   total=16384  fp16-mismatch=1240  max|diff|=9.53674e-07  max ulp=4
+    CBUF-CFG: in_size=32768 B  row_bytes=512 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=130 (auto_cfg=1, grains_auto)
+int8 ic160 iw16 ih16 OLD (40960B)        RESULT: MISMATCH                               
+int8 ic160 iw16 ih16 AUTO                RESULT: BIT-EXACT (floor)                      
+    CBUF-CFG: in_size=40960 B  row_bytes=2560 B  DATA_BANK=2  WEIGHT_BANK=10  GRAINS=80 (auto_cfg=1, grains_auto)
+
+## B) 输入字节 vs DATA_BANK（--no-auto-cfg 下用 --weight-bank 显式设 DB=12-WB）
+   # 期望：DB-1 坏、DB=ceil(in/32768) 好 ⇒ 阈值 = DB×32768 B
+ic128 ih9 (36864B) DB=1  [bad]           RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) total=2304  fp16-mismatch=562  max|diff|=239.941  max ulp=40497
+ic128 ih9 (36864B) DB=2  [ok]            RESULT: ULP-EXACT (<=16 ulp)                   total=2304  fp16-mismatch=60  max|diff|=4.76837e-07  max ulp=2
+ic128 ih16 (65536B) DB=1  [bad]          RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) total=4096  fp16-mismatch=2354  max|diff|=545.566  max ulp=42098
+ic128 ih16 (65536B) DB=2  [ok]           RESULT: ULP-EXACT (<=16 ulp)                   total=4096  fp16-mismatch=130  max|diff|=4.76837e-07  max ulp=2
+ic128 ih24 (98304B) DB=1  [bad]          RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) total=6144  fp16-mismatch=2444  max|diff|=545.566  max ulp=42300
+ic128 ih24 (98304B) DB=3  [ok]           RESULT: ULP-EXACT (<=16 ulp)                   total=6144  fp16-mismatch=220  max|diff|=4.76837e-07  max ulp=8
+ic128 ih32 (131072B) DB=1  [bad]         RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) total=8192  fp16-mismatch=2514  max|diff|=545.566  max ulp=42300
+ic128 ih32 (131072B) DB=4  [ok]          RESULT: ULP-EXACT (<=16 ulp)                   total=8192  fp16-mismatch=290  max|diff|=4.76837e-07  max ulp=2
+ic128 ih8 (32768B) DB=1 [边界净]      RESULT: ULP-EXACT (<=16 ulp)                   total=2048  fp16-mismatch=50  max|diff|=4.76837e-07  max ulp=2
+
+## C) FEATURE_GRAINS：固定 bank 充足，只切 grains（旧 52 vs tinygrad auto）
+iw16 ic16 ih54 grains=52  [old]          RESULT: MISMATCH                               total=13824  fp16-mismatch=1196  max|diff|=7.32812  max ulp=33722
+iw16 ic16 ih54 grains=130 [auto]         RESULT: ULP-EXACT (<=16 ulp)                   total=13824  fp16-mismatch=1040  max|diff|=9.53674e-07  max ulp=4
+iw16 ic16 ih64 grains=52  [old]          RESULT: MISMATCH                               total=16384  fp16-mismatch=2173  max|diff|=15.3909  max ulp=35583
+iw16 ic16 ih64 grains=130 [auto]         RESULT: ULP-EXACT (<=16 ulp)                   total=16384  fp16-mismatch=1240  max|diff|=9.53674e-07  max ulp=4
+iw16 ic16 ih128 grains=52  [old]         RESULT: MISMATCH                               total=32768  fp16-mismatch=3232  max|diff|=15.3906  max ulp=35677
+iw16 ic16 ih128 grains=130 [auto]        RESULT: ULP-EXACT (<=16 ulp)                   total=32768  fp16-mismatch=2520  max|diff|=9.53674e-07  max ulp=4
+iw16 ic16 ih200 grains=52  [old]         RESULT: MISMATCH                               total=51200  fp16-mismatch=4672  max|diff|=16.4883  max ulp=36559
+iw16 ic16 ih200 grains=130 [auto]        RESULT: ULP-EXACT (<=16 ulp)                   total=51200  fp16-mismatch=3960  max|diff|=9.53674e-07  max ulp=4
+iw8 ic16 ih100 grains=52  [old]          RESULT: MISMATCH                               total=12800  fp16-mismatch=2574  max|diff|=14.6602  max ulp=36185
+iw8 ic16 ih100 grains=258 [auto]         RESULT: ULP-EXACT (<=16 ulp)                   total=12800  fp16-mismatch=700  max|diff|=9.53674e-07  max ulp=4
+iw8 ic16 ih200 grains=52  [old]          RESULT: MISMATCH                               total=25600  fp16-mismatch=2609  max|diff|=15.7598  max ulp=36239
+iw8 ic16 ih200 grains=258 [auto]         RESULT: ULP-EXACT (<=16 ulp)                   total=25600  fp16-mismatch=1420  max|diff|=9.53674e-07  max ulp=4
+
+## D) 真·容量越界（in + weight bank > 12）→ 按输出行切分兜底
+   # ic256 3x3 oc16：weight 73728 B → 4 bank；ih40 输入 327680 B → 10 bank（合计 14 > 12）
+ic256 ih40 AUTO（越界，无切分）  RESULT: OUT-OF-ENVELOPE (CBUF banks: input+weight > 12, §7.31) total=10240  fp16-mismatch=2584  max|diff|=623.064  max ulp=42093
+    CBUF-CFG: in_size=327680 B  row_bytes=8192 B  DATA_BANK=8  WEIGHT_BANK=4  GRAINS=80 (auto_cfg=1, grains_auto)
+ic256 ih40 --tile-auto（切分）       RESULT: ULP-EXACT (<=16 ulp)                   total=10240  fp16-mismatch=360  max|diff|=4.76837e-07  max ulp=2
+    CBUF-CFG: in_size=253952 B  row_bytes=8192 B  DATA_BANK=8  WEIGHT_BANK=4  GRAINS=80 (auto_cfg=1, grains_auto)
+   # ic128 3x3 oc16：weight 36864 B → 3 bank；ih64 输入 262144 B → 8 bank（11 ≤ 12，可单发）
+ic128 ih64 AUTO（bank 够，无需切分） RESULT: ULP-EXACT (<=16 ulp)                   total=16384  fp16-mismatch=610  max|diff|=4.76837e-07  max ulp=2
+    CBUF-CFG: in_size=262144 B  row_bytes=4096 B  DATA_BANK=8  WEIGHT_BANK=4  GRAINS=80 (auto_cfg=1, grains_auto)
+ic128 ih64 --tile-oh 32（强制切分） RESULT: ULP-EXACT (<=16 ulp)                   total=16384  fp16-mismatch=610  max|diff|=4.76837e-07  max ulp=2
+    CBUF-CFG: in_size=135168 B  row_bytes=4096 B  DATA_BANK=5  WEIGHT_BANK=7  GRAINS=80 (auto_cfg=1, grains_auto)
+
+## E) 切分不改结论（同一用例 tiled vs 非 tiled 均应为准确结果）
+fp16 ic128 iw16 ih16 非切分           RESULT: ULP-EXACT (<=16 ulp)                   total=4096  fp16-mismatch=130  max|diff|=4.76837e-07  max ulp=2
+    CBUF-CFG: in_size=65536 B  row_bytes=4096 B  DATA_BANK=2  WEIGHT_BANK=10  GRAINS=80 (auto_cfg=1, grains_auto)
+fp16 ic128 iw16 ih16 --tile-oh 6         RESULT: ULP-EXACT (<=16 ulp)                   total=4096  fp16-mismatch=130  max|diff|=4.76837e-07  max ulp=2
+    CBUF-CFG: in_size=28672 B  row_bytes=4096 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)
+int8 ic128 iw16 ih16 --tile-auto         RESULT: BIT-EXACT (floor)                      
+    CBUF-CFG: in_size=32768 B  row_bytes=2048 B  DATA_BANK=1  WEIGHT_BANK=11  GRAINS=80 (auto_cfg=1, grains_auto)

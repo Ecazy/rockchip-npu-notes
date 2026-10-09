@@ -1,0 +1,379 @@
+# §7.15 tap-order A/B 证据（板端原始日志拼接；分步 .log 亦在本目录）
+
+===================== 01_matrix_prefix.log =====================
+# §7.15 权重 tap 顺序 A/B 归档
+# 日期: 2026-09-29T21:57:57+08:00
+# 板: orangepi5plus  6.1.43-rockchip-rk3588-rknpu098  RKNPU driver: v0.9.8
+# min_conv_exp.c  sha256: 32e840291e607ecfca809414ec83f68141780ea01f7af0d1dc6fc9a048015694   (新, ky-major)
+# min_conv_exp_old.c sha256: 586e5576499b55a79bad4e2f34ec0144bf6069d191259cab189da7c6f731b0a9   (旧, kx-major)
+
+########## 1) 旧二进制：判别矩阵（修复前）
+
+=== tap-order discrimination (pat2, valid, 16x16 ic3 oc16) ===
+kw3 kh3 (square)                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh3 --asym-w                   RESULT: MISMATCH       floor-mismatch=2682 (max abs diff 42)
+kw2 kh2 (square)                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw4 kh4 (square)                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh3 asym iw8                   RESULT: MISMATCH       floor-mismatch=613 (max abs diff 42)
+kw3 kh2                            RESULT: MISMATCH       floor-mismatch=1357 (max abs diff 8)
+kw2 kh3                            RESULT: MISMATCH       floor-mismatch=1873 (max abs diff 14)
+kw4 kh2                            RESULT: MISMATCH       floor-mismatch=2543 (max abs diff 15)
+kw2 kh4                            RESULT: MISMATCH       floor-mismatch=2133 (max abs diff 28)
+kw5 kh3                            RESULT: MISMATCH       floor-mismatch=1656 (max abs diff 28)
+kw3 kh5                            RESULT: MISMATCH       floor-mismatch=2101 (max abs diff 28)
+kw3 kh1 (1D)                       RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw1 kh3 (1D)                       RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2 kh1 (1D)                       RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw1 kh2 (1D)                       RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+TOTAL: pass=7 fail=8
+
+===================== 02_matrix_postfix.log =====================
+########## 2) 新二进制：判别矩阵（修复后）
+
+=== tap-order discrimination (pat2, valid, 16x16 ic3 oc16) ===
+kw3 kh3 (square)                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh3 --asym-w                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2 kh2 (square)                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw4 kh4 (square)                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh3 asym iw8                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh2                            RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2 kh3                            RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw4 kh2                            RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2 kh4                            RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw5 kh3                            RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh5                            RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh1 (1D)                       RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw1 kh3 (1D)                       RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2 kh1 (1D)                       RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw1 kh2 (1D)                       RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+TOTAL: pass=15 fail=0
+
+===================== 03_ab_cases.log =====================
+########## 3) A/B 逐用例对照 (旧 vs 新) + deconv 对照
+
+===== ./min_conv_exp_old
+./min_conv_exp_old kw3 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp_old kw3 kh3 --asym-w               RESULT: MISMATCH       floor-mismatch=2682 (max abs diff 42)
+./min_conv_exp_old kw3 kh3 tap 1:1                RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp_old kw3 kh3 tap 2:0                RESULT: MISMATCH       floor-mismatch=2624 (max abs diff 3)
+./min_conv_exp_old kw3 kh2                        RESULT: MISMATCH       floor-mismatch=1357 (max abs diff 8)
+./min_conv_exp_old kw2 kh3                        RESULT: MISMATCH       floor-mismatch=1873 (max abs diff 14)
+./min_conv_exp_old kw3 kh1                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp_old kw1 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+===== ./min_conv_exp
+./min_conv_exp kw3 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp kw3 kh3 --asym-w               RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp kw3 kh3 tap 1:1                RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp kw3 kh3 tap 2:0                RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp kw3 kh2                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp kw2 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp kw3 kh1                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+./min_conv_exp kw1 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+--- deconv no-flip control (y-blind symmetric pattern) ---
+RESULT: MISMATCH
+--- deconv flip control (y-blind symmetric pattern) ---
+RESULT: BIT-EXACT
+
+===================== 04_extended_sweep.log =====================
+########## 4) 扩展扫描：全部 kw!=kh 有序对 2..6 + asym 方形 + one-hot 全 tap + pad1 全组合 + stride2
+
+=== E) all ordered kw!=kh in 2..6 (pat2) ===
+kw2 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2 kh4                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2 kh5                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2 kh6                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh2                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh4                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh5                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh6                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw4 kh2                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw4 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw4 kh5                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw4 kh6                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw5 kh2                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw5 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw5 kh4                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw5 kh6                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw6 kh2                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw6 kh3                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw6 kh4                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw6 kh5                        RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+=== F) asym-w square 2..5 ===
+kw2 kh2 asym                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3 kh3 asym                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw4 kh4 asym                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw5 kh5 asym                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+=== G) one-hot single tap (pat2) ===
+kw3kh3 tap 0:0                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh3 tap 1:0                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh3 tap 2:0                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh3 tap 0:1                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh3 tap 1:1                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh3 tap 2:1                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh3 tap 0:2                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh3 tap 1:2                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh3 tap 2:2                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh2 tap 0:0                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh2 tap 1:0                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh2 tap 2:0                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh2 tap 0:1                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh2 tap 1:1                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw3kh2 tap 2:1                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2kh3 tap 0:0                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2kh3 tap 1:0                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2kh3 tap 0:1                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2kh3 tap 1:1                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2kh3 tap 0:2                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+kw2kh3 tap 1:2                 RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+=== H) pad=1 sweep kw/kh (pat2) ===
+pad1 kw1 kh1                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw1 kh2                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw1 kh3                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw1 kh4                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw1 kh5                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw2 kh1                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw2 kh2                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw2 kh3                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw2 kh4                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw2 kh5                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw3 kh1                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw3 kh2                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw3 kh3                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw3 kh4                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw3 kh5                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw4 kh1                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw4 kh2                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw4 kh3                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw4 kh4                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw4 kh5                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw5 kh1                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw5 kh2                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw5 kh3                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw5 kh4                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+pad1 kw5 kh5                   RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+=== I) stride=2 with kw!=kh ===
+stride2 kw3 kh2                RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+stride2 kw2 kh3                RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+stride2 kw4 kh3                RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+stride2 kw3 kh4                RESULT: BIT-EXACT      floor-mismatch=0 (max abs diff 0)
+TOTAL: pass=74 fail=0
+
+===================== 05_regression_hard.log =====================
+########## 5) 硬化回归 74 例（§7.11 用例 + --pat2 --asym-w）
+
+=== A) 3x3 pad0/pad1, 17 shapes ===
+PASS  3x3 8x8 pad0
+PASS  3x3 8x8 pad1
+PASS  3x3 16x16 pad0
+PASS  3x3 16x16 pad1
+PASS  3x3 32x32 pad0
+PASS  3x3 32x32 pad1
+PASS  3x3 16x8 pad0
+PASS  3x3 16x8 pad1
+PASS  3x3 8x16 pad0
+PASS  3x3 8x16 pad1
+PASS  3x3 12x8 pad0
+PASS  3x3 12x8 pad1
+PASS  3x3 8x12 pad0
+PASS  3x3 8x12 pad1
+PASS  3x3 16x12 pad0
+PASS  3x3 16x12 pad1
+PASS  3x3 12x16 pad0
+PASS  3x3 12x16 pad1
+PASS  3x3 20x8 pad0
+PASS  3x3 20x8 pad1
+PASS  3x3 8x20 pad0
+PASS  3x3 8x20 pad1
+PASS  3x3 11x7 pad0
+PASS  3x3 11x7 pad1
+PASS  3x3 7x11 pad0
+PASS  3x3 7x11 pad1
+PASS  3x3 9x5 pad0
+PASS  3x3 9x5 pad1
+PASS  3x3 5x9 pad0
+PASS  3x3 5x9 pad1
+PASS  3x3 16x24 pad0
+PASS  3x3 16x24 pad1
+PASS  3x3 24x16 pad0
+PASS  3x3 24x16 pad1
+=== B) IC=1 pad0/pad1, 10 shapes ===
+PASS  IC=1 3x3 8x8 pad0
+PASS  IC=1 3x3 8x8 pad1
+PASS  IC=1 3x3 16x8 pad0
+PASS  IC=1 3x3 16x8 pad1
+PASS  IC=1 3x3 8x16 pad0
+PASS  IC=1 3x3 8x16 pad1
+PASS  IC=1 3x3 12x8 pad0
+PASS  IC=1 3x3 12x8 pad1
+PASS  IC=1 3x3 8x12 pad0
+PASS  IC=1 3x3 8x12 pad1
+PASS  IC=1 3x3 16x16 pad0
+PASS  IC=1 3x3 16x16 pad1
+PASS  IC=1 3x3 24x16 pad0
+PASS  IC=1 3x3 24x16 pad1
+PASS  IC=1 3x3 16x24 pad0
+PASS  IC=1 3x3 16x24 pad1
+PASS  IC=1 3x3 7x11 pad0
+PASS  IC=1 3x3 7x11 pad1
+PASS  IC=1 3x3 11x7 pad0
+PASS  IC=1 3x3 11x7 pad1
+=== C) 1x1 pad0/pad1, 4 shapes ===
+PASS  1x1 16x8 pad0
+PASS  1x1 16x8 pad1
+PASS  1x1 8x16 pad0
+PASS  1x1 8x16 pad1
+PASS  1x1 12x16 pad0
+PASS  1x1 12x16 pad1
+PASS  1x1 8x12 pad0
+PASS  1x1 8x12 pad1
+=== D) variants (default 8x8 unless noted) ===
+PASS  3x3 ic=8 pad1
+PASS  3x3 ic=16 pad1
+PASS  3x3 ic=32 pad1
+PASS  3x3 ic=40 pad1
+PASS  3x3 ic=65 pad1
+PASS  oc=40 pad1
+PASS  stride2 pad1
+PASS  stride3 pad1
+PASS  kw3xkh1 pad1
+PASS  kw1xkh3 pad1
+PASS  pad2
+PASS  kw5xkh5 pad1
+==================================
+TOTAL: pass=74 fail=0
+
+===================== 06_regression_default.log =====================
+########## 6) 原回归 74 例（默认 y 盲区 pattern，对照）
+
+=== A) 3x3 pad0/pad1, 17 shapes ===
+PASS  3x3 8x8 pad0
+PASS  3x3 8x8 pad1
+PASS  3x3 16x16 pad0
+PASS  3x3 16x16 pad1
+PASS  3x3 32x32 pad0
+PASS  3x3 32x32 pad1
+PASS  3x3 16x8 pad0
+PASS  3x3 16x8 pad1
+PASS  3x3 8x16 pad0
+PASS  3x3 8x16 pad1
+PASS  3x3 12x8 pad0
+PASS  3x3 12x8 pad1
+PASS  3x3 8x12 pad0
+PASS  3x3 8x12 pad1
+PASS  3x3 16x12 pad0
+PASS  3x3 16x12 pad1
+PASS  3x3 12x16 pad0
+PASS  3x3 12x16 pad1
+PASS  3x3 20x8 pad0
+PASS  3x3 20x8 pad1
+PASS  3x3 8x20 pad0
+PASS  3x3 8x20 pad1
+PASS  3x3 11x7 pad0
+PASS  3x3 11x7 pad1
+PASS  3x3 7x11 pad0
+PASS  3x3 7x11 pad1
+PASS  3x3 9x5 pad0
+PASS  3x3 9x5 pad1
+PASS  3x3 5x9 pad0
+PASS  3x3 5x9 pad1
+PASS  3x3 16x24 pad0
+PASS  3x3 16x24 pad1
+PASS  3x3 24x16 pad0
+PASS  3x3 24x16 pad1
+=== B) IC=1 pad0/pad1, 10 shapes ===
+PASS  IC=1 3x3 8x8 pad0
+PASS  IC=1 3x3 8x8 pad1
+PASS  IC=1 3x3 16x8 pad0
+PASS  IC=1 3x3 16x8 pad1
+PASS  IC=1 3x3 8x16 pad0
+PASS  IC=1 3x3 8x16 pad1
+PASS  IC=1 3x3 12x8 pad0
+PASS  IC=1 3x3 12x8 pad1
+PASS  IC=1 3x3 8x12 pad0
+PASS  IC=1 3x3 8x12 pad1
+PASS  IC=1 3x3 16x16 pad0
+PASS  IC=1 3x3 16x16 pad1
+PASS  IC=1 3x3 24x16 pad0
+PASS  IC=1 3x3 24x16 pad1
+PASS  IC=1 3x3 16x24 pad0
+PASS  IC=1 3x3 16x24 pad1
+PASS  IC=1 3x3 7x11 pad0
+PASS  IC=1 3x3 7x11 pad1
+PASS  IC=1 3x3 11x7 pad0
+PASS  IC=1 3x3 11x7 pad1
+=== C) 1x1 pad0/pad1, 4 shapes ===
+PASS  1x1 16x8 pad0
+PASS  1x1 16x8 pad1
+PASS  1x1 8x16 pad0
+PASS  1x1 8x16 pad1
+PASS  1x1 12x16 pad0
+PASS  1x1 12x16 pad1
+PASS  1x1 8x12 pad0
+PASS  1x1 8x12 pad1
+=== D) variants (default 8x8 unless noted) ===
+PASS  3x3 ic=8 pad1
+PASS  3x3 ic=16 pad1
+PASS  3x3 ic=32 pad1
+PASS  3x3 ic=40 pad1
+PASS  3x3 ic=65 pad1
+PASS  oc=40 pad1
+PASS  stride2 pad1
+PASS  stride3 pad1
+PASS  kw3xkh1 pad1
+PASS  kw1xkh3 pad1
+PASS  pad2
+PASS  kw5xkh5 pad1
+==================================
+TOTAL: pass=74 fail=0
+
+===================== 07_deconv.log =====================
+########## 7) deconv 冒烟（flip 与 no-flip）
+
+deconv 4x4->8x8 S=2 pattern              RESULT: BIT-EXACT
+deconv 4x4->8x8 S=4 pattern              RESULT: BIT-EXACT
+deconv 4x4->8x8 S=8 pattern              RESULT: BIT-EXACT
+deconv 4x4->8x8 S=2 asym-w               RESULT: BIT-EXACT
+deconv 4x4->8x8 S=4 asym-w               RESULT: BIT-EXACT
+deconv 4x4->8x8 S=8 asym-w               RESULT: BIT-EXACT
+deconv 4x4->8x8 S=2 pat2 noflip          RESULT: MISMATCH
+TOTAL: pass=6 fail=1
+
+===================== vendor_blob_decode.log =====================
+===== vendor conv 3x3, oc=4, ic=3 (seed 7)  results/spatial_ohfix_20260928/conv16_i8.rknn
+  ONNX W shape (oc,ic,kh,kw) = (4, 3, 3, 3); blob 576 B = 36 rows x 16 B; rows/(oc) = 9 tap blocks
+  slot t= 0 (byte     0) -> logical [(0, 0)]  (exact)
+  slot t= 1 (byte    64) -> logical [(0, 1)]  L1=3
+  slot t= 2 (byte   128) -> logical [(0, 2)]  L1=2
+  slot t= 3 (byte   192) -> logical [(1, 0)]  L1=2
+  slot t= 4 (byte   256) -> logical [(1, 1)]  L1=1
+  slot t= 5 (byte   320) -> logical [(1, 2)]  L1=1
+  slot t= 6 (byte   384) -> logical [(2, 0)]  L1=2
+  slot t= 7 (byte   448) -> logical [(2, 1)]  L1=1
+  slot t= 8 (byte   512) -> logical [(2, 2)]  L1=2
+  --- linear rule check ---
+  tap = kh*w + kw  (kx fastest, ky-major)      CONSISTENT  [square: conventions coincide]
+  tap = kw*h + kh  (ky fastest, kx-major)      CONSISTENT  [square: conventions coincide]
+  ic>=ic_real padding slot values (unique) = [0, 8]
+  round(zp_oc) over oc = [0, 8]  -> padding == round(zp_oc)? True
+
+===== vendor conv kw=2 kh=1 (seed 11)  vendor_models/rect21_i8.rknn
+  ONNX W shape (oc,ic,kh,kw) = (16, 3, 1, 2); blob 512 B = 32 rows x 16 B; rows/(oc) = 2 tap blocks
+  slot t= 0 (byte     0) -> logical [(0, 0)]  L1=6
+  slot t= 1 (byte   256) -> logical [(0, 1)]  L1=7
+  --- linear rule check ---
+  tap = kh*w + kw  (kx fastest, ky-major)      CONSISTENT
+  tap = kw*h + kh  (ky fastest, kx-major)      CONTRADICTED at t=[1]
+  ic>=ic_real padding slot values (unique) = [-52, -43, 8, 18, 21, 29, 50, 57, 70, 127]
+  round(zp_oc) over oc = [-52, -43, 8, 18, 21, 29, 50, 57, 70, 127]  -> padding == round(zp_oc)? True
+
+===== vendor conv kw=1 kh=2 (seed 11)  vendor_models/rect12_i8.rknn
+  ONNX W shape (oc,ic,kh,kw) = (16, 3, 2, 1); blob 512 B = 32 rows x 16 B; rows/(oc) = 2 tap blocks
+  slot t= 0 (byte     0) -> logical [(0, 0)]  L1=6
+  slot t= 1 (byte   256) -> logical [(1, 0)]  L1=7
+  --- linear rule check ---
+  tap = kh*w + kw  (kx fastest, ky-major)      CONSISTENT
+  tap = kw*h + kh  (ky fastest, kx-major)      CONTRADICTED at t=[1]
+  ic>=ic_real padding slot values (unique) = [-52, -43, 8, 18, 21, 29, 50, 57, 70, 127]
+  round(zp_oc) over oc = [-52, -43, 8, 18, 21, 29, 50, 57, 70, 127]  -> padding == round(zp_oc)? True
+
+

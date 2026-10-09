@@ -1,0 +1,37 @@
+min_pool --iw 32 --ih 32 --ic 8 --kw 2 --kh 2 --sx 2 --sy 2 --pad 0 => mismatch=0
+min_pool --iw 64 --ih 63 --ic 16 --kw 2 --kh 2 --sx 1 --sy 1 --pad 1 => mismatch=0
+min_pool --iw 64 --ih 63 --ic 16 --kw 2 --kh 2 --sx 1 --sy 1 --pad 1 --tile-oh 31 => mismatch=0
+min_pool --iw 64 --ih 63 --ic 16 --kw 2 --kh 2 --sx 1 --sy 1 --pad 1 --tile-oh 16 => mismatch=0
+min_pool --iw 64 --ih 128 --ic 16 --kw 2 --kh 2 --sx 1 --sy 1 --pad 1 --tile-oh 32 => mismatch=0
+mce --iw 16 --ih 16 --ic 32 --oc 32 --kw 3 --kh 3 --pad 1 => SUBMIT ret=0 errno=-  0.043 ms  hw_elapse=20708 ns OUT-HASH: 93b5be45  (8192 B, ic_groups=1, oc_groups=1, tiles=1) 
+mce --iw 16 --ih 16 --ic 32 --oc 32 --kw 3 --kh 3 --pad 1 --task-count 3 --task-blocks => SUBMIT ret=0 errno=-  0.109 ms  hw_elapse=19542 ns OUT-HASH: 93b5be45  (8192 B, ic_groups=1, oc_groups=1, tiles=1) 
+wgrad --dir wgdata_i16 --pad 1 --batch 1 => FWD b=0: total=131072 round-mismatch=0 maxdiff=0 RESULT: BIT-EXACT (round) RESULT: CLOSED-LOOP OK (fwd exact, wgrad round-exact, update verified) 
+wgrad --dir wgdata_i16 --pad 1 --batch 1 --tile-oh 8 => FWD b=0: total=131072 round-mismatch=100794 maxdiff=255 RESULT: MISMATCH RESULT: MISMATCH (fwd_bad=1 wg_ok=288/288 sat_bad=0 upd_bad=0) 
+wgrad --dir wgd_64_64 --pad 1 --batch 1 => FWD b=0: total=131072 round-mismatch=0 maxdiff=0 RESULT: BIT-EXACT (round) RESULT: CLOSED-LOOP OK (fwd exact, wgrad round-exact, update verified) 
+wgrad --dir wgd_64_64 --pad 1 --batch 1 --tile-oh 16 => FWD b=0: total=131072 round-mismatch=100490 maxdiff=255 RESULT: MISMATCH RESULT: MISMATCH (fwd_bad=1 wg_ok=288/288 sat_bad=0 upd_bad=0) 
+soft=86 楔死=0
+
+=== §7.126 修正后的 wgrad_real 回归（二进制与数据集配对）===
+注意：上面 wgrad 两行是**无效**的（用 -DIW=64 -DIH=64 的 v64c 跑 wgdata_i16 的 16x16 数据集 ✗）——
+     教训：回归必须「二进制 × 数据集」配对，否则得到看似真实的 MISMATCH ✗。
+
+wgrad16 --dir wgdata_i16 --pad 1 --batch 1 => FWD b=0: total=8192 round-mismatch=0 maxdiff=0 RESULT: BIT-EXACT (round) RESULT: CLOSED-LOOP OK (fwd exact, wgrad round-exact, update verified) 
+wgrad16 --dir wgdata_i16 --pad 1 --batch 1 --tile-oh 8 => FWD b=0: total=8192 round-mismatch=0 maxdiff=0 RESULT: BIT-EXACT (round) RESULT: CLOSED-LOOP OK (fwd exact, wgrad round-exact, update verified) 
+wgrad64 --dir wgd_64_64 --pad 1 --batch 1 => FWD b=0: total=131072 round-mismatch=0 maxdiff=0 RESULT: BIT-EXACT (round) RESULT: CLOSED-LOOP OK (fwd exact, wgrad round-exact, update verified) 
+wgrad64 --dir wgd_64_64 --pad 1 --batch 1 --tile-oh 16 => FWD b=0: total=131072 round-mismatch=0 maxdiff=0 RESULT: BIT-EXACT (round) RESULT: CLOSED-LOOP OK (fwd exact, wgrad round-exact, update verified) 
+wgrad64 --dir wgd_64_64 --pad 1 --batch 1 --tile-oh 8 => FWD b=0: total=131072 round-mismatch=0 maxdiff=0 RESULT: BIT-EXACT (round) RESULT: CLOSED-LOOP OK (fwd exact, wgrad round-exact, update verified) 
+soft=86 楔死=0
+
+## 结论（§7.126）：三项闭合成果在回归中全部保持 ✓
+
+| 工具 | 用例 | 结果 |
+| --- | --- | --- |
+| min_pool | 不切分（32×32 k2s2；64×63 k2s1） | mismatch=0 ✓ |
+| min_pool | `--tile-oh 31 / 16`（64×63） | mismatch=0 ✓ |
+| min_pool | **`ih=128 --tile-oh 32`（旧硬边界外）** | **mismatch=0** ✓ |
+| min_conv_exp | 单 task（16×16 IC32） | `ret=0`，`OUT-HASH 93b5be45` ✓ |
+| min_conv_exp | **`--task-count 3 --task-blocks`（每 subcore 1 个）** | `ret=0`，**同哈希** ✓（多核闭合保持 ✓） |
+| wgrad_real | 16×16 int8 不切分 / `--tile-oh 8` | 均 **BIT-EXACT + CLOSED-LOOP OK** ✓ |
+| wgrad_real | 64×64 int8 不切分 / `--tile-oh 16` / `--tile-oh 8` | 均 **BIT-EXACT + CLOSED-LOOP OK** ✓ |
+
+soft reset 86→86 ✓、**楔死签名 0** ✓（全程板子健康 ✓）。

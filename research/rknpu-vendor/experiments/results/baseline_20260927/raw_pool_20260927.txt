@@ -1,0 +1,572 @@
+########################################################################
+# RKNPU PPU MaxPool 手写发射实测原始日志（2026-09-27）
+# 板：Orange Pi 5 Plus / kernel 6.1.43-rockchip-rk3588-rknpu098 / RKNPU v0.9.8
+# 工具：min_pool.c（手写 PPU regcmd，不用任何 NPU 运行时）
+# 参照：runs/eperf/probe_maxpool/ 的厂商捕获（LD_PRELOAD hook, 2026-09-17）
+########################################################################
+
+========================================================================
+==== pool_r1.log —— 首跑：照抄厂商程序 -> 全部 timeout
+========================================================================
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+src sha256: 62e688746edeb9e6
+
+########## P1 首跑：照抄厂商程序（64x64x16 -> 32x32x16, 2x2/s2 maxpool）
+### 
+   PPU 视口: in 64x64 out 32x32
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  3282.601 ms  hw_elapse=0 ns
+
+### --no-transpose
+   PPU 视口: in 64x64 out 32x32
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  3410.370 ms  hw_elapse=0 ns
+
+########## P2 非方阵，定方向
+### --iw 64 --ih 32
+   PPU 视口: in 32x64 out 16x32
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  3408.700 ms  hw_elapse=0 ns
+
+### --iw 64 --ih 32 --no-transpose
+   PPU 视口: in 64x32 out 32x16
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  3410.399 ms  hw_elapse=0 ns
+
+########## P3 换核与步长
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 2 --sy 2 --pad 1
+   PPU 视口: in 32x32 out 16x16
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  3410.115 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --kw 2 --kh 2 --sx 1 --sy 1
+   PPU 视口: in 32x32 out 31x31
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  3410.082 ms  hw_elapse=0 ns
+
+###### done
+
+========================================================================
+==== pool_r2.log —— int_mask 扫描：0xc00 命中，PPU MaxPool bit-exact；非法 mask 触发 job abort
+========================================================================
+src sha256: b6c2ffb07a7f100c
+
+########## Q. int_mask 扫描（PPU 完成位）
+### --iw 32 --ih 32 --timeout 300 --int-mask 0x300
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  521.112 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --timeout 300 --int-mask 0xc00
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=0 errno=-  0.141 ms  hw_elapse=66499 ns
+  total=4096  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --timeout 300 --int-mask 0xf00
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  517.362 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --timeout 300 --int-mask 0xfff
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  537.155 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --timeout 300 --int-mask 0x3c00
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Connection timed out  539.110 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --timeout 300 --int-mask 0x3f00
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1067.519 ms  hw_elapse=0 ns
+
+########## R. 加 PPU_OPERATION_ENABLE
+### --iw 32 --ih 32 --timeout 300 --int-mask 0x300 --ppu-op-en
+regcmd: 32 entries (256 bytes), regcfg_amount=28
+SUBMIT ret=-1 errno=Invalid argument  1047.385 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --timeout 300 --int-mask 0xc00 --ppu-op-en
+regcmd: 32 entries (256 bytes), regcfg_amount=28
+SUBMIT ret=-1 errno=Invalid argument  1073.576 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --timeout 300 --int-mask 0xf00 --ppu-op-en
+regcmd: 32 entries (256 bytes), regcfg_amount=28
+SUBMIT ret=-1 errno=Invalid argument  1067.119 ms  hw_elapse=0 ns
+
+###### done
+
+========================================================================
+==== pool_r3.log —— 崩溃后设备已卡死（内核 oops: BO 释放路径）
+========================================================================
+########## S0 设备健康检查
+[88325.350113] bd40  1fe73900 ffffff81 069a7700 ffffff81 0d7dbdd0 ffffffc0 0808cd78 ffffffc0
+[88325.350854] Code: f9000680 17ffffcf d503201f aa0003e2 (f9400000) 
+[88325.351393] ---[ end trace 0000000000000000 ]---
+[88325.374376] note: 10-orangepi-hea[1496771] exited with irqs disabled
+[88325.375084] Fixing recursive fault but reboot is needed!
+### --iw 32 --ih 32 --timeout 500
+   PPU 视口: in 32x32 out 16x16
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1638.875 ms  hw_elapse=0 ns
+
+########## S1 厂商同形状（64x64x16 -> 32x32x16, 2x2/s2）
+### --iw 64 --ih 64 --timeout 500
+   PPU 视口: in 64x64 out 32x32
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1630.285 ms  hw_elapse=0 ns
+
+### --iw 64 --ih 64 --timeout 500 --no-transpose
+   PPU 视口: in 64x64 out 32x32
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1631.998 ms  hw_elapse=0 ns
+
+########## S2 非方阵：定方向
+### --iw 64 --ih 32 --timeout 500
+   PPU 视口: in 32x64 out 16x32
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1632.643 ms  hw_elapse=0 ns
+
+### --iw 64 --ih 32 --timeout 500 --no-transpose
+   PPU 视口: in 64x32 out 32x16
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1632.277 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 64 --timeout 500
+   PPU 视口: in 64x32 out 32x16
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1636.799 ms  hw_elapse=0 ns
+
+########## S3 核与步长
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 2 --sy 2 --pad 1 --timeout 500
+   PPU 视口: in 32x32 out 16x16
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1637.424 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 1 --sy 1 --pad 1 --timeout 500
+   PPU 视口: in 32x32 out 32x32
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1637.486 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --kw 2 --kh 2 --sx 1 --sy 1 --timeout 500
+   PPU 视口: in 32x32 out 31x31
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1636.640 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --kw 4 --kh 4 --sx 4 --sy 4 --timeout 500
+   PPU 视口: in 32x32 out 8x8
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1636.698 ms  hw_elapse=0 ns
+
+### --iw 30 --ih 30 --kw 3 --kh 3 --sx 2 --sy 2 --pad 1 --timeout 500
+   PPU 视口: in 30x30 out 15x15
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1637.543 ms  hw_elapse=0 ns
+
+########## S4 enable_mask 应当无影响
+### --iw 32 --ih 32 --timeout 500 --enable-mask 0x0
+   PPU 视口: in 32x32 out 16x16
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1636.960 ms  hw_elapse=0 ns
+
+### --iw 32 --ih 32 --timeout 500 --enable-mask 0xff
+   PPU 视口: in 32x32 out 16x16
+regcmd: 30 entries (240 bytes), regcfg_amount=26
+SUBMIT ret=-1 errno=Invalid argument  1637.214 ms  hw_elapse=0 ns
+
+###### done
+
+========================================================================
+==== pool_r4.log —— 重启后安全矩阵：形状 / 方向 / 核 / 步长 / 通道 / enable_mask / method
+========================================================================
+########## 环境
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+ 15:18:03 up 0 min, 0 users, load average: 2.78, 0.68, 0.23
+
+########## T1 已知可用（重装后复验）
+### --iw 32 --ih 32 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.077 ms  hw_elapse=65503 ns
+  total=4096  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## T2 厂商同形状 64x64x16
+### --iw 64 --ih 64 --timeout 300
+   PPU 视口: in 64x64 out 32x32
+SUBMIT ret=0 errno=-  0.056 ms  hw_elapse=35291 ns
+  total=16384  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=64 ih=64 ic=16 ow=32 oh=32 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## T3 非方阵：确定 PPU 视口方向
+### --iw 64 --ih 32 --timeout 300
+   PPU 视口: in 32x64 out 16x32
+SUBMIT ret=0 errno=-  0.135 ms  hw_elapse=68711 ns
+  total=8192  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=64 ih=32 ic=16 ow=32 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 64 --ih 32 --timeout 300 --no-transpose
+   PPU 视口: in 64x32 out 32x16
+SUBMIT ret=0 errno=-  0.041 ms  hw_elapse=23528 ns
+  total=8192  mismatch=4945 (max abs diff 129)
+  RESULT: MISMATCH
+  CFG: iw=64 ih=32 ic=16 ow=32 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+   mismatch c=0 x=0 y=0: cpu=-38 hw=-1
+   mismatch c=0 x=2 y=0: cpu=110 hw=94
+   mismatch c=0 x=3 y=0: cpu=94 hw=110
+   mismatch c=0 x=4 y=0: cpu=2 hw=39
+   mismatch c=0 x=7 y=0: cpu=-32 hw=97
+   mismatch c=0 x=8 y=0: cpu=42 hw=79
+   mismatch c=0 x=12 y=0: cpu=82 hw=119
+   mismatch c=0 x=13 y=0: cpu=119 hw=103
+
+########## T4 核 / 步长 / padding
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 2 --sy 2 --pad 1 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.045 ms  hw_elapse=21656 ns
+  total=4096  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=3 kh=3 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 1 --sy 1 --pad 1 --timeout 300
+   PPU 视口: in 32x32 out 32x32
+SUBMIT ret=0 errno=-  0.111 ms  hw_elapse=29944 ns
+  total=16384  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=32 oh=32 kw=3 kh=3 sx=1 sy=1 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --kw 2 --kh 2 --sx 1 --sy 1 --timeout 300
+   PPU 视口: in 32x32 out 31x31
+SUBMIT ret=0 errno=-  0.091 ms  hw_elapse=69246 ns
+  total=15376  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=31 oh=31 kw=2 kh=2 sx=1 sy=1 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --kw 4 --kh 4 --sx 4 --sy 4 --timeout 300
+   PPU 视口: in 32x32 out 8x8
+SUBMIT ret=0 errno=-  0.125 ms  hw_elapse=60423 ns
+  total=1024  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=8 oh=8 kw=4 kh=4 sx=4 sy=4 int_mask=0xc00 ppu_op_en=0
+
+########## T5 通道数
+### --iw 32 --ih 32 --ic 32 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.091 ms  hw_elapse=69781 ns
+  total=8192  mismatch=3266 (max abs diff 150)
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=32 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+   mismatch c=16 x=0 y=0: cpu=15 hw=68
+   mismatch c=16 x=1 y=0: cpu=89 hw=105
+   mismatch c=16 x=3 y=0: cpu=-19 hw=34
+   mismatch c=16 x=4 y=0: cpu=55 hw=108
+   mismatch c=16 x=6 y=0: cpu=113 hw=0
+   mismatch c=16 x=7 y=0: cpu=21 hw=74
+   mismatch c=16 x=8 y=0: cpu=95 hw=111
+   mismatch c=16 x=9 y=0: cpu=116 hw=-34
+
+### --iw 32 --ih 32 --ic 8 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.132 ms  hw_elapse=62709 ns
+  total=4096  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## T6 enable_mask 应无影响
+### --iw 32 --ih 32 --timeout 300 --enable-mask 0x0
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.048 ms  hw_elapse=28875 ns
+  total=4096  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --timeout 300 --enable-mask 0xff
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.035 ms  hw_elapse=21583 ns
+  total=4096  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## T7 POOLING_METHOD 扫描（找 avg/min）
+### --iw 32 --ih 32 --method 0 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.085 ms  hw_elapse=62709 ns
+  total=4096  mismatch=4079 (max abs diff 127)
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+   mismatch c=0 x=0 y=0: cpu=-38 hw=0
+   mismatch c=0 x=1 y=0: cpu=36 hw=0
+   mismatch c=0 x=2 y=0: cpu=110 hw=0
+   mismatch c=0 x=3 y=0: cpu=94 hw=0
+   mismatch c=0 x=4 y=0: cpu=2 hw=0
+   mismatch c=0 x=5 y=0: cpu=76 hw=0
+   mismatch c=0 x=6 y=0: cpu=113 hw=0
+   mismatch c=0 x=7 y=0: cpu=-32 hw=0
+
+### --iw 32 --ih 32 --method 1 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.088 ms  hw_elapse=63584 ns
+  total=4096  mismatch=0 (max abs diff 0)
+  RESULT: BIT-EXACT
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --method 2 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.048 ms  hw_elapse=30334 ns
+  total=4096  mismatch=4096 (max abs diff 240)
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+   mismatch c=0 x=0 y=0: cpu=-38 hw=-128
+   mismatch c=0 x=1 y=0: cpu=36 hw=-54
+   mismatch c=0 x=2 y=0: cpu=110 hw=20
+   mismatch c=0 x=3 y=0: cpu=94 hw=-125
+   mismatch c=0 x=4 y=0: cpu=2 hw=-88
+   mismatch c=0 x=5 y=0: cpu=76 hw=-14
+   mismatch c=0 x=6 y=0: cpu=113 hw=-106
+   mismatch c=0 x=7 y=0: cpu=-32 hw=-122
+
+### --iw 32 --ih 32 --method 3 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.045 ms  hw_elapse=25958 ns
+  total=4096  mismatch=4079 (max abs diff 127)
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+   mismatch c=0 x=0 y=0: cpu=-38 hw=0
+   mismatch c=0 x=1 y=0: cpu=36 hw=0
+   mismatch c=0 x=2 y=0: cpu=110 hw=0
+   mismatch c=0 x=3 y=0: cpu=94 hw=0
+   mismatch c=0 x=4 y=0: cpu=2 hw=0
+   mismatch c=0 x=5 y=0: cpu=76 hw=0
+   mismatch c=0 x=6 y=0: cpu=113 hw=0
+   mismatch c=0 x=7 y=0: cpu=-32 hw=0
+
+###### done
+
+========================================================================
+==== pool_r5.log —— 组寻址修正 + min/avg 参照
+========================================================================
+src sha256: a56087817c5a22e6
+
+########## U1 回归：max 仍然 bit-exact
+### --iw 32 --ih 32 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.097 ms  hw_elapse=69999 ns
+  total=4096  vs-max mismatch=0 (max abs diff 0)
+  refs: vs-min=4096  vs-avg_floor=4096  vs-avg_round=4096
+  RESULT: BIT-EXACT(max)
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 64 --ih 64 --timeout 300
+   PPU 视口: in 64x64 out 32x32
+SUBMIT ret=0 errno=-  0.241 ms  hw_elapse=36750 ns
+  total=16384  vs-max mismatch=0 (max abs diff 0)
+  refs: vs-min=16384  vs-avg_floor=16384  vs-avg_round=16384
+  RESULT: BIT-EXACT(max)
+  CFG: iw=64 ih=64 ic=16 ow=32 oh=32 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## U2 通道组：ic=16 / 32 / 48（修正组寻址后）
+### --iw 32 --ih 32 --ic 16 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.116 ms  hw_elapse=28291 ns
+  total=4096  vs-max mismatch=0 (max abs diff 0)
+  refs: vs-min=4096  vs-avg_floor=4096  vs-avg_round=4096
+  RESULT: BIT-EXACT(max)
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --ic 32 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.043 ms  hw_elapse=24208 ns
+  total=8192  vs-max mismatch=4079 (max abs diff 127)
+  refs: vs-min=8176  vs-avg_floor=8160  vs-avg_round=8160
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=32 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --ic 48 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.048 ms  hw_elapse=29458 ns
+  total=12288  vs-max mismatch=8160 (max abs diff 127)
+  refs: vs-min=12257  vs-avg_floor=12224  vs-avg_round=12224
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=48 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## U3 POOLING_METHOD 编码识别
+### --iw 32 --ih 32 --method 0 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.108 ms  hw_elapse=72916 ns
+  total=4096  vs-max mismatch=4079 (max abs diff 127)
+  refs: vs-min=4079  vs-avg_floor=4064  vs-avg_round=4064
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --method 1 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.104 ms  hw_elapse=69708 ns
+  total=4096  vs-max mismatch=0 (max abs diff 0)
+  refs: vs-min=4096  vs-avg_floor=4096  vs-avg_round=4096
+  RESULT: BIT-EXACT(max)
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --method 2 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.143 ms  hw_elapse=63874 ns
+  total=4096  vs-max mismatch=4096 (max abs diff 240)
+  refs: vs-min=0  vs-avg_floor=4096  vs-avg_round=4096
+  RESULT: MATCHES-MIN
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --method 3 --timeout 300
+   PPU 视口: in 32x32 out 16x16
+SUBMIT ret=0 errno=-  0.135 ms  hw_elapse=64458 ns
+  total=4096  vs-max mismatch=4079 (max abs diff 127)
+  refs: vs-min=4079  vs-avg_floor=4064  vs-avg_round=4064
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## U4 大核（3x3/s1/p1）下的 method 识别
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 1 --sy 1 --pad 1 --method 0 --timeout 300
+   PPU 视口: in 32x32 out 32x32
+SUBMIT ret=0 errno=-  0.087 ms  hw_elapse=67083 ns
+  total=16384  vs-max mismatch=16379 (max abs diff 127)
+  refs: vs-min=16379  vs-avg_floor=16054  vs-avg_round=16200
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=16 ow=32 oh=32 kw=3 kh=3 sx=1 sy=1 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 1 --sy 1 --pad 1 --method 1 --timeout 300
+   PPU 视口: in 32x32 out 32x32
+SUBMIT ret=0 errno=-  0.041 ms  hw_elapse=21583 ns
+  total=16384  vs-max mismatch=0 (max abs diff 0)
+  refs: vs-min=16384  vs-avg_floor=16384  vs-avg_round=16384
+  RESULT: BIT-EXACT(max)
+  CFG: iw=32 ih=32 ic=16 ow=32 oh=32 kw=3 kh=3 sx=1 sy=1 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 1 --sy 1 --pad 1 --method 2 --timeout 300
+   PPU 视口: in 32x32 out 32x32
+SUBMIT ret=0 errno=-  0.254 ms  hw_elapse=107624 ns
+  total=16384  vs-max mismatch=16384 (max abs diff 240)
+  refs: vs-min=0  vs-avg_floor=16384  vs-avg_round=16384
+  RESULT: MATCHES-MIN
+  CFG: iw=32 ih=32 ic=16 ow=32 oh=32 kw=3 kh=3 sx=1 sy=1 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --kw 3 --kh 3 --sx 1 --sy 1 --pad 1 --method 3 --timeout 300
+   PPU 视口: in 32x32 out 32x32
+SUBMIT ret=0 errno=-  0.094 ms  hw_elapse=70874 ns
+  total=16384  vs-max mismatch=16379 (max abs diff 127)
+  refs: vs-min=16379  vs-avg_floor=16054  vs-avg_round=16200
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=16 ow=32 oh=32 kw=3 kh=3 sx=1 sy=1 int_mask=0xc00 ppu_op_en=0
+
+###### done
+
+========================================================================
+==== pool_r6.log —— avg 与多通道组探针
+========================================================================
+src sha256: c113b7b2b0f65116
+
+########## V1 回归
+### --iw 32 --ih 32 --timeout 300
+SUBMIT ret=0 errno=-  0.045 ms  hw_elapse=18958 ns
+  total=4096  vs-max mismatch=0 (max abs diff 0)
+  refs: vs-min=4096  vs-avg_floor=4096  vs-avg_round=4096
+  RESULT: BIT-EXACT(max)
+  CFG: iw=32 ih=32 ic=16 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## V2 method 0/3 是什么（看样本）
+### --iw 16 --ih 16 --ic 16 --kw 2 --kh 2 --sx 2 --sy 2 --method 0 --timeout 300
+SUBMIT ret=0 errno=-  0.063 ms  hw_elapse=18083 ns
+  total=1024  vs-max mismatch=1019 (max abs diff 127)
+  refs: vs-min=1022  vs-avg_floor=1017  vs-avg_round=1017
+   sample c=0 x=0 y=0: hw=   0  max= -38 min=-128 sum=-332 n=4
+   sample c=0 x=1 y=0: hw=   0  max=  36 min= -54 sum=-36 n=4
+   sample c=0 x=2 y=0: hw=   0  max= 110 min=  20 sum=260 n=4
+   sample c=0 x=3 y=0: hw=   0  max=  94 min=-125 sum=-212 n=4
+   sample c=0 x=4 y=0: hw=   0  max=   2 min= -88 sum=-172 n=4
+   sample c=0 x=5 y=0: hw=   0  max=  76 min= -14 sum=124 n=4
+  RESULT: MISMATCH
+  CFG: iw=16 ih=16 ic=16 ow=8 oh=8 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 16 --ih 16 --ic 16 --kw 2 --kh 2 --sx 2 --sy 2 --method 3 --timeout 300
+SUBMIT ret=0 errno=-  0.068 ms  hw_elapse=18083 ns
+  total=1024  vs-max mismatch=1019 (max abs diff 127)
+  refs: vs-min=1022  vs-avg_floor=1017  vs-avg_round=1017
+   sample c=0 x=0 y=0: hw=   0  max= -38 min=-128 sum=-332 n=4
+   sample c=0 x=1 y=0: hw=   0  max=  36 min= -54 sum=-36 n=4
+   sample c=0 x=2 y=0: hw=   0  max= 110 min=  20 sum=260 n=4
+   sample c=0 x=3 y=0: hw=   0  max=  94 min=-125 sum=-212 n=4
+   sample c=0 x=4 y=0: hw=   0  max=   2 min= -88 sum=-172 n=4
+   sample c=0 x=5 y=0: hw=   0  max=  76 min= -14 sum=124 n=4
+  RESULT: MISMATCH
+  CFG: iw=16 ih=16 ic=16 ow=8 oh=8 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+########## V3 给 method 0 配 RECIP（2x2 -> 0x8000；3x3 -> 0x5555）
+### --iw 16 --ih 16 --kw 2 --kh 2 --sx 2 --sy 2 --method 0 --recip-w 0x8000 --recip-h 0x8000 --timeout 300
+SUBMIT ret=0 errno=-  0.186 ms  hw_elapse=74083 ns
+  total=1024  vs-max mismatch=1019 (max abs diff 127)
+  refs: vs-min=1022  vs-avg_floor=1017  vs-avg_round=1017
+   sample c=0 x=0 y=0: hw=   0  max= -38 min=-128 sum=-332 n=4
+   sample c=0 x=1 y=0: hw=   0  max=  36 min= -54 sum=-36 n=4
+   sample c=0 x=2 y=0: hw=   0  max= 110 min=  20 sum=260 n=4
+   sample c=0 x=3 y=0: hw=   0  max=  94 min=-125 sum=-212 n=4
+   sample c=0 x=4 y=0: hw=   0  max=   2 min= -88 sum=-172 n=4
+   sample c=0 x=5 y=0: hw=   0  max=  76 min= -14 sum=124 n=4
+  RESULT: MISMATCH
+  CFG: iw=16 ih=16 ic=16 ow=8 oh=8 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 16 --ih 16 --kw 3 --kh 3 --sx 1 --sy 1 --pad 1 --method 0 --recip-w 0x5555 --recip-h 0x5555 --timeout 300
+SUBMIT ret=0 errno=-  0.325 ms  hw_elapse=96249 ns
+  total=4096  vs-max mismatch=4094 (max abs diff 127)
+  refs: vs-min=4096  vs-avg_floor=4021  vs-avg_round=4058
+   sample c=0 x=0 y=0: hw=   0  max= -38 min=-128 sum=-332 n=4
+   sample c=0 x=1 y=0: hw=   0  max=  -1 min=-128 sum=-387 n=6
+   sample c=0 x=2 y=0: hw=   0  max=  36 min= -91 sum=-165 n=6
+   sample c=0 x=3 y=0: hw=   0  max=  73 min= -54 sum=57 n=6
+   sample c=0 x=4 y=0: hw=   0  max= 110 min= -17 sum=279 n=6
+   sample c=0 x=5 y=0: hw=   0  max= 110 min=-109 sum=245 n=6
+  RESULT: MISMATCH
+  CFG: iw=16 ih=16 ic=16 ow=16 oh=16 kw=3 kh=3 sx=1 sy=1 int_mask=0xc00 ppu_op_en=0
+
+### --iw 16 --ih 16 --kw 3 --kh 3 --sx 1 --sy 1 --pad 1 --method 3 --recip-w 0x5555 --recip-h 0x5555 --timeout 300
+SUBMIT ret=0 errno=-  0.249 ms  hw_elapse=120749 ns
+  total=4096  vs-max mismatch=4094 (max abs diff 127)
+  refs: vs-min=4096  vs-avg_floor=4021  vs-avg_round=4058
+   sample c=0 x=0 y=0: hw=   0  max= -38 min=-128 sum=-332 n=4
+   sample c=0 x=1 y=0: hw=   0  max=  -1 min=-128 sum=-387 n=6
+   sample c=0 x=2 y=0: hw=   0  max=  36 min= -91 sum=-165 n=6
+   sample c=0 x=3 y=0: hw=   0  max=  73 min= -54 sum=57 n=6
+   sample c=0 x=4 y=0: hw=   0  max= 110 min= -17 sum=279 n=6
+   sample c=0 x=5 y=0: hw=   0  max= 110 min=-109 sum=245 n=6
+  RESULT: MISMATCH
+  CFG: iw=16 ih=16 ic=16 ow=16 oh=16 kw=3 kh=3 sx=1 sy=1 int_mask=0xc00 ppu_op_en=0
+
+########## V4 多通道组：SURF_LEN / MC_SURF_OUT
+### --iw 32 --ih 32 --ic 32 --timeout 300
+SUBMIT ret=0 errno=-  0.233 ms  hw_elapse=134750 ns
+  total=8192  vs-max mismatch=4079 (max abs diff 127)
+  refs: vs-min=8176  vs-avg_floor=8160  vs-avg_round=8160
+   sample c=0 x=0 y=0: hw= -38  max= -38 min=-128 sum=-332 n=4
+   sample c=0 x=1 y=0: hw=  36  max=  36 min= -54 sum=-36 n=4
+   sample c=0 x=2 y=0: hw= 110  max= 110 min=  20 sum=260 n=4
+   sample c=0 x=3 y=0: hw=  94  max=  94 min=-125 sum=-212 n=4
+   sample c=0 x=4 y=0: hw=   2  max=   2 min= -88 sum=-172 n=4
+   sample c=0 x=5 y=0: hw=  76  max=  76 min= -14 sum=124 n=4
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=32 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --ic 32 --surf-len 2 --timeout 300
+SUBMIT ret=0 errno=-  0.111 ms  hw_elapse=74667 ns
+  total=8192  vs-max mismatch=4079 (max abs diff 127)
+  refs: vs-min=8176  vs-avg_floor=8160  vs-avg_round=8160
+   sample c=0 x=0 y=0: hw= -38  max= -38 min=-128 sum=-332 n=4
+   sample c=0 x=1 y=0: hw=  36  max=  36 min= -54 sum=-36 n=4
+   sample c=0 x=2 y=0: hw= 110  max= 110 min=  20 sum=260 n=4
+   sample c=0 x=3 y=0: hw=  94  max=  94 min=-125 sum=-212 n=4
+   sample c=0 x=4 y=0: hw=   2  max=   2 min= -88 sum=-172 n=4
+   sample c=0 x=5 y=0: hw=  76  max=  76 min= -14 sum=124 n=4
+  RESULT: MISMATCH
+  CFG: iw=32 ih=32 ic=32 ow=16 oh=16 kw=2 kh=2 sx=2 sy=2 int_mask=0xc00 ppu_op_en=0
+
+### --iw 32 --ih 32 --ic 32 --surf-len 2 --mc-surf-out --timeout 300
+SUBMIT ret=-1 errno=Connection timed out  520.093 ms  hw_elapse=0 ns
+
+###### done

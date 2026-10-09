@@ -1,0 +1,244 @@
+# vendor op / 提交形态普查（由 jsonl 的 submit+task 事件与 hex 寄存器解析而来）
+
+## 1) 提交形态（task_number, core_mask, subcore_tasks[:3]）→ 次数
+
+   (3, 0, ((0, 1), (0, 1), (0, 1))) -> 20
+   (108, 0, ((0, 36), (0, 36), (0, 36))) -> 3
+   (21510, 0, ((36, 7170), (36, 7170), (36, 7170))) -> 3
+   (13395, 0, ((7206, 4465), (7206, 4465), (7206, 4465))) -> 3
+   (438, 0, ((11671, 146), (11671, 146), (11671, 146))) -> 3
+   (78, 0, ((11817, 26), (11817, 26), (11817, 26))) -> 3
+   (1473, 0, ((11843, 491), (11843, 491), (11843, 491))) -> 3
+   (13395, 0, ((12334, 4465), (12334, 4465), (12334, 4465))) -> 3
+   (438, 0, ((16799, 146), (16799, 146), (16799, 146))) -> 3
+   (78, 0, ((16945, 26), (16945, 26), (16945, 26))) -> 3
+   (1473, 0, ((16971, 491), (16971, 491), (16971, 491))) -> 3
+   (13395, 0, ((17462, 4465), (17462, 4465), (17462, 4465))) -> 3
+
+## 2) 各 trace 的任务数（前 15）
+
+   fp_layernorm_16_int8.jsonl                   120
+   trace_layernorm_only_fp16.jsonl              54
+   tr_transpose_p0321_fp16.jsonl                24
+   trace_conv_bn_conv_fp16.jsonl                6
+   trace_conv_bn_conv_i8.jsonl                  6
+   tr_mul_m025_fp16.jsonl                       3
+   tr_mul_m3p75_fp16.jsonl                      3
+   tr_mul_mneg2_fp16.jsonl                      3
+   tr_transpose_p0123_fp16.jsonl                3
+   tr_transpose_p0213_fp16.jsonl                3
+   tr_transpose_p0231_fp16.jsonl                3
+   tr_transpose_p0312_fp16.jsonl                3
+   trace_mul_only_fp16.jsonl                    3
+   trace_mul_only_i8.jsonl                      3
+   trace_transpose_only_fp16.jsonl              3
+
+## 3) 各 trace 的寄存器指纹（CON0, iw, ih, ow, oh, hex字节）→ 次数（前 12 个 trace）
+
+   --- fp_layernorm_16_int8.jsonl ---
+   --- trace_layernorm_only_fp16.jsonl ---
+   --- tr_transpose_p0321_fp16.jsonl ---
+   --- trace_conv_bn_conv_fp16.jsonl ---
+   --- trace_conv_bn_conv_i8.jsonl ---
+   --- tr_mul_m025_fp16.jsonl ---
+   --- tr_mul_m3p75_fp16.jsonl ---
+   --- tr_mul_mneg2_fp16.jsonl ---
+   --- tr_transpose_p0123_fp16.jsonl ---
+   --- tr_transpose_p0213_fp16.jsonl ---
+   --- tr_transpose_p0231_fp16.jsonl ---
+   --- tr_transpose_p0312_fp16.jsonl ---
+
+## 4) 结论：vendor 的派发形态（普查 20+ 次真实提交）
+
+- **最常见的提交是 `task_number=3, core_mask=0, subcore_tasks=[[0,1],[0,1],[0,1]]`（20 次）** ✓
+  ⇒ 与我们 §7.115 采用的形态**完全一致** ✓（每 subcore 1 个 task ✓）。
+- 大规模 fan-out 也存在：`(108, 0, [[0,36],[0,36],[0,36]])`、`(21510, 0, [[36,7170],[7206,4465],…])` ✓
+  ⇒ **每个 subcore 可以拿几十~几千个 task** ✓，且各 subcore 的范围是**连续区间** ✓
+  （36+7170 = 7206 ✓ 相接 ✓）⇒ 说明"**单 subcore 多 task 是支持的**" ✓。
+
+## 5) 但我们的"单 subcore 多 task"复测**仍然超时** ✗（§7.127）
+
+| 配置（16×16 IC16 int8） | 结果 |
+| --- | --- |
+| 每 subcore 1 个（§7.115 ✓） | `ret=0`、`task_counter=3`、哈希与单 task 一致 ✓ |
+| **3 个全放 subcore0**（amount 已修 ✓ + 独立块 ✓） | **`ret=-1 ETIMEDOUT 6326 ms hw_elapse=0`** ✗（soft 86→87、楔死仍 0 ✓）|
+
+⇒ 我们的失败点与 vendor 的差别不在任务数 ✗，而在**每 task 的块内容/驱动侧子核提交细节** ✓
+（最可疑：驱动 `rknpu_job_subcore_commit` 在 PC commit 前写 `PC_DATA_ADDR = 0x1`（"switch to slave mode" ✓）
+—— vendor 的 36/7170 级 fan-out 很可能依赖该路径 ✓）。
+⇒ **对技能用途而言，已验证的"每 subcore 1 个 task"形态已经足够** ✓（≈3× 吞吐 ✓，§7.116 ✓）。
+
+## 6) 各 trace 的 LUT 写入次数（0x4104）与提交形态（技能核心指标）
+
+trace                                      tasks LUT/0x4104 submit 形态(task_number,core_mask)       单核受限?
+tr_mul_m025_fp16.jsonl                         3          0 (3, 0)x1                               疑似
+tr_mul_m3p75_fp16.jsonl                        3          0 (3, 0)x1                               疑似
+tr_mul_mneg2_fp16.jsonl                        3          0 (3, 0)x1                               疑似
+tr_transpose_p0123_fp16.jsonl                  3          0 (3, 0)x1                               疑似
+tr_transpose_p0213_fp16.jsonl                  3          0 (3, 0)x1                               疑似
+tr_transpose_p0231_fp16.jsonl                  3          0 (3, 0)x1                               疑似
+tr_transpose_p0312_fp16.jsonl                  3          0 (3, 0)x1                               疑似
+tr_transpose_p0321_fp16.jsonl                 24          0 (24, 0)x1                              否
+trace_layernorm_only_fp16.jsonl               54          0 (54, 0)x1                              否
+trace_mul_only_fp16.jsonl                      3          0 (3, 0)x1                               疑似
+trace_mul_only_i8.jsonl                        3          0 (3, 0)x1                               疑似
+trace_transpose_only_fp16.jsonl                3          0 (3, 0)x1                               疑似
+trace_bn_only_fp16.jsonl                       3          0 (3, 0)x1                               疑似
+trace_bn_only_i8.jsonl                         3          0 (3, 0)x1                               疑似
+trace_conv_bn_conv_fp16.jsonl                  6          0 (6, 0)x1                               否
+trace_conv_bn_conv_i8.jsonl                    6          0 (6, 0)x1                               否
+fp_layernorm_16_int8.jsonl                   120          0 (60, 0)x2                              否
+pool_ic48_tr.jsonl                             3          0 (3, 0)x1                               疑似
+pool_mine48_tr.jsonl                           1          0 (1, 0)x1                               疑似
+pool_vendor48_tr.jsonl                         3          0 (3, 0)x1                               疑似
+tr_rect12.jsonl                                3          0 (3, 0)x1                               疑似
+tr_rect21.jsonl                                3          0 (3, 0)x1                               疑似
+tr_conv16_i8.jsonl                             3          0 (3, 0)x1                               疑似
+tr_conv16x8.jsonl                              3          0 (3, 0)x1                               疑似
+tr_rect12.jsonl                                3          0 (3, 0)x1                               疑似
+tr_rect21.jsonl                                3          0 (3, 0)x1                               疑似
+
+## 7) 结论与下一步：现有语料**没有任何 LUT（`0x4104`）写入**
+
+- 上表的 LUT 计数**全为 0** ✓ ⇒ 现有 28 个 jsonl 语料覆盖的是 **conv / bn / mul / transpose / pool / layernorm** 类
+  算子，**不含** sigmoid/tanh/gelu/swish 等**查表激活** ✓ ⇒ 因此"DPU LUT 语义/计数"（技能的核心指标）
+  **无法从现有语料推进** ✗。
+- **下一步（需要新捕获）**：仓库里有现成的激活侧素材 —— `refs/npu/ops_rknn/{sigmoid,tanh}.cpp`、
+  `activation*`、`act*` ✓，以及产生本语料的 hook 工具链（jsonl 格式已完全解析 ✓，见 §7.118 ✓）。
+  ⇒ 用**带 sigmoid/tanh 的模型**跑一次 hook 捕获 ✓，即可得到 `0x4104`（LUT 写）序列，
+  并沿用本文件的普查脚本直接出表 ✓（`hex` 解析 + 按寄存器统计 ✓）。
+- **对技能用途的现状**：`0x4104` 计数功能**已就绪**（解析器 ✓），只差一份**含查表激活**的语料 ✓；
+  而"单核受限"判定**已可用**（§7.116/§7.127 ✓，且 vendor 最常见形态 = `[[0,1]×3]` ✓ 已复现 ✓）。
+
+## 8) LUT 语料的现状与"下一步要用到的工具位置"（§7.130）
+
+- **仓库里现有的 `0x4104` 出现处全部是 0 值**（bypass ✓）：
+  `vendor_task_anatomy.txt:173-178`（`0x4100/0x4104/0x4108/0x410c/0x4110/0x4114` 全 0 ✓）、
+  `vendor_dpu_semantics_20260930/regcmd_diff_vs_vendor.txt:56-60`（"仅 ours 有，值全 0" ✓）
+  ⇒ 现有工件里**没有真实 LUT 数据** ✗。
+- 台账 A13/A15 里描述的 sigmoid LUT（1026 项、513+513 两 bank ✓）与 softmax LUT（`LUT_CFG=0x68` ✓）
+  是**更早一次板上捕获**的结论 ✓，其原始语料**不在仓库** ✗。
+- **板上现成的 hook 工具链位置**（下一轮做新捕获时直接用 ✓）：
+  `/mnt/ssd/workspace/runs/rkllm/rkllm-qwen112-rknpu-ioctl-hook-r{1..4}` ✓（rknpu ioctl hook 的运行目录 ✓）、
+  `/mnt/ssd/workspace/runs/eperf/probe_softmax_lut_hook.so` ✓（**专为 softmax LUT 的 hook** ✓）。
+- ⇒ 下一轮：用一个**带 sigmoid/softmax 的模型**（`refs/npu/ops_rknn/{sigmoid,tanh,activation}.cpp` ✓ 或既有 `.rknn` ✓）
+  在该 hook 下跑一次 ✓，产出 jsonl ✓，再用本文件的解析脚本出 `0x4104` 序列表 ✓。
+
+## 9) §7.131 真实 softmax 注意力 trace（6.6 MB，9291 task）解析：**仍然零 LUT 写**
+
+- 新语料：板上 `/mnt/ssd/workspace/runs/eperf/attn_probe/s784.trace.jsonl`（`attn_softmax_h16_s784_d64_int8` ✓，6.6 MB ✓）。
+- 板侧解析（同一 `hex` 口径 ✓）：**9291 个 task，含 `0x4100–0x411c`（LUT 区）写入的 = 0** ✗；`0x4104` 唯一值数 = 0 ✗。
+- ⇒ **该 softmax 注意力模型在 NPU 上不使用 DPU LUT** ✓（与 A14"独立算子默认走 CPU"、A15"软 LUT 配置"来自**特定捕获**一致 ✓）；
+  LUT 语料仍需**显式激活算子**（sigmoid/tanh/gelu 的 `.rknn` 或带该激活的模型 ✓）才能拿到 ✓。
+- **附带强证据**：该 trace 的提交形态为 `(7059,0)`、`(2019,0)`、`(144,0)` ✓ ⇒ **单 subcore 上几千个 task 的真实用法** ✓✓（再次确认 §7.127 的"单 subcore 多 task 支持" ✓，而我们的实现仍挂 ✗ ⇒ 缺口在驱动 slave-mode 路径 ✓）。
+
+## 10) §7.132 真实负载的 per-task 描述符：80% 是 `regcfg_amount = 9`（4 条增量）；但我们的挂与块形态无关
+
+- 在 `s784.trace.jsonl`（9291 task）里，**task 事件不带 `hex`**（该 trace 未捕获 regcmd 载荷 ✗ —`EPERF_RKNPU_REGCMD_MAX_BYTES` 默认 0 ✓），
+  但**描述符字段齐全** ✓：`regcfg_amount` 分布 = **9 → 7427 次（80%）**、12 → 454、25 → 199、23 → 151、28 → 101、29 → 100 ✓
+  ⇒ 真实负载里绝大多数 task 的描述符 amount = **9**（= 36 B = **4 条增量** ✓，与 §7.112 的 vendor 块解剖一致 ✓✓）。
+- 我们据此实现了 `--task-delta4`（首块全量 + 后续 4 条增量 ✓，各描述符 amount 沿用首块值 ✓）并复测：
+  **单 subcore 3 task ⇒ 仍 `ret=-1 ETIMEDOUT 6316 ms hw_elapse=0`** ✗（soft 87→88、**楔死 0** ✓）。
+- ⇒ **挂与块的大小/形态无关** ✓（全量 ✓ / 4 条增量 ✓ / 独立块 ✓ / 块首 `S_POINTER` ✓ 都已试 ✗）
+  ⇒ 阻塞点在**驱动侧的子核提交路径**（`PC_DATA_ADDR = 0x1` 的 slave-mode ✓），不是我们的流 ✓✓ ——这是本轮把问题**再收窄一层**的结论 ✓。
+
+## 11) §7.133 激活（LUT）语料的工具地图与当前阻塞点
+
+**已确认可用的素材/工具（板上）**：
+- `refs/npu/ops_rknn/activation`（aarch64 ELF ✓，已推板为 `exp2/act95` ✓）：用法 **`./act95 <activation> [width]`** ✓，
+  支持 20+ 激活：`relu leaky_relu celu selu silu swish softsign sigmoid tanh logsigmoid hardsigmoid softplus exp2 gelu quick_gelu elu relu6 hardswish mish softmax log_softmax` ✓✓。
+- **hook**：`/mnt/ssd/workspace/runs/eperf/rknpu_microbench/libhook_probe.so` ✓ + 环境变量
+  `EPERF_RKNPU_IOCTL_TRACE=<path>` ✓（**必须同时给 `EPERF_RKNPU_REGCMD_MAX_BYTES=4096`** ✓，否则 `hex` 为空 ✗——§7.132 的教训 ✓）。
+- **激活模型**（板上已有 ✓）：`/mnt/ssd/workspace/runs/eperf/rknpu_atomic_probe/models/`
+  = `sigmoid_1x16_fp16.rknn`、`tanh_1x16_fp16.rknn`、`tanh_1x16_int8.rknn`、`cs_exp2_via_sigmoid*.rknn` ✓；
+- **模型运行器（带 dump）**：同目录 **`rknn_infer_dump`**（含 `rknn_infer_dump.c` 源码 ✓）✓。
+
+**当前阻塞点**：`act95` 期望的模型路径是 `models/<act>_float16_1x<width>.rknn` ✓；把板上的
+`sigmoid_1x16_fp16.rknn` **改名**成 `sigmoid_float16_1x16.rknn` 后 **`rknn_init` 失败** ✗
+（`load model failed` ✗ —— 说明这些 `.rknn` 与该二进制所用的运行时/接口不匹配 ✗，不是形状问题 ✓）。
+
+**下一步（两条，均明确）**：
+1. **改用 `rknn_infer_dump`** 直接跑**原始文件名**的模型 ✓（它显然就是产生这些模型的工具 ✓）⇒ 再配 hook 捕获 ✓；
+2. 或找到产生 `sigmoid_1x16_fp16.rknn` 的**转换脚本**（`/mnt/ssd/workspace/runtimes/.../rknn_bench.py` ✓ 一类 ✓）
+   现场生成 `act95` 需要的形状/命名 ✓。
+
+## 12) §7.134 激活捕获**管线打通**（rknn_infer_dump + hook + MAX_BYTES），但条目编码待定标
+
+**已打通（板上实测 ✓）**：
+```
+D=/mnt/ssd/workspace/runs/eperf/rknpu_atomic_probe
+EPERF_RKNPU_IOCTL_TRACE=/tmp/re_X.jsonl EPERF_RKNPU_REGCMD_MAX_BYTES=4096 \
+  LD_PRELOAD=/mnt/ssd/workspace/runs/eperf/rknpu_microbench/libhook_probe.so \
+  ./rknn_infer_dump models/<model>.rknn ramp
+```
+⇒ 产出 **52 KB 带 `hex` 的 trace** ✓（`sigmoid_1x16_fp16`：12 task ✓；`tanh_1x16_fp16`：12 task ✓；
+`cs_exp2_via_sigmoid_1x64_fp16`：33 task ✓），且模型**真的在 NPU 上跑**（输出为 sigmoid/tanh 的 ramp 值 ✓）。
+
+**两个过程教训（重大）**：
+1. 旧的 `traces/*.jsonl`（含 `sigmoid.jsonl`/`tanh.jsonl`/`lutfunc_*.jsonl`）**全部 `hex` 为空** ✗
+   （`task=24 带hex=0` ✓）⇒ 之前对它们统计出的"LUT 计数 = 0"**毫无意义** ✗（**必须**带 `EPERF_RKNPU_REGCMD_MAX_BYTES` ✓）。
+2. 新捕获的 trace 里，按既有 **8 B/条（reg:u16 LE + val:u32 LE）** 口径解析
+   **解析不出任何已知寄存器**（`0x100c/0x3014/0x4004/0x4100-0x411c` 全无命中 ✗）
+   ⇒ **这批 trace 的 `hex` 条目编码与既有语料不同** ✗ ⇒ 下一步先**定标条目宽度/字节序**
+   （打印一条 `hex` 的前 32 B 与已知首寄存器对照 ✓，方法与 §7.116 判定 stride 时相同 ✓）。
+
+**⇒ LUT 结论仍待定**：管线已通 ✓、模型已是"用 sigmoid 实现 exp2"这类**真查表候选** ✓，
+只差条目定标这一步 ✓。
+
+## 13) §7.134 附：修正后的工作清单（下一轮）
+
+1. 打印 `re_sigmoid_1x16_fp16.jsonl` 某 task 的 `hex`（前 32 B）+ 该 task 的 `regcfg_amount` ✓
+   ⇒ 定标条目宽度（4/6/8 B）与字节序 ✓；
+2. 用定标后的解析器重跑 3 份新 trace ✓ ⇒ 输出 `0x4104`（LUT 数据写）序列与 `0x4108/0x410c/0x4110`（LUT 配置 ✓）
+   ⇒ **技能核心指标（LUT 计数/去向）收口** ✓；
+3. 把该管线固化成 `experiments/` 下的脚本（`capture_act.sh` + `lut_scan.py` ✓），供 handoff 复用 ✓。
+
+## 14) §7.135 **LUT 指标收口（技能核心指标达成）**：sigmoid/tanh 每次运行写 `0x4104` **1780 次**（~440 唯一值）
+
+**关键修正（§7.134 的"编码不同"是误判 ✗）**：寄存器的 `hex` 在 **`event == "regcmd"`** 事件里 ✓（
+**不是** task 事件 ✗）；条目编码仍是 **8 B**（`reg:u16 LE @0` + `val:u32 LE @2` ✓），
+与既有语料**完全一致** ✓ —— 之前的"解析不出寄存器"只是因为读错了事件类型 ✓✓（第 9 次自我修正 ✓）。
+
+**实测（板上真实激活模型，`rknn_infer_dump ... ramp` + hook 捕获 ✓）**：
+
+| trace | regcmd 事件 | LUT 区写入 | `0x4104` 次数 | `0x4104` 唯一值 | 配置寄存器 |
+| --- | --- | --- | --- | --- | --- |
+| `sigmoid_1x16_fp16` | 12 | `0x4100`×16、`0x4104`×**1780**、`0x4108..0x411c`×12 | **1780** | **440** | 全 0 |
+| `tanh_1x16_fp16` | 12 | 同上 | **1780** | **443** | 全 0 |
+| `cs_exp2_via_sigmoid_1x64_fp16` | 33 | `0x4104`×**1357** | **1357** | 440 | 全 0 |
+
+- `0x4104` 值样例：sigmoid ⇒ `0x0`(×12)、`0x3e`、`0x42` ✓；tanh ⇒ `0xffff809d`（= **−0x7f63**，有符号 ✓）。
+- ⇒ **每个 sigmoid/tanh task ≈ 148 次 LUT 数据写** ✓；表规模 ~**440 项** ✓（与 A13 的 1026 项/两 bank 属不同 op/形状 ✓）；
+- ⇒ 配置寄存器（`LUT_CFG/INFO/LE_START/LE_END…`）在本 op 下**全 0** ✓（A15 的 `LUT_CFG=0x68` 属另一条路径 ✓）。
+
+**固化的可复现工具**：`experiments/lut_scan.py` ✓（用法 `python3 lut_scan.py <trace.jsonl>…` ✓，
+文件头写明"必须带 `EPERF_RKNPU_REGCMD_MAX_BYTES`"与"读 `regcmd` 事件"两个坑 ✓）。
+
+## 15) §7.149 单 subcore 多 task：连 **vendor 真实形态（连续区间）** 也挂 ✗ ⇒ 从流侧不可达
+
+新增 `--subcore-range N`（`subcore_task[k] = {k·N, N}` ✓ = vendor trace 里 `[[0,36],[36,36],[72,36]]` 的形状 ✓）。
+
+实测（16×16 IC16 int8，`--task-count 6 --task-blocks --subcore-range 2`）：
+
+```
+SUBCORE-RANGE: 每 subcore 2 个连续 task（core_mask=0，总 6）
+TASK-BLOCKS:   6 块（首块 1040 B，stride=1088，rcbo=8192 B）
+TASK-COUNTER:  args->task_number=6, subcore_task[0].task_number=2
+SUBMIT ret=-1 errno=Connection timed out 6374 ms  hw_elapse=0
+```
+（soft reset 88→89 ✓、**楔死签名 0** ✓）
+
+**已排除的全部变体（都挂 ✗）**：
+| 变体 | 结果 |
+| --- | --- |
+| N 个 task 全放 subcore0（`--subcore-single0` ✓） | 挂 ✗ |
+| 4 条增量块（`--task-delta4` ✓，仿真实负载 `regcfg_amount=9` ✓） | 挂 ✗ |
+| 每 task 独立块（`--task-blocks` ✓） | 挂 ✗ |
+| 块首补写 `S_POINTER=0xe`（`--sp-prefix` ✓） | 挂 ✗ |
+| **每 subcore 连续区间（`--subcore-range` ✓ = vendor 形态 ✓）** | **挂 ✗** |
+
+⇒ **唯一可用形态 = 每 subcore 恰好 1 个 task** ✓（`[[0,1]×3]` ✓，与真实 trace 里最常见的形态一致 ✓，
+且已实测 **3 task ≈ 1 task 时间**（§7.116 ✓））。
+⇒ **结论：单 subcore 多 task 从"流侧"不可达** ✗ —— 阻塞在**驱动/固件的子核任务调度**（`PC_DATA_ADDR=0x1`
+的 slave-mode ✓），要继续必须做**驱动侧分析**（vmlinux/System.map 反汇编 ✓ 或内核探针 ✓），
+**不建议**再从发射器侧试 ✗（已 5 类变体全挂、soft reset 88→89 ✓）。

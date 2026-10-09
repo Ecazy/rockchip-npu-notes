@@ -1,0 +1,1263 @@
+########################################################################
+# RKNPU 真机补验原始日志（2026-09-27）
+# 板：Orange Pi 5 Plus (RK3588) / kernel 6.1.43-rockchip-rk3588-rknpu098 / RKNPU v0.9.8
+# 工具：min_conv_exp.c（在 experiments/min_conv.c 基础上只加实验开关，默认行为不变）
+# mismatch = 硬件输出 vs 本机 CPU 定点参考的逐元素比对
+########################################################################
+
+========================================================================
+==== exp1_board.log —— E1 权重描述符自洽性 / 多 16 通道组 / PAD_CON1 首轮
+========================================================================
+########## 0. 环境
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+npu_cur_freq=1000000000
+governor=rknpu_ondemand
+
+build ok: c8fd92183522d209
+
+########## E1 权重描述符自洽性（ic_real=3 / ic=16 / oc=32）
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.128 ms  hw_elapse=59500 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 16 --w-kernels 32 --pad-con1 0
+weights packed: 2304 B of descriptor 4608 B  [w_kernels=32 w_oc2=16 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.022 ms  hw_elapse=11375 ns
+  mismatch oc=0 (x=0,y=0): acc=-4 floor=-128 round=-128 hw=-126
+  mismatch oc=0 (x=2,y=0): acc=0 floor=-128 round=-128 hw=-122
+  mismatch oc=0 (x=3,y=0): acc=0 floor=-128 round=-128 hw=-122
+  mismatch oc=0 (x=4,y=0): acc=5 floor=-123 round=-123 hw=-128
+  mismatch oc=0 (x=5,y=0): acc=-5 floor=-128 round=-128 hw=-122
+  total=1024  floor-mismatch=418 (max abs diff 9)  round-mismatch=418
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=16 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 16 --w-kernels 16 --pad-con1 0
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=16 w_oc2=16 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.057 ms  hw_elapse=14000 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 16 --pad-con1 0
+weights packed: 4608 B of descriptor 2304 B  [w_kernels=16 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.101 ms  hw_elapse=70874 ns
+  mismatch oc=0 (x=1,y=0): acc=0 floor=-128 round=-128 hw=-122
+  mismatch oc=0 (x=3,y=0): acc=0 floor=-128 round=-128 hw=-127
+  mismatch oc=0 (x=4,y=0): acc=5 floor=-123 round=-123 hw=-127
+  mismatch oc=0 (x=6,y=0): acc=0 floor=-128 round=-128 hw=-122
+  mismatch oc=0 (x=1,y=1): acc=0 floor=-128 round=-128 hw=-119
+  total=1024  floor-mismatch=423 (max abs diff 9)  round-mismatch=423
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 3 --oc 8 --pad 1 --w-oc2 8 --w-kernels 8 --pad-con1 0
+weights packed: 1152 B of descriptor 1152 B  [w_kernels=8 w_oc2=8 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.029 ms  hw_elapse=11958 ns
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 8 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.073 ms  hw_elapse=14291 ns
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=8 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 40 --pad 1 --w-oc2 64 --w-kernels 64 --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=64 w_oc2=64 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.042 ms  hw_elapse=15167 ns
+  total=2560  floor-mismatch=187 (max abs diff 5)  round-mismatch=187
+  CFG: ic_real=3 ic=16 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+########## E2 多 16 通道组的展开顺序（ic_real=24/20）
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.025 ms  hw_elapse=12833 ns
+  total=2048  floor-mismatch=187 (max abs diff 6)  round-mismatch=187
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout c --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=C]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.038 ms  hw_elapse=12541 ns
+  total=2048  floor-mismatch=187 (max abs diff 6)  round-mismatch=187
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=C pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout d --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=D]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.025 ms  hw_elapse=12541 ns
+  total=2048  floor-mismatch=187 (max abs diff 6)  round-mismatch=187
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=D pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 20 --oc 16 --pad 1 --w-oc2 16 --w-kernels 16 --w-layout a --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=16 w_oc2=16 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.088 ms  hw_elapse=62999 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=20 ic=32 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 24 --oc 16 --pad 1 --w-oc2 16 --w-kernels 16 --w-layout a --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=16 w_oc2=16 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.032 ms  hw_elapse=14583 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+########## E3 CNA_PAD_CON1 的字节语义（ic_real=3 / oc=16 / w 32/32）
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.089 ms  hw_elapse=63000 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0xffffff80
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.027 ms  hw_elapse=13708 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=-128
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0xffff8080
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.094 ms  hw_elapse=66499 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=-32640
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0x00008080
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.027 ms  hw_elapse=12250 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=32896
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0x80800000
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.090 ms  hw_elapse=64166 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=-2139095040
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0x00000080
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.030 ms  hw_elapse=11958 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=128
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+SUBMIT ret=0 errno=-  0.027 ms  hw_elapse=13417 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=-999
+  RESULT: BIT-EXACT (floor)
+
+########## done
+
+========================================================================
+==== exp2_base_vs_exp.log —— 对照：原版 min_conv.c 与改造版并排复现
+========================================================================
+###### env
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+###### source identity
+d3534e9e014a63225257c54c2f5218db8d8ef2a137c40487c46cba29d3087ca5  min_conv.c
+c8fd92183522d209e921e566ff8c5118fc78a7044b557e0a042fe21d72b88918  min_conv_exp.c
+
+### [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RESULT: BIT-EXACT (floor)
+
+### [./min_conv_exp] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32
+weights packed: 4608 B of descriptor 4608 B
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RESULT: BIT-EXACT (floor)
+
+### [./min_conv_exp] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=-999
+  RESULT: BIT-EXACT (floor)
+
+### [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 128
+weights packed: 4608 B of descriptor 4608 B
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RESULT: BIT-EXACT (floor)
+
+### [./min_conv_exp] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 128
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=128
+  RESULT: BIT-EXACT (floor)
+
+### [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 0xFFFFFF80
+weights packed: 4608 B of descriptor 4608 B
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RESULT: BIT-EXACT (floor)
+
+### [./min_conv_exp] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 0xFFFFFF80
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=-128
+  RESULT: BIT-EXACT (floor)
+
+### [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 16 --pad-con1 0
+weights packed: 2304 B of descriptor 4608 B
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=418 (max abs diff 9)  round-mismatch=418
+  RESULT: MISMATCH
+
+### [./min_conv_exp] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 16 --pad-con1 0
+weights packed: 2304 B of descriptor 4608 B  [w_kernels=32 w_oc2=16 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=418 (max abs diff 9)  round-mismatch=418
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=16 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 16
+weights packed: 2304 B of descriptor 4608 B
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=418 (max abs diff 9)  round-mismatch=418
+  RESULT: MISMATCH
+
+### [./min_conv_exp] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 16
+weights packed: 2304 B of descriptor 4608 B  [w_kernels=32 w_oc2=16 layout=A]
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=418 (max abs diff 9)  round-mismatch=418
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=16 layout=A pad_con1=-999
+  RESULT: MISMATCH
+
+###### PAD_CON1 实际寄存器写
+--- regcmd 中 CNA_PAD_CON1(0x1184) 的实际写入值 [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 0
+  EMIT reg=0x1184 val=0x00000000
+
+--- regcmd 中 CNA_PAD_CON1(0x1184) 的实际写入值 [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32
+  EMIT reg=0x1184 val=0xffff8080
+
+--- regcmd 中 CNA_PAD_CON1(0x1184) 的实际写入值 [./min_conv_base] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 128
+  EMIT reg=0x1184 val=0x00000080
+
+--- regcmd 中 CNA_PAD_CON1(0x1184) 的实际写入值 [./min_conv_exp] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 128
+  EMIT reg=0x1184 val=0x00000080
+
+--- regcmd 中 CNA_PAD_CON1(0x1184) 的实际写入值 [./min_conv_exp] --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 0xFFFFFF80
+  EMIT reg=0x1184 val=0xffffff80
+
+###### done
+
+========================================================================
+==== exp3_fixed.log —— 输出通道组寻址修正后的重跑
+========================================================================
+###### env
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+src sha256: e64c37d3e036c41c
+
+########## A. 通道组寻址修正后：oc_real >= 32
+### --pattern --ic 3 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.060 ms  hw_elapse=50166 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 40 --pad 1 --w-oc2 64 --w-kernels 64 --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=64 w_oc2=64 layout=A]
+SUBMIT ret=0 errno=-  0.027 ms  hw_elapse=13417 ns
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 32 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.078 ms  hw_elapse=46958 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=32 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+########## B. 多 16 通道组的展开顺序（ic_real=24 / oc_real=32）
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.055 ms  hw_elapse=46375 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout c --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=C]
+SUBMIT ret=0 errno=-  0.056 ms  hw_elapse=47541 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=C pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout d --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=D]
+SUBMIT ret=0 errno=-  0.056 ms  hw_elapse=47542 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=D pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+########## C. 权重描述符自洽性（重跑，带直方图）
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.100 ms  hw_elapse=45791 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 16 --w-kernels 16 --pad-con1 0
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=16 w_oc2=16 layout=A]
+SUBMIT ret=0 errno=-  0.019 ms  hw_elapse=11084 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 16 --w-kernels 32 --pad-con1 0
+weights packed: 2304 B of descriptor 4608 B  [w_kernels=32 w_oc2=16 layout=A]
+SUBMIT ret=0 errno=-  0.026 ms  hw_elapse=10792 ns
+  total=1024  floor-mismatch=418 (max abs diff 9)  round-mismatch=418
+  mismatches per oc: oc0=28 oc1=28 oc2=22 oc3=28 oc4=28 oc5=22 oc6=28 oc7=28 oc8=22 oc9=28 oc10=28 oc11=22 oc12=28 oc13=28 oc14=22 oc15=28
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=16 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 3 --oc 8 --pad 1 --w-oc2 8 --w-kernels 8 --pad-con1 0
+weights packed: 1152 B of descriptor 1152 B  [w_kernels=8 w_oc2=8 layout=A]
+SUBMIT ret=0 errno=-  0.026 ms  hw_elapse=10500 ns
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 8 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.056 ms  hw_elapse=47832 ns
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=8 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+########## D. CNA_PAD_CON1 决定性探针（ic_real=3 / oc_real=16）
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.027 ms  hw_elapse=10791 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0x00000001
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.020 ms  hw_elapse=11666 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=1
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0x00000080
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.030 ms  hw_elapse=9625 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=128
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0x000000ff
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.025 ms  hw_elapse=10500 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=255
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0x7fffffff
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.020 ms  hw_elapse=11375 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=2147483647
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32 --pad-con1 0xffff8080
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.026 ms  hw_elapse=9333 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=-32640
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --w-kernels 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.020 ms  hw_elapse=11083 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=-999
+  RESULT: BIT-EXACT (floor)
+
+--- 无越界对照：pad=0, 6x6 输出
+### --pattern --ic 3 --oc 16 --pad 0 --iw 8 --ih 8 --ow 6 --oh 6 --w-oc2 32 --w-kernels 32 --pad-con1 0x7fffffff
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.026 ms  hw_elapse=9917 ns
+  total=576  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=2147483647
+  RESULT: BIT-EXACT (floor)
+
+--- 更大 padding：pad=2
+### --pattern --ic 3 --oc 16 --pad 2 --w-oc2 32 --w-kernels 32 --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.019 ms  hw_elapse=10791 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 3 --oc 16 --pad 2 --w-oc2 32 --w-kernels 32 --pad-con1 0x7fffffff
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A]
+SUBMIT ret=0 errno=-  0.032 ms  hw_elapse=10208 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=2147483647
+  RESULT: BIT-EXACT (floor)
+
+###### done
+
+========================================================================
+==== exp4_ic64.log —— ic=64 三布局判定与权重区哈希
+========================================================================
+###### env
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+src sha256: 4977f36e74a65d9b
+
+########## H. 哈希自检：ic=32 时三布局应当同字节；ic=64 时应当不同
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=0b1d73c5
+SUBMIT ret=0 errno=-  0.174 ms  hw_elapse=110541 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout c --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=C] fnv1a=0b1d73c5
+SUBMIT ret=0 errno=-  0.058 ms  hw_elapse=20125 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=C pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 24 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout d --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=D] fnv1a=0b1d73c5
+SUBMIT ret=0 errno=-  0.184 ms  hw_elapse=25958 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=D pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 64 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=d12bcdc5
+SUBMIT ret=0 errno=-  0.051 ms  hw_elapse=19541 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 64 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout c --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=C] fnv1a=30c829c5
+SUBMIT ret=0 errno=-  0.076 ms  hw_elapse=33541 ns
+  total=2048  floor-mismatch=459 (max abs diff 6)  round-mismatch=459
+  mismatches per oc: oc0=16 oc1=13 oc2=14 oc3=16 oc4=13 oc5=14 oc6=16 oc7=13 oc8=14 oc9=16 oc10=13 oc11=14 oc12=16 oc13=13 oc14=14 oc15=16 oc16=13 oc17=14 oc18=16 oc19=13 oc20=14 oc21=16 oc22=13 oc23=14 oc24=16 oc25=13 oc26=14 oc27=16 oc28=13 oc29=14 oc30=16 oc31=13
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=C pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 64 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout d --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=D] fnv1a=0281b7c5
+SUBMIT ret=0 errno=-  0.165 ms  hw_elapse=80791 ns
+  total=2048  floor-mismatch=1082 (max abs diff 20)  round-mismatch=1082
+  mismatches per oc: oc0=32 oc1=30 oc2=40 oc3=32 oc4=30 oc5=40 oc6=32 oc7=30 oc8=40 oc9=32 oc10=30 oc11=40 oc12=32 oc13=30 oc14=40 oc15=32 oc16=30 oc17=40 oc18=32 oc19=30 oc20=40 oc21=32 oc22=30 oc23=40 oc24=32 oc25=30 oc26=40 oc27=32 oc28=30 oc29=40 oc30=32 oc31=30
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=D pad_con1=0
+  RESULT: MISMATCH
+
+########## I. ic_real=64 的三布局判定
+### --pattern --ic 64 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=d12bcdc5
+SUBMIT ret=0 errno=-  0.188 ms  hw_elapse=125416 ns
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 64 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout c --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=C] fnv1a=30c829c5
+SUBMIT ret=0 errno=-  0.101 ms  hw_elapse=75833 ns
+  total=2048  floor-mismatch=459 (max abs diff 6)  round-mismatch=459
+  mismatches per oc: oc0=16 oc1=13 oc2=14 oc3=16 oc4=13 oc5=14 oc6=16 oc7=13 oc8=14 oc9=16 oc10=13 oc11=14 oc12=16 oc13=13 oc14=14 oc15=16 oc16=13 oc17=14 oc18=16 oc19=13 oc20=14 oc21=16 oc22=13 oc23=14 oc24=16 oc25=13 oc26=14 oc27=16 oc28=13 oc29=14 oc30=16 oc31=13
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=C pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 64 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout d --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=D] fnv1a=0281b7c5
+SUBMIT ret=0 errno=-  0.237 ms  hw_elapse=117833 ns
+  total=2048  floor-mismatch=1082 (max abs diff 20)  round-mismatch=1082
+  mismatches per oc: oc0=32 oc1=30 oc2=40 oc3=32 oc4=30 oc5=40 oc6=32 oc7=30 oc8=40 oc9=32 oc10=30 oc11=40 oc12=32 oc13=30 oc14=40 oc15=32 oc16=30 oc17=40 oc18=32 oc19=30 oc20=40 oc21=32 oc22=30 oc23=40 oc24=32 oc25=30 oc26=40 oc27=32 oc28=30 oc29=40 oc30=32 oc31=30
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=D pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 64 --oc 16 --pad 1 --w-oc2 16 --w-kernels 16 --w-layout a --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=163e63c5
+SUBMIT ret=0 errno=-  0.227 ms  hw_elapse=97999 ns
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 33 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 18432 B of descriptor 13824 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=949df844
+SUBMIT ret=0 errno=-  0.141 ms  hw_elapse=63291 ns
+  total=2048  floor-mismatch=904 (max abs diff 11)  round-mismatch=904
+  mismatches per oc: oc0=29 oc1=25 oc2=30 oc3=24 oc4=33 oc5=29 oc6=29 oc7=25 oc8=30 oc9=24 oc10=33 oc11=29 oc12=29 oc13=25 oc14=30 oc15=24 oc16=33 oc17=29 oc18=29 oc19=25 oc20=30 oc21=24 oc22=33 oc23=29 oc24=29 oc25=25 oc26=30 oc27=24 oc28=33 oc29=29 oc30=29 oc31=25
+  CFG: ic_real=33 ic=48 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+########## J. ic_real 非 32 倍数的权重区越界探针（描述符声明 vs 打包需求）
+### --pattern --ic 40 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 18432 B of descriptor 13824 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=421704ee
+SUBMIT ret=0 errno=-  0.185 ms  hw_elapse=121624 ns
+  total=2048  floor-mismatch=1018 (max abs diff 22)  round-mismatch=1018
+  mismatches per oc: oc0=36 oc1=27 oc2=35 oc3=27 oc4=37 oc5=29 oc6=36 oc7=27 oc8=35 oc9=27 oc10=37 oc11=29 oc12=36 oc13=27 oc14=35 oc15=27 oc16=37 oc17=29 oc18=36 oc19=27 oc20=35 oc21=27 oc22=37 oc23=29 oc24=36 oc25=27 oc26=35 oc27=27 oc28=37 oc29=29 oc30=36 oc31=27
+  CFG: ic_real=40 ic=48 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 40 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout d --pad-con1 0
+weights packed: 18432 B of descriptor 13824 B  [w_kernels=32 w_oc2=32 layout=D] fnv1a=9b34eb2d
+SUBMIT ret=0 errno=-  0.183 ms  hw_elapse=123374 ns
+  total=2048  floor-mismatch=1079 (max abs diff 22)  round-mismatch=1079
+  mismatches per oc: oc0=28 oc1=37 oc2=38 oc3=37 oc4=33 oc5=32 oc6=30 oc7=36 oc8=34 oc9=36 oc10=31 oc11=32 oc12=28 oc13=37 oc14=38 oc15=37 oc16=33 oc17=32 oc18=30 oc19=36 oc20=34 oc21=36 oc22=31 oc23=32 oc24=28 oc25=37 oc26=38 oc27=37 oc28=33 oc29=32 oc30=30 oc31=36
+  CFG: ic_real=40 ic=48 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=D pad_con1=0
+  RESULT: MISMATCH
+
+###### done
+
+========================================================================
+==== exp5_icpad.log —— ic 补齐口径探针
+========================================================================
+###### env
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+src sha256: e23df884c34940da
+
+########## K. ic_real>16 时的补齐口径（默认 align16 vs 强制 align32）
+### --pattern --ic 40 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 18432 B of descriptor 13824 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=421704ee
+  total=2048  floor-mismatch=1018 (max abs diff 22)  round-mismatch=1018
+  mismatches per oc: oc0=36 oc1=27 oc2=35 oc3=27 oc4=37 oc5=29 oc6=36 oc7=27 oc8=35 oc9=27 oc10=37 oc11=29 oc12=36 oc13=27 oc14=35 oc15=27 oc16=37 oc17=29 oc18=36 oc19=27 oc20=35 oc21=27 oc22=37 oc23=29 oc24=36 oc25=27 oc26=35 oc27=27 oc28=37 oc29=29 oc30=36 oc31=27
+  CFG: ic_real=40 ic=48 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 40 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --ic-pad 64 --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=813 (max abs diff 10)  round-mismatch=813
+  mismatches per oc: oc0=27 oc1=26 oc2=23 oc3=27 oc4=26 oc5=23 oc6=27 oc7=26 oc8=23 oc9=27 oc10=26 oc11=23 oc12=27 oc13=26 oc14=23 oc15=27 oc16=26 oc17=23 oc18=27 oc19=26 oc20=23 oc21=27 oc22=26 oc23=23 oc24=27 oc25=26 oc26=23 oc27=27 oc28=26 oc29=23 oc30=27 oc31=26
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 33 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --ic-pad 64 --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=49c5b1c5
+  total=2048  floor-mismatch=531 (max abs diff 5)  round-mismatch=531
+  mismatches per oc: oc0=14 oc1=17 oc2=19 oc3=14 oc4=17 oc5=19 oc6=14 oc7=17 oc8=19 oc9=14 oc10=17 oc11=19 oc12=14 oc13=17 oc14=19 oc15=14 oc16=17 oc17=19 oc18=14 oc19=17 oc20=19 oc21=14 oc22=17 oc23=19 oc24=14 oc25=17 oc26=19 oc27=14 oc28=17 oc29=19 oc30=14 oc31=17
+  CFG: ic_real=33 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 48 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --ic-pad 64 --pad-con1 0
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=904965c5
+  total=2048  floor-mismatch=531 (max abs diff 5)  round-mismatch=531
+  mismatches per oc: oc0=14 oc1=17 oc2=19 oc3=14 oc4=17 oc5=19 oc6=14 oc7=17 oc8=19 oc9=14 oc10=17 oc11=19 oc12=14 oc13=17 oc14=19 oc15=14 oc16=17 oc17=19 oc18=14 oc19=17 oc20=19 oc21=14 oc22=17 oc23=19 oc24=14 oc25=17 oc26=19 oc27=14 oc28=17 oc29=19 oc30=14 oc31=17
+  CFG: ic_real=48 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 40 --oc 16 --pad 1 --w-oc2 16 --w-kernels 16 --w-layout a --ic-pad 64 --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=17f3b9c5
+  total=1024  floor-mismatch=407 (max abs diff 10)  round-mismatch=407
+  mismatches per oc: oc0=27 oc1=26 oc2=23 oc3=27 oc4=26 oc5=23 oc6=27 oc7=26 oc8=23 oc9=27 oc10=26 oc11=23 oc12=27 oc13=26 oc14=23 oc15=27
+  CFG: ic_real=40 ic=64 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --ic 17 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=81f003c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=17 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 17 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --ic-pad 32 --pad-con1 0
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=81f003c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=17 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --ic 16 --oc 32 --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=7ea80fc5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=16 ic=16 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+###### done
+
+========================================================================
+==== exp6_partial_group.log —— 部分组失败归因（输入高通道 / CHANNEL_REAL）
+========================================================================
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+src sha256: 18938d42f2fd522a
+
+########## L. 基准与对照
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --ic 64 --oc 32
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=d12bcdc5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  AUX: hi_zero=0 icreal_reg=-1 ic_pad=64
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --ic 40 --oc 32 --ic-pad 64
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=813 (max abs diff 10)  round-mismatch=813
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  AUX: hi_zero=0 icreal_reg=-1 ic_pad=64
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --ic 40 --oc 32 --ic-pad 64 --hi-zero
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=813 (max abs diff 10)  round-mismatch=813
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  AUX: hi_zero=1 icreal_reg=-1 ic_pad=64
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --ic 40 --oc 32 --ic-pad 64 --icreal-reg 63
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=813 (max abs diff 10)  round-mismatch=813
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  AUX: hi_zero=0 icreal_reg=63 ic_pad=64
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --ic 40 --oc 32 --ic-pad 64 --hi-zero --icreal-reg 63
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=813 (max abs diff 10)  round-mismatch=813
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  AUX: hi_zero=1 icreal_reg=63 ic_pad=64
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --ic 40 --oc 32 --ic-pad 48
+weights packed: 18432 B of descriptor 13824 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=421704ee
+  total=2048  floor-mismatch=1018 (max abs diff 22)  round-mismatch=1018
+  CFG: ic_real=40 ic=48 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  AUX: hi_zero=0 icreal_reg=-1 ic_pad=48
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --ic 40 --oc 32 --ic-pad 48 --hi-zero
+weights packed: 18432 B of descriptor 13824 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=421704ee
+  total=2048  floor-mismatch=1018 (max abs diff 22)  round-mismatch=1018
+  CFG: ic_real=40 ic=48 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  AUX: hi_zero=1 icreal_reg=-1 ic_pad=48
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --ic 48 --oc 32 --ic-pad 64 --icreal-reg 63
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=904965c5
+  total=2048  floor-mismatch=531 (max abs diff 5)  round-mismatch=531
+  CFG: ic_real=48 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  AUX: hi_zero=0 icreal_reg=63 ic_pad=64
+  RESULT: MISMATCH
+
+###### done
+
+========================================================================
+==== exp7_entries.log —— DATA_ENTRIES 假设
+========================================================================
+src sha256: 74d11b966f5c1eda
+
+########## M. 部分组失败：DATA_ENTRIES 假设
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --oc 32 --ic 64
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=d12bcdc5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --oc 32 --ic 40 --ic-pad 64
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=813 (max abs diff 10)  round-mismatch=813
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --oc 32 --ic 40 --ic-pad 64 --entries 8
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --oc 32 --ic 40 --ic-pad 64 --entries 12
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=904 (max abs diff 255)  round-mismatch=904
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --oc 32 --ic 40 --ic-pad 64 --entries 6
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=813 (max abs diff 10)  round-mismatch=813
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-oc2 32 --w-kernels 32 --w-layout a --pad-con1 0 --oc 32 --ic 40 --ic-pad 64 --entries 8 --icreal-reg 63
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+###### done
+
+========================================================================
+==== exp8_confirm.log —— 修正口径确证
+========================================================================
+src sha256: 74d11b966f5c1eda
+
+########## N. 修正口径确证（entries = ceil(iw*2*ceil(ic/16)/8)）
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 48 --oc 32 --ic-pad 64 --entries 8 --w-oc2 32 --w-kernels 32
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=904965c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=48 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 33 --oc 32 --ic-pad 64 --entries 8 --w-oc2 32 --w-kernels 32
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=49c5b1c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=33 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 40 --oc 16 --ic-pad 64 --entries 8 --w-oc2 16 --w-kernels 16
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=17f3b9c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 40 --oc 40 --ic-pad 64 --entries 8 --w-oc2 64 --w-kernels 64
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=bd2a4bc5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 40 --oc 8 --ic-pad 64 --entries 8 --w-oc2 8 --w-kernels 8
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=0e3c27c5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 65 --oc 32 --ic-pad 96 --entries 12 --w-oc2 32 --w-kernels 32
+weights packed: 27648 B of descriptor 27648 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=c4bd49c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=65 ic=96 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 3 --oc 16 --entries 2 --w-oc2 32 --w-kernels 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=1669b5c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 16 --oc 16 --entries 2 --w-oc2 32 --w-kernels 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=b7ab99c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=16 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 17 --oc 16 --entries 4 --w-oc2 32 --w-kernels 32
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=e3ca4dc5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=17 ic=32 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 40 --oc 32 --ic-pad 64 --entries 8 --w-oc2 32 --w-kernels 16
+weights packed: 18432 B of descriptor 9216 B  [w_kernels=16 w_oc2=32 layout=A] fnv1a=c9f435c5
+  total=2048  floor-mismatch=716 (max abs diff 20)  round-mismatch=716
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=16 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --w-layout a --pad-con1 0 --ic 40 --oc 32 --ic-pad 64 --entries 8 --w-oc2 16 --w-kernels 16
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=17f3b9c5
+  total=2048  floor-mismatch=148 (max abs diff 6)  round-mismatch=148
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+###### done
+
+========================================================================
+==== exp9_autofix.log —— --auto-fix 全矩阵验收
+========================================================================
+###### env
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+src sha256: e023757ee1e1a10c
+
+########## O. --auto-fix 验收（期望全部 BIT-EXACT）
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 1 --oc 8
+weights packed: 1152 B of descriptor 1152 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=0d1e11c5
+  total=512  floor-mismatch=282 (max abs diff 255)  round-mismatch=282
+  CFG: ic_real=1 ic=16 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 1 --oc 16
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=0ac189c5
+  total=1024  floor-mismatch=560 (max abs diff 255)  round-mismatch=560
+  CFG: ic_real=1 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 1 --oc 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=5007cbc5
+  total=2048  floor-mismatch=1122 (max abs diff 255)  round-mismatch=1122
+  CFG: ic_real=1 ic=16 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 1 --oc 40
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=5c5935c5
+  total=2560  floor-mismatch=1400 (max abs diff 255)  round-mismatch=1400
+  CFG: ic_real=1 ic=16 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 1 --oc 64
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=138af9c5
+  total=4096  floor-mismatch=2240 (max abs diff 255)  round-mismatch=2240
+  CFG: ic_real=1 ic=16 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 8
+weights packed: 1152 B of descriptor 1152 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=8056ffc5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 16
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=6cdae1c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=e8b031c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 40
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=6ea2d1c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 3 --oc 64
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=fc23c5c5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=3 ic=16 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 16 --oc 8
+weights packed: 1152 B of descriptor 1152 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=af07a5c5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=16 ic=16 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 16 --oc 16
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=5da935c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=16 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 16 --oc 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=7ea80fc5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=16 ic=16 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 16 --oc 40
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=3652a5c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=16 ic=16 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 16 --oc 64
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=40ca79c5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=16 ic=16 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 17 --oc 8
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=3a1af7c5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=17 ic=32 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 17 --oc 16
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=c5d6c5c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=17 ic=32 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 17 --oc 32
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=81f003c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=17 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 17 --oc 40
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=d94c29c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=17 ic=32 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 17 --oc 64
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=202369c5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=17 ic=32 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 20 --oc 8
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=592ffbc5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=20 ic=32 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 20 --oc 16
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=3594bbc5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=20 ic=32 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 20 --oc 32
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=87b237c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=20 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 20 --oc 40
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=4045a1c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=20 ic=32 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 20 --oc 64
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=71a7d1c5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=20 ic=32 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 24 --oc 8
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=5ba01fc5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 24 --oc 16
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=dada35c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 24 --oc 32
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=0b1d73c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 24 --oc 40
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=7f3d71c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 24 --oc 64
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=c91e49c5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=24 ic=32 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 32 --oc 8
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=b7ded3c5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=32 ic=32 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 32 --oc 16
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=1558b7c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=32 ic=32 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 32 --oc 32
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=c9f435c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=32 ic=32 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 32 --oc 40
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=8b81f7c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=32 ic=32 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 32 --oc 64
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=d12bcdc5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=32 ic=32 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 33 --oc 8
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=465a5bc5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=33 ic=64 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 33 --oc 16
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=8f218fc5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=33 ic=64 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 33 --oc 32
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=49c5b1c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=33 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 33 --oc 40
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=e482e7c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=33 ic=64 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 33 --oc 64
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=dc0ec5c5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=33 ic=64 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 40 --oc 8
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=0e3c27c5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 40 --oc 16
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=17f3b9c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 40 --oc 32
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=dc69c7c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 40 --oc 40
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=bd2a4bc5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 40 --oc 64
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=25e77fc5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=40 ic=64 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 48 --oc 8
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=ed223bc5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=48 ic=64 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 48 --oc 16
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=8cf7f3c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=48 ic=64 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 48 --oc 32
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=904965c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=48 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 48 --oc 40
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=4b39dbc5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=48 ic=64 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 48 --oc 64
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=32762dc5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=48 ic=64 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 64 --oc 8
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=87a109c5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 64 --oc 16
+weights packed: 9216 B of descriptor 9216 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=163e63c5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 64 --oc 32
+weights packed: 18432 B of descriptor 18432 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=d12bcdc5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 64 --oc 40
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=de36c1c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 64 --oc 64
+weights packed: 36864 B of descriptor 36864 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=83b06bc5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=64 ic=64 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 65 --oc 8
+weights packed: 6912 B of descriptor 6912 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=564491c5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=65 ic=96 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 65 --oc 16
+weights packed: 13824 B of descriptor 13824 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=3ae73bc5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=65 ic=96 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 65 --oc 32
+weights packed: 27648 B of descriptor 27648 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=c4bd49c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=65 ic=96 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 65 --oc 40
+weights packed: 55296 B of descriptor 55296 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=e557b1c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=65 ic=96 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 65 --oc 64
+weights packed: 55296 B of descriptor 55296 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=b13363c5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=65 ic=96 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 96 --oc 8
+weights packed: 6912 B of descriptor 6912 B  [w_kernels=8 w_oc2=8 layout=A] fnv1a=d03a4fc5
+  total=512  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=96 ic=96 oc_real=8 oc=32 w_kernels=8 w_oc2=8 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 96 --oc 16
+weights packed: 13824 B of descriptor 13824 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=c4a40fc5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=96 ic=96 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 96 --oc 32
+weights packed: 27648 B of descriptor 27648 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=f978d3c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=96 ic=96 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 96 --oc 40
+weights packed: 55296 B of descriptor 55296 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=d6d189c5
+  total=2560  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=96 ic=96 oc_real=40 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 96 --oc 64
+weights packed: 55296 B of descriptor 55296 B  [w_kernels=64 w_oc2=64 layout=A] fnv1a=42d509c5
+  total=4096  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=96 ic=96 oc_real=64 oc=64 w_kernels=64 w_oc2=64 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+########## P. 对照：不加 --auto-fix 的同一批（应出现 MISMATCH）
+### --pattern --pad 1 --pad-con1 0 --ic 40 --oc 32
+weights packed: 18432 B of descriptor 13824 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=421704ee
+  total=2048  floor-mismatch=1018 (max abs diff 22)  round-mismatch=1018
+  CFG: ic_real=40 ic=48 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --ic 48 --oc 32
+weights packed: 18432 B of descriptor 13824 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=01177a92
+  total=2048  floor-mismatch=904 (max abs diff 11)  round-mismatch=904
+  CFG: ic_real=48 ic=48 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --ic 65 --oc 32
+weights packed: 27648 B of descriptor 23040 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=cfa78c3a
+  total=2048  floor-mismatch=557 (max abs diff 6)  round-mismatch=557
+  CFG: ic_real=65 ic=80 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+###### done
+
+========================================================================
+==== exp10_ic1.log —— ic_real=1 专用路径对照
+========================================================================
+########## Q. ic_real=1 专用路径 与 ic_real=2 对照
+### --pattern --pad 1 --pad-con1 0 --ic 1 --oc 16 --w-oc2 32 --w-kernels 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=23082dc5
+  total=1024  floor-mismatch=580 (max abs diff 255)  round-mismatch=580
+  CFG: ic_real=1 ic=16 oc_real=16 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --ic 1 --oc 16 --w-oc2 2 --w-kernels 2
+weights packed: 288 B of descriptor 288 B  [w_kernels=2 w_oc2=2 layout=A] fnv1a=61822045
+  total=1024  floor-mismatch=677 (max abs diff 255)  round-mismatch=677
+  CFG: ic_real=1 ic=16 oc_real=16 oc=32 w_kernels=2 w_oc2=2 layout=A pad_con1=0
+  RESULT: MISMATCH
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 2 --oc 16
+weights packed: 2304 B of descriptor 2304 B  [w_kernels=16 w_oc2=16 layout=A] fnv1a=ec875fc5
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=2 ic=16 oc_real=16 oc=32 w_kernels=16 w_oc2=16 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+### --pattern --pad 1 --pad-con1 0 --auto-fix --ic 2 --oc 32
+weights packed: 4608 B of descriptor 4608 B  [w_kernels=32 w_oc2=32 layout=A] fnv1a=b9de23c5
+  total=2048  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  CFG: ic_real=2 ic=16 oc_real=32 oc=32 w_kernels=32 w_oc2=32 layout=A pad_con1=0
+  RESULT: BIT-EXACT (floor)
+
+###### done

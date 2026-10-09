@@ -1,0 +1,516 @@
+name: eperf-instruments-build
+
+x-opencl-hook-build: &opencl-hook-build
+  image: eperf-build/instruments:opencl-hook-v1
+  build:
+    context: ../../..
+    dockerfile: infra/container_env/docker/framework-build.Dockerfile
+    args:
+      CMAKE_VERSION: "4.2.5"
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      ALL_PROXY: ${ALL_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-}
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
+      all_proxy: ${all_proxy:-}
+      no_proxy: ${no_proxy:-}
+  user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+  cpus: "${CONTAINER_CPUS:-64}"
+  mem_limit: "${CONTAINER_MEMORY_LIMIT:-128g}"
+  working_dir: /root/eperf-exporter
+  init: true
+  restart: "no"
+  env_file:
+    - path: ../../../.env
+      required: false
+  environment:
+    HOME: /home/ubuntu
+    REPO_ROOT: /root/eperf-exporter
+    CACHE_ROOT: /cache
+    IMAGE_CACHE_ROOT: /cache/container_env/eperf-build/instruments
+    BUILD_JOBS: ${BUILD_JOBS:-64}
+    CMAKE_BUILD_PARALLEL_LEVEL: ${CMAKE_BUILD_PARALLEL_LEVEL:-64}
+    HTTP_PROXY: ${HTTP_PROXY:-}
+    HTTPS_PROXY: ${HTTPS_PROXY:-}
+    ALL_PROXY: ${ALL_PROXY:-}
+    NO_PROXY: ${NO_PROXY:-}
+    http_proxy: ${http_proxy:-}
+    https_proxy: ${https_proxy:-}
+    all_proxy: ${all_proxy:-}
+    no_proxy: ${no_proxy:-}
+  volumes:
+    - type: bind
+      source: ../../..
+      target: /root/eperf-exporter
+    - type: bind
+      source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+      target: /cache
+      bind:
+        create_host_path: false
+
+x-kernperf-build: &kernperf-build
+  <<: *opencl-hook-build
+
+services:
+  eperf-instruments-opencl-hook-v1-linux-x64:
+    <<: *opencl-hook-build
+    container_name: eperf-instruments-opencl-hook-v1-linux-x64
+    profiles: ["opencl-hook-v1"]
+    command:
+      - bash
+      - infra/container_env/tasks/build-instruments.sh
+      - --target-system
+      - linux_x64_ubuntu24_04
+
+  eperf-instruments-opencl-hook-v1-linux-aarch64-gnu11.3:
+    <<: *opencl-hook-build
+    container_name: eperf-instruments-opencl-hook-v1-linux-aarch64-gnu11.3
+    profiles: ["opencl-hook-v1"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${GNU_AARCH64_TOOLCHAIN_ROOT:-../../../prebuilts/toolchains/gnu-aarch64/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu}
+        target: /opt/toolchains/gnu-aarch64
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-instruments.sh
+      - --target-system
+      - linux_aarch64_gnu11_3
+
+  eperf-instruments-opencl-hook-v1-android-aarch64-ndk29:
+    <<: *opencl-hook-build
+    container_name: eperf-instruments-opencl-hook-v1-android-aarch64-ndk29
+    profiles: ["opencl-hook-v1"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-instruments.sh
+      - --target-system
+      - android_aarch64_ndk29
+
+  # Native on-device Snapdragon Profiler collector.  This target is separate
+  # from the OpenCL hook because it samples SDP DSP/GPU providers rather than
+  # intercepting graphics API calls.
+  eperf-instruments-sdp-device-android-aarch64-ndk29:
+    <<: *opencl-hook-build
+    container_name: eperf-instruments-sdp-device-android-aarch64-ndk29
+    profiles: ["sdp-device"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-instruments.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --sdp-device
+
+  eperf-kernperf-linux-x64:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-linux-x64
+    profiles: ["kernperf"]
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - linux_x64_ubuntu24_04
+
+  eperf-kernperf-linux-aarch64-gnu11.3:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-linux-aarch64-gnu11.3
+    profiles: ["kernperf"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${GNU_AARCH64_TOOLCHAIN_ROOT:-../../../prebuilts/toolchains/gnu-aarch64/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu}
+        target: /opt/toolchains/gnu-aarch64
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - linux_aarch64_gnu11_3
+      - --cpu-providers
+      - --mnn-provider
+      - --ggml-provider
+      - --gpu-providers
+
+  eperf-kernperf-vkpeak-linux-aarch64-gnu11.3:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-vkpeak-linux-aarch64-gnu11.3
+    profiles: ["kernperf-vkpeak"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${GNU_AARCH64_TOOLCHAIN_ROOT:-../../../prebuilts/toolchains/gnu-aarch64/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu}
+        target: /opt/toolchains/gnu-aarch64
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - linux_aarch64_gnu11_3
+      - --vkpeak-provider
+
+  eperf-kernperf-android-aarch64-ndk29:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-android-aarch64-ndk29
+    profiles: ["kernperf"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --cpu-providers
+      - --mnn-provider
+      - --ggml-provider
+      - --gpu-providers
+
+  # Links only against the already built Android ggml Hexagon static artifact;
+  # the FastRPC/DSP skeleton is staged by build-kernperf.sh for device use.
+  eperf-kernperf-hexagon-bmm-android-aarch64-ndk29:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-hexagon-bmm-android-aarch64-ndk29
+    profiles: ["kernperf-hexagon-bmm"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --hexagon-bmm
+
+  # Reuses the same ggml Hexagon static artifact and DSP skeleton as the BMM
+  # probe, but constructs the actual FLASH_ATTN_EXT graph on the host.
+  eperf-kernperf-hexagon-flash-attn-android-aarch64-ndk29:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-hexagon-flash-attn-android-aarch64-ndk29
+    profiles: ["kernperf-hexagon-flash-attn"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --hexagon-flash-attn
+
+  # linux-aarch64 (glibc) HTP probe for Rhino Pi-X1 (SM8550 / HTP v73).  Links
+  # the GenieX linux-aarch64 shared ggml closure plus the v73 DSP skeleton; the
+  # closure is staged under the repo so the build does not depend on a
+  # target-specific cache layout.
+  eperf-kernperf-hexagon-flash-attn-linux-aarch64-gnu11.3:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-hexagon-flash-attn-linux-aarch64-gnu11.3
+    profiles: ["kernperf-hexagon-flash-attn-linux"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${GNU_AARCH64_TOOLCHAIN_ROOT:-../../../prebuilts/toolchains/gnu-aarch64/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu}
+        target: /opt/toolchains/gnu-aarch64
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - linux_aarch64_gnu11_3
+      - --hexagon-flash-attn
+
+  # Chunked-GDN operator probe: builds the state-update core as ggml MUL_MATs
+  # (F32 vs F16 left operand) and validates against a host fp64 reference, so the
+  # HMX precision/performance trade can be reproduced on device.
+  eperf-kernperf-hexagon-gdn-android-aarch64-ndk29:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-hexagon-gdn-android-aarch64-ndk29
+    profiles: ["kernperf-hexagon-gdn"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --hexagon-gdn
+
+  # Same GenieX shared ggml closure, but exposes the standalone
+  # HTP_OP_SOFTMAX_ILP probe (--op softmax_ilp2/4/8/16) so the FA S-tile softmax
+  # body can be timed in isolation with N rows per iteration.  The FA op itself
+  # is left untouched.  Structural timing/PMU gate only; output is undefined.
+  eperf-kernperf-hexagon-softmax-android-aarch64-ndk29:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-hexagon-softmax-android-aarch64-ndk29
+    profiles: ["kernperf-hexagon-softmax"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --hexagon-softmax
+
+  # Pure Hexagon memory-bandwidth probe (HTP_OP_MEMBW): HVX vmem streaming
+  # against cacheable L2/DDR and VTCM, selected by --path/--dir.
+  eperf-kernperf-hexagon-bandwidth-android-aarch64-ndk29:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-hexagon-bandwidth-android-aarch64-ndk29
+    profiles: ["kernperf-hexagon-bandwidth"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --hexagon-bandwidth
+
+  # Real ggml layout ops (CONT/CPY/CONCAT/REPEAT/PAD) through the same GenieX
+  # shared ggml closure as the FLASH_ATTN_EXT probe.
+  eperf-kernperf-hexagon-layout-android-aarch64-ndk29:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-hexagon-layout-android-aarch64-ndk29
+    profiles: ["kernperf-hexagon-layout"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --hexagon-layout
+
+  eperf-kernperf-acl-bmm-linux-aarch64-gnu11.3:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-acl-bmm-linux-aarch64-gnu11.3
+    profiles: ["kernperf-acl-bmm"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${GNU_AARCH64_TOOLCHAIN_ROOT:-../../../prebuilts/toolchains/gnu-aarch64/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu}
+        target: /opt/toolchains/gnu-aarch64
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - linux_aarch64_gnu11_3
+      - --acl-bmm
+
+  eperf-kernperf-clblast-bmm-linux-aarch64-gnu11.3:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-clblast-bmm-linux-aarch64-gnu11.3
+    profiles: ["kernperf-clblast-bmm"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${GNU_AARCH64_TOOLCHAIN_ROOT:-../../../prebuilts/toolchains/gnu-aarch64/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu}
+        target: /opt/toolchains/gnu-aarch64
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - linux_aarch64_gnu11_3
+      - --gpu-providers
+
+  eperf-kernperf-clblast-bmm-android-aarch64-ndk29:
+    <<: *kernperf-build
+    container_name: eperf-kernperf-clblast-bmm-android-aarch64-ndk29
+    profiles: ["kernperf-clblast-bmm"]
+    volumes:
+      - type: bind
+        source: ../../..
+        target: /root/eperf-exporter
+      - type: bind
+        source: ${CACHE_ROOT:?CACHE_ROOT_is_required}
+        target: /cache
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ANDROID_NDK_HOME:-../../../prebuilts/toolchains/android-ndk/r29}
+        target: /opt/toolchains/android-ndk
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - bash
+      - infra/container_env/tasks/build-kernperf.sh
+      - --target-system
+      - android_aarch64_ndk29
+      - --gpu-providers

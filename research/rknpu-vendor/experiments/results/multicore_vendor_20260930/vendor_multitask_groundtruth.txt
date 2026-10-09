@@ -1,0 +1,207 @@
+# vendor 多 task 尾写「真值」（从 vendor_task_anatomy.txt 抽出，§7.59）
+
+## 结构发现：后续 task 是「4 条增量」
+
+op=1（DPU-only attention）job 的 task 块：
+- task_index=0：34 条（完整配置；DPU_DST_BASE_ADDR=0xffaa0000）
+- task_index=1：34 条（仅 DPU_DST_BASE_ADDR 变为 0xffaa0400）
+- task_index=2：**4 条** = [0x4004 DPU_S_POINTER=0xe, 0x5004 DPU_RDMA_RDMA_S_POINTER=0xe,
+  0x4020 DPU_DST_BASE_ADDR=0xffaa0800, 0x4058 DPU_WDMA_SIZE_0=0x30007]
+- task_index=3：**4 条**（同构，DST 再 +0x400）
+
+⇒ **PC 在 task 之间保留寄存器状态**（后续 task 只需写变化量）——多 task 的正确用法。
+
+## 尾写真值（连续两个 task）
+
+| task | PC_BASE_ADDRESS | PC_REGISTER_AMOUNTS | PC_VERSION | PC_OPERATION_ENABLE |
+| --- | --- | --- | --- | --- |
+| task_index=0 | 0xffffe380 | 0x37 (55) | 0x0 | 0xd |
+| task_index=1 | 0xffffe700 | 0x7 (7) | 0x0 | 0xd |
+
+- 两个 base 之差 = **0x380 = 896 B = 112 条（uint64）**；而 (0x37+1)*2 = 112 条 ✓ ⇒
+  `PC_REGISTER_AMOUNTS` 与「下一块的条数」同量纲：**(N+1)*2 = 块条数** ⇒ `N = 块条数/2 - 1`。
+- 我们工具写的 `PC_REGISTER_AMOUNTS = (pc_amt+5)/2-1`（driver 公式）在 L=134 时 = 66 ⇒ 与
+  `L/2-1 = 66` 一致 ⇒ **同构**（所以尾写数值本身看起来没问题）。
+
+## 追加定量推导（§7.60）
+
+从 `vendor_submit_rules.txt` 的**可用样本**（`task_number=3`、`task_counter: 0→3` 的真实成功提交）：
+- `core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0`
+- `subcore_tasks=[[0,1],[0,1],[0,1],[0,0],[0,0]]` ⇒ **每个 subcore 只拿 1 个 task**（args 侧是 3）
+- 描述符字段分布 `(regcfg_amount, regcfg_offset, flags) = (69, 0, 0)` ⇒ **三个 task 的 regcfg_amount 全相同（含 4 条增量的短 task）**
+  ⇒ `regcfg_amount` 不是「本 task 的实际长度」，而是**每个 task 的槽位预算**。
+
+单位推导（尾部两个 base 之差 0x380 = 896 B）：
+- 896 B = **16 B × 56**；而同一 task 的 `PC_REGISTER_AMOUNTS = 0x37 = 55` ⇒ 55 + 1 = 56 ✓
+  ⇒ **`PC_REGISTER_AMOUNTS` 以「16 B 单元」计**，且 `PC_BASE_ADDRESS` 的推进量 = `(N+1) × 16` 字节。
+- 我们的公式 `PC_REGISTER_AMOUNTS = (pc_amt+5)/2-1`，在 L=134 条（1072 B）时 = 66，而 1072/16 = 67 ⇒ 66 = 67−1 ✓
+  ⇒ **与 vendor 同口径**（我们尾写数值本身是对的）。
+- 但 vendor 的 `regcfg_amount = 69` 对一个 34 条（272 B）的块 ⇒ 272/4 = 68、+1 = 69 ✓ ⇒ **`regcfg_amount` 以 4 B 字计**
+  ⇒ 我们传 130（按 8 B 条目计）**与 vendor 口径差 2 倍**（这条在单 task 下无影响——PC 用它只算 `PC_DATA_AMOUNT`——
+  但多 task 时可能被用于**跨 task 步进**，属于下一步要试的变量）。
+
+## 追加：多 task 两种失败模式（§7.61，本机实测）
+
+| 配置 | 提交 | 后续 task 是否产生输出 |
+| --- | --- | --- |
+| 1 subcore 上 2 task（显式 `subcore_task[0].task_number=2`） | **6.3 s 超时**（`hw_elapse=0`）✗ | — |
+| `core_mask=0x7` + 每核 1 task（distinct `task_start`，无尾写） | **`ret=0`，36–88 µs** ✓ | **未产生**：fp16（区域预填 0x00）下 task1 `nonzero_bytes=0`（完全未动 ✗）、task2 `=182`（残片 ✗） |
+| 同上但加 `--chain-pc`（尾写链） | **6.35 s 超时** ✗ | — |
+
+驱动源码佐证：`core_mask=0x7` 会逐个 commit 三个核；任务完成要求**所有核的中断**到齐
+（`atomic_dec_and_test(&job->interrupt_count)`）⇒ 既然 `ret=0`，三个核**都中断了**，
+但 follow-up 没有输出 ⇒ 问题在**每核的流/寄存器状态**（下一步线索：`rknpu_job_subcore_commit`
+在 PC commit 之前会写 `PC_DATA_ADDR = 0x1`（注释 "switch to slave mode"），值得单独试）。
+
+## 追加：vendor「最小多 task 样本」与我们的实测差异（§7.62）
+
+vendor 样本（`bn_lower_20260928/em0d/tr_*_fp16.jsonl`，`task_counter: 0→3` 真实成功）：
+```
+submit: core_mask=0 task_start=0 task_number=3 flags=0x5 task_base=0x0 task_counter=0→3 hw=64166 ns
+        subcore_tasks=[[0,1],[0,1],[0,1],[0,0],[0,0]]
+task 描述符字段分布 (regcfg_amount, regcfg_offset, flags): (69,0,0) → 3     ← 三个 task 全相同且非零
+```
+其块解剖（同 job）：task0 = 34 条（完整）、task1 = 34 条（仅改 DST 地址）、task2/3 = **4 条增量**；
+每个 task 尾部都写 `PC_BASE_ADDRESS`/`PC_REGISTER_AMOUNTS`/`PC_VERSION`/`PC_OPERATION_ENABLE=0xd`。
+
+我们本轮实测（16×16 IC16 int8，`flags=0x5`，`core_mask=0`）：
+
+| 配置 | 结果 |
+| --- | --- |
+| `--task-count 3` + **真实 `regcfg_amount`**（仿 vendor）+ `subcore_task[0]=3` | **6.25 s 超时** ✗ |
+| `--task-count 2` + `subcore_task[0]=1`（参数 2、子核 1） | **挂**（无输出）✗ |
+| `--task-count 2` + `regcfg_amount=0`（旧行为） | `ret=0`、0.19 ms —— **静默只跑 1 个 task** ✗ |
+
+⇒ 结论：① `args->task_number` 在**运行中的驱动**里**被尊重**（子核数与参数数不一致时会真的尝试 2 个 task 并挂）
+⇒ §7.45 的「驱动覆盖」结论需要按实际内核二进制复核（我们读的源码可能与运行的不一致）；
+② 我们的 `regcfg_amount=0` 只是「静默单 task」；
+③ 与 vendor 仍差在**流布局/尾写取值**（vendor = 34/34/4 条连续块 + 每块尾写；我们 = 等长 134 条块 + 自算尾写）。
+
+## §7.110 我们侧的一个真 bug（已修）：多 task 描述符的 `regcfg_amount` 实际写的是 0
+
+- 代码顺序 bug：`tk2->regcfg_amount = t->regcfg_amount;` 位于 `t->regcfg_amount = n - EXTRA;` **之前**
+  ⇒ 多 task 时**所有描述符的 amount 都是 0** ✗ —— 这正是 §7.62「`regcfg_amount=0` ⇒ 静默只跑 1 个 task」的成因 ✓。
+- **修正**：在 `n` 已知后统一写 `t[k].regcfg_amount = n - EXTRA`（=126，vendor「三描述符同值且非零」的形状 ✓）。
+- **实测（16×16 IC16 int8，`--task-count 3`）**：`TASK-COUNTER: args->task_number=3, subcore_task[0].task_number=3`
+  ⇒ **`SUBMIT ret=-1 errno=Connection timed out 6329 ms hw_elapse=0`** ✗（soft reset 83→84，楔死签名仍 0 ✓）。
+- ⇒ 失败模式从「静默单 task」变为「超时」⇒ 与「PC 顺着尾写去追下一块、但我们的流布局不是 vendor 的
+  34/34/4 + 增量」一致 ✓ ⇒ **下一步就是逐字节复刻 vendor 的块布局**（短块 + 4 条增量 + 每块尾写），
+  而不是继续调 amount 数值 ✓。
+
+## §7.111 运行内核复核（handoff §3 的第二步，behaviour 已可判定）
+
+在板上实测（只读探查）：
+
+```
+/sys/module/rknpu/version  = 0.9.8            ← 与 refs/rknpu-driver-0.9.8 同版本
+/proc/kallsyms:
+  ffffffc009002910 t rknpu_get_task_number
+  ffffffc009002e30 t rknpu_job_subcore_commit.isra.0
+模块不在 /lib/modules 下（= 内建进内核）⇒ ko 文件不可用，需 vmlinux/System.map 才能反汇编
+```
+
+**行为学判定（比源码更硬）**：§7.110 的实测里 `args->task_number=3` 让提交**真的尝试跑 3 个 task**
+（6.3 s 超时、`hw_elapse=0`，而 amount=0 时是"静默 1 个"✓）⇒ **运行中的 0.9.8 驱动确实尊重 `args->task_number`**
+⇒ §7.45「驱动把 `task_number` 覆盖为 `use_core_num`」这一条**不适用于当前运行内核** ✗
+（源码里那条路径只在 `core_mask≠0` 时生效；`core_mask=0` 时走 `args->task_number` ✓ —— 与实测一致 ✓）。
+
+**结论**：多 task 的失败不再指向"驱动覆盖" ✗，而是**流布局**（下一轮：逐字节复刻 vendor 34/34/4 + 4 条增量 ✓，
+可用 `--task-count 2` 的"全长块 + 4 条增量块"最小样本开始 ✓）。
+
+## §7.112 vendor 原始块表复核（`vendor_regcmd_blocks.txt`）与 amount 口径
+
+原始数据（同一 4-task job，op=1）：
+
+| task | bytes | entries | 内容 |
+| --- | --- | --- | --- |
+| 0 | **276** | 34 | 完整配置，DST=0xffaa0000 |
+| 1 | **276** | 34 | 同 task0，仅 DST=0xffaa0400 |
+| 2 | **36** | 4 | `S_POINTER×2 + DST=0xffaa0800 + WDMA_SIZE` |
+| 3 | **36** | 4 | 同 task2，DST=0xffaa0c00 |
+
+**精确关系**：`regcfg_amount = 69 = 276 / 4` ✓（= 首块字节数 / 4 ✓）——而**4 个描述符的 amount 全是 69**
+（含 36 B 的短块 ✓）⇒ 印证「**amount 不是本 task 的实际长度，而是该 job 的槽位预算**，
+以**入口块的字节数 / 4** 计」✓✓（§7.60 的结论据此精确化 ✓）。
+
+**注意（对我们工具的含义）**：我们的驱动公式是 `PC_DATA_AMOUNT = (amount + 4 + 2 - 1)/2 - 1` ✓
+⇒ 我们传 `n − EXTRA`（1072 B 块 ⇒ 130 ⇒ PC_DATA_AMOUNT=66 ✓ 与尾写值一致 ✓）是**我们驱动口径** ✓；
+vendor 的 69 是**他们的口径**（若按我们的公式算会得 36 ✗）⇒ **两套口径不可混用** ✗，
+即「把 amount 改成 vendor 数值」**不是**正确的下一步 ✗（§7.110 的实测也已表明改 amount 只把
+"静默单 task" 变成"超时" ✗）。
+
+**由此得到的下一步（本轮更新）**：多 task 的关键差异是**块布局**（短块 + 增量 + 每块自带
+`S_POINTER` 类写 ✓），且**首块必须自带该 job 的完整配置** ✓；我们的等长 134 条块 + 自算尾写
+在驱动"逐 task commit"模型下缺少 **每块的 `S_POINTER` 重写**（vendor 每个短块都以
+`0x4004/0x5004 = 0xe` 开头 ✓✓）⇒ 下一轮先试：**在每个后续 task 的块首补写 `S_POINTER=0xe`** ✓。
+
+## §7.113 试「块首补写 S_POINTER=0xe」：仍超时 ✗（2 个 task 就挂）⇒ 模型层面的差异
+
+- 新增 `--sp-prefix`（把 `0x4004=0xe`、`0x5004=0xe` 作为块首两条 ✓ 与 vendor 的块头一致 ✓）。
+- 实测（16×16 IC16 int8）：`--task-count 2 --sp-prefix` ⇒ `n=132`、`regcfg_amount=128` 写入 2 个描述符、
+  `args->task_number=2 / subcore_task[0].task_number=2` ⇒ **`SUBMIT ret=-1 ETIMEDOUT 6240 ms hw_elapse=0`** ✗
+  （soft reset 84→85，**楔死签名仍 0** ✓）。
+- ⇒ **块首 S_POINTER 不是原因** ✗；且**2 个 task 就挂** ⇒ 与任务数无关 ✓。
+
+**模型层面的差异（新的、更根本的认识）**：驱动源码显示 **PC 的 4 条尾写（`PC_DATA_ADDR`/`PC_DATA_AMOUNT`/
+`INT_MASK`/`INT_CLEAR`/`PC_TASK_CONTROL`/`PC_DMA_BASE_ADDR`/`PC_OP_EN`）是**驱动**在 commit 时编程的** ✓
+⇒ vendor 尾写里的 896 B 步进是**驱动**的 PC 记账 ✓（不是我们能直接写的东西 ✓）；
+而我们的多 task 目前让**所有描述符指向同一个 `rcbo` 块** ✗ ⇒ 每个 task 的 PC 程序完全相同，
+第二次 commit 时 PC 从同一处重跑（且我们流里的 `PC_BASE_ADDRESS=0`）⇒ 极可能跳到 0 ⇒ 挂 ✓。
+
+**下一步（明确的下一步实验）**：**给每个 task 一个独立的块**（把同一个 emit 复制 N 份到 `rcbo` 的不同偏移 ✓
+`regcmd_addr` 各不相同 ✓，每份自带驱动写入的尾写 ✓），再配 `task_number=N` + `subcore_task[0]=N` ✓。
+
+## §7.114 试「每 task 独立块」：仍超时 ✗（三条杠杆全部排除）
+
+- 新增 `--task-blocks`：把同一 emit 复制 N 份到 `rcbo` 的不同 64 B 对齐偏移 ✓，
+  各描述符 `regcmd_addr` 各异 ✓（vendor 的 distinct-块形态 ✓）。
+- 实测（16×16 IC16 int8）：`TASK-BLOCKS: 2 块 × 1040 B（stride=1088，rcbo=8192 B）` ⇒
+  **`SUBMIT ret=-1 ETIMEDOUT 6375 ms hw_elapse=0`** ✗（soft 85→86，**楔死 0** ✓）。
+- ⇒ **"同块多 task" 也不是原因** ✗。至此已排除：① amount=0（已修 ✓）；② 块首 `S_POINTER` ✗；
+  ③ 每 task 独立块 ✗。**三者都不是** ⇒ 挂在更前面的层次（PC/子核派发模型 ✓）。
+
+**剩余唯一未试的杠杆（有历史风险，需谨慎单次尝试）**：驱动 `rknpu_job_subcore_commit` 在 PC commit
+**之前**会写 `PC_DATA_ADDR = 0x1`（"switch to slave mode" ✓）⇒ 多 task 的正确用法可能必须走
+**`core_mask=0x7` + 每核 1 task** 的"子核"路径 ✓（§7.61 实测该路径 `ret=0` ✓、36–88 µs ✓，
+但 follow-up 无输出 ✗ —— 当时未试"给每核的块各自带完整配置 + 合法尾写"✗）。
+⚠️ 历史纪律：`--subcore 2/3/4` 曾导致板子楔死 ⇒ 该实验只做**单次**并在前后核对
+`job commit failed`、soft reset 计数与健康探针 ✓。
+
+## §7.118 vendor 原始 regcmd **字节流**的所在与格式（比摘要表更硬的一手资料）
+
+`experiments/results/**/*.jsonl`（hook 抓取）里，每个 task 事件带 **`"hex"`** 字段 = **该 task 的 regcmd 原始字节流** ✓：
+
+```json
+{"event":"task",...,"regcfg_amount":69,"bytes":592,
+ "hex":"04400e000000011004500e00000001200c40e5010000011010400200004801101440000000000110204000b0ffff..."}
+```
+
+- 前 6 字节 `04 40 0e 00 00 00` 解析为 **reg=0x4004（LE u16）+ val=0x0000000e（LE u32）** ✓ —— 与 `vendor_regcmd_blocks.txt`
+  的块首 `0x4004=0xe` ✓ **完全一致** ✓ ⇒ **一手字节流可用** ✓。
+- ⇒ 于是"块布局/尾写取值"不必再依赖摘要表 ✓：可直接按 **(reg:u16 LE, val:u32 LE)** 逐条解析 `hex` ✓
+  （条宽 6 B；摘要表里的"34 条/276 B"是**另一口径**（8 B/条 + 对齐 ✓），下一轮用 `decode_trace.py` 统一 ✓）。
+- ⇒ **本轮未竟**：用该字节流回答 §7.117 的遗留问题（**输入面是否必须方图**是硬件规则还是我们发射器的约定 ✗）——
+  方法是统计 vendor 全部 task 的 `DATAIN_WIDTH/HEIGHT`（0x1020 ✓）并看是否存在**非方**样本 ✓；若存在且 vendor 正确
+  ⇒ 属发射器约定 ✗；若全部为方 ⇒ 更像硬件规则 ✓。
+
+## §7.119 **判定 §7.117 的遗留**：vendor 存在**非方**输入面 ⇒ "必须方图"是**我们发射器的约定**，不是硬件规则
+
+**解析口径先判定**（`hex` 字节流）：条目 = **8 B**（stride=8 时 295/295 整除、`0x5004` 出现 238 次、
+唯一 reg 数 152 ✓）；stride=6 时余数非零且 `0x5004` **一次都不出现** ✗ ⇒ 8 B 正确 ✓。
+
+**统计全部 295 个 vendor task 的 `0x1020`（`DATAIN_WIDTH`/`HEIGHT`）**：
+
+| 口径 | 样本 | 方形 | **非方形** |
+| --- | --- | --- | --- |
+| stride=8（正确 ✓） | 45 | 26 | **19** ✗ |
+
+非方形样本举例：`8×16`（4 次）、`1×8`（6 次）、`4×8`（4 次）、`1×1`（12 次，w=h ✓）等
+⇒ **vendor 在真实模型里大量使用非方输入面** ✓✓ ⇒ **硬件本身接受非方** ✓
+⇒ 我们观测到的"暂存必须 `rows == IW`"（§7.117）**是我们发射器/打包侧的约定或 bug** ✗，
+**不是硬件限制** ✓✓。
+
+**后果与下一步**：
+- 我们的"`rows = max(…, IW)`"是**绕行**（代价：宽图无内存收益 ✗）；
+- 真正的修法是找出非方几何下**发射器/打包**与 vendor 的差异 —— 用它做对照：
+  取一个 vendor 非方样本（如 `w=8, h=16` ✓），比较其**输入侧寄存器**（`0x1020/0x1080/0x1084/0x1070/0x1110` 等）
+  与我们同几何的发射结果 ✓（离线可做 ✓）。

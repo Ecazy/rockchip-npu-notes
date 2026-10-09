@@ -1,0 +1,67 @@
+###### 0. 环境
+6.1.43-rockchip-rk3588-rknpu098
+RKNPU driver: v0.9.8
+npu_freq=1000000000
+
+###### 1. librocketnpu 基线（FC bit-exact）
+=== Golden Comparison ===
+Total bytes: 10
+Exact: 10 / 10 (100.0%)
+Max diff: 0
+Mean diff: 0.000
+RESULT: PASS (bit-exact)
+Done.
+
+###### 2. 阶段 1：手写最小 CONV，与 CPU 参考逐元素对照
+--- --pattern --ic 3 --oc 16 --pad 1 --w-oc2 32 --pad-con1 0
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RESULT: BIT-EXACT (floor)
+--- --pattern --ic 16 --oc 16 --pad 1 --w-oc2 32 --pad-con1 0
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RESULT: BIT-EXACT (floor)
+--- --pattern --ic 5 --oc 8 --pad 1 --w-oc2 32 --pad-con1 0 --stride 2 --ow 4 --oh 4
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=128  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RESULT: BIT-EXACT (floor)
+--- --pattern --ic 5 --oc 8 --pad 1 --w-oc2 32 --pad-con1 0 --stride 3 --ow 3 --oh 3
+regcmd: 130 entries (130 uint64 = 1040 bytes), regcfg_amount=126
+  total=72  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+  RESULT: BIT-EXACT (floor)
+
+###### 3. 权重每 tap 的 oc 维跨度（16 = align(oc_real,2) vs 32 = align(oc_real,32)）
+w-oc2=16    total=1024  floor-mismatch=455 (max abs diff 4)  round-mismatch=455
+w-oc2=32    total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+
+###### 4. CNA_PAD_CON1 语义（越界样本的字节取值）
+PAD_CON1=0        total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+PAD_CON1=-128     total=1024  floor-mismatch=22 (max abs diff 128)  round-mismatch=22
+
+###### 5. 阶段 2：DECONV = 权重 180 度翻转的转置卷积（与 CPU 参考逐元素对照）
+S=2 out=8x8   total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+S=4 out=14x14   total=3136  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+S=8 out=26x26   total=10816  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+S=2 out=8x8 (不翻转kernel)   total=1024  floor-mismatch=532 (max abs diff 7)  round-mismatch=532
+S=4 out=14x14 (不翻转kernel)   total=3136  floor-mismatch=1186 (max abs diff 2)  round-mismatch=1186
+S=8 out=26x26 (不翻转kernel)   total=10816  floor-mismatch=1186 (max abs diff 2)  round-mismatch=1186
+
+###### 6. DECONV_X/Y_STRIDE 域值生效性（输出 md5 与普通 forward conv 比对）
+baseline (无 deconv)                         md5=39d07c648d0d
+deconv_stride_field=0                        md5=39d07c648d0d  与 forward conv 逐字节相同 -> no-op
+deconv_stride_field=1                        md5=846515ea7999  输出改变 -> 生效
+deconv_stride_field=2                        md5=39d07c648d0d  与 forward conv 逐字节相同 -> no-op
+deconv_stride_field=3                        md5=ef3f58fe204a  输出改变 -> 生效
+deconv_stride_field=4                        md5=39d07c648d0d  与 forward conv 逐字节相同 -> no-op
+deconv_stride_field=5                        md5=39d07c648d0d  与 forward conv 逐字节相同 -> no-op
+deconv_stride_field=6                        md5=39d07c648d0d  与 forward conv 逐字节相同 -> no-op
+deconv_stride_field=7                        md5=440a91f99ebf  输出改变 -> 生效
+
+###### 7. enable_mask 扫描（同一个 conv task）
+enable_mask=0x0      total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+enable_mask=0x1      total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+enable_mask=0x7      total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+enable_mask=0xf      total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+enable_mask=0x1d     total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+enable_mask=0x7f     total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0
+enable_mask=0xff     total=1024  floor-mismatch=0 (max abs diff 0)  round-mismatch=0

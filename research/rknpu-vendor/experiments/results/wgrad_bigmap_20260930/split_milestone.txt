@@ -1,0 +1,20 @@
+# §7.54 里程碑：训练闭环突破单次 submit 包线（板端 exp3，driver v0.9.8）
+# 命令：./deep/h{64,128} --fp16 --pad 1 --batch 1 --update --tile-oh 16 --tile-p 512
+
+=== 64x64 IC64（整图输入 16 bank > 9 可用 ⇒ 必须切分）===
+OUT-OFF: 1310720 (输入需求 fwd=524288 wgrad=1048576)
+TILE: 每 task 16 输出行；输入暂存 @0，输出暂存 @524288 (65536 B)，全图输出 @1310720
+F16 FWD b=0 total=131072 mismatch=0 RESULT: BIT-EXACT (fp16)
+WGRAD16_TOTAL: coords=576/576 BIT-EXACT (fp16)  [K 维分块 + host fp32 累加]
+WGRAD16_ABS: 分块 vs 一次性 绝对偏差 max=0.1719；>1e-2 的 grad 数=11482（= fp16 分块取整量级）
+F16 FWD2 b=0 total=131072 mismatch=33 (hard=0) vs CPU(W') RESULT: ULP-EXACT (<=16 ulp)
+RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+COST: submits=4616 fwd_tasks=8 wgrad_tasks=4608 wall=295.536 ms hw=265.699 ms
+
+=== 128x128 IC64 ===
+F16 FWD b=0 total=524288 mismatch=0 RESULT: BIT-EXACT (fp16)
+WGRAD16_TOTAL: coords=576/576 BIT-EXACT (fp16)  [K 维分块 + host fp32 累加]
+F16 FWD2 b=0 total=524288 mismatch=168 (hard=0) vs CPU(W') RESULT: ULP-EXACT (<=16 ulp)
+RESULT: CLOSED-LOOP OK (fp16 fwd exact, wgrad exact, update verified)
+
+# 对照：此前（§7.49 之前）训练闭环上限 = 8x8；现在 128x128 = 8x8 的 256 倍像素。

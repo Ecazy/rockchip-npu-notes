@@ -1,0 +1,101 @@
+# §7.17 FP16 证据归档
+# 日期: 2026-09-29T23:30:19+08:00
+# 板: orangepi5plus  6.1.43-rockchip-rk3588-rknpu098  RKNPU driver: v0.9.8
+# min_conv_exp.c sha256: 58fd584ca8886c70c9e604631eb2b5373d2738494abbb4cf61a35b4be752f530
+
+########## 1) fp16 回归（--fp16，健康探针协议）
+
+=== A) 1x1 ic sweep (oc<=16) ===
+1x1 ic1 oc16                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic2 oc16                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic3 oc16                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic4 oc16                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic7 oc16                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic8 oc16                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic9 oc16                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic15 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic16 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic17 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic24 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic32 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic33 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic48 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic64 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic96 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+=== B) 1x1 oc sweep (ic=16) ===
+1x1 ic16 oc4                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic16 oc8                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic16 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic16 oc24                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic16 oc32                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic16 oc40                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic16 oc48                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic16 oc64                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+=== B2) 3x3p1 ic16 oc sweep（含不完整 oc 组）===
+3x3p1 ic16 oc4                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=56  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc8                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=140  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc16                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=280  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc17                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=308  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc24                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=448  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc32                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=588  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc33                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=616  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc40                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=728  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc48                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=896  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc64                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=1176  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic16 oc65                SUBMIT ret=-1 (env fail)
+=== C) 3x3 pad0/pad1 多形状 ===
+3x3 8x8 pad0                   RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=40  max|diff|=9.53674e-07  max ulp=4
+3x3 8x8 pad1                   RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=40  max|diff|=9.53674e-07  max ulp=4
+3x3 16x16 pad0                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=260  max|diff|=9.53674e-07  max ulp=4
+3x3 16x16 pad1                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=260  max|diff|=9.53674e-07  max ulp=4
+3x3 16x8 pad0                  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=110  max|diff|=9.53674e-07  max ulp=4
+3x3 16x8 pad1                  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=110  max|diff|=9.53674e-07  max ulp=4
+3x3 8x16 pad0                  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=100  max|diff|=9.53674e-07  max ulp=4
+3x3 8x16 pad1                  RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=100  max|diff|=9.53674e-07  max ulp=4
+3x3 32x32 pad0                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=1250  max|diff|=9.53674e-07  max ulp=4
+3x3 32x32 pad1                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=1250  max|diff|=9.53674e-07  max ulp=4
+3x3 12x20 pad0                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=230  max|diff|=9.53674e-07  max ulp=4
+3x3 12x20 pad1                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=230  max|diff|=9.53674e-07  max ulp=4
+=== D) 5x5 pad2 / 1x1 大 ic ===
+5x5 pad2 16x16                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=11  max|diff|=9.53674e-07  max ulp=16
+1x1 ic96 oc16                  RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+=== E) 矩形核 ===
+kw3 kh2 pad0                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+kw2 kh3 pad0                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+kw1 kh5 pad0                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+kw5 kh1 pad0                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+kw4 kh6 pad0                   RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=3  max|diff|=4.76837e-07  max ulp=8
+kw6 kh4 pad0                   RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=10  max|diff|=9.53674e-07  max ulp=4
+=== F) stride ===
+3x3 s2 pad1                    RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=35  max|diff|=9.53674e-07  max ulp=4
+3x3 s3 pad1                    RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=10  max|diff|=9.53674e-07  max ulp=4
+=== G) 3x3p1 oc sweep 其他 ic ===
+3x3p1 ic8 oc17                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=286  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic8 oc24                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=416  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic8 oc40                 RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=676  max|diff|=9.53674e-07  max ulp=4
+3x3p1 ic32 oc17                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=266  max|diff|=9.53674e-07  max ulp=8
+3x3p1 ic32 oc24                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=384  max|diff|=9.53674e-07  max ulp=8
+3x3p1 ic32 oc40                RESULT: ULP-EXACT (<=16 ulp) fp16-mismatch=626  max|diff|=9.53674e-07  max ulp=8
+=== H) 1x1 ic<=8 且 oc>=24（§7.18 修复后应全过）===
+1x1 ic1 oc24                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic1 oc32                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic1 oc40                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic3 oc24                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic3 oc32                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic3 oc40                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic8 oc24                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic8 oc32                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+1x1 ic8 oc40                   RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+=== I) [信息性] fp16 BS/BRDMA bias（配方：先一次 BS-bypass 提交，再 BS 激活跑（内部自动预热 3））===
+bias 5.0f ic8 oc8            SUBMIT ret=0 RESULT: MISMATCH         P[oc=0 x=0 y=0] hw=36 ref=41
+bias -3.0f ic8 oc8           SUBMIT ret=0 RESULT: BIT-EXACT (fp16) P[oc=0 x=0 y=0] hw=33 ref=33
+bias ramp ic8 oc8            SUBMIT ret=0 RESULT: BIT-EXACT (fp16) P[oc=0 x=0 y=0] hw=41 ref=41
+bias 5.0f ic8 oc24           SUBMIT ret=0 RESULT: BIT-EXACT (fp16) P[oc=0 x=0 y=0] hw=41 ref=41
+bias 5.0f 3x3 ic8 oc16       SUBMIT ret=0 RESULT: BIT-EXACT (fp16) P[oc=0 x=0 y=0] hw=6.83203 ref=6.83203
+=== J) fp16 deconv（--deconv-flip；§7.22）===
+deconv 4x4->8x8 S=2            RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+deconv 4x4->8x8 S=4            RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+deconv 4x4->8x8 S=8            RESULT: BIT-EXACT (fp16) fp16-mismatch=0  max|diff|=0  max ulp=0
+--- 已知共享边界（int8 同挂，信息性）：1x1 核 + S=2 ---
+deconv 1x1 S=2（共享边界） SUBMIT ret=0 RESULT: MISMATCH         P[oc=0 x=0 y=0] hw=0 ref=0
+TOTAL: pass=74 fail=0 envfail=1 dirtyevents=0
