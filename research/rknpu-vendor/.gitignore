@@ -1,0 +1,31 @@
+# 凭据与本地备份 —— 永不提交
+.env
+.vault-backup-*/
+*.log
+.agents/
+# opencode 技能软链（指向本地 .agents/skills/，勿提交）
+.opencode/skills/
+
+# 第三方引用库（4GB+，仅本地；refs/README.md 与克隆脚本除外）
+refs/*
+!refs/README.md
+!refs/*.sh
+
+# 实验产生的二进制产物（可由板上复现，仅本地保存）
+experiments/results/**/*.bin
+experiments/results/**/*.rknn
+experiments/results/**/*.npz
+experiments/results/**/*.npy
+experiments/results/**/*.tgz
+experiments/results/**/*.onnx
+
+# 常见杂项
+__pycache__/
+*.pyc
+.tmp/
+
+# vendor probe 模型（板上 bn_lower_probe/ 取回，或由 make_*.py 重建）
+experiments/vendor_models/
+
+# Local full-history backup; source history also remains in the original checkout.
+.archive/
