@@ -1,8 +1,37 @@
-# OS / editor cruft
+# Operating system and editor files.
 .DS_Store
 *.swp
 *~
 
-# Python
+# Python caches.
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Local credentials; sanitized configuration templates may be tracked.
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Local agent configuration and delegation sessions.
+/.agents/
+/.codex/
+/.opencode*/
+/.opencode*.json
+
+# Workspace builds and exported documentation packages.
+/build*/
+/dist/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+/Makefile
+/Testing/
+
+# Independent upstream checkouts; their index and provenance remain tracked.
+/research/upstream-components/*/
+
+# Validation output. Custom-ops and vendor research have scoped local rules.
+/research/validation/*/build-*/
+/research/validation/*/*.tgz
