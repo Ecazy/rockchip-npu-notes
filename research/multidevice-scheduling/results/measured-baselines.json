@@ -1,0 +1,2030 @@
+{
+  "scenario": {
+    "name": "measured-RK3588-costs-hypothetical-two-device-topology",
+    "note": "Two independently configured logical devices use actual RK3588 costs. This does not model isolated DDR domains of RK3588 cores or measured RK182X.",
+    "cost_cell_ids": [
+      "df872cedaf6187155f45",
+      "7e0b3f451918dbf77654"
+    ]
+  },
+  "cost_evidence": "measured",
+  "topology_evidence": "configured",
+  "policies": {
+    "round_robin": {
+      "status": "ok",
+      "failure": null,
+      "policy": "round_robin",
+      "makespan_ns": 1055816,
+      "jobs": [
+        {
+          "id": "job0",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 0,
+          "compute_start_ns": 0,
+          "end_ns": 11083,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 0,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job1",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 0,
+          "compute_start_ns": 0,
+          "end_ns": 263954,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 0,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job2",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 11083,
+          "compute_start_ns": 11083,
+          "end_ns": 22166,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 11083,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job3",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 263954,
+          "compute_start_ns": 263954,
+          "end_ns": 527908,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 263954,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job4",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 22166,
+          "compute_start_ns": 22166,
+          "end_ns": 33249,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 22166,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job5",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 527908,
+          "compute_start_ns": 527908,
+          "end_ns": 791862,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 527908,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job6",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 33249,
+          "compute_start_ns": 33249,
+          "end_ns": 44332,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 33249,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job7",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 791862,
+          "compute_start_ns": 791862,
+          "end_ns": 1055816,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 791862,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        }
+      ],
+      "devices": {
+        "A": {
+          "memory_capacity_bytes": 16777216,
+          "measured": false,
+          "note": "",
+          "busy_ns": 44332,
+          "compute_ns": 44332,
+          "transfer_ns": 0,
+          "jobs": [
+            "job0",
+            "job2",
+            "job4",
+            "job6"
+          ],
+          "peak_used_bytes": 67200,
+          "final_used_bytes": 0
+        },
+        "B": {
+          "memory_capacity_bytes": 16777216,
+          "measured": false,
+          "note": "",
+          "busy_ns": 1055816,
+          "compute_ns": 1055816,
+          "transfer_ns": 0,
+          "jobs": [
+            "job1",
+            "job3",
+            "job5",
+            "job7"
+          ],
+          "peak_used_bytes": 5251072,
+          "final_used_bytes": 0
+        }
+      },
+      "host_staging": {
+        "peak_reserved_bytes": 0,
+        "final_reserved_bytes": 0,
+        "capacity_bytes": null,
+        "scope": "conservative reservation for entire download/copy/upload route"
+      },
+      "links": {
+        "host->A": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "host->B": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "A->B": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "B->A": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        }
+      },
+      "events": [
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job0",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job1",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job2",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job3",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job4",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job5",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job6",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job7",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job0",
+          "device": "A",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "exec_start",
+          "job": "job0",
+          "device": "A"
+        },
+        {
+          "time_ns": 0,
+          "type": "compute_begin",
+          "job": "job0",
+          "device": "A"
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job1",
+          "device": "B",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "exec_start",
+          "job": "job1",
+          "device": "B"
+        },
+        {
+          "time_ns": 0,
+          "type": "compute_begin",
+          "job": "job1",
+          "device": "B"
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job2",
+          "device": "A",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job3",
+          "device": "B",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job4",
+          "device": "A",
+          "queue_depth": 2
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job5",
+          "device": "B",
+          "queue_depth": 2
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job6",
+          "device": "A",
+          "queue_depth": 3
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job7",
+          "device": "B",
+          "queue_depth": 3
+        },
+        {
+          "time_ns": 11083,
+          "type": "compute_done",
+          "job": "job0",
+          "device": "A",
+          "end_ns": 11083
+        },
+        {
+          "time_ns": 11083,
+          "type": "exec_start",
+          "job": "job2",
+          "device": "A"
+        },
+        {
+          "time_ns": 11083,
+          "type": "compute_begin",
+          "job": "job2",
+          "device": "A"
+        },
+        {
+          "time_ns": 22166,
+          "type": "compute_done",
+          "job": "job2",
+          "device": "A",
+          "end_ns": 22166
+        },
+        {
+          "time_ns": 22166,
+          "type": "exec_start",
+          "job": "job4",
+          "device": "A"
+        },
+        {
+          "time_ns": 22166,
+          "type": "compute_begin",
+          "job": "job4",
+          "device": "A"
+        },
+        {
+          "time_ns": 33249,
+          "type": "compute_done",
+          "job": "job4",
+          "device": "A",
+          "end_ns": 33249
+        },
+        {
+          "time_ns": 33249,
+          "type": "exec_start",
+          "job": "job6",
+          "device": "A"
+        },
+        {
+          "time_ns": 33249,
+          "type": "compute_begin",
+          "job": "job6",
+          "device": "A"
+        },
+        {
+          "time_ns": 44332,
+          "type": "compute_done",
+          "job": "job6",
+          "device": "A",
+          "end_ns": 44332
+        },
+        {
+          "time_ns": 263954,
+          "type": "compute_done",
+          "job": "job1",
+          "device": "B",
+          "end_ns": 263954
+        },
+        {
+          "time_ns": 263954,
+          "type": "exec_start",
+          "job": "job3",
+          "device": "B"
+        },
+        {
+          "time_ns": 263954,
+          "type": "compute_begin",
+          "job": "job3",
+          "device": "B"
+        },
+        {
+          "time_ns": 527908,
+          "type": "compute_done",
+          "job": "job3",
+          "device": "B",
+          "end_ns": 527908
+        },
+        {
+          "time_ns": 527908,
+          "type": "exec_start",
+          "job": "job5",
+          "device": "B"
+        },
+        {
+          "time_ns": 527908,
+          "type": "compute_begin",
+          "job": "job5",
+          "device": "B"
+        },
+        {
+          "time_ns": 791862,
+          "type": "compute_done",
+          "job": "job5",
+          "device": "B",
+          "end_ns": 791862
+        },
+        {
+          "time_ns": 791862,
+          "type": "exec_start",
+          "job": "job7",
+          "device": "B"
+        },
+        {
+          "time_ns": 791862,
+          "type": "compute_begin",
+          "job": "job7",
+          "device": "B"
+        },
+        {
+          "time_ns": 1055816,
+          "type": "compute_done",
+          "job": "job7",
+          "device": "B",
+          "end_ns": 1055816
+        }
+      ]
+    },
+    "shortest_queue": {
+      "status": "ok",
+      "failure": null,
+      "policy": "shortest_queue",
+      "makespan_ns": 1055816,
+      "jobs": [
+        {
+          "id": "job0",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 0,
+          "compute_start_ns": 0,
+          "end_ns": 11083,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 0,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job1",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 0,
+          "compute_start_ns": 0,
+          "end_ns": 263954,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 0,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job2",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 11083,
+          "compute_start_ns": 11083,
+          "end_ns": 22166,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 11083,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job3",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 263954,
+          "compute_start_ns": 263954,
+          "end_ns": 527908,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 263954,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job4",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 22166,
+          "compute_start_ns": 22166,
+          "end_ns": 33249,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 22166,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job5",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 527908,
+          "compute_start_ns": 527908,
+          "end_ns": 791862,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 527908,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job6",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 33249,
+          "compute_start_ns": 33249,
+          "end_ns": 44332,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 33249,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job7",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 791862,
+          "compute_start_ns": 791862,
+          "end_ns": 1055816,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 791862,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        }
+      ],
+      "devices": {
+        "A": {
+          "memory_capacity_bytes": 16777216,
+          "measured": false,
+          "note": "",
+          "busy_ns": 44332,
+          "compute_ns": 44332,
+          "transfer_ns": 0,
+          "jobs": [
+            "job0",
+            "job2",
+            "job4",
+            "job6"
+          ],
+          "peak_used_bytes": 67200,
+          "final_used_bytes": 0
+        },
+        "B": {
+          "memory_capacity_bytes": 16777216,
+          "measured": false,
+          "note": "",
+          "busy_ns": 1055816,
+          "compute_ns": 1055816,
+          "transfer_ns": 0,
+          "jobs": [
+            "job1",
+            "job3",
+            "job5",
+            "job7"
+          ],
+          "peak_used_bytes": 5251072,
+          "final_used_bytes": 0
+        }
+      },
+      "host_staging": {
+        "peak_reserved_bytes": 0,
+        "final_reserved_bytes": 0,
+        "capacity_bytes": null,
+        "scope": "conservative reservation for entire download/copy/upload route"
+      },
+      "links": {
+        "host->A": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "host->B": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "A->B": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "B->A": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        }
+      },
+      "events": [
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job0",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job1",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job2",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job3",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job4",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job5",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job6",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job7",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job0",
+          "device": "A",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "exec_start",
+          "job": "job0",
+          "device": "A"
+        },
+        {
+          "time_ns": 0,
+          "type": "compute_begin",
+          "job": "job0",
+          "device": "A"
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job1",
+          "device": "B",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "exec_start",
+          "job": "job1",
+          "device": "B"
+        },
+        {
+          "time_ns": 0,
+          "type": "compute_begin",
+          "job": "job1",
+          "device": "B"
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job2",
+          "device": "A",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job3",
+          "device": "B",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job4",
+          "device": "A",
+          "queue_depth": 2
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job5",
+          "device": "B",
+          "queue_depth": 2
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job6",
+          "device": "A",
+          "queue_depth": 3
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job7",
+          "device": "B",
+          "queue_depth": 3
+        },
+        {
+          "time_ns": 11083,
+          "type": "compute_done",
+          "job": "job0",
+          "device": "A",
+          "end_ns": 11083
+        },
+        {
+          "time_ns": 11083,
+          "type": "exec_start",
+          "job": "job2",
+          "device": "A"
+        },
+        {
+          "time_ns": 11083,
+          "type": "compute_begin",
+          "job": "job2",
+          "device": "A"
+        },
+        {
+          "time_ns": 22166,
+          "type": "compute_done",
+          "job": "job2",
+          "device": "A",
+          "end_ns": 22166
+        },
+        {
+          "time_ns": 22166,
+          "type": "exec_start",
+          "job": "job4",
+          "device": "A"
+        },
+        {
+          "time_ns": 22166,
+          "type": "compute_begin",
+          "job": "job4",
+          "device": "A"
+        },
+        {
+          "time_ns": 33249,
+          "type": "compute_done",
+          "job": "job4",
+          "device": "A",
+          "end_ns": 33249
+        },
+        {
+          "time_ns": 33249,
+          "type": "exec_start",
+          "job": "job6",
+          "device": "A"
+        },
+        {
+          "time_ns": 33249,
+          "type": "compute_begin",
+          "job": "job6",
+          "device": "A"
+        },
+        {
+          "time_ns": 44332,
+          "type": "compute_done",
+          "job": "job6",
+          "device": "A",
+          "end_ns": 44332
+        },
+        {
+          "time_ns": 263954,
+          "type": "compute_done",
+          "job": "job1",
+          "device": "B",
+          "end_ns": 263954
+        },
+        {
+          "time_ns": 263954,
+          "type": "exec_start",
+          "job": "job3",
+          "device": "B"
+        },
+        {
+          "time_ns": 263954,
+          "type": "compute_begin",
+          "job": "job3",
+          "device": "B"
+        },
+        {
+          "time_ns": 527908,
+          "type": "compute_done",
+          "job": "job3",
+          "device": "B",
+          "end_ns": 527908
+        },
+        {
+          "time_ns": 527908,
+          "type": "exec_start",
+          "job": "job5",
+          "device": "B"
+        },
+        {
+          "time_ns": 527908,
+          "type": "compute_begin",
+          "job": "job5",
+          "device": "B"
+        },
+        {
+          "time_ns": 791862,
+          "type": "compute_done",
+          "job": "job5",
+          "device": "B",
+          "end_ns": 791862
+        },
+        {
+          "time_ns": 791862,
+          "type": "exec_start",
+          "job": "job7",
+          "device": "B"
+        },
+        {
+          "time_ns": 791862,
+          "type": "compute_begin",
+          "job": "job7",
+          "device": "B"
+        },
+        {
+          "time_ns": 1055816,
+          "type": "compute_done",
+          "job": "job7",
+          "device": "B",
+          "end_ns": 1055816
+        }
+      ]
+    },
+    "earliest_finish": {
+      "status": "ok",
+      "failure": null,
+      "policy": "earliest_finish",
+      "makespan_ns": 561157,
+      "jobs": [
+        {
+          "id": "job0",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 0,
+          "compute_start_ns": 0,
+          "end_ns": 11083,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 0,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job1",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 0,
+          "compute_start_ns": 0,
+          "end_ns": 263954,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 0,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job2",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 11083,
+          "compute_start_ns": 11083,
+          "end_ns": 22166,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 11083,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job3",
+          "device": "A",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 22166,
+          "compute_start_ns": 22166,
+          "end_ns": 286120,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 22166,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job4",
+          "device": "B",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 263954,
+          "compute_start_ns": 263954,
+          "end_ns": 275037,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 263954,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job5",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 275037,
+          "compute_start_ns": 275037,
+          "end_ns": 538991,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 275037,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job6",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 286120,
+          "compute_start_ns": 286120,
+          "end_ns": 297203,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 286120,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job7",
+          "device": "A",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 297203,
+          "compute_start_ns": 297203,
+          "end_ns": 561157,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 297203,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        }
+      ],
+      "devices": {
+        "A": {
+          "memory_capacity_bytes": 16777216,
+          "measured": false,
+          "note": "",
+          "busy_ns": 561157,
+          "compute_ns": 561157,
+          "transfer_ns": 0,
+          "jobs": [
+            "job0",
+            "job2",
+            "job3",
+            "job6",
+            "job7"
+          ],
+          "peak_used_bytes": 5251072,
+          "final_used_bytes": 0
+        },
+        "B": {
+          "memory_capacity_bytes": 16777216,
+          "measured": false,
+          "note": "",
+          "busy_ns": 538991,
+          "compute_ns": 538991,
+          "transfer_ns": 0,
+          "jobs": [
+            "job1",
+            "job4",
+            "job5"
+          ],
+          "peak_used_bytes": 5251072,
+          "final_used_bytes": 0
+        }
+      },
+      "host_staging": {
+        "peak_reserved_bytes": 0,
+        "final_reserved_bytes": 0,
+        "capacity_bytes": null,
+        "scope": "conservative reservation for entire download/copy/upload route"
+      },
+      "links": {
+        "host->A": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "host->B": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "A->B": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "B->A": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        }
+      },
+      "events": [
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job0",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job1",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job2",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job3",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job4",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job5",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job6",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job7",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job0",
+          "device": "A",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "exec_start",
+          "job": "job0",
+          "device": "A"
+        },
+        {
+          "time_ns": 0,
+          "type": "compute_begin",
+          "job": "job0",
+          "device": "A"
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job1",
+          "device": "B",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "exec_start",
+          "job": "job1",
+          "device": "B"
+        },
+        {
+          "time_ns": 0,
+          "type": "compute_begin",
+          "job": "job1",
+          "device": "B"
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job2",
+          "device": "A",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job3",
+          "device": "A",
+          "queue_depth": 2
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job4",
+          "device": "B",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job5",
+          "device": "B",
+          "queue_depth": 2
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job6",
+          "device": "A",
+          "queue_depth": 3
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job7",
+          "device": "A",
+          "queue_depth": 4
+        },
+        {
+          "time_ns": 11083,
+          "type": "compute_done",
+          "job": "job0",
+          "device": "A",
+          "end_ns": 11083
+        },
+        {
+          "time_ns": 11083,
+          "type": "exec_start",
+          "job": "job2",
+          "device": "A"
+        },
+        {
+          "time_ns": 11083,
+          "type": "compute_begin",
+          "job": "job2",
+          "device": "A"
+        },
+        {
+          "time_ns": 22166,
+          "type": "compute_done",
+          "job": "job2",
+          "device": "A",
+          "end_ns": 22166
+        },
+        {
+          "time_ns": 22166,
+          "type": "exec_start",
+          "job": "job3",
+          "device": "A"
+        },
+        {
+          "time_ns": 22166,
+          "type": "compute_begin",
+          "job": "job3",
+          "device": "A"
+        },
+        {
+          "time_ns": 263954,
+          "type": "compute_done",
+          "job": "job1",
+          "device": "B",
+          "end_ns": 263954
+        },
+        {
+          "time_ns": 263954,
+          "type": "exec_start",
+          "job": "job4",
+          "device": "B"
+        },
+        {
+          "time_ns": 263954,
+          "type": "compute_begin",
+          "job": "job4",
+          "device": "B"
+        },
+        {
+          "time_ns": 275037,
+          "type": "compute_done",
+          "job": "job4",
+          "device": "B",
+          "end_ns": 275037
+        },
+        {
+          "time_ns": 275037,
+          "type": "exec_start",
+          "job": "job5",
+          "device": "B"
+        },
+        {
+          "time_ns": 275037,
+          "type": "compute_begin",
+          "job": "job5",
+          "device": "B"
+        },
+        {
+          "time_ns": 286120,
+          "type": "compute_done",
+          "job": "job3",
+          "device": "A",
+          "end_ns": 286120
+        },
+        {
+          "time_ns": 286120,
+          "type": "exec_start",
+          "job": "job6",
+          "device": "A"
+        },
+        {
+          "time_ns": 286120,
+          "type": "compute_begin",
+          "job": "job6",
+          "device": "A"
+        },
+        {
+          "time_ns": 297203,
+          "type": "compute_done",
+          "job": "job6",
+          "device": "A",
+          "end_ns": 297203
+        },
+        {
+          "time_ns": 297203,
+          "type": "exec_start",
+          "job": "job7",
+          "device": "A"
+        },
+        {
+          "time_ns": 297203,
+          "type": "compute_begin",
+          "job": "job7",
+          "device": "A"
+        },
+        {
+          "time_ns": 538991,
+          "type": "compute_done",
+          "job": "job5",
+          "device": "B",
+          "end_ns": 538991
+        },
+        {
+          "time_ns": 561157,
+          "type": "compute_done",
+          "job": "job7",
+          "device": "A",
+          "end_ns": 561157
+        }
+      ]
+    },
+    "locality_aware": {
+      "status": "ok",
+      "failure": null,
+      "policy": "locality_aware",
+      "makespan_ns": 561157,
+      "jobs": [
+        {
+          "id": "job0",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 0,
+          "compute_start_ns": 0,
+          "end_ns": 11083,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 0,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job1",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 0,
+          "compute_start_ns": 0,
+          "end_ns": 263954,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 0,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job2",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 11083,
+          "compute_start_ns": 11083,
+          "end_ns": 22166,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 11083,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job3",
+          "device": "A",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 22166,
+          "compute_start_ns": 22166,
+          "end_ns": 286120,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 22166,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job4",
+          "device": "B",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 263954,
+          "compute_start_ns": 263954,
+          "end_ns": 275037,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 263954,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job5",
+          "device": "B",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 275037,
+          "compute_start_ns": 275037,
+          "end_ns": 538991,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 275037,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job6",
+          "device": "A",
+          "task_count": 1,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 286120,
+          "compute_start_ns": 286120,
+          "end_ns": 297203,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 286120,
+          "transfer_wait_ns": 0,
+          "compute_ns": 11083,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 67200,
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "id": "job7",
+          "device": "A",
+          "task_count": 64,
+          "arrival_ns": 0,
+          "ready_ns": 0,
+          "assigned_ns": 0,
+          "exec_start_ns": 297203,
+          "compute_start_ns": 297203,
+          "end_ns": 561157,
+          "dependency_wait_ns": 0,
+          "dispatch_wait_ns": 0,
+          "queue_wait_ns": 297203,
+          "transfer_wait_ns": 0,
+          "compute_ns": 263954,
+          "transfer_bytes": 0,
+          "transfer_time_ns": 0,
+          "workspace_bytes": 5251072,
+          "inputs": [],
+          "outputs": []
+        }
+      ],
+      "devices": {
+        "A": {
+          "memory_capacity_bytes": 16777216,
+          "measured": false,
+          "note": "",
+          "busy_ns": 561157,
+          "compute_ns": 561157,
+          "transfer_ns": 0,
+          "jobs": [
+            "job0",
+            "job2",
+            "job3",
+            "job6",
+            "job7"
+          ],
+          "peak_used_bytes": 5251072,
+          "final_used_bytes": 0
+        },
+        "B": {
+          "memory_capacity_bytes": 16777216,
+          "measured": false,
+          "note": "",
+          "busy_ns": 538991,
+          "compute_ns": 538991,
+          "transfer_ns": 0,
+          "jobs": [
+            "job1",
+            "job4",
+            "job5"
+          ],
+          "peak_used_bytes": 5251072,
+          "final_used_bytes": 0
+        }
+      },
+      "host_staging": {
+        "peak_reserved_bytes": 0,
+        "final_reserved_bytes": 0,
+        "capacity_bytes": null,
+        "scope": "conservative reservation for entire download/copy/upload route"
+      },
+      "links": {
+        "host->A": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "host->B": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "A->B": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        },
+        "B->A": {
+          "bandwidth_bytes_per_s": 1000000000,
+          "latency_ns": 2000,
+          "transfers": 0,
+          "bytes": 0,
+          "busy_ns": 0
+        }
+      },
+      "events": [
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job0",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job1",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job2",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job3",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job4",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job5",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job6",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "ready",
+          "job": "job7",
+          "ready_ns": 0
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job0",
+          "device": "A",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "exec_start",
+          "job": "job0",
+          "device": "A"
+        },
+        {
+          "time_ns": 0,
+          "type": "compute_begin",
+          "job": "job0",
+          "device": "A"
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job1",
+          "device": "B",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "exec_start",
+          "job": "job1",
+          "device": "B"
+        },
+        {
+          "time_ns": 0,
+          "type": "compute_begin",
+          "job": "job1",
+          "device": "B"
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job2",
+          "device": "A",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job3",
+          "device": "A",
+          "queue_depth": 2
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job4",
+          "device": "B",
+          "queue_depth": 1
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job5",
+          "device": "B",
+          "queue_depth": 2
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job6",
+          "device": "A",
+          "queue_depth": 3
+        },
+        {
+          "time_ns": 0,
+          "type": "enqueue",
+          "job": "job7",
+          "device": "A",
+          "queue_depth": 4
+        },
+        {
+          "time_ns": 11083,
+          "type": "compute_done",
+          "job": "job0",
+          "device": "A",
+          "end_ns": 11083
+        },
+        {
+          "time_ns": 11083,
+          "type": "exec_start",
+          "job": "job2",
+          "device": "A"
+        },
+        {
+          "time_ns": 11083,
+          "type": "compute_begin",
+          "job": "job2",
+          "device": "A"
+        },
+        {
+          "time_ns": 22166,
+          "type": "compute_done",
+          "job": "job2",
+          "device": "A",
+          "end_ns": 22166
+        },
+        {
+          "time_ns": 22166,
+          "type": "exec_start",
+          "job": "job3",
+          "device": "A"
+        },
+        {
+          "time_ns": 22166,
+          "type": "compute_begin",
+          "job": "job3",
+          "device": "A"
+        },
+        {
+          "time_ns": 263954,
+          "type": "compute_done",
+          "job": "job1",
+          "device": "B",
+          "end_ns": 263954
+        },
+        {
+          "time_ns": 263954,
+          "type": "exec_start",
+          "job": "job4",
+          "device": "B"
+        },
+        {
+          "time_ns": 263954,
+          "type": "compute_begin",
+          "job": "job4",
+          "device": "B"
+        },
+        {
+          "time_ns": 275037,
+          "type": "compute_done",
+          "job": "job4",
+          "device": "B",
+          "end_ns": 275037
+        },
+        {
+          "time_ns": 275037,
+          "type": "exec_start",
+          "job": "job5",
+          "device": "B"
+        },
+        {
+          "time_ns": 275037,
+          "type": "compute_begin",
+          "job": "job5",
+          "device": "B"
+        },
+        {
+          "time_ns": 286120,
+          "type": "compute_done",
+          "job": "job3",
+          "device": "A",
+          "end_ns": 286120
+        },
+        {
+          "time_ns": 286120,
+          "type": "exec_start",
+          "job": "job6",
+          "device": "A"
+        },
+        {
+          "time_ns": 286120,
+          "type": "compute_begin",
+          "job": "job6",
+          "device": "A"
+        },
+        {
+          "time_ns": 297203,
+          "type": "compute_done",
+          "job": "job6",
+          "device": "A",
+          "end_ns": 297203
+        },
+        {
+          "time_ns": 297203,
+          "type": "exec_start",
+          "job": "job7",
+          "device": "A"
+        },
+        {
+          "time_ns": 297203,
+          "type": "compute_begin",
+          "job": "job7",
+          "device": "A"
+        },
+        {
+          "time_ns": 538991,
+          "type": "compute_done",
+          "job": "job5",
+          "device": "B",
+          "end_ns": 538991
+        },
+        {
+          "time_ns": 561157,
+          "type": "compute_done",
+          "job": "job7",
+          "device": "A",
+          "end_ns": 561157
+        }
+      ]
+    }
+  }
+}

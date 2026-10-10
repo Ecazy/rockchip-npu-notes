@@ -1,0 +1,2695 @@
+{
+  "repository": "https://github.com/airockchip/rknn3-toolkit",
+  "commit": "2136cc54fa79ad289c43e56ed9cf7e63ef56439b",
+  "commit_date": "2026-08-31T12:45:15Z",
+  "tree": {
+    "sha": "2136cc54fa79ad289c43e56ed9cf7e63ef56439b",
+    "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/2136cc54fa79ad289c43e56ed9cf7e63ef56439b",
+    "tree": [
+      {
+        "path": ".gitattributes",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "size": 0,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "CHANGELOG.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ada111a9eaecbb4eba15e026677d2630ed1fef49",
+        "size": 3670,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/ada111a9eaecbb4eba15e026677d2630ed1fef49"
+      },
+      {
+        "path": "LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fea68d235d6f24667bcb09fe78c0166ae8dd1ba4",
+        "size": 7639,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fea68d235d6f24667bcb09fe78c0166ae8dd1ba4"
+      },
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "908ad46b93476a2664a18e069f722376969f2e5d",
+        "size": 7585,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/908ad46b93476a2664a18e069f722376969f2e5d"
+      },
+      {
+        "path": "README_CN.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cb8b9345001cdfae439afe741050ace93b53501a",
+        "size": 7200,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/cb8b9345001cdfae439afe741050ace93b53501a"
+      },
+      {
+        "path": "doc",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c3edc5c8ea7eaca58c50d9e4bfc1e7a3c6145c66",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/c3edc5c8ea7eaca58c50d9e4bfc1e7a3c6145c66"
+      },
+      {
+        "path": "doc/CN",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "4fce8cc5fa78aa1646f19cdb54c6e97d057038dd",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/4fce8cc5fa78aa1646f19cdb54c6e97d057038dd"
+      },
+      {
+        "path": "doc/CN/00_RKNN3_SDK_\u53d1\u5e03\u8bf4\u660e_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "94d205e6035a0bbf0af1841e3b03f0d267239454",
+        "size": 190902,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/94d205e6035a0bbf0af1841e3b03f0d267239454"
+      },
+      {
+        "path": "doc/CN/01_RKNN3_SDK_\u5feb\u901f\u5165\u95e8_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "65e171dbf89b3aadc3a5e0c9cf4883c90ec25691",
+        "size": 9669965,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/65e171dbf89b3aadc3a5e0c9cf4883c90ec25691"
+      },
+      {
+        "path": "doc/CN/02_RKNN3_SDK_\u5f00\u53d1\u6307\u5357_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e83624004a539f5bf3c8aed4fa1bfc1f0bdda164",
+        "size": 2994780,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e83624004a539f5bf3c8aed4fa1bfc1f0bdda164"
+      },
+      {
+        "path": "doc/CN/03_RKNN3_Toolkit_Python_API_\u53c2\u8003_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "decd4be2dc5f20d956f3e7fe2005761ec011a4da",
+        "size": 653152,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/decd4be2dc5f20d956f3e7fe2005761ec011a4da"
+      },
+      {
+        "path": "doc/CN/04_RKNN3_Toolkit_Lite_Python_API_\u53c2\u8003_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2a1eb52e044e2d92fe70da9dc755c39008198a5b",
+        "size": 1338052,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/2a1eb52e044e2d92fe70da9dc755c39008198a5b"
+      },
+      {
+        "path": "doc/CN/05_RKNN3_Runtime_C_API_\u53c2\u8003_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4cd83e6d16afee3e2e55fc462f775b57cc5aa11a",
+        "size": 1291152,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4cd83e6d16afee3e2e55fc462f775b57cc5aa11a"
+      },
+      {
+        "path": "doc/CN/06_RKLLM3_Server_\u4f7f\u7528\u6307\u5357_V1.1.0.pdf",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "07bc1a7ef30ffabc6ace5266e7b023dde3dd13bc",
+        "size": 865330,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/07bc1a7ef30ffabc6ace5266e7b023dde3dd13bc"
+      },
+      {
+        "path": "doc/CN/07_RKNN3_\u7b97\u5b50\u652f\u6301\u4e0e\u7ea6\u675f\u53c2\u8003_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "58993adfc8eeae766170d06ded2c8f9a881e2f75",
+        "size": 1697049,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/58993adfc8eeae766170d06ded2c8f9a881e2f75"
+      },
+      {
+        "path": "doc/EN",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "cc1b6957170d2f8ca4e5286c9a1eeabade4086ee",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/cc1b6957170d2f8ca4e5286c9a1eeabade4086ee"
+      },
+      {
+        "path": "doc/EN/00_RKNN3_SDK_Release_Notes_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9b9e854d63d9e9227fd4c7af1124b3578d449cac",
+        "size": 104405,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9b9e854d63d9e9227fd4c7af1124b3578d449cac"
+      },
+      {
+        "path": "doc/EN/01_RKNN3_SDK_QuickStart_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f2a3b20aaaa58177100ab9846a8edea1afc6292c",
+        "size": 9556382,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f2a3b20aaaa58177100ab9846a8edea1afc6292c"
+      },
+      {
+        "path": "doc/EN/02_RKNN3_SDK_Development_Guide_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ac78c6bd68a4e9f12372a22a0787b5fc8576a115",
+        "size": 2022388,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/ac78c6bd68a4e9f12372a22a0787b5fc8576a115"
+      },
+      {
+        "path": "doc/EN/03_RKNN3_Toolkit_Python_API_Reference_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "07d2001a49fff371aa66d194b1d10691be77c895",
+        "size": 465042,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/07d2001a49fff371aa66d194b1d10691be77c895"
+      },
+      {
+        "path": "doc/EN/04_RKNN3_Toolkit_Lite_Python_API_Reference_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a44c3791445accae331bcf9fc525a9a2823bd67f",
+        "size": 1186844,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a44c3791445accae331bcf9fc525a9a2823bd67f"
+      },
+      {
+        "path": "doc/EN/05_RKNN3_Runtime_C_API_Reference_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1a1ac46a35156d4e71754f34f13c6bdc675cb22c",
+        "size": 820637,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/1a1ac46a35156d4e71754f34f13c6bdc675cb22c"
+      },
+      {
+        "path": "doc/EN/06_RKLLM3_Server_User_Guide_V1.1.0.pdf",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "1bd2aa31dab76fec4bc6b5ed95e91e3ec7f36a2b",
+        "size": 683019,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/1bd2aa31dab76fec4bc6b5ed95e91e3ec7f36a2b"
+      },
+      {
+        "path": "doc/EN/07_RKNN3_Supported_Operators_and_Constraints_Reference_V1.1.0.pdf",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0caa5c5a9d179a1c453c2dc97e5240d687fc6c3a",
+        "size": 1578058,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0caa5c5a9d179a1c453c2dc97e5240d687fc6c3a"
+      },
+      {
+        "path": "res",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "f18494b2b096e84fc495be8d9e421365a4e74925",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/f18494b2b096e84fc495be8d9e421365a4e74925"
+      },
+      {
+        "path": "res/QQGroup2QRCode.png",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1bbce12a14e475392dd9b6e9afdc3ed29411d9a5",
+        "size": 96408,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/1bbce12a14e475392dd9b6e9afdc3ed29411d9a5"
+      },
+      {
+        "path": "res/QQGroup3QRCode.png",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9649eea25cbdbf487b8189dee5e152f79b55c05c",
+        "size": 97404,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9649eea25cbdbf487b8189dee5e152f79b55c05c"
+      },
+      {
+        "path": "res/QQGroup4QRCode.png",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8843b38e99a76aa8a8de73c2363baaedbbbbb69e",
+        "size": 813498,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/8843b38e99a76aa8a8de73c2363baaedbbbbb69e"
+      },
+      {
+        "path": "res/QQGroup5QRCode.png",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "d52941546258919dad04ef2e228621230383ead4",
+        "size": 485939,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/d52941546258919dad04ef2e228621230383ead4"
+      },
+      {
+        "path": "res/QQGroupQRCode.png",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1aed240f4c39aa944d58d6efa80fe5f30eb0adab",
+        "size": 92999,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/1aed240f4c39aa944d58d6efa80fe5f30eb0adab"
+      },
+      {
+        "path": "res/logo.png",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fe28451cf6710d6f170859e0fe531ace99e96ba8",
+        "size": 5811,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fe28451cf6710d6f170859e0fe531ace99e96ba8"
+      },
+      {
+        "path": "rknn3-runtime",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "b970b98773377b31035facbb263267eecf8f6958",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/b970b98773377b31035facbb263267eecf8f6958"
+      },
+      {
+        "path": "rknn3-runtime/.gitattributes",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "61385c713bd78598c597dc04880c68f316e3ce6f",
+        "size": 229,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/61385c713bd78598c597dc04880c68f316e3ce6f"
+      },
+      {
+        "path": "rknn3-runtime/.gitignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "388ca53bc5d1ede153494ed6b90cfd3b4341e1b6",
+        "size": 38,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/388ca53bc5d1ede153494ed6b90cfd3b4341e1b6"
+      },
+      {
+        "path": "rknn3-runtime/examples",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "1f3db24f151f253663952b6d5e1021ef4f2897d0",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/1f3db24f151f253663952b6d5e1021ef4f2897d0"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "9ceb8a8790456ef8194528f293b0a4bfb7e21c1b",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/9ceb8a8790456ef8194528f293b0a4bfb7e21c1b"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/json",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "3aee4fc8689f18d905f1c595e01836bf90b7c709",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/3aee4fc8689f18d905f1c595e01836bf90b7c709"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/json/json.hpp",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "31590ff65200c284735d15a0d325a09429a7a6bd",
+        "size": 956133,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/31590ff65200c284735d15a0d325a09429a7a6bd"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a881b6cebf26498f720cdb33860e2deb00469a91",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/a881b6cebf26498f720cdb33860e2deb00469a91"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/include",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "0f02de03dfb20d5b375f19487cff3b3e324ddb0d",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/0f02de03dfb20d5b375f19487cff3b3e324ddb0d"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/include/Tokenizer.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bb87210d43f9e9f3eb1dedc4ac227f16a74b28f9",
+        "size": 2352,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/bb87210d43f9e9f3eb1dedc4ac227f16a74b28f9"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "da52ea3b7be888c486a4d3b7a1cdc476efb212cf",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/da52ea3b7be888c486a4d3b7a1cdc476efb212cf"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Android",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8a4eff10277b64bb9634900e88d8f985456274fe",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/8a4eff10277b64bb9634900e88d8f985456274fe"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Android/arm64-v8a",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "9d12abc5721ae500a43781850d08d20006fea7ca",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/9d12abc5721ae500a43781850d08d20006fea7ca"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Android/arm64-v8a/libtokenizer.a",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "927b90978a3a81516e067a10e700217b69888b91",
+        "size": 21152226,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/927b90978a3a81516e067a10e700217b69888b91"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Android/armeabi-v7a",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "4c08bace2a0fd3453834ec071bd022c31356331c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/4c08bace2a0fd3453834ec071bd022c31356331c"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Android/armeabi-v7a/libtokenizer.a",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a50166bb9e5c39c5725326cc9d7bb1edf86add17",
+        "size": 14400272,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a50166bb9e5c39c5725326cc9d7bb1edf86add17"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Linux",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8ab335424e5516eb1ed616ac45ae560ea41243df",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/8ab335424e5516eb1ed616ac45ae560ea41243df"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Linux/aarch64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "d31fa585f4a6286681228027028b806df6ab22f1",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/d31fa585f4a6286681228027028b806df6ab22f1"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Linux/aarch64/libtokenizer.a",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "21fd9d9ce10f87a814b6331e06b3a5615268b992",
+        "size": 1567638,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/21fd9d9ce10f87a814b6331e06b3a5615268b992"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Linux/armhf",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "802f128d88e453f6f40c0d987d626c2fa30a2e89",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/802f128d88e453f6f40c0d987d626c2fa30a2e89"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Linux/armhf/libtokenizer.a",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "999b54fadc17c0ba6cb2e48db90374c81aba63b6",
+        "size": 1305144,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/999b54fadc17c0ba6cb2e48db90374c81aba63b6"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Linux/x86_64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "b8d3314d8f43f3118f52b3902092b558de946dbf",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/b8d3314d8f43f3118f52b3902092b558de946dbf"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Linux/x86_64/libtokenizer.a",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e30c5f1cc26455fa6ba861158a02f22135277916",
+        "size": 1478032,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e30c5f1cc26455fa6ba861158a02f22135277916"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Windows",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "70ad18c8c73cc75cca4c6bd930669d9285ce61e0",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/70ad18c8c73cc75cca4c6bd930669d9285ce61e0"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Windows/x86_64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "fdb69b50322b9b9fb13874ad3c418d13e8447277",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/fdb69b50322b9b9fb13874ad3c418d13e8447277"
+      },
+      {
+        "path": "rknn3-runtime/examples/3rdparty/tokenizer/lib/Windows/x86_64/libtokenizer.a",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a91bffbb4776f4c18a20d93737491791236f3ec5",
+        "size": 1355318,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a91bffbb4776f4c18a20d93737491791236f3ec5"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a26f68c38493b64d1c584a2c76379e791b31a552",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/a26f68c38493b64d1c584a2c76379e791b31a552"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a92d1afebdb9c78a03e51e38fb8c8df83b096051",
+        "size": 6070,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a92d1afebdb9c78a03e51e38fb8c8df83b096051"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "595fa0c8217b62701dd2c1a552ac9bc5abad3cc9",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/595fa0c8217b62701dd2c1a552ac9bc5abad3cc9"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/CMakeLists.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d873e521bc6c2928c9649c8f0292705c215a4097",
+        "size": 1812,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/d873e521bc6c2928c9649c8f0292705c215a4097"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/build-android.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "8c11082d134c37ed3f45469829ac6dc40dbc0e9d",
+        "size": 2232,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/8c11082d134c37ed3f45469829ac6dc40dbc0e9d"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/build-linux.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "ff61866bb423628701073d5ca360218bf04b54d2",
+        "size": 2466,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/ff61866bb423628701073d5ca360218bf04b54d2"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/main.cc",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0502fdbb38b0634a6760c8f2ca78a652f1791cd0",
+        "size": 23325,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0502fdbb38b0634a6760c8f2ca78a652f1791cd0"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/plugin",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8ed25b0513371fdbc3319c68c8ee6ccbbeb22eea",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/8ed25b0513371fdbc3319c68c8ee6ccbbeb22eea"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/plugin/build.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "4fba9c0fc22d27af7e63566836db38cac18cb1eb",
+        "size": 3662,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4fba9c0fc22d27af7e63566836db38cac18cb1eb"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/plugin/rknn3_custom_op.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9d3d57f5006691211e91c29f8a3c5932b691d667",
+        "size": 2134,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9d3d57f5006691211e91c29f8a3c5932b691d667"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/plugin/rknn_custom_op_impl.c",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "067a846070f08d222ef354984fea3caabcbb6e00",
+        "size": 18236,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/067a846070f08d222ef354984fea3caabcbb6e00"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/cpp/plugin/rknn_custom_op_impl.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4f3fd530a1fb251561c829d89fa224e7d01837f2",
+        "size": 1223,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4f3fd530a1fb251561c829d89fa224e7d01837f2"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/python",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "473fc8ef55f80c437519ebf6439c94f942478486",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/473fc8ef55f80c437519ebf6439c94f942478486"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/python/convert2rknn.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "275916bda3bbafe2a89a881971483fc7f5f362c3",
+        "size": 3960,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/275916bda3bbafe2a89a881971483fc7f5f362c3"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/python/gen_onnx.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d4f692bfdca52150292798dfd2c146b2d87a63b0",
+        "size": 3643,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/d4f692bfdca52150292798dfd2c146b2d87a63b0"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_custom_op_demo/python/verify_onnx.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2aedf28b281a905c585233c7571652a2f8d837b2",
+        "size": 3506,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/2aedf28b281a905c585233c7571652a2f8d837b2"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_encrypt_demo",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "fa08b458e9a8901e607d2aa35980fa32048a40d1",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/fa08b458e9a8901e607d2aa35980fa32048a40d1"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_encrypt_demo/README_CN.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "35b531eb53c5448a8cef0c3d013e2a95dbda37a7",
+        "size": 1894,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/35b531eb53c5448a8cef0c3d013e2a95dbda37a7"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_encrypt_demo/tools",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8064510c21d2ec1bd8a5a865bc3e970275eba75a",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/8064510c21d2ec1bd8a5a865bc3e970275eba75a"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_encrypt_demo/tools/rk_public_key.pem",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4a9cd17facb26875fa3eae20e338bc84bbcfc7cc",
+        "size": 450,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4a9cd17facb26875fa3eae20e338bc84bbcfc7cc"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_encrypt_demo/tools/rknn3_model_encrypt.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aa21e808c8624048747c0df11b14df908ac6b57d",
+        "size": 6382,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/aa21e808c8624048747c0df11b14df908ac6b57d"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c8f8ed1b61f801139284b0f90084ccc8dad58092",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/c8f8ed1b61f801139284b0f90084ccc8dad58092"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info/CMakeLists.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2968b50fe84d9dad3474fd0a825eac520b8169ab",
+        "size": 1922,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/2968b50fe84d9dad3474fd0a825eac520b8169ab"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0d5c4a2bcbc864833fffdf931f6e351aad01dcb5",
+        "size": 1991,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0d5c4a2bcbc864833fffdf931f6e351aad01dcb5"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info/README_CN.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f8800a30ce57b3272a148780118c5e37c53cb456",
+        "size": 1870,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f8800a30ce57b3272a148780118c5e37c53cb456"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info/build-android.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "aab86340a346ed3abd1dfebe1ad397e2248c58af",
+        "size": 2172,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/aab86340a346ed3abd1dfebe1ad397e2248c58af"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info/build-cygwin.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "5132f39158e559445966657a21d273da877042b5",
+        "size": 1447,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/5132f39158e559445966657a21d273da877042b5"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info/build-linux.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "b435b54629d1fc951d96ad131cac29b5d59c0aad",
+        "size": 2448,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b435b54629d1fc951d96ad131cac29b5d59c0aad"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info/src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "4c1f638857f0bdf29dd1dfb78c120363d2d79c65",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/4c1f638857f0bdf29dd1dfb78c120363d2d79c65"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_info/src/rknn3_model_info.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4c46869c98048d62181dabd5a60697c9796bc26e",
+        "size": 14925,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4c46869c98048d62181dabd5a60697c9796bc26e"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "448a5adc6a0df2f8bf478c2f459c51596a2b97e7",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/448a5adc6a0df2f8bf478c2f459c51596a2b97e7"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/CMakeLists.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5733f90b407ef064fa3d57873bd0f7c58df79da7",
+        "size": 2089,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/5733f90b407ef064fa3d57873bd0f7c58df79da7"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b2c5fe6a0e433e284784015216f2be29d2bb0826",
+        "size": 3963,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b2c5fe6a0e433e284784015216f2be29d2bb0826"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/README_CN.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "231574694478b2a6e20bcb4cf1d544092f54be95",
+        "size": 6528,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/231574694478b2a6e20bcb4cf1d544092f54be95"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/build-android.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "6273ec0313718a2a79a427186df55088f8ea3e4d",
+        "size": 2233,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/6273ec0313718a2a79a427186df55088f8ea3e4d"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/build-cygwin.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "a82976ae8ac9574d1e0d416b63aed4a7c55e65a0",
+        "size": 859,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a82976ae8ac9574d1e0d416b63aed4a7c55e65a0"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/build-linux.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "04aa265d289f735de7edc5b945cf08b2c70bf547",
+        "size": 2468,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/04aa265d289f735de7edc5b945cf08b2c70bf547"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "976d8c4d53265d4e145a3cb9ce381fb393d73b0c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/976d8c4d53265d4e145a3cb9ce381fb393d73b0c"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/src/cnpy.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5811f5704e937a597814bc58b21b2a32294495ca",
+        "size": 9232,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/5811f5704e937a597814bc58b21b2a32294495ca"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/src/cnpy.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8d6ab4fdf505e1e1ca1a9e71e519c05733a11d46",
+        "size": 1312,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/8d6ab4fdf505e1e1ca1a9e71e519c05733a11d46"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/src/rknn3_model_test.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e2b51760f6924c9ae22a20de2189be2849c96b58",
+        "size": 85661,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e2b51760f6924c9ae22a20de2189be2849c96b58"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/src/rknn3_test_utils.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7c1d9d934e23de0b0d364727ab97924752cf7d65",
+        "size": 2465,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/7c1d9d934e23de0b0d364727ab97924752cf7d65"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_model_test_demo/src/rknn3_test_utils.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9331409fb1a7ab0e6e95b670bfd318cdd7210ff7",
+        "size": 326,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9331409fb1a7ab0e6e95b670bfd318cdd7210ff7"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "ec0b71a1e5818d48efa2570dfcf8d5ec092ae6aa",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/ec0b71a1e5818d48efa2570dfcf8d5ec092ae6aa"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/CMakeLists.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b84e0f28a2a9faf9d328a33cfed5ccc8d7fed7e7",
+        "size": 5120,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b84e0f28a2a9faf9d328a33cfed5ccc8d7fed7e7"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/README_CN.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "83d12637141269784b284e6cbb972b561c68cf8a",
+        "size": 9346,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/83d12637141269784b284e6cbb972b561c68cf8a"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/build-android.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "9240aec7416dd7ed4f4aa1cd10048540ba534dbc",
+        "size": 2427,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9240aec7416dd7ed4f4aa1cd10048540ba534dbc"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/build-cygwin.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "a82976ae8ac9574d1e0d416b63aed4a7c55e65a0",
+        "size": 859,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a82976ae8ac9574d1e0d416b63aed4a7c55e65a0"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/build-linux.sh",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "a11c0a2de8e96330b26f930564cdfb4df96b98bd",
+        "size": 2459,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a11c0a2de8e96330b26f930564cdfb4df96b98bd"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "6b63ef43f12d472d1a48a93f2bdbc2f17b0e0b34",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/6b63ef43f12d472d1a48a93f2bdbc2f17b0e0b34"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/src/rknn3_session_test.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c8c61e1169c6121bc3bd1ee94202bc63a5390731",
+        "size": 9721,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/c8c61e1169c6121bc3bd1ee94202bc63a5390731"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/src/rknn3_session_test_eval_perf.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5dd9060acea0a31b512b341eabd28940456c7aac",
+        "size": 10522,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/5dd9060acea0a31b512b341eabd28940456c7aac"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/src/rknn3_session_test_function_call.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9f57402b79badb790cf24c565d5cab053ac0bd92",
+        "size": 15310,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9f57402b79badb790cf24c565d5cab053ac0bd92"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/src/rknn3_session_test_multi_session.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "012cf9bfb0e6b05b6f93a5383f78fd1f25219c98",
+        "size": 15548,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/012cf9bfb0e6b05b6f93a5383f78fd1f25219c98"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/src/rknn3_session_test_save_checkpoint.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "63788b5287f6b47a89ef040dc1bf49168f4c3940",
+        "size": 10549,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/63788b5287f6b47a89ef040dc1bf49168f4c3940"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/src/rknn3_session_test_token_embed_input.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "08be14e85586684dfe3bca2f7a26ac38916c366f",
+        "size": 12889,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/08be14e85586684dfe3bca2f7a26ac38916c366f"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/utils",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "7ae11cf490652b63c73a916a076ed436ace637d7",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/7ae11cf490652b63c73a916a076ed436ace637d7"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/utils/rknn3_session_test_common.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2ce40b3d28ba4462c3c93bb7f52453aa0be4f31a",
+        "size": 37408,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/2ce40b3d28ba4462c3c93bb7f52453aa0be4f31a"
+      },
+      {
+        "path": "rknn3-runtime/examples/rknn3_session_test_demo/utils/rknn3_session_test_common.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "72f9d14ab6bcafc241200499dce02c9392daeb45",
+        "size": 8930,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/72f9d14ab6bcafc241200499dce02c9392daeb45"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a1a1ef281cf5ba8d4f4679bb1e4fb105bc6e73d1",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/a1a1ef281cf5ba8d4f4679bb1e4fb105bc6e73d1"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/README_CN.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "96a67767ca9d67772cb40d6a568135c981c417f4",
+        "size": 58294,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/96a67767ca9d67772cb40d6a568135c981c417f4"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/README_EN.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "23f1dbcda9b6af9205aef77c77860ce21a5ab461",
+        "size": 60375,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/23f1dbcda9b6af9205aef77c77860ce21a5ab461"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "86790506921de71bb8285ff302e08c4492d052ab",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/86790506921de71bb8285ff302e08c4492d052ab"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/android_arm64-v8a",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "b81ec42cea7397892a21f9eaec477394309f1b39",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/b81ec42cea7397892a21f9eaec477394309f1b39"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/android_arm64-v8a/rkllm3-server",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "fd0bfdf39bc12f56439d31bcc490b5b3d2cd1c4c",
+        "size": 4137368,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fd0bfdf39bc12f56439d31bcc490b5b3d2cd1c4c"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/linux-aarch64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "338894f64425a3c9cd3244fd067eb028d5882777",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/338894f64425a3c9cd3244fd067eb028d5882777"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/linux-aarch64/rkllm3-server",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "a4b30c18e3d1aa66f251185a8f90005e6d6e3e95",
+        "size": 3764720,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a4b30c18e3d1aa66f251185a8f90005e6d6e3e95"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "cad2d25798dac735467a0ee55a4e5d769270cd19",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/cad2d25798dac735467a0ee55a4e5d769270cd19"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64/cyggcc_s-seh-1.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "18ad7542df3d00534e6be0e32ee754eaacc8e1c3",
+        "size": 98323,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/18ad7542df3d00534e6be0e32ee754eaacc8e1c3"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64/cygstdc++-6.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bbb46876ad16fee5c8509f428a09d8fa41d35a50",
+        "size": 1984531,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/bbb46876ad16fee5c8509f428a09d8fa41d35a50"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64/cygwin1.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fc4d32210ab3a6128cc5c1f2382c69fbd463819a",
+        "size": 2992181,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fc4d32210ab3a6128cc5c1f2382c69fbd463819a"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64/libfftw3f-3.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "32a3fcf1d0bdf27ba12611c4a2f9871c679da871",
+        "size": 2772692,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/32a3fcf1d0bdf27ba12611c4a2f9871c679da871"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64/librknn3_api.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "21419b8aee1a8530d25e70ba7306a0c288c10652",
+        "size": 106049,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/21419b8aee1a8530d25e70ba7306a0c288c10652"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64/librknn3_api_rkcp.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a382d7574ae899783d0b57864c61a9fb4c82b6e2",
+        "size": 13503182,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a382d7574ae899783d0b57864c61a9fb4c82b6e2"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64/libusb-1.0.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b86292835d8228f35cd56aae346bdc4627afdcc8",
+        "size": 1207807,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b86292835d8228f35cd56aae346bdc4627afdcc8"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/bin/windows-x86_64/rkllm3-server.exe",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "0d852f8d432d56c0eadbdb0625f324c72fbba2f9",
+        "size": 4334592,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0d852f8d432d56c0eadbdb0625f324c72fbba2f9"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/demo.jpg",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "104863e6efa20f80fb7726cfb0a4d319b1ddf284",
+        "size": 244967,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/104863e6efa20f80fb7726cfb0a4d319b1ddf284"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a28ae7aac7e67cd00ee64056d8e22deb21cf7a7c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/a28ae7aac7e67cd00ee64056d8e22deb21cf7a7c"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/android_arm64-v8a",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "f7b6e69b619537c14cc4c5e983b06306e41bc9d9",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/f7b6e69b619537c14cc4c5e983b06306e41bc9d9"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/android_arm64-v8a/librkllm3-server.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "82bf16bb4484a916a03a238bb8058fa02518260b",
+        "size": 4894848,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/82bf16bb4484a916a03a238bb8058fa02518260b"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/include",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "4d608ec0bb94c2ef261103cee690ebdda8ce797c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/4d608ec0bb94c2ef261103cee690ebdda8ce797c"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/include/rkllm3-server.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f719b43b45f75d4172030b5e16c5fe97b37246e4",
+        "size": 559,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f719b43b45f75d4172030b5e16c5fe97b37246e4"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/linux-aarch64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8c06ac7a509e62a35717498d09ddaa6013ff751c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/8c06ac7a509e62a35717498d09ddaa6013ff751c"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/linux-aarch64/librkllm3-server.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "90ecd1315661cabe71f4720705742931c6b663ad",
+        "size": 4010208,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/90ecd1315661cabe71f4720705742931c6b663ad"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "68bce09195a33175587366c873d2c03ac4c4ae2e",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/68bce09195a33175587366c873d2c03ac4c4ae2e"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64/cyggcc_s-seh-1.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "18ad7542df3d00534e6be0e32ee754eaacc8e1c3",
+        "size": 98323,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/18ad7542df3d00534e6be0e32ee754eaacc8e1c3"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64/cygstdc++-6.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bbb46876ad16fee5c8509f428a09d8fa41d35a50",
+        "size": 1984531,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/bbb46876ad16fee5c8509f428a09d8fa41d35a50"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64/cygwin1.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fc4d32210ab3a6128cc5c1f2382c69fbd463819a",
+        "size": 2992181,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fc4d32210ab3a6128cc5c1f2382c69fbd463819a"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64/libfftw3f-3.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "32a3fcf1d0bdf27ba12611c4a2f9871c679da871",
+        "size": 2772692,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/32a3fcf1d0bdf27ba12611c4a2f9871c679da871"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64/librkllm3-server.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "13681d19a764af8cf579b78bc56fbe00d1dc4d8a",
+        "size": 4788224,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/13681d19a764af8cf579b78bc56fbe00d1dc4d8a"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64/librknn3_api.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "21419b8aee1a8530d25e70ba7306a0c288c10652",
+        "size": 106049,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/21419b8aee1a8530d25e70ba7306a0c288c10652"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64/librknn3_api_rkcp.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a382d7574ae899783d0b57864c61a9fb4c82b6e2",
+        "size": 13503182,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a382d7574ae899783d0b57864c61a9fb4c82b6e2"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/lib/windows-x86_64/libusb-1.0.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b86292835d8228f35cd56aae346bdc4627afdcc8",
+        "size": 1207807,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b86292835d8228f35cd56aae346bdc4627afdcc8"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/note.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9186ddc3f6cd3ddf9b920c0f05cdea964ad41738",
+        "size": 2720,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9186ddc3f6cd3ddf9b920c0f05cdea964ad41738"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a40e239e9567e2a2fdb38927c22ec6b65fe69011",
+        "size": 2275,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a40e239e9567e2a2fdb38927c22ec6b65fe69011"
+      },
+      {
+        "path": "rknn3-runtime/rkllm3-server/test_multimodal.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4773c210a8f649ef77f19955c37b9d331385d78e",
+        "size": 1416,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4773c210a8f649ef77f19955c37b9d331385d78e"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "dbceecec35a1f6a8ff689059ad9e6ac00cdff01d",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/dbceecec35a1f6a8ff689059ad9e6ac00cdff01d"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Android",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c85b67b2ed842e87b6fb13307fbdcb434158ac5b",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/c85b67b2ed842e87b6fb13307fbdcb434158ac5b"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Android/arm64-v8a",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "47571bb8d742a9131cd4dbed7f3c0b672484752c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/47571bb8d742a9131cd4dbed7f3c0b672484752c"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Android/arm64-v8a/librknn3_api.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c8a83cd4ef928e17435955547771b768c86d16fb",
+        "size": 305552,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/c8a83cd4ef928e17435955547771b768c86d16fb"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Android/arm64-v8a/librknn3_api_native.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "540d86e684209fddd4a864e4bddef52d2a4d8c5f",
+        "size": 2489008,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/540d86e684209fddd4a864e4bddef52d2a4d8c5f"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Android/arm64-v8a/librknn3_api_rkcp.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4a9ace7d42148e4341434036fc2d67d8cdadf4d1",
+        "size": 9710128,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4a9ace7d42148e4341434036fc2d67d8cdadf4d1"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Linux",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "899bb564b6eaa1e819266619982199036c1b8ce5",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/899bb564b6eaa1e819266619982199036c1b8ce5"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Linux/aarch64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "782de30bbff0f8537eead7caed9331e8a51a33ab",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/782de30bbff0f8537eead7caed9331e8a51a33ab"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Linux/aarch64/librknn3_api.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8907d0e4e44f89302325f6b1fe2a45b2faaab323",
+        "size": 42016,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/8907d0e4e44f89302325f6b1fe2a45b2faaab323"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Linux/aarch64/librknn3_api_native.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6ca3d82aaebe62062fa8fe8f397ceba76392c7e7",
+        "size": 1404664,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/6ca3d82aaebe62062fa8fe8f397ceba76392c7e7"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Linux/aarch64/librknn3_api_rkcp.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c1e1b9cf8a9a0d220f00ec3c591ee8682dbb50bd",
+        "size": 9078912,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/c1e1b9cf8a9a0d220f00ec3c591ee8682dbb50bd"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Linux/x86_64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "1310022b135ac3824031b5fdd444118cf2d01138",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/1310022b135ac3824031b5fdd444118cf2d01138"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Linux/x86_64/librknn3_api.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7d4e8c084dfb8ca91997acbafcd3cb7e9f97daa2",
+        "size": 1635376,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/7d4e8c084dfb8ca91997acbafcd3cb7e9f97daa2"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Linux/x86_64/librknn3_api_rkcp.so",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7d4e8c084dfb8ca91997acbafcd3cb7e9f97daa2",
+        "size": 1635376,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/7d4e8c084dfb8ca91997acbafcd3cb7e9f97daa2"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Windows",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a09097179545b38316237acb501f6653f7d4e15f",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/a09097179545b38316237acb501f6653f7d4e15f"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Windows/x86_64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "2e3320b0fa1f987204d2e5858aa3649570d73f18",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/2e3320b0fa1f987204d2e5858aa3649570d73f18"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Windows/x86_64/cyggcc_s-seh-1.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "18ad7542df3d00534e6be0e32ee754eaacc8e1c3",
+        "size": 98323,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/18ad7542df3d00534e6be0e32ee754eaacc8e1c3"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Windows/x86_64/cygstdc++-6.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bbb46876ad16fee5c8509f428a09d8fa41d35a50",
+        "size": 1984531,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/bbb46876ad16fee5c8509f428a09d8fa41d35a50"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Windows/x86_64/cygwin1.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fc4d32210ab3a6128cc5c1f2382c69fbd463819a",
+        "size": 2992181,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fc4d32210ab3a6128cc5c1f2382c69fbd463819a"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Windows/x86_64/librknn3_api.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "21419b8aee1a8530d25e70ba7306a0c288c10652",
+        "size": 106049,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/21419b8aee1a8530d25e70ba7306a0c288c10652"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Windows/x86_64/librknn3_api_rkcp.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a382d7574ae899783d0b57864c61a9fb4c82b6e2",
+        "size": 13503182,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a382d7574ae899783d0b57864c61a9fb4c82b6e2"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/Windows/x86_64/libusb-1.0.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b86292835d8228f35cd56aae346bdc4627afdcc8",
+        "size": 1207807,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b86292835d8228f35cd56aae346bdc4627afdcc8"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/include",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "0dfd0b3c9c26193307c4bd589e14ccc75b878732",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/0dfd0b3c9c26193307c4bd589e14ccc75b878732"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/include/float16.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "81fa553f0385486af38707eedc89b1caa985542c",
+        "size": 2318,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/81fa553f0385486af38707eedc89b1caa985542c"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-api/include/rknn3_api.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a7768d7f77965e9d573f9fc091821ce104304af7",
+        "size": 86180,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a7768d7f77965e9d573f9fc091821ce104304af7"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-server",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c1a9d38a75590f13952487f880675fdaecc8d562",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/c1a9d38a75590f13952487f880675fdaecc8d562"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-server/Android",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "d300911411f619c5844ebc64e0500c260e8d6415",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/d300911411f619c5844ebc64e0500c260e8d6415"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-server/Android/arm64-v8a",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a86acb8d1c3b04f1667d1ab9e2ed64517b2e8668",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/a86acb8d1c3b04f1667d1ab9e2ed64517b2e8668"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-server/Android/arm64-v8a/rknn3-server",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "32e06c8356c267cc844db67d2c0f83d44f89b90c",
+        "size": 358816,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/32e06c8356c267cc844db67d2c0f83d44f89b90c"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-server/Linux",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "009a4254326a3b14d5067f2d9f50f4fdb118c1d8",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/009a4254326a3b14d5067f2d9f50f4fdb118c1d8"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-server/Linux/aarch64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "52e130d62ce6a0080436211cbb864f801633e17b",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/52e130d62ce6a0080436211cbb864f801633e17b"
+      },
+      {
+        "path": "rknn3-runtime/rknn3-server/Linux/aarch64/rknn3-server",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "7912ada5594b55438f78f8b2bfe2a8e0676d0515",
+        "size": 511456,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/7912ada5594b55438f78f8b2bfe2a8e0676d0515"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c65d678863829dc1089a76e458c21087ecd95fad",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/c65d678863829dc1089a76e458c21087ecd95fad"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/android-arm64-v8a",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "f15d492b90109db35e6b21ad7f461260b9fed79c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/f15d492b90109db35e6b21ad7f461260b9fed79c"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/android-arm64-v8a/rknn3_transfer_proxy",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "e6604a308f1e6b1c51644e5530c79eba37695ef4",
+        "size": 924328,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e6604a308f1e6b1c51644e5530c79eba37695ef4"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/linux-aarch64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a4797d9101ea364de03deb51ad7f44ebc590c7b1",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/a4797d9101ea364de03deb51ad7f44ebc590c7b1"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/linux-aarch64/rknn3_transfer_proxy",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "cbad72f7314ef3883ce00d82e1759ee0f6d852a2",
+        "size": 469944,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/cbad72f7314ef3883ce00d82e1759ee0f6d852a2"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/windows-x86_64",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "aa83789a70156a87c354e4d88cf77c606b5b1024",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/aa83789a70156a87c354e4d88cf77c606b5b1024"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/windows-x86_64/cyggcc_s-seh-1.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "18ad7542df3d00534e6be0e32ee754eaacc8e1c3",
+        "size": 98323,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/18ad7542df3d00534e6be0e32ee754eaacc8e1c3"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/windows-x86_64/cygstdc++-6.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bbb46876ad16fee5c8509f428a09d8fa41d35a50",
+        "size": 1984531,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/bbb46876ad16fee5c8509f428a09d8fa41d35a50"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/windows-x86_64/cygwin1.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fc4d32210ab3a6128cc5c1f2382c69fbd463819a",
+        "size": 2992181,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fc4d32210ab3a6128cc5c1f2382c69fbd463819a"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/windows-x86_64/libusb-1.0.dll",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b86292835d8228f35cd56aae346bdc4627afdcc8",
+        "size": 1207807,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b86292835d8228f35cd56aae346bdc4627afdcc8"
+      },
+      {
+        "path": "rknn3-runtime/rknn3_transfer_proxy/windows-x86_64/rknn3_transfer_proxy.exe",
+        "mode": "100755",
+        "type": "blob",
+        "sha": "88113e649e2d50173de1eee52e0f0ba12435f179",
+        "size": 2341731,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/88113e649e2d50173de1eee52e0f0ba12435f179"
+      },
+      {
+        "path": "rknn3-toolkit-lite",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "2bf1e315e47b647d1793dfcff7b9369877957c27",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/2bf1e315e47b647d1793dfcff7b9369877957c27"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "e416782c48850a417e1535bf0d025b1ec4b47b2f",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/e416782c48850a417e1535bf0d025b1ec4b47b2f"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "0bf65e1badf7a78fbd4a2e5aa30b3946ba46628c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/0bf65e1badf7a78fbd4a2e5aa30b3946ba46628c"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2fd6cdbd5cae904af2f20e5087cf3d50d149ef49",
+        "size": 4357,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/2fd6cdbd5cae904af2f20e5087cf3d50d149ef49"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/demo.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "104863e6efa20f80fb7726cfb0a4d319b1ddf284",
+        "size": 244967,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/104863e6efa20f80fb7726cfb0a4d319b1ddf284"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/gme-Qwen2-VL-2B",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "797c1149f596c77306c347f17c7420719e155d0b",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/797c1149f596c77306c347f17c7420719e155d0b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/gme-Qwen2-VL-2B/chat_template.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "732bd68bc5427d1fb6c06a59b3bf2456b2155d24",
+        "size": 1050,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/732bd68bc5427d1fb6c06a59b3bf2456b2155d24"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/gme-Qwen2-VL-2B/config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "431cb3f7166250e25dc563fbbad1e1be8c479799",
+        "size": 1251,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/431cb3f7166250e25dc563fbbad1e1be8c479799"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/gme-Qwen2-VL-2B/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6a12bcd76a6f4151c9aca398ff5ef0dbfdb4a235",
+        "size": 7030148,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/6a12bcd76a6f4151c9aca398ff5ef0dbfdb4a235"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/gme-Qwen2-VL-2B/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4976841af79d8587e3e38006a6be978efe3a2208",
+        "size": 4256,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4976841af79d8587e3e38006a6be978efe3a2208"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/gme-Qwen2-VL-2B/vocab.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4783fe10ac3adce15ac8f358ef5462739852c569",
+        "size": 2776833,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4783fe10ac3adce15ac8f358ef5462739852c569"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/GME-Qwen2-VL/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f4c02bd87e1a392a8a2380ebcb2a00f1f42d4aab",
+        "size": 16052,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f4c02bd87e1a392a8a2380ebcb2a00f1f42d4aab"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "f9a94fd52b08d424514768902eb918c14160725b",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/f9a94fd52b08d424514768902eb918c14160725b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "239292fc825177c9c6e8f37740c8a7c71402bed6",
+        "size": 22439,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/239292fc825177c9c6e8f37740c8a7c71402bed6"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/demo.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "104863e6efa20f80fb7726cfb0a4d319b1ddf284",
+        "size": 244967,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/104863e6efa20f80fb7726cfb0a4d319b1ddf284"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/gemma-4-E2B-it",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "984ccf266e8988aeb241fc8952a6737124603f7d",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/984ccf266e8988aeb241fc8952a6737124603f7d"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/gemma-4-E2B-it/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c7c5ee3d681ef0152087345da5165560cba9df1d",
+        "size": 32169626,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/c7c5ee3d681ef0152087345da5165560cba9df1d"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/gemma-4-E2B-it/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "375b25dc8be85705251e41be1c25310d24932051",
+        "size": 2095,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/375b25dc8be85705251e41be1c25310d24932051"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/test.mp4",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "790c30965b7461a69ad1e395761667aaae3475cc",
+        "size": 1445556,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/790c30965b7461a69ad1e395761667aaae3475cc"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "be048cc527588f9e8c174fdadabb3bfd1fd3cbd2",
+        "size": 19841,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/be048cc527588f9e8c174fdadabb3bfd1fd3cbd2"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/test_vlm.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "923506d5aa0312424739abb403bc7f5eb601d3cc",
+        "size": 26563,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/923506d5aa0312424739abb403bc7f5eb601d3cc"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Gemma4/test_vlm_video.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "467f87180d7a08813479f1d931ef7edfaf1054a0",
+        "size": 27850,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/467f87180d7a08813479f1d931ef7edfaf1054a0"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c19ecf2459f4c60332d46cbf16a6d2f60c196ba8",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/c19ecf2459f4c60332d46cbf16a6d2f60c196ba8"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "12843c9dc083442931382b921fb998ac66c96bbc",
+        "size": 4097,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/12843c9dc083442931382b921fb998ac66c96bbc"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "80529cfe3e0dc656350ab59ab0aa6e543118baba",
+        "size": 8655,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/80529cfe3e0dc656350ab59ab0aa6e543118baba"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5/test_embed.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "42929a2bd4fe97de4240052b153c2e8428304303",
+        "size": 8539,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/42929a2bd4fe97de4240052b153c2e8428304303"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5/test_tokens.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7d01c244d542409354e0fe56aad4991b6096ff10",
+        "size": 8572,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/7d01c244d542409354e0fe56aad4991b6096ff10"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "4de705800928cbb7731de66b2bd364f2ce8e2fe5",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/4de705800928cbb7731de66b2bd364f2ce8e2fe5"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4d6b90f7803fb2401d17deb93444f04b5ab5df52",
+        "size": 3037,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4d6b90f7803fb2401d17deb93444f04b5ab5df52"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/demo.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "104863e6efa20f80fb7726cfb0a4d319b1ddf284",
+        "size": 244967,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/104863e6efa20f80fb7726cfb0a4d319b1ddf284"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_3B",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "127ed94ff493b64f8d525b6188f5bd96b38f3f4b",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/127ed94ff493b64f8d525b6188f5bd96b38f3f4b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_3B/chat_template.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "732bd68bc5427d1fb6c06a59b3bf2456b2155d24",
+        "size": 1050,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/732bd68bc5427d1fb6c06a59b3bf2456b2155d24"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_3B/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "443909a61d429dff23010e5bddd28ff530edda00",
+        "size": 7031645,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/443909a61d429dff23010e5bddd28ff530edda00"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_3B/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "91684ea3dc135a7d815e2c932054ce88c1aab41f",
+        "size": 5702,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/91684ea3dc135a7d815e2c932054ce88c1aab41f"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_3B/vocab.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4783fe10ac3adce15ac8f358ef5462739852c569",
+        "size": 2776833,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4783fe10ac3adce15ac8f358ef5462739852c569"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_7B",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "127ed94ff493b64f8d525b6188f5bd96b38f3f4b",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/127ed94ff493b64f8d525b6188f5bd96b38f3f4b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_7B/chat_template.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "732bd68bc5427d1fb6c06a59b3bf2456b2155d24",
+        "size": 1050,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/732bd68bc5427d1fb6c06a59b3bf2456b2155d24"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_7B/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "443909a61d429dff23010e5bddd28ff530edda00",
+        "size": 7031645,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/443909a61d429dff23010e5bddd28ff530edda00"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_7B/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "91684ea3dc135a7d815e2c932054ce88c1aab41f",
+        "size": 5702,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/91684ea3dc135a7d815e2c932054ce88c1aab41f"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/qwen2_5_VL_7B/vocab.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4783fe10ac3adce15ac8f358ef5462739852c569",
+        "size": 2776833,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4783fe10ac3adce15ac8f358ef5462739852c569"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e03ff7258f79e99fc4f3e971e5b7bc2cbc44f63c",
+        "size": 11826,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e03ff7258f79e99fc4f3e971e5b7bc2cbc44f63c"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen2.5VL/test_7B.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "233e541750666346c3c68428ebe3b98986b02c6e",
+        "size": 11813,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/233e541750666346c3c68428ebe3b98986b02c6e"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "91e7069b5119e249161c37f19cc469c1f2c5fac8",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/91e7069b5119e249161c37f19cc469c1f2c5fac8"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding/Qwen3-Embedding-0.6B",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "4606cc855ac0b86d9c55f3aec6c5325f53561ca1",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/4606cc855ac0b86d9c55f3aec6c5325f53561ca1"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding/Qwen3-Embedding-0.6B/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6207337006f63c5a1b4efaa7ca0bfe479e35927b",
+        "size": 11423705,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/6207337006f63c5a1b4efaa7ca0bfe479e35927b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding/Qwen3-Embedding-0.6B/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7345216a0785dc7086e8c245b2a9d3896ce2b756",
+        "size": 9706,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/7345216a0785dc7086e8c245b2a9d3896ce2b756"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding/Qwen3-Embedding-4B",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "a7dcbf637e26d31ccecce9c075dbf8c2cd6d9589",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/a7dcbf637e26d31ccecce9c075dbf8c2cd6d9589"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding/Qwen3-Embedding-4B/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0bc01765b0e69cac54fecd1b8b9b9fab02a43da9",
+        "size": 11422947,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0bc01765b0e69cac54fecd1b8b9b9fab02a43da9"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding/Qwen3-Embedding-4B/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "df3a9d96759529ca1006eb6db024bbb099a97578",
+        "size": 7256,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/df3a9d96759529ca1006eb6db024bbb099a97578"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c7d797e2710df804ec65ef21bf53a481e7790b81",
+        "size": 7368,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/c7d797e2710df804ec65ef21bf53a481e7790b81"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3-Embedding/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d33b518ffcaa8b11a06a3dd27b59bc3ebae34058",
+        "size": 22645,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/d33b518ffcaa8b11a06a3dd27b59bc3ebae34058"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "5300d5a94a80dd6e7e6ce784f22ab7426f792b95",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/5300d5a94a80dd6e7e6ce784f22ab7426f792b95"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3/Qwen3-1.7B-Base",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c72fb05eea7839d3fab496e2955c442c43982202",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/c72fb05eea7839d3fab496e2955c442c43982202"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3/Qwen3-1.7B-Base/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "443909a61d429dff23010e5bddd28ff530edda00",
+        "size": 7031645,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/443909a61d429dff23010e5bddd28ff530edda00"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3/Qwen3-1.7B-Base/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6a3829ee9491f36113e64df37573be81df0366f5",
+        "size": 9678,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/6a3829ee9491f36113e64df37573be81df0366f5"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3/Qwen3-1.7B-Base/vocab.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4783fe10ac3adce15ac8f358ef5462739852c569",
+        "size": 2776833,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4783fe10ac3adce15ac8f358ef5462739852c569"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7aa02d17689da8e89ae9e1db06418e1860328be7",
+        "size": 4303,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/7aa02d17689da8e89ae9e1db06418e1860328be7"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f46684bb4b2feb8a5b20983cc9f2dffa6fc2644f",
+        "size": 8404,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f46684bb4b2feb8a5b20983cc9f2dffa6fc2644f"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3/test_embed.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b77301a7479c4927992192c90c36662c001a2c43",
+        "size": 8432,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b77301a7479c4927992192c90c36662c001a2c43"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "93a15c19c731b39d0efdd42ac0278bba8981ab5a",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/93a15c19c731b39d0efdd42ac0278bba8981ab5a"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "37c6a35d81246d9d74d524bb53521bf09579e3eb",
+        "size": 5757,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/37c6a35d81246d9d74d524bb53521bf09579e3eb"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/demo.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "104863e6efa20f80fb7726cfb0a4d319b1ddf284",
+        "size": 244967,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/104863e6efa20f80fb7726cfb0a4d319b1ddf284"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_2B",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "7725dae24856e9c1b74ca6b28c29e014c287cb8a",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/7725dae24856e9c1b74ca6b28c29e014c287cb8a"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_2B/chat_template.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e49e75bdda104c8de941eb20e0b3765184fb27bc",
+        "size": 5502,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e49e75bdda104c8de941eb20e0b3765184fb27bc"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_2B/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c6cc1014128b19d1fc46b1d30a23e3b1d35db421",
+        "size": 7032403,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/c6cc1014128b19d1fc46b1d30a23e3b1d35db421"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_2B/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d3d3763207692c78780f4bf42d4dadf49a5c8012",
+        "size": 10868,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/d3d3763207692c78780f4bf42d4dadf49a5c8012"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_2B/vocab.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4783fe10ac3adce15ac8f358ef5462739852c569",
+        "size": 2776833,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4783fe10ac3adce15ac8f358ef5462739852c569"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_4B",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "fb644b4b2cf17f0fc0c999b9c104bb247070ed92",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/fb644b4b2cf17f0fc0c999b9c104bb247070ed92"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_4B/chat_template.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e49e75bdda104c8de941eb20e0b3765184fb27bc",
+        "size": 5502,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e49e75bdda104c8de941eb20e0b3765184fb27bc"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_4B/config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "22be8bb79043d39840ca5e70d7a2dab80311602c",
+        "size": 1505,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/22be8bb79043d39840ca5e70d7a2dab80311602c"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_4B/tokenizer.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c6cc1014128b19d1fc46b1d30a23e3b1d35db421",
+        "size": 7032403,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/c6cc1014128b19d1fc46b1d30a23e3b1d35db421"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_4B/tokenizer_config.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d3d3763207692c78780f4bf42d4dadf49a5c8012",
+        "size": 10868,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/d3d3763207692c78780f4bf42d4dadf49a5c8012"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/qwen3_VL_4B/vocab.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4783fe10ac3adce15ac8f358ef5462739852c569",
+        "size": 2776833,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4783fe10ac3adce15ac8f358ef5462739852c569"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/test.mp4",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "790c30965b7461a69ad1e395761667aaae3475cc",
+        "size": 1445556,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/790c30965b7461a69ad1e395761667aaae3475cc"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "47ecce7836f813c2b97a6ab3c64fc4273bc89401",
+        "size": 12617,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/47ecce7836f813c2b97a6ab3c64fc4273bc89401"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/Qwen3VL/test_video.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f0926376fb491f7675dbaffb93a601d37f85fa77",
+        "size": 14207,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f0926376fb491f7675dbaffb93a601d37f85fa77"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/dynamic_shape",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "d6c70bb65927e428ef17aa965e50022a4b1b1d7b",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/d6c70bb65927e428ef17aa965e50022a4b1b1d7b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/dynamic_shape/dog_224x224.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4f46457bc9c6438863e497e07e9e7c58a4212231",
+        "size": 18889,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4f46457bc9c6438863e497e07e9e7c58a4212231"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/dynamic_shape/labels.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0993780f99088349e2c156a5a8c57ce1013eb493",
+        "size": 25564,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0993780f99088349e2c156a5a8c57ce1013eb493"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/dynamic_shape/synset_label.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b53fbf603e968333b3e101d8cbf4267a12b3ab5b",
+        "size": 30677,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b53fbf603e968333b3e101d8cbf4267a12b3ab5b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/dynamic_shape/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f59e251a069d3f9dd23c97f169ba2032ba14d615",
+        "size": 6986,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f59e251a069d3f9dd23c97f169ba2032ba14d615"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/mobilenet",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "54965422d39af25ba45be60f55ddb9d31cea0e6a",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/54965422d39af25ba45be60f55ddb9d31cea0e6a"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/mobilenet/dog_224x224.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4f46457bc9c6438863e497e07e9e7c58a4212231",
+        "size": 18889,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4f46457bc9c6438863e497e07e9e7c58a4212231"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/mobilenet/space_shuttle_224.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "97bbb2cc48fdcc19dca93bf574f50072cd2ab4b1",
+        "size": 23472,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/97bbb2cc48fdcc19dca93bf574f50072cd2ab4b1"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/mobilenet/synset.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a9e8c7f50d144ef6034d5231709dd3545b10b69c",
+        "size": 31675,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a9e8c7f50d144ef6034d5231709dd3545b10b69c"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/mobilenet/synset_label.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b53fbf603e968333b3e101d8cbf4267a12b3ab5b",
+        "size": 30677,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/b53fbf603e968333b3e101d8cbf4267a12b3ab5b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/mobilenet/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f8090bc9fda2eb310f711846710f408a4f9d5647",
+        "size": 2181,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f8090bc9fda2eb310f711846710f408a4f9d5647"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/multicard",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "632ab02a91c488b205befb2d99b8ac011b22d4a5",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/632ab02a91c488b205befb2d99b8ac011b22d4a5"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/multicard/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "824a51337e0e4312a0f71b615b54df79eaed9f36",
+        "size": 10645,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/824a51337e0e4312a0f71b615b54df79eaed9f36"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/multicard/rknn_multicard_gemma4_test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "31fd8bd9c25a53be160a07aa3456a629ff785f55",
+        "size": 54179,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/31fd8bd9c25a53be160a07aa3456a629ff785f55"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/multicard/rknn_multicard_qwen35_test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "643e2e3fc3707cfa1b1e967747676a6427152c0b",
+        "size": 45059,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/643e2e3fc3707cfa1b1e967747676a6427152c0b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "f91baec12edf6170fb73a627904d32fd3abdd890",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/f91baec12edf6170fb73a627904d32fd3abdd890"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_dynamic_shape_model_test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1c96d80c9d3cdf316c80bfafaf2ab0d12df59fec",
+        "size": 25705,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/1c96d80c9d3cdf316c80bfafaf2ab0d12df59fec"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_model_test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d770eeff58fcad744cd9d133b501b03fa858ee44",
+        "size": 14728,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/d770eeff58fcad744cd9d133b501b03fa858ee44"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_profile_ops_test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9bc04e7f7f3385e9564a093774d0e40ed6bb3b33",
+        "size": 15451,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9bc04e7f7f3385e9564a093774d0e40ed6bb3b33"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_query.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5a6f8eaa16011ae15748515fd4b6a62cd737489a",
+        "size": 427,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/5a6f8eaa16011ae15748515fd4b6a62cd737489a"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_session_test_async.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9b9063d42b3ed293150b421ee64834b56be45f50",
+        "size": 24466,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9b9063d42b3ed293150b421ee64834b56be45f50"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_session_test_cmmlu.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "110572907f044ac3be6a576894891d420c721f0b",
+        "size": 14580,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/110572907f044ac3be6a576894891d420c721f0b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_session_test_eval_perf.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "01a0d3b5c291dd2223036e038b47d28a1d1d5110",
+        "size": 14201,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/01a0d3b5c291dd2223036e038b47d28a1d1d5110"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_session_test_kvcache_load_save.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7fb5af1972a0e7f3b54aff9353823fb0f022096b",
+        "size": 17596,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/7fb5af1972a0e7f3b54aff9353823fb0f022096b"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_session_test_lora.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "503c10742a694ff9dd389dd347dd2af14a14a1b9",
+        "size": 16675,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/503c10742a694ff9dd389dd347dd2af14a14a1b9"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_session_test_pause_resume.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "432e6405d5268a5728b2e4010bcc5c2b3661ab35",
+        "size": 20143,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/432e6405d5268a5728b2e4010bcc5c2b3661ab35"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_session_test_pingpong.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "863c25bb592b85eb83a7444912b6264da65ef6ad",
+        "size": 19410,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/863c25bb592b85eb83a7444912b6264da65ef6ad"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn3_session_test_stop.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6d267f550d44b7934a9bfda341fad275cb7cc555",
+        "size": 15128,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/6d267f550d44b7934a9bfda341fad275cb7cc555"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn_session_test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "99f47e7cfe99f2c96438f91109f649519a1c9fdb",
+        "size": 11056,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/99f47e7cfe99f2c96438f91109f649519a1c9fdb"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn_vlm_deepstack_mmbench_test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "42cffc9c2c210893ccd2095f83d4ee155d66bb23",
+        "size": 19921,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/42cffc9c2c210893ccd2095f83d4ee155d66bb23"
+      },
+      {
+        "path": "rknn3-toolkit-lite/examples/tools/rknn_vlm_mmbench_test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "855b3a846fce904c723ef4800b47854a47a652a3",
+        "size": 18283,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/855b3a846fce904c723ef4800b47854a47a652a3"
+      },
+      {
+        "path": "rknn3-toolkit-lite/packages",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8e31795a53af16cadded3be2fb97d3e9fda9456d",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/8e31795a53af16cadded3be2fb97d3e9fda9456d"
+      },
+      {
+        "path": "rknn3-toolkit-lite/packages/md5sum.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "70bf0339e2756564779d891fe18da37df3bee363",
+        "size": 478,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/70bf0339e2756564779d891fe18da37df3bee363"
+      },
+      {
+        "path": "rknn3-toolkit-lite/packages/requirements.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e6b87822dacf5f6c4b6aa9f6234466c6d6eee1f8",
+        "size": 50,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e6b87822dacf5f6c4b6aa9f6234466c6d6eee1f8"
+      },
+      {
+        "path": "rknn3-toolkit-lite/packages/rknn3_toolkit_lite-1.1.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "03bc9c3df272f6e4d85ba5982b5ab7d3c89d058d",
+        "size": 593861,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/03bc9c3df272f6e4d85ba5982b5ab7d3c89d058d"
+      },
+      {
+        "path": "rknn3-toolkit-lite/packages/rknn3_toolkit_lite-1.1.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4ec97587150fe66a7ff7d939f222fbc60e66722e",
+        "size": 590915,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4ec97587150fe66a7ff7d939f222fbc60e66722e"
+      },
+      {
+        "path": "rknn3-toolkit-lite/packages/rknn3_toolkit_lite-1.1.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "20452db57b844d36c84c2fc60d3aae91bba5b2ce",
+        "size": 520624,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/20452db57b844d36c84c2fc60d3aae91bba5b2ce"
+      },
+      {
+        "path": "rknn3-toolkit-lite/packages/rknn3_toolkit_lite-1.1.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f7a5d77bbe128359c5d7303ff765c4c18f2e16d5",
+        "size": 594826,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f7a5d77bbe128359c5d7303ff765c4c18f2e16d5"
+      },
+      {
+        "path": "rknn3-toolkit",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "21fa142083d3745ff8392f71e64b2171b10d234f",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/21fa142083d3745ff8392f71e64b2171b10d234f"
+      },
+      {
+        "path": "rknn3-toolkit/docker",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "38c5aa3efc914480f742d6d07f6e9d836363d6c9",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/38c5aa3efc914480f742d6d07f6e9d836363d6c9"
+      },
+      {
+        "path": "rknn3-toolkit/docker/docker_file",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "b4ddc8c0b3a736b4b2deeb3f4c2488bd1c0b1d1f",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/b4ddc8c0b3a736b4b2deeb3f4c2488bd1c0b1d1f"
+      },
+      {
+        "path": "rknn3-toolkit/docker/docker_file/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e69afa6a7052f3fac6a2d32d7c9ff7d694b92cd6",
+        "size": 115,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/e69afa6a7052f3fac6a2d32d7c9ff7d694b92cd6"
+      },
+      {
+        "path": "rknn3-toolkit/docker/docker_file/ubuntu_22_04_cp310",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "139b32981bf9ca11d9275cf33026ebaeeec349e6",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/139b32981bf9ca11d9275cf33026ebaeeec349e6"
+      },
+      {
+        "path": "rknn3-toolkit/docker/docker_file/ubuntu_22_04_cp310/Dockerfile_ubuntu_22_04_for_cp310",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2f7ffb7a1e57c857ac87e0399152a8cff30b9d68",
+        "size": 1059,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/2f7ffb7a1e57c857ac87e0399152a8cff30b9d68"
+      },
+      {
+        "path": "rknn3-toolkit/docker/docker_file/ubuntu_22_04_cp310/sources_bionic.list",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "eaaad810aaf02d77a037603f68722852ef15dfa5",
+        "size": 902,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/eaaad810aaf02d77a037603f68722852ef15dfa5"
+      },
+      {
+        "path": "rknn3-toolkit/examples",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "36aa87744ef6fe24665490eb7c1e8b1f6618118e",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/36aa87744ef6fe24665490eb7c1e8b1f6618118e"
+      },
+      {
+        "path": "rknn3-toolkit/examples/qwen2_5",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "cc6df4614a8d0750797421bcf4a64eaad60d599c",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/cc6df4614a8d0750797421bcf4a64eaad60d599c"
+      },
+      {
+        "path": "rknn3-toolkit/examples/qwen2_5/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2ecfd0eaac8d315330742a14231b1020dac980f8",
+        "size": 2222,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/2ecfd0eaac8d315330742a14231b1020dac980f8"
+      },
+      {
+        "path": "rknn3-toolkit/examples/qwen2_5/attention_mask_0.npy",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a529311a5df537272805eac1d7597e85fe24e5f1",
+        "size": 368,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a529311a5df537272805eac1d7597e85fe24e5f1"
+      },
+      {
+        "path": "rknn3-toolkit/examples/qwen2_5/dataset.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "26b8f04102a7b5206f05fc9bad0f2b82956547a1",
+        "size": 92,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/26b8f04102a7b5206f05fc9bad0f2b82956547a1"
+      },
+      {
+        "path": "rknn3-toolkit/examples/qwen2_5/input_embeds_0.npy",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0a967e09468ab43a3d20a1229b2110bf6483ba73",
+        "size": 215168,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0a967e09468ab43a3d20a1229b2110bf6483ba73"
+      },
+      {
+        "path": "rknn3-toolkit/examples/qwen2_5/num_logits_to_keep_0.npy",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3b6332f58cc1872520881b80af2c0319d46d1a6b",
+        "size": 136,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/3b6332f58cc1872520881b80af2c0319d46d1a6b"
+      },
+      {
+        "path": "rknn3-toolkit/examples/qwen2_5/position_ids_0.npy",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a8d788ed467640e9380575a94055a624170d230a",
+        "size": 608,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a8d788ed467640e9380575a94055a624170d230a"
+      },
+      {
+        "path": "rknn3-toolkit/examples/qwen2_5/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "07bca50f485b005b0438e42da853459d20d6cf17",
+        "size": 7799,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/07bca50f485b005b0438e42da853459d20d6cf17"
+      },
+      {
+        "path": "rknn3-toolkit/examples/resnet50v2",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "e90102448f099abbbe0d326771e60716bec81949",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/e90102448f099abbbe0d326771e60716bec81949"
+      },
+      {
+        "path": "rknn3-toolkit/examples/resnet50v2/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bfa2418d3d51161fe55d4aa47122de9adc0dffba",
+        "size": 959,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/bfa2418d3d51161fe55d4aa47122de9adc0dffba"
+      },
+      {
+        "path": "rknn3-toolkit/examples/resnet50v2/dataset.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9078c68db586a0251bdd41282d67f4d256b3abc3",
+        "size": 16,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/9078c68db586a0251bdd41282d67f4d256b3abc3"
+      },
+      {
+        "path": "rknn3-toolkit/examples/resnet50v2/dog_224x224.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4f46457bc9c6438863e497e07e9e7c58a4212231",
+        "size": 18889,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4f46457bc9c6438863e497e07e9e7c58a4212231"
+      },
+      {
+        "path": "rknn3-toolkit/examples/resnet50v2/labels.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0993780f99088349e2c156a5a8c57ce1013eb493",
+        "size": 25564,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0993780f99088349e2c156a5a8c57ce1013eb493"
+      },
+      {
+        "path": "rknn3-toolkit/examples/resnet50v2/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "52f422aad2648f32bdacea965d0b8a82f2544494",
+        "size": 4028,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/52f422aad2648f32bdacea965d0b8a82f2544494"
+      },
+      {
+        "path": "rknn3-toolkit/examples/yolov5",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "53cf2178bbffdfc4a13766fb7580a89ace2a412e",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/53cf2178bbffdfc4a13766fb7580a89ace2a412e"
+      },
+      {
+        "path": "rknn3-toolkit/examples/yolov5/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "26b2851e65abb8b6f87e666fa8cfab40a00268de",
+        "size": 673,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/26b2851e65abb8b6f87e666fa8cfab40a00268de"
+      },
+      {
+        "path": "rknn3-toolkit/examples/yolov5/bus.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d8ef30bd2fc1f620e9348ddd3b03f7b7758dfacb",
+        "size": 181374,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/d8ef30bd2fc1f620e9348ddd3b03f7b7758dfacb"
+      },
+      {
+        "path": "rknn3-toolkit/examples/yolov5/dataset.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a81b1f855159be64b372f8927d6733de2a6e595c",
+        "size": 8,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/a81b1f855159be64b372f8927d6733de2a6e595c"
+      },
+      {
+        "path": "rknn3-toolkit/examples/yolov5/result_truth.jpg",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "44cbe7e4263767666b7fa8a35bcb1baf57358e4c",
+        "size": 192971,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/44cbe7e4263767666b7fa8a35bcb1baf57358e4c"
+      },
+      {
+        "path": "rknn3-toolkit/examples/yolov5/test.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "43d505847d4d7f1cd7d0da4a246fc1ec82ca9ceb",
+        "size": 10382,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/43d505847d4d7f1cd7d0da4a246fc1ec82ca9ceb"
+      },
+      {
+        "path": "rknn3-toolkit/examples/yolov5/yolov5s_relu.onnx",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f40c38647c61879e849957685f305c8384219235",
+        "size": 28924147,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/f40c38647c61879e849957685f305c8384219235"
+      },
+      {
+        "path": "rknn3-toolkit/packages",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "07b332aecd5db7abe71a897ea4b26b70168a9a28",
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/trees/07b332aecd5db7abe71a897ea4b26b70168a9a28"
+      },
+      {
+        "path": "rknn3-toolkit/packages/md5sum.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4786770b2b8566f875bc01ee6d0cfa3cc10f6d0a",
+        "size": 358,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/4786770b2b8566f875bc01ee6d0cfa3cc10f6d0a"
+      },
+      {
+        "path": "rknn3-toolkit/packages/requirements_cp310-1.1.0.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0b31da027e4315f7c18b19f6421b370783b2ca87",
+        "size": 384,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/0b31da027e4315f7c18b19f6421b370783b2ca87"
+      },
+      {
+        "path": "rknn3-toolkit/packages/requirements_cp312-1.1.0.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fbd39b746cc5ece212eba272e31d3fff4fb41eed",
+        "size": 379,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fbd39b746cc5ece212eba272e31d3fff4fb41eed"
+      },
+      {
+        "path": "rknn3-toolkit/packages/rknn3_toolkit-1.1.0-cp310-cp310-macosx_13_0_arm64.whl",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "fb7ddab31bb6123ce1af1925d3e1806ea04b95b5",
+        "size": 84499718,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/fb7ddab31bb6123ce1af1925d3e1806ea04b95b5"
+      },
+      {
+        "path": "rknn3-toolkit/packages/rknn3_toolkit-1.1.0-cp310-cp310-manylinux2014_x86_64.whl",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1c8ad5dd90721fc23070222e58bf534c2ce20b51",
+        "size": 89480608,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/1c8ad5dd90721fc23070222e58bf534c2ce20b51"
+      },
+      {
+        "path": "rknn3-toolkit/packages/rknn3_toolkit-1.1.0-cp312-cp312-macosx_13_0_arm64.whl",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "07bb809394724c89e5cc9c4163bf6a7b8e53bdee",
+        "size": 83845564,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/07bb809394724c89e5cc9c4163bf6a7b8e53bdee"
+      },
+      {
+        "path": "rknn3-toolkit/packages/rknn3_toolkit-1.1.0-cp312-cp312-manylinux2014_x86_64.whl",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "85b8427393352e885c54fcc7065056aa91a9dfd4",
+        "size": 88534423,
+        "url": "https://api.github.com/repos/airockchip/rknn3-toolkit/git/blobs/85b8427393352e885c54fcc7065056aa91a9dfd4"
+      }
+    ],
+    "truncated": false
+  }
+}

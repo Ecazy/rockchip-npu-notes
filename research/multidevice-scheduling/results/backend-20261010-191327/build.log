@@ -1,0 +1,35 @@
+-- The C compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Looking for pthread.h
+-- Looking for pthread.h - found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- rknpu-submit: seam check registered against /mnt/ssd/workspace/multidevice-backend-20261010-191327/research/custom-ops/../upstream-components/rocket-userspace
+-- Found Python3: /usr/bin/python3.10 (found version "3.10.12") found components: Interpreter 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /mnt/ssd/workspace/multidevice-backend-20261010-191327/build
+[  6%] Building C object custom-ops/provider/CMakeFiles/rknpu-submit.dir/src/rknpu_provider.c.o
+[ 13%] Linking C static library librknpu-submit.a
+[ 13%] Built target rknpu-submit
+[ 40%] Building C object custom-ops/CMakeFiles/custom_ops.dir/mnt/ssd/workspace/multidevice-backend-20261010-191327/research/upstream-components/rocket-userspace/src/npu_regcmd.c.o
+[ 40%] Building C object custom-ops/CMakeFiles/custom_ops.dir/src/linear_hardsigmoid.c.o
+[ 40%] Building C object custom-ops/CMakeFiles/custom_ops.dir/mnt/ssd/workspace/multidevice-backend-20261010-191327/research/upstream-components/rocket-userspace/src/rocket_hw_profile.c.o
+[ 40%] Building C object custom-ops/CMakeFiles/custom_ops.dir/src/custom_ops.c.o
+[ 46%] Building C object custom-ops/CMakeFiles/custom_ops.dir/mnt/ssd/workspace/multidevice-backend-20261010-191327/research/upstream-components/rocket-userspace/src/rocket_sysfs.c.o
+[ 53%] Building C object custom-ops/CMakeFiles/custom_ops.dir/mnt/ssd/workspace/multidevice-backend-20261010-191327/research/upstream-components/rocket-userspace/src/rocket_log.c.o
+[ 60%] Building C object custom-ops/CMakeFiles/custom_ops.dir/mnt/ssd/workspace/multidevice-backend-20261010-191327/research/upstream-components/rocket-userspace/src/rocket_chain.c.o
+[ 66%] Building C object custom-ops/CMakeFiles/custom_ops.dir/mnt/ssd/workspace/multidevice-backend-20261010-191327/research/upstream-components/rocket-userspace/src/rocket_op.c.o
+[ 73%] Linking C static library libcustom_ops.a
+[ 73%] Built target custom_ops
+[ 80%] Building C object custom-ops/CMakeFiles/co_schedule.dir/src/co_schedule.c.o
+[ 86%] Linking C static library libco_schedule.a
+[ 86%] Built target co_schedule
+[ 93%] Building C object CMakeFiles/co_backend_bridge.dir/co_backend_bridge.c.o
+[100%] Linking C shared library libco_backend_bridge.so
+[100%] Built target co_backend_bridge
