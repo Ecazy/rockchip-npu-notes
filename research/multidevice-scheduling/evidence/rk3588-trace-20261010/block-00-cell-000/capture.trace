@@ -1,0 +1,812 @@
+# tracer: function_graph
+#
+#     TIME        CPU  TASK/PID         DURATION                  FUNCTION CALLS
+#      |          |     |    |           |   |                     |   |   |   |
+104954.298060 |   4) cost_pr-379034 |               |  /* RS request id=4398046511104 tid=379034 mask=1 mono=104954298053015 */
+104954.298060 |   5) cost_pr-379035 |               |  /* RS request id=5497558138880 tid=379035 mask=1 mono=104954298054473 */
+104954.298060 |   6) cost_pr-379036 |               |  /* RS request id=6597069766656 tid=379036 mask=1 mono=104954298053015 */
+104954.298060 |   7) cost_pr-379037 |               |  /* RS request id=7696581394432 tid=379037 mask=1 mono=104954298053015 */
+104954.298061 |   0) cost_pr-379030 |               |  /* RS request id=0 tid=379030 mask=1 mono=104954298053306 */
+104954.298064 |   2) cost_pr-379032 |               |  /* RS request id=2199023255552 tid=379032 mask=1 mono=104954298058264 */
+104954.298066 |   1) cost_pr-379031 |               |  /* RS request id=1099511627776 tid=379031 mask=1 mono=104954298060306 */
+104954.298104 |   3) cost_pr-379033 |               |  /* RS request id=3298534883328 tid=379033 mask=1 mono=104954298098806 */
+104954.298136 |   5) cost_pr-379035 |               |  /* RS ioctl id=5497558138880 tid=379035 mask=1 mono=104954298134972 */
+104954.298137 |   5) cost_pr-379035 |               |  rknpu_submit_ioctl() {
+104954.298138 |   5) cost_pr-379035 |   0.291 us    |    ktime_get();
+104954.298139 |   5) cost_pr-379035 |               |    rknpu_job_schedule() {
+104954.298139 |   6) cost_pr-379036 |               |  /* RS ioctl id=6597069766656 tid=379036 mask=1 mono=104954298138472 */
+104954.298140 |   5) cost_pr-379035 |   0.291 us    |      rknpu_get_task_number();
+104954.298140 |   6) cost_pr-379036 |               |  rknpu_submit_ioctl() {
+104954.298141 |   5) cost_pr-379035 |               |      rknpu_job_next.part.0() {
+104954.298141 |   5) cost_pr-379035 |   0.291 us    |        ktime_get();
+104954.298141 |   6) cost_pr-379036 |   0.291 us    |    ktime_get();
+104954.298142 |   6) cost_pr-379036 |               |    rknpu_job_schedule() {
+104954.298142 |   6) cost_pr-379036 |   0.292 us    |      rknpu_get_task_number();
+104954.298143 |   6) cost_pr-379036 |   0.291 us    |      rknpu_job_next.part.0();
+104954.298143 |   4) cost_pr-379034 |               |  /* RS ioctl id=4398046511104 tid=379034 mask=1 mono=104954298142263 */
+104954.298143 |   6) cost_pr-379036 |   1.166 us    |    } /* rknpu_job_schedule */
+104954.298144 |   4) cost_pr-379034 |               |  rknpu_submit_ioctl() {
+104954.298144 |   5) cost_pr-379035 |   2.917 us    |      } /* rknpu_job_next.part.0 */
+104954.298144 |   5) cost_pr-379035 |   4.667 us    |    } /* rknpu_job_schedule */
+104954.298145 |   4) cost_pr-379034 |   0.291 us    |    ktime_get();
+104954.298146 |   4) cost_pr-379034 |               |    rknpu_job_schedule() {
+104954.298146 |   4) cost_pr-379034 |   0.583 us    |      rknpu_get_task_number();
+104954.298146 |   7) cost_pr-379037 |               |  /* RS ioctl id=7696581394432 tid=379037 mask=1 mono=104954298145763 */
+104954.298147 |   4) cost_pr-379034 |   0.000 us    |      rknpu_job_next.part.0();
+104954.298148 |   4) cost_pr-379034 |   1.750 us    |    } /* rknpu_job_schedule */
+104954.298148 |   7) cost_pr-379037 |               |  rknpu_submit_ioctl() {
+104954.298149 |   7) cost_pr-379037 |   0.583 us    |    ktime_get();
+104954.298150 |   7) cost_pr-379037 |               |    rknpu_job_schedule() {
+104954.298150 |   7) cost_pr-379037 |   0.292 us    |      rknpu_get_task_number();
+104954.298151 |   7) cost_pr-379037 |   0.292 us    |      rknpu_job_next.part.0();
+104954.298151 |   7) cost_pr-379037 |   1.166 us    |    } /* rknpu_job_schedule */
+104954.298231 |   0) cost_pr-379030 |               |  rknpu_core0_irq_handler() {
+104954.298233 |   0) cost_pr-379030 |   0.875 us    |    rknpu_get_task_number();
+104954.298235 |   0) cost_pr-379030 |   0.583 us    |    rknpu_get_task_number();
+104954.298236 |   0) cost_pr-379030 |   0.875 us    |    ktime_get();
+104954.298242 |   0) cost_pr-379030 |               |    rknpu_job_next.part.0() {
+104954.298243 |   0) cost_pr-379030 |   0.583 us    |      ktime_get();
+104954.298243 |   5) cost_pr-379035 | ! 106.459 us  |  } /* rknpu_submit_ioctl */
+104954.298245 |   5) cost_pr-379035 |               |  /* RS return id=5497558138880 tid=379035 mask=1 mono=104954298244345 */
+104954.298246 |   0) cost_pr-379030 |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.298246 |   0) cost_pr-379030 | + 16.625 us   |  } /* rknpu_core0_irq_handler */
+104954.298295 |   2) cost_pr-379032 |               |  /* RS ioctl id=2199023255552 tid=379032 mask=1 mono=104954298290428 */
+104954.298296 |   0) cost_pr-379030 |               |  /* RS ioctl id=0 tid=379030 mask=1 mono=104954298291886 */
+104954.298296 |   1) cost_pr-379031 |               |  /* RS ioctl id=1099511627776 tid=379031 mask=1 mono=104954298292761 */
+104954.298297 |   3) cost_pr-379033 |               |  /* RS ioctl id=3298534883328 tid=379033 mask=1 mono=104954298293636 */
+104954.298298 |   2) cost_pr-379032 |               |  rknpu_submit_ioctl() {
+104954.298298 |   0) cost_pr-379030 |               |  rknpu_submit_ioctl() {
+104954.298299 |   1) cost_pr-379031 |               |  rknpu_submit_ioctl() {
+104954.298299 |   2) cost_pr-379032 |   0.875 us    |    ktime_get();
+104954.298300 |   0) cost_pr-379030 |   0.583 us    |    ktime_get();
+104954.298300 |   3) cost_pr-379033 |               |  rknpu_submit_ioctl() {
+104954.298300 |   1) cost_pr-379031 |   0.583 us    |    ktime_get();
+104954.298300 |   2) cost_pr-379032 |               |    rknpu_job_schedule() {
+104954.298301 |   0) cost_pr-379030 |               |    rknpu_job_schedule() {
+104954.298301 |   3) cost_pr-379033 |   0.583 us    |    ktime_get();
+104954.298302 |   2) cost_pr-379032 |   0.584 us    |      rknpu_get_task_number();
+104954.298302 |   1) cost_pr-379031 |               |    rknpu_job_schedule() {
+104954.298302 |   3) cost_pr-379033 |               |    rknpu_job_schedule() {
+104954.298303 |   2) cost_pr-379032 |   5.250 us    |      rknpu_job_next.part.0();
+104954.298303 |   0) cost_pr-379030 |   0.875 us    |      rknpu_get_task_number();
+104954.298305 |   0) cost_pr-379030 |   3.791 us    |      rknpu_job_next.part.0();
+104954.298305 |   1) cost_pr-379031 |   0.875 us    |      rknpu_get_task_number();
+104954.298307 |   1) cost_pr-379031 |   2.041 us    |      rknpu_job_next.part.0();
+104954.298307 |   3) cost_pr-379033 |   0.584 us    |      rknpu_get_task_number();
+104954.298308 |   3) cost_pr-379033 |   0.583 us    |      rknpu_job_next.part.0();
+104954.298309 |   0) cost_pr-379030 |   8.167 us    |    } /* rknpu_job_schedule */
+104954.298309 |   2) cost_pr-379032 |   8.167 us    |    } /* rknpu_job_schedule */
+104954.298309 |   3) cost_pr-379033 |   7.292 us    |    } /* rknpu_job_schedule */
+104954.298310 |   1) cost_pr-379031 |   7.875 us    |    } /* rknpu_job_schedule */
+ ------------------------------------------
+ 0) cost_pr-379030 =>    <idle>-0   
+ ------------------------------------------
+
+104954.298329 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.298330 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.298331 |   0)    <idle>-0    |   0.292 us    |    rknpu_get_task_number();
+104954.298332 |   0)    <idle>-0    |   0.584 us    |    ktime_get();
+104954.298334 |   5) cost_pr-379035 |               |  /* RS done id=5497558138880 tid=379035 mask=1 mono=104954298333011 */
+104954.298335 |   5) cost_pr-379035 |               |  /* RS request id=5497558139136 tid=379035 mask=1 mono=104954298335052 */
+104954.298341 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.298342 |   0)    <idle>-0    |   0.875 us    |      ktime_get();
+104954.298342 |   6) cost_pr-379036 | ! 201.834 us  |  } /* rknpu_submit_ioctl */
+104954.298344 |   6) cost_pr-379036 |               |  /* RS return id=6597069766656 tid=379036 mask=1 mono=104954298343219 */
+104954.298345 |   0)    <idle>-0    |   4.375 us    |    } /* rknpu_job_next.part.0 */
+104954.298346 |   0)    <idle>-0    | + 17.500 us   |  } /* rknpu_core0_irq_handler */
+104954.298365 |   5) cost_pr-379035 |               |  /* RS ioctl id=5497558139136 tid=379035 mask=1 mono=104954298364802 */
+104954.298366 |   5) cost_pr-379035 |               |  rknpu_submit_ioctl() {
+104954.298366 |   5) cost_pr-379035 |   0.292 us    |    ktime_get();
+104954.298367 |   5) cost_pr-379035 |               |    rknpu_job_schedule() {
+104954.298367 |   5) cost_pr-379035 |   0.292 us    |      rknpu_get_task_number();
+104954.298368 |   5) cost_pr-379035 |   0.292 us    |      rknpu_job_next.part.0();
+104954.298368 |   5) cost_pr-379035 |   1.459 us    |    } /* rknpu_job_schedule */
+104954.298383 |   6) cost_pr-379036 |               |  /* RS done id=6597069766656 tid=379036 mask=1 mono=104954298382593 */
+104954.298385 |   6) cost_pr-379036 |               |  /* RS request id=6597069766912 tid=379036 mask=1 mono=104954298384343 */
+104954.298412 |   6) cost_pr-379036 |               |  /* RS ioctl id=6597069766912 tid=379036 mask=1 mono=104954298411468 */
+104954.298413 |   6) cost_pr-379036 |               |  rknpu_submit_ioctl() {
+104954.298413 |   6) cost_pr-379036 |   0.291 us    |    ktime_get();
+104954.298414 |   6) cost_pr-379036 |               |    rknpu_job_schedule() {
+104954.298414 |   6) cost_pr-379036 |   0.000 us    |      rknpu_get_task_number();
+104954.298414 |   6) cost_pr-379036 |   0.292 us    |      rknpu_job_next.part.0();
+104954.298415 |   6) cost_pr-379036 |   1.167 us    |    } /* rknpu_job_schedule */
+104954.298450 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.298452 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.298453 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.298454 |   0)    <idle>-0    |   0.875 us    |    ktime_get();
+104954.298463 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.298464 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.298464 |   4) cost_pr-379034 | ! 320.250 us  |  } /* rknpu_submit_ioctl */
+104954.298465 |   4) cost_pr-379034 |               |  /* RS return id=4398046511104 tid=379034 mask=1 mono=104954298464842 */
+104954.298467 |   0)    <idle>-0    |   4.375 us    |    } /* rknpu_job_next.part.0 */
+104954.298468 |   0)    <idle>-0    | + 17.500 us   |  } /* rknpu_core0_irq_handler */
+104954.298498 |   4) cost_pr-379034 |               |  /* RS done id=4398046511104 tid=379034 mask=1 mono=104954298497800 */
+104954.298500 |   4) cost_pr-379034 |               |  /* RS request id=4398046511360 tid=379034 mask=1 mono=104954298499550 */
+104954.298528 |   4) cost_pr-379034 |               |  /* RS ioctl id=4398046511360 tid=379034 mask=1 mono=104954298527550 */
+104954.298529 |   4) cost_pr-379034 |               |  rknpu_submit_ioctl() {
+104954.298529 |   4) cost_pr-379034 |   0.000 us    |    ktime_get();
+104954.298530 |   4) cost_pr-379034 |               |    rknpu_job_schedule() {
+104954.298530 |   4) cost_pr-379034 |   0.292 us    |      rknpu_get_task_number();
+104954.298530 |   4) cost_pr-379034 |   0.291 us    |      rknpu_job_next.part.0();
+104954.298531 |   4) cost_pr-379034 |   1.458 us    |    } /* rknpu_job_schedule */
+104954.298553 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.298554 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.298555 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.298557 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.298565 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.298566 |   0)    <idle>-0    |   0.584 us    |      ktime_get();
+104954.298566 |   7) cost_pr-379037 | ! 418.542 us  |  } /* rknpu_submit_ioctl */
+104954.298568 |   7) cost_pr-379037 |               |  /* RS return id=7696581394432 tid=379037 mask=1 mono=104954298567507 */
+104954.298569 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.298570 |   0)    <idle>-0    | + 16.917 us   |  } /* rknpu_core0_irq_handler */
+104954.298604 |   7) cost_pr-379037 |               |  /* RS done id=7696581394432 tid=379037 mask=1 mono=104954298603674 */
+104954.298606 |   7) cost_pr-379037 |               |  /* RS request id=7696581394688 tid=379037 mask=1 mono=104954298605715 */
+104954.298636 |   7) cost_pr-379037 |               |  /* RS ioctl id=7696581394688 tid=379037 mask=1 mono=104954298636048 */
+104954.298637 |   7) cost_pr-379037 |               |  rknpu_submit_ioctl() {
+104954.298638 |   7) cost_pr-379037 |   0.000 us    |    ktime_get();
+104954.298638 |   7) cost_pr-379037 |               |    rknpu_job_schedule() {
+104954.298638 |   7) cost_pr-379037 |   0.292 us    |      rknpu_get_task_number();
+104954.298639 |   7) cost_pr-379037 |   0.000 us    |      rknpu_job_next.part.0();
+104954.298639 |   7) cost_pr-379037 |   1.166 us    |    } /* rknpu_job_schedule */
+104954.298650 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.298651 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.298652 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.298654 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.298662 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.298663 |   0)    <idle>-0    |   0.584 us    |      ktime_get();
+104954.298664 |   2) cost_pr-379032 | ! 366.625 us  |  } /* rknpu_submit_ioctl */
+104954.298666 |   0)    <idle>-0    |   4.084 us    |    } /* rknpu_job_next.part.0 */
+104954.298666 |   0)    <idle>-0    | + 16.917 us   |  } /* rknpu_core0_irq_handler */
+104954.298669 |   2) cost_pr-379032 |               |  /* RS return id=2199023255552 tid=379032 mask=1 mono=104954298665798 */
+104954.298748 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.298749 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.298750 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+104954.298751 |   0)    <idle>-0    |   0.875 us    |    ktime_get();
+104954.298759 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.298760 |   0)    <idle>-0    |   0.584 us    |      ktime_get();
+104954.298762 |   2) cost_pr-379032 |               |  /* RS done id=2199023255552 tid=379032 mask=1 mono=104954298758838 */
+104954.298763 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.298764 |   0)    <idle>-0    | + 16.042 us   |  } /* rknpu_core0_irq_handler */
+104954.298767 |   2) cost_pr-379032 |               |  /* RS request id=2199023255808 tid=379032 mask=1 mono=104954298764671 */
+ ------------------------------------------
+ 0)    <idle>-0    => cost_pr-379030
+ ------------------------------------------
+
+104954.298768 |   0) cost_pr-379030 | ! 469.292 us  |  } /* rknpu_submit_ioctl */
+104954.298773 |   0) cost_pr-379030 |               |  /* RS return id=0 tid=379030 mask=1 mono=104954298770213 */
+104954.298852 |   0) cost_pr-379030 |               |  rknpu_core0_irq_handler() {
+104954.298854 |   0) cost_pr-379030 |   0.583 us    |    rknpu_get_task_number();
+104954.298855 |   0) cost_pr-379030 |   0.875 us    |    rknpu_get_task_number();
+104954.298857 |   0) cost_pr-379030 |   0.583 us    |    ktime_get();
+104954.298863 |   0) cost_pr-379030 |               |    rknpu_job_next.part.0() {
+104954.298864 |   0) cost_pr-379030 |   0.583 us    |      ktime_get();
+104954.298866 |   1) cost_pr-379031 | ! 567.583 us  |  } /* rknpu_submit_ioctl */
+104954.298867 |   0) cost_pr-379030 |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.298868 |   0) cost_pr-379030 | + 15.750 us   |  } /* rknpu_core0_irq_handler */
+104954.298871 |   1) cost_pr-379031 |               |  /* RS return id=1099511627776 tid=379031 mask=1 mono=104954298868503 */
+104954.298896 |   0) cost_pr-379030 |               |  /* RS done id=0 tid=379030 mask=1 mono=104954298892711 */
+104954.298897 |   2) cost_pr-379032 |               |  /* RS ioctl id=2199023255808 tid=379032 mask=1 mono=104954298893878 */
+104954.298900 |   2) cost_pr-379032 |               |  rknpu_submit_ioctl() {
+104954.298900 |   0) cost_pr-379030 |               |  /* RS request id=256 tid=379030 mask=1 mono=104954298898545 */
+104954.298901 |   2) cost_pr-379032 |   0.583 us    |    ktime_get();
+104954.298903 |   2) cost_pr-379032 |               |    rknpu_job_schedule() {
+104954.298904 |   2) cost_pr-379032 |   0.875 us    |      rknpu_get_task_number();
+104954.298905 |   2) cost_pr-379032 |   0.875 us    |      rknpu_job_next.part.0();
+104954.298906 |   2) cost_pr-379032 |   3.792 us    |    } /* rknpu_job_schedule */
+104954.298943 |   0) cost_pr-379030 |               |  rknpu_core0_irq_handler() {
+104954.298944 |   0) cost_pr-379030 |   0.583 us    |    rknpu_get_task_number();
+104954.298946 |   0) cost_pr-379030 |   0.583 us    |    rknpu_get_task_number();
+104954.298947 |   0) cost_pr-379030 |   0.875 us    |    ktime_get();
+104954.298953 |   0) cost_pr-379030 |               |    rknpu_job_next.part.0() {
+104954.298954 |   0) cost_pr-379030 |   0.584 us    |      ktime_get();
+104954.298957 |   3) cost_pr-379033 | ! 657.125 us  |  } /* rknpu_submit_ioctl */
+104954.298958 |   0) cost_pr-379030 |   4.084 us    |    } /* rknpu_job_next.part.0 */
+104954.298958 |   0) cost_pr-379030 | + 15.750 us   |  } /* rknpu_core0_irq_handler */
+104954.298961 |   3) cost_pr-379033 |               |  /* RS return id=3298534883328 tid=379033 mask=1 mono=104954298958919 */
+104954.298968 |   1) cost_pr-379031 |               |  /* RS done id=1099511627776 tid=379031 mask=1 mono=104954298965044 */
+104954.298973 |   1) cost_pr-379031 |               |  /* RS request id=1099511628032 tid=379031 mask=1 mono=104954298971169 */
+104954.299031 |   0) cost_pr-379030 |               |  /* RS ioctl id=256 tid=379030 mask=1 mono=104954299028043 */
+104954.299039 |   0) cost_pr-379030 |               |  rknpu_submit_ioctl() {
+104954.299040 |   0) cost_pr-379030 |   0.584 us    |    ktime_get();
+104954.299042 |   0) cost_pr-379030 |               |    rknpu_job_schedule() {
+104954.299043 |   0) cost_pr-379030 |   0.583 us    |      rknpu_get_task_number();
+104954.299044 |   0) cost_pr-379030 |   0.584 us    |      rknpu_job_next.part.0();
+104954.299046 |   0) cost_pr-379030 |   4.666 us    |    } /* rknpu_job_schedule */
+104954.299053 |   3) cost_pr-379033 |               |  /* RS done id=3298534883328 tid=379033 mask=1 mono=104954299050209 */
+104954.299058 |   3) cost_pr-379033 |               |  /* RS request id=3298534883584 tid=379033 mask=1 mono=104954299055751 */
+104954.299067 |   1) cost_pr-379031 |               |  /* RS ioctl id=1099511628032 tid=379031 mask=1 mono=104954299063334 */
+104954.299069 |   1) cost_pr-379031 |               |  rknpu_submit_ioctl() {
+104954.299070 |   1) cost_pr-379031 |   0.875 us    |    ktime_get();
+104954.299072 |   1) cost_pr-379031 |               |    rknpu_job_schedule() {
+104954.299073 |   1) cost_pr-379031 |   0.583 us    |      rknpu_get_task_number();
+104954.299074 |   1) cost_pr-379031 |   0.875 us    |      rknpu_job_next.part.0();
+104954.299075 |   1) cost_pr-379031 |   3.500 us    |    } /* rknpu_job_schedule */
+ ------------------------------------------
+ 0) cost_pr-379030 =>    <idle>-0   
+ ------------------------------------------
+
+104954.299083 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.299084 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.299086 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.299087 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.299096 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.299096 |   0)    <idle>-0    |   0.875 us    |      ktime_get();
+104954.299096 |   5) cost_pr-379035 | ! 730.334 us  |  } /* rknpu_submit_ioctl */
+104954.299098 |   5) cost_pr-379035 |               |  /* RS return id=5497558139136 tid=379035 mask=1 mono=104954299097458 */
+104954.299100 |   0)    <idle>-0    |   4.375 us    |    } /* rknpu_job_next.part.0 */
+104954.299100 |   0)    <idle>-0    | + 17.500 us   |  } /* rknpu_core0_irq_handler */
+104954.299126 |   5) cost_pr-379035 |               |  /* RS done id=5497558139136 tid=379035 mask=1 mono=104954299124875 */
+104954.299141 |   3) cost_pr-379033 |               |  /* RS ioctl id=3298534883584 tid=379033 mask=1 mono=104954299138291 */
+104954.299144 |   3) cost_pr-379033 |               |  rknpu_submit_ioctl() {
+104954.299145 |   3) cost_pr-379033 |   0.875 us    |    ktime_get();
+104954.299146 |   3) cost_pr-379033 |               |    rknpu_job_schedule() {
+104954.299147 |   3) cost_pr-379033 |   0.875 us    |      rknpu_get_task_number();
+104954.299149 |   3) cost_pr-379033 |   0.875 us    |      rknpu_job_next.part.0();
+104954.299150 |   3) cost_pr-379033 |   3.791 us    |    } /* rknpu_job_schedule */
+104954.299181 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.299182 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.299184 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+104954.299185 |   0)    <idle>-0    |   0.875 us    |    ktime_get();
+104954.299193 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.299193 |   6) cost_pr-379036 | ! 780.500 us  |  } /* rknpu_submit_ioctl */
+104954.299193 |   0)    <idle>-0    |   0.875 us    |      ktime_get();
+104954.299195 |   6) cost_pr-379036 |               |  /* RS return id=6597069766912 tid=379036 mask=1 mono=104954299194290 */
+104954.299197 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.299197 |   0)    <idle>-0    | + 16.333 us   |  } /* rknpu_core0_irq_handler */
+104954.299225 |   6) cost_pr-379036 |               |  /* RS done id=6597069766912 tid=379036 mask=1 mono=104954299224623 */
+104954.299275 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.299277 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+104954.299278 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.299279 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.299286 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.299287 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.299288 |   4) cost_pr-379034 | ! 758.916 us  |  } /* rknpu_submit_ioctl */
+104954.299289 |   4) cost_pr-379034 |               |  /* RS return id=4398046511360 tid=379034 mask=1 mono=104954299288789 */
+104954.299290 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.299291 |   0)    <idle>-0    | + 15.459 us   |  } /* rknpu_core0_irq_handler */
+104954.299316 |   4) cost_pr-379034 |               |  /* RS done id=4398046511360 tid=379034 mask=1 mono=104954299315622 */
+104954.299376 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.299377 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.299378 |   0)    <idle>-0    |   0.291 us    |    rknpu_get_task_number();
+104954.299379 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.299386 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.299386 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.299387 |   7) cost_pr-379037 | ! 749.875 us  |  } /* rknpu_submit_ioctl */
+104954.299388 |   7) cost_pr-379037 |               |  /* RS return id=7696581394688 tid=379037 mask=1 mono=104954299387954 */
+104954.299389 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.299390 |   0)    <idle>-0    | + 14.291 us   |  } /* rknpu_core0_irq_handler */
+104954.299423 |   7) cost_pr-379037 |               |  /* RS done id=7696581394688 tid=379037 mask=1 mono=104954299422662 */
+104954.299471 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.299472 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.299473 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.299474 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.299480 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.299480 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.299483 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.299484 |   0)    <idle>-0    | + 13.709 us   |  } /* rknpu_core0_irq_handler */
+104954.299485 |   2) cost_pr-379032 | ! 584.791 us  |  } /* rknpu_submit_ioctl */
+104954.299490 |   2) cost_pr-379032 |               |  /* RS return id=2199023255808 tid=379032 mask=1 mono=104954299486828 */
+104954.299563 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.299564 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.299566 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.299567 |   0)    <idle>-0    |   0.584 us    |    ktime_get();
+104954.299571 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.299572 |   0)    <idle>-0    |   0.584 us    |      ktime_get();
+104954.299575 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.299576 |   0)    <idle>-0    | + 12.833 us   |  } /* rknpu_core0_irq_handler */
+ ------------------------------------------
+ 0)    <idle>-0    => cost_pr-379030
+ ------------------------------------------
+
+104954.299580 |   0) cost_pr-379030 | ! 546.583 us  |  } /* rknpu_submit_ioctl */
+104954.299585 |   0) cost_pr-379030 |               |  /* RS return id=256 tid=379030 mask=1 mono=104954299582202 */
+104954.299603 |   2) cost_pr-379032 |               |  /* RS done id=2199023255808 tid=379032 mask=1 mono=104954299599993 */
+104954.299672 |   0) cost_pr-379030 |               |  /* RS done id=256 tid=379030 mask=1 mono=104954299669117 */
+ ------------------------------------------
+ 0) cost_pr-379030 =>    <idle>-0   
+ ------------------------------------------
+
+104954.299702 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.299703 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.299704 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+104954.299705 |   0)    <idle>-0    |   0.875 us    |    ktime_get();
+104954.299709 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.299709 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.299713 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.299713 |   0)    <idle>-0    | + 11.958 us   |  } /* rknpu_core0_irq_handler */
+104954.299714 |   1) cost_pr-379031 | ! 644.875 us  |  } /* rknpu_submit_ioctl */
+104954.299722 |   1) cost_pr-379031 |               |  /* RS return id=1099511628032 tid=379031 mask=1 mono=104954299717825 */
+104954.299809 |   1) cost_pr-379031 |               |  /* RS done id=1099511628032 tid=379031 mask=1 mono=104954299805907 */
+104954.299841 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.299842 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.299844 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.299845 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.299847 |   0)    <idle>-0    |   0.584 us    |    rknpu_job_next.part.0();
+104954.299848 |   0)    <idle>-0    |   7.000 us    |  } /* rknpu_core0_irq_handler */
+104954.299893 |   3) cost_pr-379033 | ! 748.708 us  |  } /* rknpu_submit_ioctl */
+104954.299900 |   3) cost_pr-379033 |               |  /* RS return id=3298534883584 tid=379033 mask=1 mono=104954299896322 */
+104954.299997 |   3) cost_pr-379033 |               |  /* RS done id=3298534883584 tid=379033 mask=1 mono=104954299993738 */
+104954.300011 |   7) cost_pr-379037 |               |  /* RS request id=7696581394944 tid=379037 mask=1 mono=104954300010654 */
+104954.300013 |   6) cost_pr-379036 |               |  /* RS request id=6597069767168 tid=379036 mask=1 mono=104954300012404 */
+104954.300013 |   3) cost_pr-379033 |               |  /* RS request id=3298534883840 tid=379033 mask=1 mono=104954300010946 */
+104954.300013 |   5) cost_pr-379035 |               |  /* RS request id=5497558139392 tid=379035 mask=1 mono=104954300012696 */
+104954.300015 |   4) cost_pr-379034 |               |  /* RS request id=4398046511616 tid=379034 mask=1 mono=104954300014737 */
+104954.300019 |   2) cost_pr-379032 |               |  /* RS request id=2199023256064 tid=379032 mask=1 mono=104954300015904 */
+ ------------------------------------------
+ 0)    <idle>-0    => cost_pr-379030
+ ------------------------------------------
+
+104954.300020 |   0) cost_pr-379030 |               |  /* RS request id=512 tid=379030 mask=1 mono=104954300016779 */
+104954.300021 |   1) cost_pr-379031 |               |  /* RS request id=1099511628288 tid=379031 mask=1 mono=104954300017654 */
+104954.300048 |   7) cost_pr-379037 |               |  /* RS ioctl id=7696581394944 tid=379037 mask=1 mono=104954300047987 */
+104954.300049 |   7) cost_pr-379037 |               |  rknpu_submit_ioctl() {
+104954.300050 |   7) cost_pr-379037 |   0.292 us    |    ktime_get();
+104954.300050 |   7) cost_pr-379037 |               |    rknpu_job_schedule() {
+104954.300050 |   7) cost_pr-379037 |   0.292 us    |      rknpu_get_task_number();
+104954.300051 |   7) cost_pr-379037 |               |      rknpu_job_next.part.0() {
+104954.300051 |   7) cost_pr-379037 |   0.583 us    |        ktime_get();
+104954.300054 |   7) cost_pr-379037 |   2.625 us    |      } /* rknpu_job_next.part.0 */
+104954.300054 |   7) cost_pr-379037 |   3.791 us    |    } /* rknpu_job_schedule */
+104954.300065 |   6) cost_pr-379036 |               |  /* RS ioctl id=6597069767168 tid=379036 mask=1 mono=104954300064903 */
+104954.300066 |   6) cost_pr-379036 |               |  rknpu_submit_ioctl() {
+104954.300067 |   6) cost_pr-379036 |   0.292 us    |    ktime_get();
+104954.300067 |   6) cost_pr-379036 |               |    rknpu_job_schedule() {
+104954.300068 |   6) cost_pr-379036 |   0.292 us    |      rknpu_get_task_number();
+104954.300068 |   6) cost_pr-379036 |   0.292 us    |      rknpu_job_next.part.0();
+104954.300068 |   6) cost_pr-379036 |   1.167 us    |    } /* rknpu_job_schedule */
+104954.300083 |   5) cost_pr-379035 |               |  /* RS ioctl id=5497558139392 tid=379035 mask=1 mono=104954300082403 */
+104954.300084 |   5) cost_pr-379035 |               |  rknpu_submit_ioctl() {
+104954.300084 |   5) cost_pr-379035 |   0.000 us    |    ktime_get();
+104954.300085 |   5) cost_pr-379035 |               |    rknpu_job_schedule() {
+104954.300085 |   5) cost_pr-379035 |   0.292 us    |      rknpu_get_task_number();
+104954.300085 |   5) cost_pr-379035 |   0.292 us    |      rknpu_job_next.part.0();
+104954.300086 |   5) cost_pr-379035 |   1.459 us    |    } /* rknpu_job_schedule */
+104954.300096 |   4) cost_pr-379034 |               |  /* RS ioctl id=4398046511616 tid=379034 mask=1 mono=104954300095236 */
+104954.300097 |   4) cost_pr-379034 |               |  rknpu_submit_ioctl() {
+104954.300097 |   4) cost_pr-379034 |   0.292 us    |    ktime_get();
+104954.300098 |   4) cost_pr-379034 |               |    rknpu_job_schedule() {
+104954.300098 |   4) cost_pr-379034 |   0.292 us    |      rknpu_get_task_number();
+104954.300099 |   4) cost_pr-379034 |   0.292 us    |      rknpu_job_next.part.0();
+104954.300099 |   4) cost_pr-379034 |   1.167 us    |    } /* rknpu_job_schedule */
+104954.300143 |   0) cost_pr-379030 |               |  rknpu_core0_irq_handler() {
+104954.300145 |   0) cost_pr-379030 |   0.583 us    |    rknpu_get_task_number();
+104954.300146 |   0) cost_pr-379030 |   0.584 us    |    rknpu_get_task_number();
+104954.300147 |   0) cost_pr-379030 |   0.875 us    |    ktime_get();
+104954.300152 |   0) cost_pr-379030 |               |    rknpu_job_next.part.0() {
+104954.300153 |   0) cost_pr-379030 |   0.583 us    |      ktime_get();
+104954.300155 |   7) cost_pr-379037 | ! 105.291 us  |  } /* rknpu_submit_ioctl */
+104954.300156 |   7) cost_pr-379037 |               |  /* RS return id=7696581394944 tid=379037 mask=1 mono=104954300155610 */
+104954.300158 |   0) cost_pr-379030 |   5.250 us    |    } /* rknpu_job_next.part.0 */
+104954.300158 |   0) cost_pr-379030 | + 15.750 us   |  } /* rknpu_core0_irq_handler */
+104954.300204 |   3) cost_pr-379033 |               |  /* RS ioctl id=3298534883840 tid=379033 mask=1 mono=104954300200235 */
+104954.300204 |   1) cost_pr-379031 |               |  /* RS ioctl id=1099511628288 tid=379031 mask=1 mono=104954300200235 */
+104954.300206 |   3) cost_pr-379033 |               |  rknpu_submit_ioctl() {
+104954.300207 |   1) cost_pr-379031 |               |  rknpu_submit_ioctl() {
+104954.300207 |   3) cost_pr-379033 |   0.875 us    |    ktime_get();
+104954.300208 |   1) cost_pr-379031 |   0.875 us    |    ktime_get();
+104954.300209 |   3) cost_pr-379033 |               |    rknpu_job_schedule() {
+104954.300209 |   7) cost_pr-379037 |               |  /* RS done id=7696581394944 tid=379037 mask=1 mono=104954300208693 */
+104954.300209 |   1) cost_pr-379031 |               |    rknpu_job_schedule() {
+104954.300210 |   3) cost_pr-379033 |   1.166 us    |      rknpu_get_task_number();
+104954.300210 |   2) cost_pr-379032 |               |  /* RS ioctl id=2199023256064 tid=379032 mask=1 mono=104954300206360 */
+104954.300211 |   7) cost_pr-379037 |               |  /* RS request id=7696581395200 tid=379037 mask=1 mono=104954300210443 */
+104954.300211 |   3) cost_pr-379033 |   1.750 us    |      rknpu_job_next.part.0();
+104954.300212 |   1) cost_pr-379031 |   0.875 us    |      rknpu_get_task_number();
+104954.300212 |   2) cost_pr-379032 |               |  rknpu_submit_ioctl() {
+104954.300213 |   1) cost_pr-379031 |   0.583 us    |      rknpu_job_next.part.0();
+104954.300213 |   2) cost_pr-379032 |   0.584 us    |    ktime_get();
+104954.300214 |   3) cost_pr-379033 |   4.958 us    |    } /* rknpu_job_schedule */
+104954.300214 |   1) cost_pr-379031 |   4.666 us    |    } /* rknpu_job_schedule */
+104954.300215 |   2) cost_pr-379032 |               |    rknpu_job_schedule() {
+104954.300216 |   2) cost_pr-379032 |   0.583 us    |      rknpu_get_task_number();
+104954.300217 |   2) cost_pr-379032 |   0.583 us    |      rknpu_job_next.part.0();
+104954.300218 |   2) cost_pr-379032 |   3.500 us    |    } /* rknpu_job_schedule */
+104954.300235 |   0) cost_pr-379030 |               |  rknpu_core0_irq_handler() {
+104954.300236 |   0) cost_pr-379030 |   0.875 us    |    rknpu_get_task_number();
+104954.300238 |   0) cost_pr-379030 |   0.584 us    |    rknpu_get_task_number();
+104954.300239 |   7) cost_pr-379037 |               |  /* RS ioctl id=7696581395200 tid=379037 mask=1 mono=104954300238443 */
+104954.300239 |   0) cost_pr-379030 |   0.583 us    |    ktime_get();
+104954.300240 |   7) cost_pr-379037 |               |  rknpu_submit_ioctl() {
+104954.300240 |   7) cost_pr-379037 |   0.292 us    |    ktime_get();
+104954.300240 |   7) cost_pr-379037 |               |    rknpu_job_schedule() {
+104954.300241 |   7) cost_pr-379037 |   0.292 us    |      rknpu_get_task_number();
+104954.300241 |   7) cost_pr-379037 |               |      rknpu_job_next.part.0() {
+104954.300241 |   7) cost_pr-379037 |   0.000 us    |        ktime_get();
+104954.300244 |   7) cost_pr-379037 |   2.334 us    |      } /* rknpu_job_next.part.0 */
+104954.300244 |   7) cost_pr-379037 |   3.792 us    |    } /* rknpu_job_schedule */
+104954.300246 |   0) cost_pr-379030 |   0.584 us    |    rknpu_job_next.part.0();
+104954.300246 |   6) cost_pr-379036 | ! 179.667 us  |  } /* rknpu_submit_ioctl */
+104954.300247 |   0) cost_pr-379030 | + 12.250 us   |  } /* rknpu_core0_irq_handler */
+104954.300247 |   6) cost_pr-379036 |               |  /* RS return id=6597069767168 tid=379036 mask=1 mono=104954300246901 */
+104954.300254 |   0) cost_pr-379030 |               |  /* RS ioctl id=512 tid=379030 mask=1 mono=104954300250984 */
+104954.300256 |   0) cost_pr-379030 |               |  rknpu_submit_ioctl() {
+104954.300257 |   0) cost_pr-379030 |   0.875 us    |    ktime_get();
+104954.300259 |   0) cost_pr-379030 |               |    rknpu_job_schedule() {
+104954.300260 |   0) cost_pr-379030 |   0.875 us    |      rknpu_get_task_number();
+104954.300261 |   0) cost_pr-379030 |   0.875 us    |      rknpu_job_next.part.0();
+104954.300262 |   0) cost_pr-379030 |   3.500 us    |    } /* rknpu_job_schedule */
+104954.300279 |   6) cost_pr-379036 |               |  /* RS done id=6597069767168 tid=379036 mask=1 mono=104954300278692 */
+104954.300281 |   6) cost_pr-379036 |               |  /* RS request id=6597069767424 tid=379036 mask=1 mono=104954300280442 */
+104954.300307 |   6) cost_pr-379036 |               |  /* RS ioctl id=6597069767424 tid=379036 mask=1 mono=104954300306983 */
+104954.300308 |   6) cost_pr-379036 |               |  rknpu_submit_ioctl() {
+104954.300309 |   6) cost_pr-379036 |   0.000 us    |    ktime_get();
+104954.300309 |   6) cost_pr-379036 |               |    rknpu_job_schedule() {
+104954.300309 |   6) cost_pr-379036 |   0.291 us    |      rknpu_get_task_number();
+104954.300310 |   6) cost_pr-379036 |   0.292 us    |      rknpu_job_next.part.0();
+104954.300310 |   6) cost_pr-379036 |   1.458 us    |    } /* rknpu_job_schedule */
+ ------------------------------------------
+ 0) cost_pr-379030 =>    <idle>-0   
+ ------------------------------------------
+
+104954.300369 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.300370 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.300371 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.300372 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.300382 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.300382 |   0)    <idle>-0    |   0.875 us    |      ktime_get();
+104954.300382 |   5) cost_pr-379035 | ! 298.667 us  |  } /* rknpu_submit_ioctl */
+104954.300384 |   5) cost_pr-379035 |               |  /* RS return id=5497558139392 tid=379035 mask=1 mono=104954300383399 */
+104954.300386 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.300386 |   0)    <idle>-0    | + 17.792 us   |  } /* rknpu_core0_irq_handler */
+104954.300412 |   5) cost_pr-379035 |               |  /* RS done id=5497558139392 tid=379035 mask=1 mono=104954300411982 */
+104954.300414 |   5) cost_pr-379035 |               |  /* RS request id=5497558139648 tid=379035 mask=1 mono=104954300413440 */
+104954.300442 |   5) cost_pr-379035 |               |  /* RS ioctl id=5497558139648 tid=379035 mask=1 mono=104954300441148 */
+104954.300442 |   5) cost_pr-379035 |               |  rknpu_submit_ioctl() {
+104954.300443 |   5) cost_pr-379035 |   0.292 us    |    ktime_get();
+104954.300443 |   5) cost_pr-379035 |               |    rknpu_job_schedule() {
+104954.300444 |   5) cost_pr-379035 |   0.583 us    |      rknpu_get_task_number();
+104954.300444 |   5) cost_pr-379035 |   0.292 us    |      rknpu_job_next.part.0();
+104954.300445 |   5) cost_pr-379035 |   1.750 us    |    } /* rknpu_job_schedule */
+104954.300462 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.300463 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.300464 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.300465 |   0)    <idle>-0    |   0.584 us    |    ktime_get();
+104954.300474 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.300474 |   4) cost_pr-379034 | ! 377.709 us  |  } /* rknpu_submit_ioctl */
+104954.300475 |   0)    <idle>-0    |   0.875 us    |      ktime_get();
+104954.300476 |   4) cost_pr-379034 |               |  /* RS return id=4398046511616 tid=379034 mask=1 mono=104954300475564 */
+104954.300478 |   0)    <idle>-0    |   4.084 us    |    } /* rknpu_job_next.part.0 */
+104954.300479 |   0)    <idle>-0    | + 17.208 us   |  } /* rknpu_core0_irq_handler */
+104954.300501 |   4) cost_pr-379034 |               |  /* RS done id=4398046511616 tid=379034 mask=1 mono=104954300501231 */
+104954.300503 |   4) cost_pr-379034 |               |  /* RS request id=4398046511872 tid=379034 mask=1 mono=104954300502981 */
+104954.300529 |   4) cost_pr-379034 |               |  /* RS ioctl id=4398046511872 tid=379034 mask=1 mono=104954300528939 */
+104954.300530 |   4) cost_pr-379034 |               |  rknpu_submit_ioctl() {
+104954.300530 |   4) cost_pr-379034 |   0.291 us    |    ktime_get();
+104954.300531 |   4) cost_pr-379034 |               |    rknpu_job_schedule() {
+104954.300531 |   4) cost_pr-379034 |   0.000 us    |      rknpu_get_task_number();
+104954.300532 |   4) cost_pr-379034 |   0.584 us    |      rknpu_job_next.part.0();
+104954.300533 |   4) cost_pr-379034 |   1.167 us    |    } /* rknpu_job_schedule */
+104954.300554 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.300555 |   0)    <idle>-0    |   0.292 us    |    rknpu_get_task_number();
+104954.300557 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.300558 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.300566 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.300567 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.300568 |   3) cost_pr-379033 | ! 361.958 us  |  } /* rknpu_submit_ioctl */
+104954.300570 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.300571 |   0)    <idle>-0    | + 16.917 us   |  } /* rknpu_core0_irq_handler */
+104954.300573 |   3) cost_pr-379033 |               |  /* RS return id=3298534883840 tid=379033 mask=1 mono=104954300570355 */
+104954.300649 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.300650 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.300651 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.300652 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.300660 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.300661 |   0)    <idle>-0    |   0.875 us    |      ktime_get();
+104954.300661 |   3) cost_pr-379033 |               |  /* RS done id=3298534883840 tid=379033 mask=1 mono=104954300657562 */
+104954.300662 |   1) cost_pr-379031 | ! 455.875 us  |  } /* rknpu_submit_ioctl */
+104954.300664 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.300665 |   0)    <idle>-0    | + 16.042 us   |  } /* rknpu_core0_irq_handler */
+104954.300665 |   3) cost_pr-379033 |               |  /* RS request id=3298534884096 tid=379033 mask=1 mono=104954300663103 */
+104954.300667 |   1) cost_pr-379031 |               |  /* RS return id=1099511628288 tid=379031 mask=1 mono=104954300664562 */
+104954.300743 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.300744 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.300746 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.300747 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.300754 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.300754 |   1) cost_pr-379031 |               |  /* RS done id=1099511628288 tid=379031 mask=1 mono=104954300750602 */
+104954.300754 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.300757 |   2) cost_pr-379032 | ! 544.250 us  |  } /* rknpu_submit_ioctl */
+104954.300758 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.300758 |   1) cost_pr-379031 |               |  /* RS request id=1099511628544 tid=379031 mask=1 mono=104954300756144 */
+104954.300758 |   0)    <idle>-0    | + 15.167 us   |  } /* rknpu_core0_irq_handler */
+104954.300760 |   3) cost_pr-379033 |               |  /* RS ioctl id=3298534884096 tid=379033 mask=1 mono=104954300756727 */
+104954.300761 |   2) cost_pr-379032 |               |  /* RS return id=2199023256064 tid=379032 mask=1 mono=104954300758769 */
+104954.300763 |   3) cost_pr-379033 |               |  rknpu_submit_ioctl() {
+104954.300764 |   3) cost_pr-379033 |   0.875 us    |    ktime_get();
+104954.300765 |   3) cost_pr-379033 |               |    rknpu_job_schedule() {
+104954.300766 |   3) cost_pr-379033 |   0.583 us    |      rknpu_get_task_number();
+104954.300767 |   3) cost_pr-379033 |   0.875 us    |      rknpu_job_next.part.0();
+104954.300768 |   3) cost_pr-379033 |   3.500 us    |    } /* rknpu_job_schedule */
+104954.300856 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.300857 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.300859 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.300860 |   0)    <idle>-0    |   0.875 us    |    ktime_get();
+104954.300866 |   1) cost_pr-379031 |               |  /* RS ioctl id=1099511628544 tid=379031 mask=1 mono=104954300862892 */
+104954.300866 |   2) cost_pr-379032 |               |  /* RS done id=2199023256064 tid=379032 mask=1 mono=104954300863184 */
+104954.300867 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.300867 |   7) cost_pr-379037 | ! 627.667 us  |  } /* rknpu_submit_ioctl */
+104954.300868 |   0)    <idle>-0    |   0.584 us    |      ktime_get();
+104954.300869 |   7) cost_pr-379037 |               |  /* RS return id=7696581395200 tid=379037 mask=1 mono=104954300868434 */
+104954.300869 |   1) cost_pr-379031 |               |  rknpu_submit_ioctl() {
+104954.300870 |   1) cost_pr-379031 |   0.583 us    |    ktime_get();
+104954.300871 |   0)    <idle>-0    |   4.084 us    |    } /* rknpu_job_next.part.0 */
+104954.300871 |   2) cost_pr-379032 |               |  /* RS request id=2199023256320 tid=379032 mask=1 mono=104954300869309 */
+104954.300871 |   1) cost_pr-379031 |               |    rknpu_job_schedule() {
+104954.300872 |   0)    <idle>-0    | + 15.458 us   |  } /* rknpu_core0_irq_handler */
+104954.300872 |   1) cost_pr-379031 |   0.584 us    |      rknpu_get_task_number();
+104954.300874 |   1) cost_pr-379031 |   0.875 us    |      rknpu_job_next.part.0();
+104954.300876 |   1) cost_pr-379031 |   4.375 us    |    } /* rknpu_job_schedule */
+104954.300902 |   7) cost_pr-379037 |               |  /* RS done id=7696581395200 tid=379037 mask=1 mono=104954300901392 */
+104954.300904 |   7) cost_pr-379037 |               |  /* RS request id=7696581395456 tid=379037 mask=1 mono=104954300903142 */
+104954.300932 |   7) cost_pr-379037 |               |  /* RS ioctl id=7696581395456 tid=379037 mask=1 mono=104954300932016 */
+104954.300933 |   7) cost_pr-379037 |               |  rknpu_submit_ioctl() {
+104954.300934 |   7) cost_pr-379037 |   0.292 us    |    ktime_get();
+104954.300934 |   7) cost_pr-379037 |               |    rknpu_job_schedule() {
+104954.300934 |   7) cost_pr-379037 |   0.000 us    |      rknpu_get_task_number();
+104954.300935 |   7) cost_pr-379037 |   0.292 us    |      rknpu_job_next.part.0();
+104954.300935 |   7) cost_pr-379037 |   1.167 us    |    } /* rknpu_job_schedule */
+104954.300954 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.300955 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.300956 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.300957 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.300958 |   2) cost_pr-379032 |               |  /* RS ioctl id=2199023256320 tid=379032 mask=1 mono=104954300954766 */
+104954.300960 |   2) cost_pr-379032 |               |  rknpu_submit_ioctl() {
+104954.300962 |   2) cost_pr-379032 |   0.875 us    |    ktime_get();
+104954.300963 |   2) cost_pr-379032 |               |    rknpu_job_schedule() {
+104954.300964 |   2) cost_pr-379032 |   0.584 us    |      rknpu_get_task_number();
+104954.300965 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.300965 |   2) cost_pr-379032 |   2.042 us    |      rknpu_job_next.part.0();
+104954.300966 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.300968 |   2) cost_pr-379032 |   4.958 us    |    } /* rknpu_job_schedule */
+104954.300969 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.300970 |   0)    <idle>-0    | + 16.334 us   |  } /* rknpu_core0_irq_handler */
+ ------------------------------------------
+ 0)    <idle>-0    => cost_pr-379030
+ ------------------------------------------
+
+104954.300974 |   0) cost_pr-379030 | ! 717.209 us  |  } /* rknpu_submit_ioctl */
+104954.300979 |   0) cost_pr-379030 |               |  /* RS return id=512 tid=379030 mask=1 mono=104954300975766 */
+104954.301049 |   0) cost_pr-379030 |               |  rknpu_core0_irq_handler() {
+104954.301051 |   0) cost_pr-379030 |   0.583 us    |    rknpu_get_task_number();
+104954.301052 |   0) cost_pr-379030 |   0.583 us    |    rknpu_get_task_number();
+104954.301053 |   0) cost_pr-379030 |   0.875 us    |    ktime_get();
+104954.301060 |   0) cost_pr-379030 |               |    rknpu_job_next.part.0() {
+104954.301060 |   6) cost_pr-379036 | ! 752.500 us  |  } /* rknpu_submit_ioctl */
+104954.301062 |   0) cost_pr-379030 |   1.458 us    |      ktime_get();
+104954.301062 |   6) cost_pr-379036 |               |  /* RS return id=6597069767424 tid=379036 mask=1 mono=104954301061515 */
+104954.301065 |   0) cost_pr-379030 |   4.667 us    |    } /* rknpu_job_next.part.0 */
+104954.301066 |   0) cost_pr-379030 | + 17.208 us   |  } /* rknpu_core0_irq_handler */
+104954.301087 |   0) cost_pr-379030 |               |  /* RS done id=512 tid=379030 mask=1 mono=104954301083389 */
+104954.301091 |   0) cost_pr-379030 |               |  /* RS request id=768 tid=379030 mask=1 mono=104954301089223 */
+104954.301094 |   6) cost_pr-379036 |               |  /* RS done id=6597069767424 tid=379036 mask=1 mono=104954301093598 */
+104954.301095 |   6) cost_pr-379036 |               |  /* RS request id=6597069767680 tid=379036 mask=1 mono=104954301095056 */
+104954.301133 |   6) cost_pr-379036 |               |  /* RS ioctl id=6597069767680 tid=379036 mask=1 mono=104954301132972 */
+104954.301134 |   6) cost_pr-379036 |               |  rknpu_submit_ioctl() {
+104954.301135 |   6) cost_pr-379036 |   0.000 us    |    ktime_get();
+104954.301136 |   6) cost_pr-379036 |               |    rknpu_job_schedule() {
+104954.301136 |   6) cost_pr-379036 |   0.291 us    |      rknpu_get_task_number();
+104954.301137 |   6) cost_pr-379036 |   0.000 us    |      rknpu_job_next.part.0();
+104954.301137 |   6) cost_pr-379036 |   1.167 us    |    } /* rknpu_job_schedule */
+104954.301167 |   0) cost_pr-379030 |               |  rknpu_core0_irq_handler() {
+104954.301169 |   0) cost_pr-379030 |   0.583 us    |    rknpu_get_task_number();
+104954.301170 |   0) cost_pr-379030 |   0.292 us    |    rknpu_get_task_number();
+104954.301172 |   0) cost_pr-379030 |   0.584 us    |    ktime_get();
+104954.301179 |   0) cost_pr-379030 |               |    rknpu_job_next.part.0() {
+104954.301180 |   0) cost_pr-379030 |   0.583 us    |      ktime_get();
+104954.301180 |   5) cost_pr-379035 | ! 738.208 us  |  } /* rknpu_submit_ioctl */
+104954.301182 |   5) cost_pr-379035 |               |  /* RS return id=5497558139648 tid=379035 mask=1 mono=104954301181388 */
+104954.301183 |   0) cost_pr-379030 |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.301184 |   0) cost_pr-379030 | + 16.625 us   |  } /* rknpu_core0_irq_handler */
+104954.301216 |   5) cost_pr-379035 |               |  /* RS done id=5497558139648 tid=379035 mask=1 mono=104954301215221 */
+104954.301218 |   5) cost_pr-379035 |               |  /* RS request id=5497558139904 tid=379035 mask=1 mono=104954301218137 */
+104954.301223 |   0) cost_pr-379030 |               |  /* RS ioctl id=768 tid=379030 mask=1 mono=104954301219304 */
+104954.301225 |   0) cost_pr-379030 |               |  rknpu_submit_ioctl() {
+104954.301226 |   0) cost_pr-379030 |   0.583 us    |    ktime_get();
+104954.301227 |   0) cost_pr-379030 |               |    rknpu_job_schedule() {
+104954.301228 |   0) cost_pr-379030 |   0.584 us    |      rknpu_get_task_number();
+104954.301230 |   0) cost_pr-379030 |   0.583 us    |      rknpu_job_next.part.0();
+104954.301231 |   0) cost_pr-379030 |   3.209 us    |    } /* rknpu_job_schedule */
+104954.301242 |   5) cost_pr-379035 |               |  /* RS ioctl id=5497558139904 tid=379035 mask=1 mono=104954301242345 */
+104954.301243 |   5) cost_pr-379035 |               |  rknpu_submit_ioctl() {
+104954.301244 |   5) cost_pr-379035 |   0.291 us    |    ktime_get();
+104954.301244 |   5) cost_pr-379035 |               |    rknpu_job_schedule() {
+104954.301244 |   5) cost_pr-379035 |   0.291 us    |      rknpu_get_task_number();
+104954.301245 |   5) cost_pr-379035 |   0.000 us    |      rknpu_job_next.part.0();
+104954.301246 |   5) cost_pr-379035 |   1.458 us    |    } /* rknpu_job_schedule */
+ ------------------------------------------
+ 0) cost_pr-379030 =>    <idle>-0   
+ ------------------------------------------
+
+104954.301272 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.301273 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.301275 |   0)    <idle>-0    |   0.875 us    |    rknpu_get_task_number();
+104954.301276 |   0)    <idle>-0    |   0.584 us    |    ktime_get();
+104954.301285 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.301286 |   0)    <idle>-0    |   0.584 us    |      ktime_get();
+104954.301286 |   4) cost_pr-379034 | ! 756.292 us  |  } /* rknpu_submit_ioctl */
+104954.301288 |   4) cost_pr-379034 |               |  /* RS return id=4398046511872 tid=379034 mask=1 mono=104954301287262 */
+104954.301289 |   0)    <idle>-0    |   4.084 us    |    } /* rknpu_job_next.part.0 */
+104954.301290 |   0)    <idle>-0    | + 18.375 us   |  } /* rknpu_core0_irq_handler */
+104954.301312 |   4) cost_pr-379034 |               |  /* RS done id=4398046511872 tid=379034 mask=1 mono=104954301312053 */
+104954.301314 |   4) cost_pr-379034 |               |  /* RS request id=4398046512128 tid=379034 mask=1 mono=104954301313803 */
+104954.301340 |   4) cost_pr-379034 |               |  /* RS ioctl id=4398046512128 tid=379034 mask=1 mono=104954301339469 */
+104954.301341 |   4) cost_pr-379034 |               |  rknpu_submit_ioctl() {
+104954.301341 |   4) cost_pr-379034 |   0.292 us    |    ktime_get();
+104954.301342 |   4) cost_pr-379034 |               |    rknpu_job_schedule() {
+104954.301342 |   4) cost_pr-379034 |   0.292 us    |      rknpu_get_task_number();
+104954.301342 |   4) cost_pr-379034 |   0.000 us    |      rknpu_job_next.part.0();
+104954.301343 |   4) cost_pr-379034 |   1.166 us    |    } /* rknpu_job_schedule */
+104954.301418 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.301420 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.301421 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.301422 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.301431 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.301431 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.301435 |   3) cost_pr-379033 | ! 672.292 us  |  } /* rknpu_submit_ioctl */
+104954.301435 |   0)    <idle>-0    |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.301436 |   0)    <idle>-0    | + 17.500 us   |  } /* rknpu_core0_irq_handler */
+104954.301440 |   3) cost_pr-379033 |               |  /* RS return id=3298534884096 tid=379033 mask=1 mono=104954301437176 */
+104954.301527 |   3) cost_pr-379033 |               |  /* RS done id=3298534884096 tid=379033 mask=1 mono=104954301524092 */
+104954.301532 |   3) cost_pr-379033 |               |  /* RS request id=3298534884352 tid=379033 mask=1 mono=104954301529925 */
+104954.301561 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.301562 |   0)    <idle>-0    |   0.292 us    |    rknpu_get_task_number();
+104954.301563 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.301564 |   0)    <idle>-0    |   0.584 us    |    ktime_get();
+104954.301572 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.301573 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.301573 |   1) cost_pr-379031 | ! 704.958 us  |  } /* rknpu_submit_ioctl */
+104954.301576 |   0)    <idle>-0    |   4.375 us    |    } /* rknpu_job_next.part.0 */
+104954.301577 |   0)    <idle>-0    | + 16.333 us   |  } /* rknpu_core0_irq_handler */
+104954.301579 |   1) cost_pr-379031 |               |  /* RS return id=1099511628544 tid=379031 mask=1 mono=104954301575716 */
+104954.301626 |   3) cost_pr-379033 |               |  /* RS ioctl id=3298534884352 tid=379033 mask=1 mono=104954301623257 */
+104954.301629 |   3) cost_pr-379033 |               |  rknpu_submit_ioctl() {
+104954.301630 |   3) cost_pr-379033 |   0.584 us    |    ktime_get();
+104954.301632 |   3) cost_pr-379033 |               |    rknpu_job_schedule() {
+104954.301632 |   3) cost_pr-379033 |   0.583 us    |      rknpu_get_task_number();
+104954.301634 |   3) cost_pr-379033 |   0.583 us    |      rknpu_job_next.part.0();
+104954.301635 |   3) cost_pr-379033 |   3.791 us    |    } /* rknpu_job_schedule */
+104954.301664 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.301665 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.301666 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.301667 |   1) cost_pr-379031 |               |  /* RS done id=1099511628544 tid=379031 mask=1 mono=104954301663798 */
+104954.301667 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.301671 |   1) cost_pr-379031 |               |  /* RS request id=1099511628800 tid=379031 mask=1 mono=104954301669340 */
+104954.301675 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.301676 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.301676 |   7) cost_pr-379037 | ! 742.875 us  |  } /* rknpu_submit_ioctl */
+104954.301677 |   7) cost_pr-379037 |               |  /* RS return id=7696581395456 tid=379037 mask=1 mono=104954301676923 */
+104954.301679 |   0)    <idle>-0    |   3.791 us    |    } /* rknpu_job_next.part.0 */
+104954.301680 |   0)    <idle>-0    | + 16.041 us   |  } /* rknpu_core0_irq_handler */
+104954.301717 |   7) cost_pr-379037 |               |  /* RS done id=7696581395456 tid=379037 mask=1 mono=104954301716589 */
+104954.301761 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.301762 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.301763 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.301764 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.301769 |   1) cost_pr-379031 |               |  /* RS ioctl id=1099511628800 tid=379031 mask=1 mono=104954301765880 */
+104954.301771 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.301772 |   0)    <idle>-0    |   0.875 us    |      ktime_get();
+104954.301772 |   1) cost_pr-379031 |               |  rknpu_submit_ioctl() {
+104954.301773 |   1) cost_pr-379031 |   0.583 us    |    ktime_get();
+104954.301774 |   2) cost_pr-379032 | ! 813.166 us  |  } /* rknpu_submit_ioctl */
+104954.301774 |   1) cost_pr-379031 |               |    rknpu_job_schedule() {
+104954.301775 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.301775 |   1) cost_pr-379031 |   0.584 us    |      rknpu_get_task_number();
+104954.301776 |   0)    <idle>-0    | + 15.167 us   |  } /* rknpu_core0_irq_handler */
+104954.301777 |   1) cost_pr-379031 |   0.583 us    |      rknpu_job_next.part.0();
+104954.301778 |   1) cost_pr-379031 |   3.500 us    |    } /* rknpu_job_schedule */
+104954.301779 |   2) cost_pr-379032 |               |  /* RS return id=2199023256320 tid=379032 mask=1 mono=104954301776088 */
+104954.301857 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.301858 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.301859 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.301860 |   0)    <idle>-0    |   0.584 us    |    ktime_get();
+104954.301867 |   2) cost_pr-379032 |               |  /* RS done id=2199023256320 tid=379032 mask=1 mono=104954301863879 */
+104954.301867 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.301868 |   6) cost_pr-379036 | ! 733.833 us  |  } /* rknpu_submit_ioctl */
+104954.301868 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.301869 |   6) cost_pr-379036 |               |  /* RS return id=6597069767680 tid=379036 mask=1 mono=104954301868837 */
+104954.301871 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.301872 |   2) cost_pr-379032 |               |  /* RS request id=2199023256576 tid=379032 mask=1 mono=104954301869420 */
+104954.301872 |   0)    <idle>-0    | + 15.458 us   |  } /* rknpu_core0_irq_handler */
+104954.301900 |   6) cost_pr-379036 |               |  /* RS done id=6597069767680 tid=379036 mask=1 mono=104954301899461 */
+104954.301950 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.301951 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.301952 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.301954 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.301954 |   2) cost_pr-379032 |               |  /* RS ioctl id=2199023256576 tid=379032 mask=1 mono=104954301951086 */
+104954.301957 |   2) cost_pr-379032 |               |  rknpu_submit_ioctl() {
+104954.301958 |   2) cost_pr-379032 |   0.583 us    |    ktime_get();
+104954.301959 |   2) cost_pr-379032 |               |    rknpu_job_schedule() {
+104954.301960 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.301960 |   2) cost_pr-379032 |   0.583 us    |      rknpu_get_task_number();
+104954.301961 |   0)    <idle>-0    |   0.584 us    |      ktime_get();
+104954.301961 |   2) cost_pr-379032 |   1.458 us    |      rknpu_job_next.part.0();
+104954.301963 |   2) cost_pr-379032 |   4.083 us    |    } /* rknpu_job_schedule */
+104954.301965 |   0)    <idle>-0    |   4.959 us    |    } /* rknpu_job_next.part.0 */
+104954.301965 |   0)    <idle>-0    | + 15.458 us   |  } /* rknpu_core0_irq_handler */
+ ------------------------------------------
+ 0)    <idle>-0    => cost_pr-379030
+ ------------------------------------------
+
+104954.301969 |   0) cost_pr-379030 | ! 744.333 us  |  } /* rknpu_submit_ioctl */
+104954.301974 |   0) cost_pr-379030 |               |  /* RS return id=768 tid=379030 mask=1 mono=104954301971210 */
+104954.302042 |   0) cost_pr-379030 |               |  rknpu_core0_irq_handler() {
+104954.302043 |   0) cost_pr-379030 |   0.584 us    |    rknpu_get_task_number();
+104954.302044 |   0) cost_pr-379030 |   0.875 us    |    rknpu_get_task_number();
+104954.302045 |   0) cost_pr-379030 |   0.875 us    |    ktime_get();
+104954.302051 |   0) cost_pr-379030 |               |    rknpu_job_next.part.0() {
+104954.302052 |   0) cost_pr-379030 |   0.583 us    |      ktime_get();
+104954.302053 |   5) cost_pr-379035 | ! 809.083 us  |  } /* rknpu_submit_ioctl */
+104954.302054 |   5) cost_pr-379035 |               |  /* RS return id=5497558139904 tid=379035 mask=1 mono=104954302053751 */
+104954.302055 |   0) cost_pr-379030 |   4.083 us    |    } /* rknpu_job_next.part.0 */
+104954.302056 |   0) cost_pr-379030 | + 15.750 us   |  } /* rknpu_core0_irq_handler */
+104954.302079 |   5) cost_pr-379035 |               |  /* RS done id=5497558139904 tid=379035 mask=1 mono=104954302078542 */
+104954.302081 |   0) cost_pr-379030 |               |  /* RS done id=768 tid=379030 mask=1 mono=104954302077959 */
+104954.302085 |   0) cost_pr-379030 |               |  /* RS request id=1024 tid=379030 mask=1 mono=104954302083501 */
+104954.302166 |   0) cost_pr-379030 |               |  /* RS ioctl id=1024 tid=379030 mask=1 mono=104954302162833 */
+104954.302168 |   0) cost_pr-379030 |               |  rknpu_submit_ioctl() {
+104954.302169 |   0) cost_pr-379030 |   0.875 us    |    ktime_get();
+104954.302170 |   0) cost_pr-379030 |               |    rknpu_job_schedule() {
+104954.302174 |   0) cost_pr-379030 |               |      rknpu_core0_irq_handler() {
+104954.302176 |   0) cost_pr-379030 |   0.583 us    |        rknpu_get_task_number();
+104954.302177 |   0) cost_pr-379030 |   0.584 us    |        rknpu_get_task_number();
+104954.302178 |   0) cost_pr-379030 |   0.583 us    |        ktime_get();
+104954.302183 |   0) cost_pr-379030 |               |        rknpu_job_next.part.0() {
+104954.302184 |   0) cost_pr-379030 |   0.583 us    |          ktime_get();
+104954.302184 |   4) cost_pr-379034 | ! 844.083 us  |  } /* rknpu_submit_ioctl */
+104954.302186 |   4) cost_pr-379034 |               |  /* RS return id=4398046512128 tid=379034 mask=1 mono=104954302185291 */
+104954.302187 |   0) cost_pr-379030 |   4.083 us    |        } /* rknpu_job_next.part.0 */
+104954.302188 |   0) cost_pr-379030 | + 13.417 us   |      } /* rknpu_core0_irq_handler */
+104954.302189 |   0) cost_pr-379030 |   0.583 us    |      rknpu_get_task_number();
+104954.302191 |   0) cost_pr-379030 |   0.584 us    |      rknpu_job_next.part.0();
+104954.302192 |   0) cost_pr-379030 | + 21.292 us   |    } /* rknpu_job_schedule */
+104954.302210 |   4) cost_pr-379034 |               |  /* RS done id=4398046512128 tid=379034 mask=1 mono=104954302209790 */
+ ------------------------------------------
+ 0) cost_pr-379030 =>    <idle>-0   
+ ------------------------------------------
+
+104954.302266 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.302267 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.302268 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.302269 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.302276 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.302276 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.302279 |   3) cost_pr-379033 | ! 649.833 us  |  } /* rknpu_submit_ioctl */
+104954.302280 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.302280 |   0)    <idle>-0    | + 14.291 us   |  } /* rknpu_core0_irq_handler */
+104954.302284 |   3) cost_pr-379033 |               |  /* RS return id=3298534884352 tid=379033 mask=1 mono=104954302280956 */
+104954.302359 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.302361 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.302362 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.302363 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.302368 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.302368 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.302371 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.302372 |   0)    <idle>-0    | + 12.833 us   |  } /* rknpu_core0_irq_handler */
+104954.302372 |   1) cost_pr-379031 | ! 600.541 us  |  } /* rknpu_submit_ioctl */
+104954.302372 |   3) cost_pr-379033 |               |  /* RS done id=3298534884352 tid=379033 mask=1 mono=104954302369038 */
+104954.302377 |   1) cost_pr-379031 |               |  /* RS return id=1099511628800 tid=379031 mask=1 mono=104954302374580 */
+104954.302467 |   1) cost_pr-379031 |               |  /* RS done id=1099511628800 tid=379031 mask=1 mono=104954302463537 */
+104954.302491 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.302492 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.302494 |   0)    <idle>-0    |   0.584 us    |    rknpu_get_task_number();
+104954.302495 |   0)    <idle>-0    |   0.583 us    |    ktime_get();
+104954.302499 |   0)    <idle>-0    |               |    rknpu_job_next.part.0() {
+104954.302499 |   0)    <idle>-0    |   0.583 us    |      ktime_get();
+104954.302503 |   0)    <idle>-0    |   3.792 us    |    } /* rknpu_job_next.part.0 */
+104954.302503 |   0)    <idle>-0    | + 11.958 us   |  } /* rknpu_core0_irq_handler */
+104954.302503 |   2) cost_pr-379032 | ! 546.875 us  |  } /* rknpu_submit_ioctl */
+104954.302509 |   2) cost_pr-379032 |               |  /* RS return id=2199023256576 tid=379032 mask=1 mono=104954302505828 */
+104954.302586 |   0)    <idle>-0    |               |  rknpu_core0_irq_handler() {
+104954.302588 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.302589 |   0)    <idle>-0    |   0.583 us    |    rknpu_get_task_number();
+104954.302590 |   0)    <idle>-0    |   0.584 us    |    ktime_get();
+104954.302593 |   0)    <idle>-0    |   0.875 us    |    rknpu_job_next.part.0();
+104954.302594 |   0)    <idle>-0    |   7.875 us    |  } /* rknpu_core0_irq_handler */
+104954.302596 |   2) cost_pr-379032 |               |  /* RS done id=2199023256576 tid=379032 mask=1 mono=104954302593035 */
+ ------------------------------------------
+ 0)    <idle>-0    => cost_pr-379030
+ ------------------------------------------
+
+104954.302597 |   0) cost_pr-379030 | ! 429.625 us  |  } /* rknpu_submit_ioctl */
+104954.302603 |   0) cost_pr-379030 |               |  /* RS return id=1024 tid=379030 mask=1 mono=104954302599743 */
+104954.302696 |   0) cost_pr-379030 |               |  /* RS done id=1024 tid=379030 mask=1 mono=104954302693075 */

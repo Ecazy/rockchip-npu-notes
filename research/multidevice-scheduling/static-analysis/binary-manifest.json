@@ -1,0 +1,55 @@
+{
+  "repository": "https://github.com/airockchip/rknn3-toolkit",
+  "commit": "2136cc54fa79ad289c43e56ed9cf7e63ef56439b",
+  "path": "rknn3-runtime/rknn3-api/Linux/x86_64/librknn3_api.so",
+  "url": "https://raw.githubusercontent.com/airockchip/rknn3-toolkit/2136cc54fa79ad289c43e56ed9cf7e63ef56439b/rknn3-runtime/rknn3-api/Linux/x86_64/librknn3_api.so",
+  "sha256": "dc14b0c978fc06d9f00ca04dbfa90bd326362e264020c1f06ff136472c0c3362",
+  "bytes": 1635376,
+  "analysis": "readelf/nm static only; never loaded or executed; binary cached outside repository",
+  "reports": [
+    {
+      "path": "research/multidevice-scheduling/static-analysis/elf-header.txt",
+      "command": [
+        "readelf",
+        "-h",
+        "/tmp/multidevice-rknn3-api-x86_64.so"
+      ],
+      "sha256": "6f43f5d6ae021b17bf1b27b98f0548e1b82341689a1dd2f2ef33007b7a97c564",
+      "bytes": 963
+    },
+    {
+      "path": "research/multidevice-scheduling/static-analysis/elf-dynamic.txt",
+      "command": [
+        "readelf",
+        "-d",
+        "/tmp/multidevice-rknn3-api-x86_64.so"
+      ],
+      "sha256": "043e73862b05ad586fef36de312be472e6d4cd533b42876fe0eb80d0b2627a00",
+      "bytes": 1688
+    },
+    {
+      "path": "research/multidevice-scheduling/static-analysis/elf-exported-symbols.txt",
+      "command": [
+        "nm",
+        "-D",
+        "-C",
+        "--defined-only",
+        "/tmp/multidevice-rknn3-api-x86_64.so"
+      ],
+      "sha256": "fa6af510184bdd660904f9f9ca3f689bd4bb755a8e041914b8de097e568c8168",
+      "bytes": 133319
+    },
+    {
+      "path": "research/multidevice-scheduling/static-analysis/elf-imported-symbols.txt",
+      "command": [
+        "nm",
+        "-D",
+        "-C",
+        "--undefined-only",
+        "/tmp/multidevice-rknn3-api-x86_64.so"
+      ],
+      "sha256": "1a26bfc3200d0c8202306f9973351f396c5a5063df8e185fddb6fad35b0b1989",
+      "bytes": 21015
+    }
+  ]
+}

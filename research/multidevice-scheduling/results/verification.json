@@ -1,0 +1,155 @@
+{
+  "status": "PASS",
+  "artifact_files_verified": 64,
+  "dataset": {
+    "cells": 608,
+    "submits": 945120,
+    "full_sources_verified": true,
+    "sources": 6682
+  },
+  "archived_trace_replays": [
+    {
+      "block": "block-00-cell-000",
+      "requests": 24,
+      "cores": [
+        0
+      ],
+      "service_sum_ns": 2361303,
+      "service_median_ns": 88957,
+      "observed_span_ns": 2551756,
+      "synthetic_makespan_ns": 2361303,
+      "service_durations_match": true,
+      "synthetic_observed_compatible": true,
+      "interval_reconstruction_pass": true,
+      "queue_observed": true,
+      "core_fifo": {
+        "observable": true,
+        "cores": [
+          0
+        ],
+        "execution_order_unique": true,
+        "unique_enqueue_order": false,
+        "overlapping_enqueue_pairs": 1,
+        "scope": "definite execution order with feasible FIFO enqueue hulls; overlapping hull order not identified"
+      },
+      "ioctl_residual_median_ns": 558533
+    },
+    {
+      "block": "block-00-cell-001",
+      "requests": 24,
+      "cores": [
+        0
+      ],
+      "service_sum_ns": 1798976,
+      "service_median_ns": 74957,
+      "observed_span_ns": 164959428,
+      "synthetic_makespan_ns": 164935249,
+      "service_durations_match": true,
+      "synthetic_observed_compatible": true,
+      "interval_reconstruction_pass": true,
+      "queue_observed": true,
+      "core_fifo": {
+        "observable": true,
+        "cores": [
+          0
+        ],
+        "execution_order_unique": true,
+        "unique_enqueue_order": true,
+        "overlapping_enqueue_pairs": 0,
+        "scope": "definite execution order with feasible FIFO enqueue hulls; overlapping hull order not identified"
+      },
+      "ioctl_residual_median_ns": 24208
+    },
+    {
+      "block": "block-00-cell-002",
+      "requests": 24,
+      "cores": [
+        0,
+        1,
+        2
+      ],
+      "service_sum_ns": 3233958,
+      "service_median_ns": 132123,
+      "observed_span_ns": 1638269,
+      "synthetic_makespan_ns": 1617288,
+      "service_durations_match": true,
+      "synthetic_observed_compatible": true,
+      "interval_reconstruction_pass": true,
+      "queue_observed": true,
+      "core_fifo": {
+        "observable": true,
+        "cores": [
+          0,
+          1,
+          2
+        ],
+        "execution_order_unique": true,
+        "unique_enqueue_order": true,
+        "overlapping_enqueue_pairs": 0,
+        "scope": "definite execution order with feasible FIFO enqueue hulls; overlapping hull order not identified"
+      },
+      "ioctl_residual_median_ns": 54541
+    },
+    {
+      "block": "block-00-cell-003",
+      "requests": 24,
+      "cores": [
+        0
+      ],
+      "service_sum_ns": 1852059,
+      "service_median_ns": 76415,
+      "observed_span_ns": 37592397,
+      "synthetic_makespan_ns": 37564833,
+      "service_durations_match": true,
+      "synthetic_observed_compatible": true,
+      "interval_reconstruction_pass": true,
+      "queue_observed": true,
+      "core_fifo": {
+        "observable": true,
+        "cores": [
+          0
+        ],
+        "execution_order_unique": true,
+        "unique_enqueue_order": false,
+        "overlapping_enqueue_pairs": 2,
+        "scope": "definite execution order with feasible FIFO enqueue hulls; overlapping hull order not identified"
+      },
+      "ioctl_residual_median_ns": 28437
+    },
+    {
+      "block": "block-00-cell-004",
+      "requests": 24,
+      "cores": [
+        0,
+        1,
+        2
+      ],
+      "service_sum_ns": 1985056,
+      "service_median_ns": 80353,
+      "observed_span_ns": 51657536,
+      "synthetic_makespan_ns": 51633290,
+      "service_durations_match": true,
+      "synthetic_observed_compatible": true,
+      "interval_reconstruction_pass": true,
+      "queue_observed": true,
+      "core_fifo": {
+        "observable": true,
+        "cores": [
+          0,
+          1,
+          2
+        ],
+        "execution_order_unique": true,
+        "unique_enqueue_order": true,
+        "overlapping_enqueue_pairs": 0,
+        "scope": "definite execution order with feasible FIFO enqueue hulls; overlapping hull order not identified"
+      },
+      "ioctl_residual_median_ns": 25520
+    }
+  ],
+  "hardware_smoke": [
+    "backend-20261010-190102",
+    "backend-20261010-191327"
+  ],
+  "source_scope": "full original sources verified"
+}

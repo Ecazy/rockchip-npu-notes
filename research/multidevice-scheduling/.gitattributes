@@ -1,0 +1,10 @@
+# Preserve hashed datasets, captured evidence and fixed upstream snapshots byte-for-byte.
+data/** -text
+evidence/** -text -whitespace
+results/** -text
+static-analysis/** -text
+
+# Original tool output and upstream whitespace are part of the archived evidence.
+results/backend-*/build.log -whitespace
+static-analysis/elf-*.txt -whitespace
+static-analysis/sources/** -whitespace

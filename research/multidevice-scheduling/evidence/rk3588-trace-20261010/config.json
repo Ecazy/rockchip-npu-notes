@@ -1,0 +1,143 @@
+{
+  "binary_sha256": "600e2586509e6647ce67b9cbe5f6a290a77f5e3228502020c1cbdb7acaa57e10",
+  "blocks": 1,
+  "cells": [
+    {
+      "affinity_base": 0,
+      "allowed": 7,
+      "background": null,
+      "capture": "immediate",
+      "dims": [
+        64,
+        64,
+        64
+      ],
+      "id": "lut-64x64x64-p16-w1-fixed-m1-a7-chain-device_ready-continuous-none",
+      "mask": 1,
+      "mode": "chain",
+      "operations": 24,
+      "path": "device_ready",
+      "programs": 16,
+      "seed": 20261010,
+      "start": "continuous",
+      "strategy": "fixed",
+      "timeout_s": 120,
+      "trace": true,
+      "warmup": 2,
+      "workers": 1,
+      "workload": "lut"
+    },
+    {
+      "affinity_base": 0,
+      "allowed": 7,
+      "background": null,
+      "capture": "immediate",
+      "dims": [
+        64,
+        64,
+        64
+      ],
+      "id": "lut-64x64x64-p16-w4-fixed-m1-a7-chain-device_ready-continuous-none",
+      "mask": 1,
+      "mode": "chain",
+      "operations": 24,
+      "path": "device_ready",
+      "programs": 16,
+      "seed": 20261010,
+      "start": "continuous",
+      "strategy": "fixed",
+      "timeout_s": 120,
+      "trace": true,
+      "warmup": 2,
+      "workers": 4,
+      "workload": "lut"
+    },
+    {
+      "affinity_base": 0,
+      "allowed": 7,
+      "background": null,
+      "capture": "immediate",
+      "dims": [
+        64,
+        64,
+        64
+      ],
+      "id": "lut-64x64x64-p16-w3-split-m1-a7-chain-device_ready-continuous-none",
+      "mask": 1,
+      "mode": "chain",
+      "operations": 24,
+      "path": "device_ready",
+      "programs": 16,
+      "seed": 20261010,
+      "start": "continuous",
+      "strategy": "split",
+      "timeout_s": 120,
+      "trace": true,
+      "warmup": 2,
+      "workers": 3,
+      "workload": "lut"
+    },
+    {
+      "affinity_base": 0,
+      "allowed": 7,
+      "background": null,
+      "capture": "deferred",
+      "dims": [
+        256,
+        256,
+        256
+      ],
+      "id": "matmul-256x256x256-p1-w8-fixed-m1-a7-chain-device_ready-continuous-none",
+      "mask": 1,
+      "mode": "chain",
+      "operations": 24,
+      "path": "device_ready",
+      "programs": 1,
+      "seed": 20261010,
+      "start": "continuous",
+      "strategy": "fixed",
+      "timeout_s": 120,
+      "trace": true,
+      "warmup": 2,
+      "workers": 8,
+      "workload": "matmul"
+    },
+    {
+      "affinity_base": 0,
+      "allowed": 7,
+      "background": null,
+      "capture": "deferred",
+      "dims": [
+        256,
+        256,
+        256
+      ],
+      "id": "matmul-256x256x256-p1-w8-split-m1-a7-chain-device_ready-continuous-none",
+      "mask": 1,
+      "mode": "chain",
+      "operations": 24,
+      "path": "device_ready",
+      "programs": 1,
+      "seed": 20261010,
+      "start": "continuous",
+      "strategy": "split",
+      "timeout_s": 120,
+      "trace": true,
+      "warmup": 2,
+      "workers": 8,
+      "workload": "matmul"
+    }
+  ],
+  "claim": "closed-loop controlled untraced service/Host cost; no queue assumption",
+  "planned_budget": {
+    "measured_operations": 120,
+    "measured_submits": 120,
+    "measured_tasks": 1200,
+    "warmup_operations": 48,
+    "warmup_submits": 48,
+    "warmup_tasks": 288
+  },
+  "schema_version": 2,
+  "source_sha256": "9f729212801fb502490a967841405b40d892a31ccd1bbb18f706d1aec8a72dd6",
+  "suite": "trace"
+}

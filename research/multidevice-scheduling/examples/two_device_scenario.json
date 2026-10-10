@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "meta": {
+    "name": "two-device-rk3588-rk182x-hypothetical",
+    "note": "All capacities, links and durations illustrative configured assumptions; no RK182X or RK3588 measurement in this scenario. Cross-device links are abstract effective routes, not proven P2P.",
+    "time_unit": "ns"
+  },
+  "devices": [
+    {
+      "id": "rk3588",
+      "memory_capacity_bytes": 1048576,
+      "measured": false,
+      "note": "illustrative durations only; run replay/device-cost for measured service"
+    },
+    {
+      "id": "rk182x",
+      "memory_capacity_bytes": 524288,
+      "measured": false,
+      "note": "hypothetical config, NOT measured on hardware"
+    }
+  ],
+  "links": [
+    {
+      "src": "host",
+      "dst": "rk3588",
+      "bandwidth_bytes_per_s": 8000000000,
+      "latency_ns": 2000
+    },
+    {
+      "src": "host",
+      "dst": "rk182x",
+      "bandwidth_bytes_per_s": 4000000000,
+      "latency_ns": 3000
+    },
+    {
+      "src": "rk3588",
+      "dst": "rk182x",
+      "bandwidth_bytes_per_s": 2000000000,
+      "latency_ns": 5000
+    },
+    {
+      "src": "rk182x",
+      "dst": "rk3588",
+      "bandwidth_bytes_per_s": 2000000000,
+      "latency_ns": 5000
+    }
+  ],
+  "tensors": [
+    {
+      "id": "input",
+      "size_bytes": 65536,
+      "source": "host"
+    },
+    {
+      "id": "weight",
+      "size_bytes": 32768,
+      "source": "host"
+    },
+    {
+      "id": "stem",
+      "size_bytes": 65536,
+      "producer": "stem"
+    },
+    {
+      "id": "branch_a",
+      "size_bytes": 49152,
+      "producer": "branch_a"
+    },
+    {
+      "id": "branch_b",
+      "size_bytes": 49152,
+      "producer": "branch_b"
+    },
+    {
+      "id": "merged",
+      "size_bytes": 65536,
+      "producer": "merge"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "stem",
+      "arrival_ns": 0,
+      "depends_on": [],
+      "inputs": [
+        "input",
+        "weight"
+      ],
+      "outputs": [
+        "stem"
+      ],
+      "workspace_bytes": 16384,
+      "durations_ns": {
+        "rk3588": 120000,
+        "rk182x": 90000
+      },
+      "eligible_devices": [
+        "rk3588",
+        "rk182x"
+      ],
+      "task_count": 8
+    },
+    {
+      "id": "branch_a",
+      "arrival_ns": 0,
+      "depends_on": [
+        "stem"
+      ],
+      "inputs": [
+        "stem"
+      ],
+      "outputs": [
+        "branch_a"
+      ],
+      "workspace_bytes": 8192,
+      "durations_ns": {
+        "rk3588": 40000,
+        "rk182x": 30000
+      },
+      "eligible_devices": [
+        "rk3588",
+        "rk182x"
+      ],
+      "task_count": 4
+    },
+    {
+      "id": "branch_b",
+      "arrival_ns": 0,
+      "depends_on": [
+        "stem"
+      ],
+      "inputs": [
+        "stem",
+        "weight"
+      ],
+      "outputs": [
+        "branch_b"
+      ],
+      "workspace_bytes": 8192,
+      "durations_ns": {
+        "rk3588": 55000,
+        "rk182x": 45000
+      },
+      "eligible_devices": [
+        "rk3588",
+        "rk182x"
+      ],
+      "task_count": 4
+    },
+    {
+      "id": "merge",
+      "arrival_ns": 0,
+      "depends_on": [
+        "branch_a",
+        "branch_b"
+      ],
+      "inputs": [
+        "branch_a",
+        "branch_b"
+      ],
+      "outputs": [
+        "merged"
+      ],
+      "workspace_bytes": 16384,
+      "durations_ns": {
+        "rk3588": 70000,
+        "rk182x": 80000
+      },
+      "eligible_devices": [
+        "rk3588",
+        "rk182x"
+      ],
+      "task_count": 8
+    }
+  ]
+}
