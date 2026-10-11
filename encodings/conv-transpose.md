@@ -304,9 +304,10 @@ taps. The gate bounds it at 2^-9 [HW sweep, RK1, `tests/conv_transpose_resident.
 
 ### Scope of the measurements
 
-A frontend's layout and precision conversion, a whole model's wall and accuracy, and the
-memory of every layer resident at once (about 100 MB for pix2pix) are unmeasured. The CPU
-arm ran at two threads only. The route refuses depthwise and the RK3576.
+A frontend's layout and precision conversion, and the memory of every layer resident at once
+(about 100 MB for pix2pix), are unmeasured. A whole model's wall and accuracy through ONNX
+Runtime are in [perf/benchmarks.md](../perf/benchmarks.md) §"ONNX Runtime (ort-rocket)". The
+CPU arm in this file ran at two threads only. The route refuses depthwise and the RK3576.
 
 ## Validation
 

@@ -168,10 +168,15 @@ These are not measured:
 - A K-accumulation partial kept row-major
 - What the removed host work is worth
 
-The host work has one profile, of a fully resident 12B F16 model at pp2048. There the A
-pack and the output read are together at most 5.3% of the prefill wall [expected, a bound
-read from one profile]. A device add of 0-7% leaves that no margin, so `librocketnpu` still
-packs A and de-scatters C.
+The host work has two profiles. The first is of a fully resident 12B F16 model at pp2048.
+There the A pack and the output read are together at most 5.3% of the prefill wall
+[expected, a bound read from one profile]. The 5.3% bound is scoped to that LLM prefill. A
+device add of 0-7% leaves it no margin, so `librocketnpu` still packs A and de-scatters C.
+
+The second is of a ViT encoder's flash attention at 1370 tokens [HW sweep 2026-10-10, RK3588,
+600 MHz]. There the scores' de-tile and P's pack are ~13 ms of a 42 ms head range, ~31% of the
+call. See [perf/attention-offload-crossover.md](perf/attention-offload-crossover.md)
+§"What remains".
 
 ## Tiling
 
@@ -267,7 +272,7 @@ inputs** (`tests/matmul_correctness_matrix_rocket.c`). Small-integer test inputs
 fp16 products that mask this break. Nothing real drives a height-1 matmul to expose it. LLM
 decode (the only M==1 case) is GEMV-bound and runs on the CPU (~82x slower on the NPU, see
 [perf/not-mac-bound.md](perf/not-mac-bound.md)). The `ggml-rocket` backend gates NPU matmul
-at `ROCKET_MIN_M=4`.
+at `ROCKET_MIN_M` (default 32, never below 4).
 
 #### Software workaround
 

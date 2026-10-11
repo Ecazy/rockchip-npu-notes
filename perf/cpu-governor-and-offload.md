@@ -158,6 +158,21 @@ off, its threads block between operators and `ondemand` clocks them down as well
 arm carries the same bias as the NPU arm, smaller. See [../matmul-as-conv.md](../matmul-as-conv.md)
 §"A convolution on the resident matmul" for the entry these numbers ran on.
 
+## whisper.cpp's CPU decoder
+
+A CPU arm that runs a loop of short steps gains more from pinning than an NPU arm does. On
+`ondemand`, the greedy decoder of whisper.cpp v1.9.4 (`-bs 1 -nf`, 4 threads, `taskset -c 4-7`)
+runs a base step in 11.6 ms. Under `performance` with `cpu-sleep` off it takes 8.1-8.3 ms,
+0.70-0.71x [HW sweep 2026-10-10]. Tiny moves from 5.5 to 3.7-3.8 ms and small from 31.4 to 22.4-22.6 ms. A
+resident-weight NPU decoder step moves less, from 27.3 to 21.1-22.1 ms at base. So the unpinned
+comparison was biased toward the NPU, the opposite of the busy XNNPACK case above.
+
+The two settings moved together, and the measurement does not separate them. The `ondemand`
+figures are single processes, and the pinned ones are three passes with the arm order rotated.
+Between steps the sampling runs on one thread while the other three wait, which lets `ondemand`
+clock the cluster down [hypothesis]. The NPU comparison is in
+[decode-gemv.md](decode-gemv.md) §"A Whisper decoder step on resident weights".
+
 ## Governor, idle-state and DDR settings
 
 For an NPU-against-CPU comparison and for a deployment:

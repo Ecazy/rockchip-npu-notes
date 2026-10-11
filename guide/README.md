@@ -11,7 +11,7 @@ rockchip-npu-notes/   # you are here: the hardware reference + this guide
 rocket-userspace/     # librocketnpu: the userspace driver + matmul and op library
 ggml-rocket/          # ggml backend: LLM / Whisper frontend
 tflite-rocket/        # TFLite delegate: detection / Frigate frontend
-ort-rocket/           # ONNX Runtime execution provider: vision and text encoders
+ort-rocket/           # ONNX Runtime execution provider: encoders and per-layer convolutions
 rknpu-submit/         # optional submit provider for the vendor rknpu kernel driver
 patches/rocket/       # optional kernel patches (clock, perf counters); patches repo, rocket/ scope
 ```
@@ -80,8 +80,8 @@ consumer is Frigate on mainline RK3588. See its README for build and integration
 
 ort-rocket is an ONNX Runtime execution provider. ONNX Runtime loads it for an unmodified
 `.onnx` model. It offloads a recognized encoder (plain and windowed ViTs, ModernBERT text
-encoders) and `ConvTranspose` nodes, and leaves the rest of the graph on the CPU. See its
-README for build and usage.
+encoders) and `ConvTranspose` and `Conv` nodes (`Conv` behind a cost rule), and leaves the rest
+of the graph on the CPU. See its README for build and usage.
 
 ### A vendor kernel
 

@@ -26,7 +26,7 @@ These levers are on by default. Leave them on, and set one to `0` only to A/B it
 - `ROCKET_KACC`: fp16 K-accumulation, +19%
 - `ROCKET_REUSE=2`: CBUF DATA_REUSE, +7%
 - `ROCKET_MM_ASYM`: asymmetric tiling, +6-9% on F16
-- `ROCKET_FLASH_ATTN`: attention offload, wins above ~2K context
+- `ROCKET_FLASH_ATTN`: attention offload, wins above ~2K context (measured 2026-06-26)
 - `ROCKET_DEQUANT_THREADS`: threaded quant dequant, +19-33%
 
 Four opt-ins change the outcome, each gated on your workload and RAM:
@@ -169,8 +169,9 @@ their source. The opt-in entries give the RAM math per lever.
 
 A short user turn spends almost all its wall time in decode. Decode is CPU-bound and
 bandwidth-limited on both backends ([perf/decode-gemv.md](perf/decode-gemv.md)). The NPU
-barely touches the turn, because the prefill is below the offload floor and runs on the
-CPU. Three facts follow:
+barely touches the turn. A quantized GGUF's prefill falls below its offload floor and runs on
+the CPU. An F16 prefill of 32 tokens or more offloads, but the turn stays decode-bound. Three
+facts follow:
 
 - The lever is quantization, for the stream. `Q4_K_M` decodes ~2.8x faster than F16
   (Ministral-3-8B: F16 1.4 -> Q4_K_M 3.8 t/s decode [HW sweep]) and fits a smaller board.
@@ -445,7 +446,9 @@ in the set, and its per-pass spread is the widest at 6.3%. Read its sign, not it
 - **Delta:** gpt-oss-20b MXFP4 at `-b 2048 -ub 2048` reads 1.81x the CPU at pp512 and
   2.38x at pp2048. It reads 1.64x -> 2.08x over the experts-on-CPU arm across pp512-pp2048
   [HW sweep 2026-08-27, 600 MHz pinned]. At the llama.cpp default `-ub 512` it is
-  ~1.6x/1.7x over experts-on-CPU, with no collapse. That tax belongs to the fp16 route.
+  ~1.6x/1.7x over experts-on-CPU, with no collapse. That tax belongs to the fp16 route. A
+  2026-10-09 build with a NEON group-wise readback reads pp512 1.093-1.098x the build before it
+  [HW sweep 2026-10-09, `ondemand`]. These ratios predate it and need a re-measure.
 - **Confirm:** `ROCKET_LOG_STDERR=1` prints the resident/streamed expert split at teardown.
   Under the default, that split reads 100% resident. A nonzero streamed count means a
   limit the pre-flight could not see ahead of the ingest, most likely an exhausted NPU
@@ -473,8 +476,10 @@ dispatch at the same row count. It clears the floors only past ~1250 tokens in a
 micro-batch. **Do not read one MoE's ratio across to another.**
 
 `ROCKET_MOE_MIN_WORK=240` admits DeepSeek's marginal cell (1.05x at `M_e` = 96). That
-cell repays its expert ingest only after ~16 000 tokens of prefill. So lower the floor
-only for a workload that prefills that much.
+cell repays its ~18 s expert ingest only after ~7 700 tokens of prefill at that shape
+[host-computed]. The count takes the 2026-08 ratio at the 2026-10-09 ingest
+([perf/benchmarks.md](perf/benchmarks.md) §"The third architecture, and the threshold declines
+it correctly"). So lower the floor only for a workload that prefills that much.
 
 #### `ROCKET_MOE=1`
 
@@ -649,7 +654,9 @@ DeepSeek, so no row threshold separates them.
   (gpt-oss, some others). It has no sink term, so accepting the op would silently compute
   a different softmax.
 - **When it matters:** long contexts. It reads parity at <=1K, 1.50x at 8K and 1.25x at
-  16K [HW sweep]. Below ~2K it is a wash, and the default gate handles that.
+  16K on Gemma-4-12B F16 [HW sweep 2026-06]. Below ~2K it is a wash, and the default gate
+  handles that. Those figures predate the FA call's host-pass cuts of 2026-09-27 and
+  2026-10-10, so they need a re-measure on a build that has them.
 - **Diagnosis:** you rarely touch it. If a model's NPU curve collapses past ~1K context
   but is fine below it, suspect a sink-bearing attention. The handler must decline such
   an op, and it does.

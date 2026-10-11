@@ -35,14 +35,19 @@ Q4_K_M, the fastest stream and the smallest fit, and PPL Δ is NPU−CPU on the 
 | Qwen3.5-9B | 9.0B | 25.9 -> 24.9 | 3.6x -> 3.5x | 3.6 | 5.3 | +0.05% |
 | Gemma-4-12B | 11.9B | 17.4 -> 15.0 | 3.6x -> 3.2x | 2.5 | 6.9 | −0.81% |
 | Phi-4 (14B) | 14.7B | 10.3 -> 11.8 (Q4) | 2.9x -> 3.5x | 2.2 | 8.3 | −0.31% |
-| DeepSeek-V2-Lite (MoE+MLA) | 15.7B | 26.0 -> 28.4 (Q4) | 1.33x -> 1.53x | 7.8 | 9.7 | −0.42% |
-| gpt-oss-20b (MoE) | 20.9B | 22.0 -> 28.1 (MXFP4) | 1.81x -> 2.38x | 7.2 | 11.3 | cosine 0.9998 † |
+| DeepSeek-V2-Lite (MoE+MLA) | 15.7B | 26.0 -> 28.4 (Q4) ‡ | 1.33x -> 1.53x | 7.8 | 9.7 | −0.42% |
+| gpt-oss-20b (MoE) | 20.9B | 22.0 -> 28.1 (MXFP4) ‡ | 1.81x -> 2.38x | 7.2 | 11.3 | cosine 0.9998 † |
 | Qwen3.6-27B (hybrid) | 27.3B | 5.4 -> 7.8 (Q4) | 3.0x -> 4.4x | 1.1 | 15.9 | −0.26% |
 
 † gpt-oss is a reasoning model, so wikitext PPL is not a valid metric for it. Its faithfulness
 rests on the per-matmul cosine against an fp64 reference and on `test-rocket-moe`, not on a greedy
 match. The section "The accept boundary" and the MoE gate table below show why the greedy
 comparison has no resolution here.
+
+‡ The two MoE prefill rows are 2026-08-27 builds. A 2026-10-09 `librocketnpu` build packs the
+experts faster and runs the group-wise int8 readback as NEON. Under governor `ondemand` it reads
+gpt-oss pp512 at 24.90-25.23 t/s and DeepSeek-V2-Lite pp2048 at 32.69-32.83 t/s
+(§"gpt-oss-20b (MXFP4, MoE)"). The x CPU column needs a re-measure on that build.
 
 **The quantized rows' x CPU column compares against an unrepacked CPU.** The NPU arm has to run
 without llama.cpp's weight repack, and the repack speeds the CPU arm 1.26-1.71x at pp2048 on these
@@ -53,10 +58,13 @@ b11242, governor pinned].
 
 The prefill multiple grows with model size, up to Qwen3.6-27B's 4.4x at pp2048, the largest here.
 It grows because the CPU baseline degrades faster than the NPU as the matmuls grow. The exceptions
-are architectural. The MoE expert FFNs of gpt-oss-20b and DeepSeek-V2-Lite route through
+are architectural.
+
+The MoE expert FFNs of gpt-oss-20b and DeepSeek-V2-Lite route through
 `MUL_MAT_ID`, which holds each quantized expert resident as native int8. That deletes the
 per-micro-batch host dequant that makes the naive expert offload a loss. The route is on by default
-from 2026-08-27, and it takes gpt-oss to 2.38x at pp2048, against 1.15x with the experts on the CPU.
+from 2026-08-27. On that build it takes gpt-oss to 2.38x at pp2048, against 1.15x with the experts
+on the CPU.
 
 The default claims an expert op only where two conditions hold. A residency pre-flight must be
 able to reserve the whole stack before ingesting it. The per-expert GEMM must also carry enough
@@ -358,9 +366,10 @@ llama.cpp and a different driver build. It is not row-comparable with the table 
 Each matrix is internally consistent, and the ratios agree in direction.
 
 The expert route carries this model's result. Holding the routed experts on the NPU as native int8
-is 2.06x the experts-on-CPU arm and 2.38x the CPU at pp2048. It wins at every prefill length. CPU
-prefill is itself unusually fast here (~12 t/s, against ~7 for a dense 8B), because only ~3.6 B
-params are active per token. The 2.38x is therefore against a strong baseline.
+is 2.06x the experts-on-CPU arm and 2.38x the CPU at pp2048 on the 2026-08-27 build. It wins at
+every prefill length. CPU prefill is itself unusually fast here (~12 t/s, against ~7 for a dense
+8B), because only ~3.6 B params are active per token. The 2.38x is therefore against a strong
+baseline.
 
 **The default is deliberately not the peak.** The pre-flight reserves a whole expert stack before
 claiming its op. Reserving charges all `n_expert` experts, where the lazy admission it front-runs
@@ -452,6 +461,10 @@ Against that product the cells sort with no overlap on two architectures at once
 - Every materially winning cell is at or over 4.15e8.
 
 The shipped threshold is the geometric midpoint of that last gap, 340 mega-MACs.
+
+The bracket rests on the 2026-08-27 cells. The 2026-10-09 readback and activation-pack changes cut
+the expert call's cost on gpt-oss's shape (§"gpt-oss-20b (MXFP4, MoE)"). So the `M_e` = 72 and 96
+cells need re-running before the 340 bracket is quoted as current.
 
 ### The third architecture, and the threshold declines it correctly
 
@@ -582,6 +595,19 @@ run exercises 1575. A MoE prefill figure from `llama-bench` therefore carries pa
 Two builds differ only in the pack's speed, with ingests of ~41 s and ~21 s. Over three rotated
 passes each, they read pp512 at 21.18 and 22.67 t/s.
 
+The next `librocketnpu` build (2026-10-09) runs the resident group-wise int8 readback as NEON. The
+int8 activation pack's group copy also stops compiling to a byte loop. At gpt-oss's expert
+(K=N=2880, group 576, three workers), `moe_gw_bench` reads the group-wise call at 4.16-4.19 ->
+3.40-3.52 ms at M 64 and 12.05-12.09 -> 8.92-10.26 ms at M 256. Each is two rotated runs a build
+[HW sweep 2026-10-09, RK1, 600 MHz, governor `ondemand`].
+
+End to end, on llama.cpp a7fb71f with `--repack 0` and `-p 512 -n 0 -b 2048 -ub 2048`, gpt-oss
+reads pp512 22.78-22.99 -> 24.90-25.23 t/s. That is 1.093-1.098x within a pass over three rotated
+passes, with the ingest unchanged at 20.7-21.1 s. DeepSeek-V2-Lite at `-p 2048 -ub 2048` reads
+pp2048 28.82-29.99 -> 32.69-32.83 t/s over two rotated passes, against a build without the faster
+pack either. Its ingest fell 38.3-38.8 -> 18.2-18.4 s in the same pair, and `llama-bench`'s timed
+reps carry part of the ingest. The 2026-08-27 tables in this section predate both changes.
+
 Attention stays on the CPU here, and that is a correctness requirement. The gpt-oss model carries an
 attention sink, a learned per-head logit that joins the softmax denominator. The NPU FLASH_ATTN
 handler has no sink term, so the offload is declined for such ops. **An accepted offload silently
@@ -655,9 +681,9 @@ path is itself −0.296% (3.74 se, all eight chunks negative), which would other
 the experts.
 
 **Verdict.** The `MUL_MAT_ID` handler closes the op-coverage gap. With the experts held resident on
-the NPU as native int8, it is a 2.38x prefill win at pp2048 (1.81x at pp512). It wins at every
-length on this model, and eligibility on another model is per architecture (see "The accept
-boundary").
+the NPU as native int8, it is a 2.38x prefill win at pp2048 (1.81x at pp512) on the 2026-08-27
+build. It wins at every length on this model, and eligibility on another model is per architecture
+(see "The accept boundary").
 
 The fp16 streaming expert route still loses (4.59 / 10.18). The datatype is not the blocker,
 because MXFP4 dequantizes fine. The blocker is that streaming per-expert dequant costs more than the
@@ -2165,31 +2191,38 @@ the table above shows, and not the NPU submit path.
 
 ## ONNX Runtime (ort-rocket)
 
-`ort-rocket` is an ONNX Runtime execution provider on `librocketnpu`. It claims whole encoders
-and single ConvTranspose nodes, and leaves the rest of a graph on the CPU EP. Its README owns the
-full per-model table. The vision rows here are warm medians on the RK1 at 600 MHz, governor
-`performance`, four passes with the arm order rotated. Both arms run under `taskset -c 4-7` at 4
-intra-op threads. The CPU EP runs at `ORT_ENABLE_ALL`, and the EP session with spinning off
-[HW sweep 2026-10-09, rocket-userspace `a1571b4`, ort-rocket `8667395`].
+`ort-rocket` is an ONNX Runtime execution provider on `librocketnpu`. It claims whole encoders, and
+single ConvTranspose and Conv nodes (Conv behind a cost rule), and leaves the rest of a graph on the
+CPU EP. Its README owns the full per-model table. The vision rows here are warm medians on the RK1
+at 600 MHz, governor `performance`, four passes with the arm order rotated. Both arms run under
+`taskset -c 4-7` at 4 intra-op threads. The CPU EP runs at `ORT_ENABLE_ALL`, and the EP session with
+spinning off [HW sweep 2026-10-10, rocket-userspace `1401c46`, ort-rocket `3c50635`].
 
 | Model | Offloaded | Single stream, x the CPU EP | Faithfulness against the CPU EP |
 |---|---|---:|---|
-| SigLIP-B/16 | plain ViT, d=768, 196 tokens | 2.27-2.40x | hidden-state cosine 0.9999864 |
-| CLIP ViT-B/16 | plain ViT, d=768, 197 tokens | 2.21-2.33x | hidden-state cosine 0.9999955 |
-| RF-DETR nano | windowed DINOv2 ViT-S, d=384 | 1.49x | COCO mAP 0.5049 against 0.5051 |
-| RF-DETR base | windowed DINOv2 ViT-S, d=384 | 1.44-1.48x | COCO mAP 0.564 against 0.564 |
-| SAM ViT-B | ViT-Det, d=768, 4096 tokens | 1.02-1.03x | mask IoU 0.9998 |
-| Depth Anything v2 Small | DINOv2 ViT-S, global attention over 1370 tokens | 1.13-1.16x | depth cosine 0.9999999 |
-| Laya English | ModernBERT-large, d=1024, 48-512 tokens | 1.66-3.11x | 4 of 4 answers agree |
-| pix2pix generator | ConvTranspose nodes, 65% of the CPU wall | 1.76x at 4 threads, 2.15x at 2 | PSNR 80.8 dB |
+| SigLIP-B/16 | plain ViT, d=768, 196 tokens | 2.44-2.52x | hidden-state cosine 0.9999864 |
+| CLIP ViT-B/16 | plain ViT, d=768, 197 tokens | 2.39-2.48x | hidden-state cosine 0.9999955 |
+| RF-DETR nano | windowed DINOv2 ViT-S, d=384 | 1.57-1.59x | COCO mAP 0.5049 against 0.5051 |
+| RF-DETR base | windowed DINOv2 ViT-S, d=384 | 1.61-1.65x | COCO mAP 0.564 against 0.564 |
+| SAM ViT-B | ViT-Det, d=768, 4096 tokens | 1.03-1.05x | mask IoU 0.9998 |
+| Depth Anything v2 Small | DINOv2 ViT-S, global attention over 1370 tokens | 1.33-1.35x | depth cosine 0.9999999 |
+| Laya English | ModernBERT-large, d=1024, 48-512 tokens | 1.99-3.95x | 4 of 4 answers agree |
+| pix2pix generator | ConvTranspose and Conv nodes | 2.91x at 4 threads, 1.86x with the ConvTranspose claim alone | PSNR 77.3 dB |
 
-A model's single-stream ratio follows its attention-to-projection ratio, `ntok / 4d`, averaged
-over the layers with a windowed layer counted at its window length. The NPU runs the large-K
-projection GEMMs about 2.7x more efficiently per MAC than attention. The ratio orders five of the
-six vision families. SigLIP and CLIP sit at 0.06, RF-DETR nano at 0.17 and base at 0.33, and
-Depth Anything at 0.89. SAM, at 0.49, reads lowest of all. Its four global layers attend over 4096
-tokens, 16.8 million scores per head, the largest single attention in the set [hypothesis, not
-isolated].
+A model's single-stream ratio falls with its attention-to-projection ratio, `ntok / 4d`, averaged
+over the layers with a windowed layer counted at its window length. The ratio orders the vision
+models coarsely. SigLIP and CLIP sit at 0.06 and lead.
+
+RF-DETR nano sits at 0.17 and base at 0.33. Base reads slightly above nano on this build, so the
+screen does not separate ratios that close. Depth Anything sits at 0.89. SAM, at 0.49, reads lowest
+of all.
+
+SAM's four global layers attend over 4096 tokens, 16.8 million scores per head, the largest single
+attention in the set [hypothesis, not isolated]. Its attention also runs its own per-window path,
+not the flash attention head range whose host passes the 2026-10-10 build cut
+([attention-offload-crossover.md](attention-offload-crossover.md) §"The head range's host passes
+at an encoder shape"). Against the 2026-10-09 build SAM moved 1.02-1.03x -> 1.03-1.05x, while
+the ratio of every family on the head range rose 5-17%.
 
 ONNX Runtime's CPU kernels run the Laya graph at ~77 GOP/s, which is why its ratio sits above what
 the vision models predict.
@@ -2231,11 +2264,11 @@ workers need [hypothesis]. With
 | pix2pix, 4 threads, CPU EP | 145.5 ms | 146.6 ms |
 | SAM mask decoder, EP, x the CPU EP | 1.017x | 1.049x |
 
-The vision families' encoders gain too, paired within each of four passes [HW sweep 2026-10-09,
-RK1, `performance`, `taskset -c 4-7`, 4 threads]. Spinning off runs SigLIP at 0.87-0.91x the
-default session's time, RF-DETR nano at 0.91-0.93x, Depth Anything at 0.93-0.96x and RF-DETR base
-at 0.96-0.99x. CLIP (0.97-1.06x) and SAM (1.00-1.01x) do not move. With 8 unconfined threads the
-same split reads SigLIP 0.75-0.79x and nano 0.83-0.85x.
+The vision families' encoders gain too, paired within each of four passes [HW sweep 2026-10-10, RK1,
+`performance`, `taskset -c 4-7`, 4 threads, the table's build]. Spinning off runs SigLIP at
+0.84-0.88x the default session's time, Depth Anything at 0.89-0.92x and RF-DETR nano at 0.90-0.93x.
+CLIP (0.98-1.02x), RF-DETR base (0.98-1.01x) and SAM (0.98-1.02x) do not move. On the 2026-10-09
+build, with 8 unconfined threads, the same split read SigLIP 0.75-0.79x and nano 0.83-0.85x.
 
 At 2 threads pix2pix shows no difference. A 726-token Laya request varies +-10% between passes
 either way, so that cell is unresolved. An execution provider cannot change a session's options,

@@ -29,7 +29,7 @@ ggml-rocket as of 2026-09-28 built against its ggml, and Parakeet TDT 0.6B v3 F1
 |---|---|
 | `cpu` | `ROCKET_MIN_M=1000000 ROCKET_FLASH_ATTN=0`: the backend loads and declines every op |
 | `cpup` | `cpu` plus `OMP_WAIT_POLICY=PASSIVE` |
-| `def` | the defaults, `ROCKET_MIN_M=128` |
+| `def` | the defaults of ggml-rocket as of 2026-09-28, `ROCKET_MIN_M=128` |
 | `forced` | `ROCKET_MIN_M=4` |
 | `forcedp` | `forced` plus `OMP_WAIT_POLICY=PASSIVE` |
 
