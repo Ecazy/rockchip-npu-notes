@@ -35,14 +35,19 @@ Q4_K_M, the fastest stream and the smallest fit, and PPL Δ is NPU−CPU on the 
 | Qwen3.5-9B | 9.0B | 25.9 -> 24.9 | 3.6x -> 3.5x | 3.6 | 5.3 | +0.05% |
 | Gemma-4-12B | 11.9B | 17.4 -> 15.0 | 3.6x -> 3.2x | 2.5 | 6.9 | −0.81% |
 | Phi-4 (14B) | 14.7B | 10.3 -> 11.8 (Q4) | 2.9x -> 3.5x | 2.2 | 8.3 | −0.31% |
-| DeepSeek-V2-Lite (MoE+MLA) | 15.7B | 26.0 -> 28.4 (Q4) | 1.33x -> 1.53x | 7.8 | 9.7 | −0.42% |
-| gpt-oss-20b (MoE) | 20.9B | 22.0 -> 28.1 (MXFP4) | 1.81x -> 2.38x | 7.2 | 11.3 | cosine 0.9998 † |
+| DeepSeek-V2-Lite (MoE+MLA) | 15.7B | 26.0 -> 28.4 (Q4) ‡ | 1.33x -> 1.53x | 7.8 | 9.7 | −0.42% |
+| gpt-oss-20b (MoE) | 20.9B | 22.0 -> 28.1 (MXFP4) ‡ | 1.81x -> 2.38x | 7.2 | 11.3 | cosine 0.9998 † |
 | Qwen3.6-27B (hybrid) | 27.3B | 5.4 -> 7.8 (Q4) | 3.0x -> 4.4x | 1.1 | 15.9 | −0.26% |
 
 † gpt-oss is a reasoning model, so wikitext PPL is not a valid metric for it. Its faithfulness
 rests on the per-matmul cosine against an fp64 reference and on `test-rocket-moe`, not on a greedy
 match. The section "The accept boundary" and the MoE gate table below show why the greedy
 comparison has no resolution here.
+
+‡ The two MoE prefill rows are 2026-08-27 builds. A 2026-10-09 `librocketnpu` build packs the
+experts faster and runs the group-wise int8 readback as NEON. Under governor `ondemand` it reads
+gpt-oss pp512 at 24.90-25.23 t/s and DeepSeek-V2-Lite pp2048 at 32.69-32.83 t/s
+(§"gpt-oss-20b (MXFP4, MoE)"). The x CPU column needs a re-measure on that build.
 
 **The quantized rows' x CPU column compares against an unrepacked CPU.** The NPU arm has to run
 without llama.cpp's weight repack, and the repack speeds the CPU arm 1.26-1.71x at pp2048 on these
@@ -53,10 +58,13 @@ b11242, governor pinned].
 
 The prefill multiple grows with model size, up to Qwen3.6-27B's 4.4x at pp2048, the largest here.
 It grows because the CPU baseline degrades faster than the NPU as the matmuls grow. The exceptions
-are architectural. The MoE expert FFNs of gpt-oss-20b and DeepSeek-V2-Lite route through
+are architectural.
+
+The MoE expert FFNs of gpt-oss-20b and DeepSeek-V2-Lite route through
 `MUL_MAT_ID`, which holds each quantized expert resident as native int8. That deletes the
 per-micro-batch host dequant that makes the naive expert offload a loss. The route is on by default
-from 2026-08-27, and it takes gpt-oss to 2.38x at pp2048, against 1.15x with the experts on the CPU.
+from 2026-08-27. On that build it takes gpt-oss to 2.38x at pp2048, against 1.15x with the experts
+on the CPU.
 
 The default claims an expert op only where two conditions hold. A residency pre-flight must be
 able to reserve the whole stack before ingesting it. The per-expert GEMM must also carry enough
@@ -358,9 +366,10 @@ llama.cpp and a different driver build. It is not row-comparable with the table 
 Each matrix is internally consistent, and the ratios agree in direction.
 
 The expert route carries this model's result. Holding the routed experts on the NPU as native int8
-is 2.06x the experts-on-CPU arm and 2.38x the CPU at pp2048. It wins at every prefill length. CPU
-prefill is itself unusually fast here (~12 t/s, against ~7 for a dense 8B), because only ~3.6 B
-params are active per token. The 2.38x is therefore against a strong baseline.
+is 2.06x the experts-on-CPU arm and 2.38x the CPU at pp2048 on the 2026-08-27 build. It wins at
+every prefill length. CPU prefill is itself unusually fast here (~12 t/s, against ~7 for a dense
+8B), because only ~3.6 B params are active per token. The 2.38x is therefore against a strong
+baseline.
 
 **The default is deliberately not the peak.** The pre-flight reserves a whole expert stack before
 claiming its op. Reserving charges all `n_expert` experts, where the lazy admission it front-runs
@@ -453,6 +462,10 @@ Against that product the cells sort with no overlap on two architectures at once
 
 The shipped threshold is the geometric midpoint of that last gap, 340 mega-MACs.
 
+The bracket rests on the 2026-08-27 cells. The 2026-10-09 readback and activation-pack changes cut
+the expert call's cost on gpt-oss's shape (§"gpt-oss-20b (MXFP4, MoE)"). So the `M_e` = 72 and 96
+cells need re-running before the 340 bracket is quoted as current.
+
 ### The third architecture, and the threshold declines it correctly
 
 The threshold above is fitted on two models, and gpt-oss contributes nothing to where it sits. Its
@@ -520,16 +533,20 @@ contradicts it, while a falling slope is exactly what amortizing a fixed per-dis
 like. Padding is capped at ~33% by construction and is not the term that flips the sign.
 
 The floor is a materiality bar, not `> 1.00`, and the ingest is the reason. The one-time expert
-ingest (~32 s per `llama_context` on DeepSeek, ~36 s on gpt-oss) is charged only if the gate
-accepts. The gate is therefore the one place where the ingest can be avoided. An offload at ratio
+ingest (~18 s per `llama_context` on DeepSeek, ~21 s on gpt-oss [HW sweep 2026-10-09, RK1, 600 MHz,
+governor `ondemand`]) is charged only if the gate accepts. The gate is therefore the one place where the ingest can be avoided. An offload at ratio
 `r` saves `1 − 1/r` of prefill wall, so the ingest breaks even after:
 
 | cell | ratio | saves | breaks even after |
 |---|---:|---:|---:|
-| DeepSeek `M_e` = 96 | 1.05x | 4.8% | ~16 300 tokens of prefill at that shape |
-| DeepSeek `M_e` = 144 | 1.22x | 18.0% | ~4 800 tokens |
-| DeepSeek `M_e` = 192 | 1.31x | 23.7% | ~3 800 tokens |
-| gpt-oss `M_e` = 64 | 1.64x | 39.0% | ~2 100 tokens |
+| DeepSeek `M_e` = 96 | 1.05x | 4.8% | ~7 700 tokens of prefill at that shape |
+| DeepSeek `M_e` = 144 | 1.22x | 18.0% | ~2 300 tokens |
+| DeepSeek `M_e` = 192 | 1.31x | 23.7% | ~1 800 tokens |
+| gpt-oss `M_e` = 64 | 1.64x | 39.0% | ~1 100 tokens |
+
+The ratios are the 2026-08 cells. Each break-even count is that cell's count at the 2026-08 ingest,
+scaled by the model's ingest ratio [host-computed]. The ratio compares the earlier pack with the
+current one in one session: 0.47x on DeepSeek and 0.51x on gpt-oss.
 
 A cell a few percent above parity therefore costs a short session more than it saves. That is what
 makes a bar above 1.00 the correct default rather than a cautious one.
@@ -564,11 +581,32 @@ pp2048 and 43% of pp512. On this 31 GiB board gpt-oss reaches 99%, which is ~14 
 alongside its 11.3 GiB GGUF. The GGUF must stay mapped for CPU decode. A smaller board will not
 reach 99%, and the backend warns when it lands short.
 
-The ingest is a one-time cost. It is lazy and lands inside the first prefill: ~70 s for ~1750
-experts (42 ms each, 21 s of MXFP4->int8 decode, 50 s of NPU-BO scatter). It is paid per
-`llama_context`. `llama-bench` builds a fresh context per test row, so it pays the ingest per row,
-and a long-running host pays it once. The ingest does not contaminate the numbers, because the
-llama-bench warm-up is a full prompt run and the ingest lands there.
+The ingest is a one-time cost, paid per `llama_context`. It is lazy: an expert is ingested the
+first time the router sends it a row. On gpt-oss it is 20.6-21.7 s for ~1575 experts, 13 ms each:
+11.2-11.8 s of MXFP4->int8 decode and 9.4-9.9 s of NPU-BO pack. Measured 2026-10-09 on the RK1 at
+600 MHz, governor `ondemand`, `-p 512 -b 2048 -ub 2048` [HW sweep]. `llama-bench` builds a fresh context per test row,
+so it pays the ingest per row, and a long-running host pays it once.
+
+**The `llama-bench` warm-up does not absorb all of the ingest.** An expert the warm-up never routed
+to is ingested inside the first timed rep that routes to it. Three timed pp512 reps read 22.60,
+22.51 and 21.27 s [HW sweep 2026-10-09, one run]. That run exercised 1629 experts, where a one-rep
+run exercises 1575. A MoE prefill figure from `llama-bench` therefore carries part of the ingest.
+
+Two builds differ only in the pack's speed, with ingests of ~41 s and ~21 s. Over three rotated
+passes each, they read pp512 at 21.18 and 22.67 t/s.
+
+The next `librocketnpu` build (2026-10-09) runs the resident group-wise int8 readback as NEON. The
+int8 activation pack's group copy also stops compiling to a byte loop. At gpt-oss's expert
+(K=N=2880, group 576, three workers), `moe_gw_bench` reads the group-wise call at 4.16-4.19 ->
+3.40-3.52 ms at M 64 and 12.05-12.09 -> 8.92-10.26 ms at M 256. Each is two rotated runs a build
+[HW sweep 2026-10-09, RK1, 600 MHz, governor `ondemand`].
+
+End to end, on llama.cpp a7fb71f with `--repack 0` and `-p 512 -n 0 -b 2048 -ub 2048`, gpt-oss
+reads pp512 22.78-22.99 -> 24.90-25.23 t/s. That is 1.093-1.098x within a pass over three rotated
+passes, with the ingest unchanged at 20.7-21.1 s. DeepSeek-V2-Lite at `-p 2048 -ub 2048` reads
+pp2048 28.82-29.99 -> 32.69-32.83 t/s over two rotated passes, against a build without the faster
+pack either. Its ingest fell 38.3-38.8 -> 18.2-18.4 s in the same pair, and `llama-bench`'s timed
+reps carry part of the ingest. The 2026-08-27 tables in this section predate both changes.
 
 Attention stays on the CPU here, and that is a correctness requirement. The gpt-oss model carries an
 attention sink, a learned per-head logit that joins the softmax denominator. The NPU FLASH_ATTN
@@ -643,9 +681,9 @@ path is itself −0.296% (3.74 se, all eight chunks negative), which would other
 the experts.
 
 **Verdict.** The `MUL_MAT_ID` handler closes the op-coverage gap. With the experts held resident on
-the NPU as native int8, it is a 2.38x prefill win at pp2048 (1.81x at pp512). It wins at every
-length on this model, and eligibility on another model is per architecture (see "The accept
-boundary").
+the NPU as native int8, it is a 2.38x prefill win at pp2048 (1.81x at pp512) on the 2026-08-27
+build. It wins at every length on this model, and eligibility on another model is per architecture
+(see "The accept boundary").
 
 The fp16 streaming expert route still loses (4.59 / 10.18). The datatype is not the blocker,
 because MXFP4 dequantizes fine. The blocker is that streaming per-expert dequant costs more than the
@@ -667,10 +705,11 @@ also needs the per-expert size floors: without them it regresses DeepSeek-V2-Lit
 100% residency.
 
 The recommended invocation on a 31 GiB board is the default, with `-b 2048 -ub 2048`. Expect a
-one-time expert ingest at the first prefill, per `llama_context`: ~36 s here (9.5-10.4 s
-MXFP4->int8 decode, 26.0-27.1 s NPU-BO pack, five samples). The pack half is bytes-bound at
-~505 MB/s, not per-expert. DeepSeek-V2-Lite pays the same ~27 s for 2.9x as many experts holding
-the same ~14 GB.
+one-time expert ingest at the first prefill, per `llama_context`: 20.6-21.7 s here (11.2-11.8 s
+MXFP4->int8 decode, 9.4-9.9 s NPU-BO pack) [HW sweep 2026-10-09, RK1, 600 MHz, governor
+`ondemand`]. The pack runs ~1.3 GB/s and grows with the bytes held resident, not with the expert
+count. DeepSeek-V2-Lite packs 3.0x as many experts, holding ~14.9 GB, in 11.7-11.8 s. Its Q4_K->int8
+decode beside that is 6.4-6.6 s, at `-p 2048 -ub 2048`.
 
 ### The accept side of the same floor, and the budget above it
 
@@ -710,9 +749,9 @@ is saturating rather than linear. The `P` term is required: `-ub` 4096 needs `-p
 prefill work doubles while the per-prefill constants do not. A `P`-fixed extrapolation of the same
 two points reads ~1.007, wrong by 5%.
 
-**Where the ingest is charged moves this cell by 12%.** `llama-bench`'s warm-up pays the one-time
-expert ingest, so the timed reps do not. With the warm-up off, the same cell reads 0.934x instead
-of 1.016. These are two numbers from one configuration, differing only in where a one-time cost is
+**Where the ingest is charged moves this cell by 12%.** `llama-bench`'s warm-up pays most of the
+one-time expert ingest, and the timed reps pay only the experts it never routed to. With the
+warm-up off, the same cell reads 0.934x instead of 1.016. These are two numbers from one configuration, differing only in where a one-time cost is
 charged. A figure quoted from this cell must state which charging it used.
 
 #### The auto budget and `ROCKET_MOE_CACHE_MB`
@@ -724,6 +763,10 @@ with zero streaming at every rung. The ladder therefore has one regime and one v
 Ratios in the table below are against the pooled `ROCKET_MOE=0` mean. That control reads 10.29 /
 10.32 / 10.31 / 10.35 / 10.39 / 10.27 across six processes spanning seven hours. Its 1.2% spread is
 non-monotone, so it is the arm's own spread rather than drift.
+
+The ingest and repaid-after columns carry an NPU-BO pack of ~505 MB/s [HW sweep 2026-08-28]. The pack
+measured on gpt-oss runs ~1.3 GB/s [HW sweep 2026-10-09]. At that rate the pack term of each ingest
+is ~0.35x as large, so both columns overstate the cost [host-computed].
 
 | budget | stacks | resident | IOVA | ingest | t/s | n | ratio | rep sd | ingest repaid after |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2148,25 +2191,63 @@ the table above shows, and not the NPU submit path.
 
 ## ONNX Runtime (ort-rocket)
 
-`ort-rocket` is an ONNX Runtime execution provider on `librocketnpu`. It claims whole encoders
-and single ConvTranspose nodes, and leaves the rest of a graph on the CPU EP. Its README owns the
-full per-model table. The figures here are warm, on the RK1 at 600 MHz, against the CPU EP at
-`ORT_ENABLE_ALL` [HW sweep].
+`ort-rocket` is an ONNX Runtime execution provider on `librocketnpu`. It claims whole encoders, and
+single ConvTranspose and Conv nodes (Conv behind a cost rule), and leaves the rest of a graph on the
+CPU EP. Its README owns the full per-model table. The vision rows here are warm medians on the RK1
+at 600 MHz, governor `performance`, four passes with the arm order rotated. Both arms run under
+`taskset -c 4-7` at 4 intra-op threads. The CPU EP runs at `ORT_ENABLE_ALL`, and the EP session with
+spinning off [HW sweep 2026-10-10, rocket-userspace `1401c46`, ort-rocket `3c50635`].
 
 | Model | Offloaded | Single stream, x the CPU EP | Faithfulness against the CPU EP |
 |---|---|---:|---|
-| SigLIP-B/16 | plain ViT, d=768, 196 tokens | 1.27x | hidden-state cosine 0.9999864 |
-| RF-DETR base | windowed DINOv2 ViT-S, d=384 | 1.05x | COCO mAP 0.564 against 0.564 |
-| SAM ViT-B | ViT-Det, d=768, 4096 tokens | 1.03-1.11x | mask IoU 0.9998 |
-| Depth Anything v2 Small | DINOv2 ViT-S, global attention over 1370 tokens | 0.78x | depth cosine 0.9999999 |
-| Laya English | ModernBERT-large, d=1024, 48-512 tokens | 1.66-3.11x | 4 of 4 answers agree |
-| pix2pix generator | ConvTranspose nodes, 65% of the CPU wall | 1.76x at 4 threads, 2.15x at 2 | PSNR 80.8 dB |
+| SigLIP-B/16 | plain ViT, d=768, 196 tokens | 2.44-2.52x | hidden-state cosine 0.9999864 |
+| CLIP ViT-B/16 | plain ViT, d=768, 197 tokens | 2.39-2.48x | hidden-state cosine 0.9999955 |
+| RF-DETR nano | windowed DINOv2 ViT-S, d=384 | 1.57-1.59x | COCO mAP 0.5049 against 0.5051 |
+| RF-DETR base | windowed DINOv2 ViT-S, d=384 | 1.61-1.65x | COCO mAP 0.564 against 0.564 |
+| SAM ViT-B | ViT-Det, d=768, 4096 tokens | 1.03-1.05x | mask IoU 0.9998 |
+| Depth Anything v2 Small | DINOv2 ViT-S, global attention over 1370 tokens | 1.33-1.35x | depth cosine 0.9999999 |
+| Laya English | ModernBERT-large, d=1024, 48-512 tokens | 1.99-3.95x | 4 of 4 answers agree |
+| pix2pix generator | ConvTranspose and Conv nodes | 2.91x at 4 threads, 1.86x with the ConvTranspose claim alone | PSNR 77.3 dB |
 
-A model's single-stream ratio follows its attention-to-projection ratio, `ntok / 4d`, with a
-windowed layer counted at its window length. The NPU runs the large-K projection GEMMs about 2.7x
-more efficiently per MAC than attention. So the one global-attention encoder loses, and the wide
-text encoder gains most. ONNX Runtime's CPU kernels run the Laya graph at ~77 GOP/s, which is
-why its ratio sits above what the vision models predict.
+A model's single-stream ratio falls with its attention-to-projection ratio, `ntok / 4d`, averaged
+over the layers with a windowed layer counted at its window length. The ratio orders the vision
+models coarsely. SigLIP and CLIP sit at 0.06 and lead.
+
+RF-DETR nano sits at 0.17 and base at 0.33. Base reads slightly above nano on this build, so the
+screen does not separate ratios that close. Depth Anything sits at 0.89. SAM, at 0.49, reads lowest
+of all.
+
+SAM's four global layers attend over 4096 tokens, 16.8 million scores per head, the largest single
+attention in the set [hypothesis, not isolated]. Its attention also runs its own per-window path,
+not the flash attention head range whose host passes the 2026-10-10 build cut
+([attention-offload-crossover.md](attention-offload-crossover.md) §"The head range's host passes
+at an encoder shape"). Against the 2026-10-09 build SAM moved 1.02-1.03x -> 1.03-1.05x, while
+the ratio of every family on the head range rose 5-17%.
+
+ONNX Runtime's CPU kernels run the Laya graph at ~77 GOP/s, which is why its ratio sits above what
+the vision models predict.
+
+### The CPU EP baseline on the RK3588
+
+The CPU EP's thread setting moves its time by up to 1.75x. Each cell below is four processes,
+each after a memory reset [HW sweep 2026-10-09, RK1, `performance`]:
+
+| Model | 8 threads | ONNX Runtime's default pool | 4 threads, `taskset -c 4-7` |
+|---|---:|---:|---:|
+| SigLIP-B/16 | 340-537 ms | 331-573 ms | 345-346 ms |
+| CLIP ViT-B/16 | 340-504 ms | 306-567 ms | 326 ms |
+| Depth Anything v2 Small | 1604-1643 ms | 1410-1417 ms | 1349-1351 ms |
+| RF-DETR nano | 432-535 ms | 374-375 ms | 345-346 ms |
+| RF-DETR base | 1080-1240 ms | 1010-1017 ms | 951-953 ms |
+
+Within one process each setting is steady. Across processes, an explicit 8 threads falls into
+modes up to 1.75x apart, because the threads span both clusters. The default pool, which
+`intra_op_num_threads` 0 builds with its own thread affinity, is bimodal on SigLIP and CLIP. Four
+threads on the A76 cores is the fastest median on four of the five, and repeats within 0.2%. The
+table above uses it.
+
+The EP arm reads the same in either process setting once its spinning is off. The Laya rows
+still use the default pool.
 
 ### ONNX Runtime thread spinning
 
@@ -2183,10 +2264,16 @@ workers need [hypothesis]. With
 | pix2pix, 4 threads, CPU EP | 145.5 ms | 146.6 ms |
 | SAM mask decoder, EP, x the CPU EP | 1.017x | 1.049x |
 
+The vision families' encoders gain too, paired within each of four passes [HW sweep 2026-10-10, RK1,
+`performance`, `taskset -c 4-7`, 4 threads, the table's build]. Spinning off runs SigLIP at
+0.84-0.88x the default session's time, Depth Anything at 0.89-0.92x and RF-DETR nano at 0.90-0.93x.
+CLIP (0.98-1.02x), RF-DETR base (0.98-1.01x) and SAM (0.98-1.02x) do not move. On the 2026-10-09
+build, with 8 unconfined threads, the same split read SigLIP 0.75-0.79x and nano 0.83-0.85x.
+
 At 2 threads pix2pix shows no difference. A 726-token Laya request varies +-10% between passes
 either way, so that cell is unresolved. An execution provider cannot change a session's options,
-so the application sets this one. The ViT and Laya rows in the table above were taken under the
-default session, and the pix2pix row with spinning off.
+so the application sets this one. The vision and pix2pix rows in the table above were taken with
+spinning off, and the Laya rows under the default session.
 
 ```python
 so.add_session_config_entry("session.intra_op.allow_spinning", "0")

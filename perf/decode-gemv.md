@@ -1,9 +1,9 @@
 # Decode is GEMV-bound
 
-Token-by-token LLM decode (M=1, one query row against the whole weight matrix) is a GEMV,
-not a GEMM. On the `rocket` path the NPU is ~82x slower at M=1 than at the batched GEMM it
-was built for [HW sweep]. Software pads `M==1` to 4 and the ggml backend gates NPU matmul at
-`ROCKET_MIN_M=4`, so decode runs on the A76 cores. The NPU is a prefill, batched-GEMM and
+Token-by-token LLM decode (M=1, one query row against the whole weight matrix) is a GEMV, not a
+GEMM. On the `rocket` path the NPU is ~82x slower at M=1 than at the batched GEMM it was built for
+[HW sweep]. Software pads `M==1` to 4, and the ggml backend gates NPU matmul at `ROCKET_MIN_M`
+(default 32, never below 4), so decode runs on the A76 cores. The NPU is a prefill, batched-GEMM and
 encoder engine. This is the settled split. The analysis below explains why it is structural
 rather than an open tuning gap.
 
@@ -81,6 +81,95 @@ sequences stay memory-bandwidth-bound. It is a multi-week research project with 
 ceiling and a structural tension with the static-graph execution model. This note records it
 as the design to copy if NPU-assisted generation is ever taken on, not as a queued task.
 
+## A Whisper decoder step on resident weights
+
+A Whisper decoder step with every matmul on the NPU runs 2.6-2.8x slower than whisper.cpp's
+4-thread CPU step. It uses about half of that step's CPU time. Against whisper.cpp on one thread it saves
+10-26% of the CPU, at 2-14% more wall [HW sweep 2026-10-10].
+
+The NPU arm is `rocket-userspace`
+`tests/whisper_decode_step_probe.c`. It keeps every decoder weight resident in fp16 on one
+canonical-tiling context and runs each matmul at M=4, one row padded. Q, K and V share one call,
+and the tied vocabulary projection is padded to N 51872. LayerNorm, GELU and both attentions run
+on the host, on one thread.
+
+The weights are random. Every step's logits match an fp32 host step at cosine 1.00000, with the
+same argmax.
+
+The operating point is an RK3588 (Turing RK1) on mainline `rocket` 1.3.0 at 600 MHz, with
+`ROCKET_KACC=1`, three workers and `taskset -c 4-7`. Every CPU policy is on `performance` with
+`cpu-sleep` off, and memory is reset before each arm. The CPU arm is whisper.cpp v1.9.4 with
+OpenMP, on the multilingual F16 models and jfk.wav, greedy from
+`<|sot|><|en|><|transcribe|><|notimestamps|>`. Each figure is a range over three passes with the
+arm order rotated, and each NPU figure is a median over 64 steps. The raw data and both campaign
+drivers are in [data/whisper-decode/](data/whisper-decode/).
+
+| Model | NPU step | NPU matmuls | Host part | NPU-arm CPU | whisper.cpp step |
+|---|---:|---:|---:|---:|---:|
+| tiny | 10.3-10.4 ms | 7.3-7.4 ms | 3.0 ms | 7.7-7.8 core-ms | 3.7-3.8 ms |
+| base | 21.1-22.1 ms | 12.6 ms | 8.5-9.6 ms | 16.3-17.3 core-ms | 8.1-8.3 ms |
+| small | 58.1-59.8 ms | 33.1-33.3 ms | 24.7-26.4 ms | 42.2-43.9 core-ms | 22.4-22.6 ms |
+
+The whisper.cpp step is `whisper-cli`'s decode time per run (`-bs 1 -nf`, 4 threads). Paired
+within a pass, the wall ratio is 2.71-2.80x at tiny, 2.60-2.67x at base and 2.57-2.68x at small.
+On `ondemand` with `cpu-sleep` on, the wall ratio read 2.35-2.5x, because whisper.cpp's step gains
+more from pinning than the NPU arm does
+([cpu-governor-and-offload.md](cpu-governor-and-offload.md) §"whisper.cpp's CPU decoder").
+
+### The weight stream at M=4
+
+Timed alone, each distinct matmul fits a fixed cost per call plus a weight stream [HW sweep
+2026-10-10, five shapes a model, pinned]. On three workers a call costs 0.08-0.11 ms beyond its
+stream, and the stream runs at 11.0-13.4 GB/s. On one worker the stream runs at 3.81-4.57 GB/s,
+so the three cores stream in parallel. The vocabulary projection alone takes 4.4 ms at base:
+53 MB at 12.2 GB/s.
+
+A base step's matmuls take 12.6 ms against 7.8 ms of stream at the fitted rate. The rest, ~0.13
+ms a call over 37 calls, is the host path: the input pack, the regcmd generation, cache
+maintenance, the submit and the de-tile. On `ondemand`, one worker halved the fixed cost and
+tripled the stream time, and the base step read 44.6 ms at 18.4 core-ms.
+
+### The CPU it costs
+
+`data/whisper-decode/wdec_cpu.c` times whisper.cpp's decoder per call through libwhisper. It
+encodes once, then replays the clip's greedy token sequence at each thread count, in rotated order
+inside one process. A log-softmax over the vocabulary between calls stands in for the sampling.
+It makes the replay count the CPU an idle OpenMP team spends between steps. The CPU per step is process CPU time
+over a replay. The NPU arm ran in the same rotation [HW sweep 2026-10-10].
+
+| Arm | base step | base CPU | small step | small CPU |
+|---|---:|---:|---:|---:|
+| whisper.cpp, 4 threads | 8.7-9.0 ms | 33.3-34.5 core-ms | 22.7-23.1 ms | 88.7-90.4 core-ms |
+| whisper.cpp, 2 threads | 12.0-12.7 ms | 23.6-24.9 core-ms | 33.5-34.0 ms | 66.2-67.1 core-ms |
+| whisper.cpp, 1 thread | 19.5-19.8 ms | 19.4-19.8 core-ms | 56.7-57.3 ms | 56.6-57.1 core-ms |
+| NPU arm | 20.8-22.0 ms | 15.9-17.2 core-ms | 58.0-62.8 ms | 42.0-46.8 core-ms |
+
+The whisper.cpp steps carry the ~0.5 ms sampling stand-in, and the NPU steps do not. With the
+stand-in added to the NPU arm and each pass paired, the NPU arm costs 0.84-0.90x of one thread's
+CPU at base. At small it costs 0.74-0.83x. Its wall is 1.08-1.14x and 1.02-1.11x of one thread's.
+
+Fewer threads is a CPU lever on its own. One thread costs 0.56-0.64x the CPU of four at 2.2-2.5x
+the wall, and two threads 0.69-0.76x at 1.35-1.5x. `OMP_WAIT_POLICY=passive` saves at most 7% of
+the CPU at 4 threads and costs 7-15% of the wall.
+
+The NPU arm's CPU splits in two. At base, cross-attention takes 7.8-8.9 ms of the 8.3-9.4 ms host
+part, and self-attention 0.2 ms. The probe's cross-attention reads the fp16 K/V at 2.1-2.4 GB/s,
+one key at a time. The matmul path takes the other 7.6-7.8 core-ms, of which 5.9-6.1 ms is kernel
+time. At small the split is 22.9-28.4 ms of cross-attention and 16.6-17.3 core-ms of matmul path.
+
+### The ceiling of a one-kick step
+
+A step chained into one kick keeps the stream and the host part, and drops each call's fixed
+cost [expected]. The stream alone, the weight bytes at the fitted rate, is 4.2 ms at tiny,
+7.8 ms at base and 25.2 ms at small. That is 1.10-1.13x, 0.94-0.96x and 1.11-1.13x of
+whisper.cpp's 4-thread step [host-computed]. Cross-attention on the NPU adds its own K/V stream:
+9.2 MB, 18.4 MB and 55.3 MB a step. So at 600 MHz a decoder step on this NPU stays slower than
+the CPU's 4-thread step even with no host part and one kick [expected].
+
+What it can buy is CPU time, and only against a CPU decoder that runs on fewer threads than it
+could. The step as built saves 10-26% against one thread. Cross-attention off the host and the
+matmul path in one kick are the two terms that hold its CPU, and neither is built.
+
 ## Summary
 
 Decode-on-CPU is where the bandwidth math puts the work on this chip. It is not an unfinished
@@ -88,3 +177,6 @@ optimization. The GEMV-engine literature reinforces that. The speedups there bel
 reconfigurable hardware, and the portable part is a model/format choice (4-bit, MoE) that
 lives entirely in stock llama.cpp. Target the NPU at prefill, the Whisper encoder, and the
 SigLIP vision encoder: the batched-GEMM regimes where it wins.
+
+A resident Whisper decoder step on the NPU bears that out on the wall. It halves the CPU time of a
+4-thread step, and one CPU thread recovers most of that saving on its own.
