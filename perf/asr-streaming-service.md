@@ -85,11 +85,18 @@ The 36.5% of samples the CPU kernel held moved, to the sample, into the offload'
 `read` bucket rises from 154 to 1137 ms.
 
 The same NULL-mask case covers the vision encoders that llama.cpp's mtmd runs, whose attention
-op carries no mask either. This cell predates `librocketnpu`'s fused vector softmax pass, and
-it is not re-measured with it.
+op carries no mask either.
 
-At head size 64 the `[T, n_kv]` score matrix per head is 2.3M elements. The handler moves
-it out to the host, exponentiates it one element at a time, and moves it back. That costs
+This cell predates three `librocketnpu` changes to the FA call's host passes, and none is
+re-measured here. They are the fused vector softmax pass (2026-09-27), and the direct fp16 score
+de-tile and the NEON softmax (2026-10-10). At a 1370-token, head-dim-64 encoder shape, the last
+two take a head range from 56.7-58.5 ms to 41.4-42.7 ms, ~0.73x [HW sweep 2026-10-10]. See
+[attention-offload-crossover.md](attention-offload-crossover.md) §"The head range's host passes
+at an encoder shape". Whisper's encoder is 1500 tokens at the same head dim, so a re-measure
+there settles whether the offload still reads parity.
+
+At head size 64 the `[T, n_kv]` score matrix per head is 2.3M elements. In this cell the handler
+moves it out to the host, exponentiates it one element at a time, and moves it back. That costs
 what the QK and AV MACs cost the CPU kernel. Score traffic per MAC is `1/head_dim`, so the
 tax halves at an LLM's 128 [expected]. The knob ships off, and this is the whole reason.
 
@@ -216,8 +223,9 @@ What each row says:
 - **Pinning to the A76 cluster** is worth 2% under the `performance` governor. The bias that
   pinning corrects elsewhere is the load-sampling governor's, and §"The deployed governor"
   measures that separately.
-- **The attention offload** is parity at best, and §"The encoder attention offload" gives
-  the reason.
+- **The attention offload** reads parity at best on a build that predates the FA call's
+  host-pass cuts. Its section, §"The encoder attention offload", gives the reason and names
+  the cuts.
 
 ## Levers stacked
 

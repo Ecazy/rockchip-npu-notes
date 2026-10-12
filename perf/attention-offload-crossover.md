@@ -1,13 +1,19 @@
 # Prefill attention offload crossover
 
 Offloading the fused prefill attention op from the CPU to the NPU is a wash at short context.
-It is a net win from ~2K tokens up. The op is `FLASH_ATTN_EXT`: per-head QK -> mask -> softmax
--> P·V. The two backends scale differently with context length. This is the lever that moves
-long-context prefill on reasoning models (Gemma-4 and the like). The crossover is at ~2K with
-per-worker QK/AV submit chaining on, which is the default. Without chaining, the NPU per-head
-dispatch floor moves the crossover out to between 4K and 8K.
+It is a net win from ~2K tokens up on Gemma-4-12B F16 [HW sweep 2026-06-26]. The op is
+`FLASH_ATTN_EXT`: per-head QK -> mask -> softmax -> P·V. The two backends scale differently with
+context length. This is the lever that moves long-context prefill on reasoning models (Gemma-4
+and the like). The crossover is at ~2K with per-worker QK/AV submit chaining on, which is the
+default. Without chaining, the NPU per-head dispatch floor moves the crossover out to between 4K
+and 8K.
 
-> **Scope.** The numbers are measured at the current operating point: fp16, 600 MHz, and the
+The crossover figures predate three library cuts to the FA call's host passes. They are a fused
+softmax pass (2026-09-27), and a direct fp16 de-tile and a NEON softmax (2026-10-10). The last two
+read 0.875-0.896x and 0.910-0.912x at a Gemma-4 prefill shape (§"End to end"). The crossover
+context needs a re-measure on that build.
+
+> **Scope.** The numbers are measured at one operating point: fp16, 600 MHz, and the
 > multicore + host-softmax attention handler (`librocketnpu` `rocket_flash_attn_fp16_mt`).
 > That handler fans the heads across the worker fds and collapses the per-head QK/AV submits
 > into one job each through a resident batched-matmul context. The crossover *context*
@@ -198,11 +204,15 @@ window would avoid that 3% and forfeit the local-layer win, so it is not worth i
 The handler's outer gather (the strided ggml Q/K/V/mask views -> dense fp16 tiles, one walk
 per view) and the F32 scatter are single-threaded host loops that the driver's
 `ROCKET_MM_PROFILE` does not see. A dedicated probe (`ROCKET_FA_TIMING`) splits the FA op
-into gather, on-NPU compute and scatter. At 16K (n_kv 1024..16384) the aggregate is gather 15%,
-compute 82% and scatter 3%. The gather share shrinks with depth (25% at 2K -> 15% at 16K),
-because the on-NPU per-head GEMMs grow faster than the O(n_kv) gather. So where the offload
-wins, attention is compute-bound, not gather-bound. Threading the outer gather touches ~6% of
-prefill wall, and that share falls with depth.
+into gather, the library call and scatter. The library call is the device waits plus the
+library's own host passes: the score de-tile, the softmax and the packing. A 16K profile
+(n_kv 1024..16384), taken by 2026-06-28, reads gather 15%, library call 82% and scatter 3%.
+
+The gather share shrinks with depth (25% at 2K -> 15% at 16K), because the library call grows
+faster than the O(n_kv) gather. So where the offload wins, attention is bound by the library
+call, not by the gather. That call's host passes are a large share of it at an encoder shape
+(§"The head range's host passes at an encoder shape"). Threading the outer gather touches ~6%
+of prefill wall, and that share falls with depth.
 
 The knob `ROCKET_FA_THREADS=k` (default 1, the serial walks) splits all five host walks over
 the process-wide pool, each on its own outer index. It is worth 1.0389x of the pinned prefill
@@ -212,9 +222,77 @@ The 6% above is also the right size. The walks are 6.01% of that wall, and four 
 recover 3.75% of it. A fit of `G_k` = `A`/`k` + `B` puts the fixed residue at 0.57%, so more
 workers buy almost nothing.
 
-The win narrowing 1.50x -> 1.25x from 8K -> 16K is the on-NPU compute and the host softmax
-growing with n_kv, not the gather. The online/tiled-attention follow-on (never materialize the
-full `[Tp, n_kv]` score matrix) does not pay (see below).
+The win narrows 1.50x -> 1.25x from 8K -> 16K. That is the library call growing with n_kv, its
+device work and its host softmax alike, and not the gather. The online/tiled-attention follow-on
+(never materialize the full `[Tp, n_kv]` score matrix) does not pay (see below).
+
+## The head range's host passes at an encoder shape
+
+At a ViT encoder's shape the FA call is set by each worker's host passes over the score
+matrix, not by the device. Depth Anything v2-small's layer is 1370 tokens, 6 heads of 64,
+unmasked, on three workers of two heads each. Each cell below is a bucket's sum over 114
+ranges, divided by 114. The run is `fabench 1370 1370 3 30 64 6 6 0` under
+`ROCKET_FA_PROFILE` and `ROCKET_MM_PROFILE`, four processes per arm, arm order rotated
+[HW sweep 2026-10-10, RK3588, 600 MHz, `ondemand` governor, A76-confined]. The three columns
+are three library states, each A/B'd against the one before it:
+
+| ms per head range | fp32 accumulator | direct store | NEON softmax |
+|---|---:|---:|---:|
+| device wait, QK and AV | 10.5-12.1 | 10.8-11.0 | 10.5-11.3 |
+| QK de-tile (`read`) | 9.5-10.0 | 6.3-6.6 | 6.3-6.6 |
+| accumulator zero and narrow (`acc`) | 5.1-6.0 | 0.12-0.14 | 0.13 |
+| packing Q and P (`packA`) | 6.1-6.9 | 6.5-6.7 | 6.5-6.8 |
+| host softmax | 20.8-21.2 | 22.3-22.6 | 15.1-15.6 |
+| the FA call | 56.7-58.5 | 48.9-49.6 | 41.4-42.7 |
+
+The device waits are about a quarter of the range. The rest is host movement of the
+1372×1376 score matrix, and both changes keep the output's bits: one md5 over every run of
+each pair.
+
+### One K tile: store, do not accumulate
+
+QK's K is the head dim, which plans as one K tile at every head dim to 256 [host-computed,
+`rocket_matmul_plan`]. So one tile writes each score, and the NPU writes it as fp16. The
+batched matmul then de-tiles straight into the caller's fp16 output. Through an fp32 accumulator,
+the same scores cost a 15 MB zero, a read-modify-write de-tile and a narrow, about 11 ms of a
+57 ms call.
+
+The store de-tile keeps two thirds of the accumulate's time, where the byte count says 0.4x.
+Its reads of the output BO setting its rate is [hypothesis]. The softmax that follows ran 7%
+slower in the same passes [hypothesis: the scores' cache state after a tile-order store].
+
+### The softmax's own instruction rate
+
+On one A76 the fused softmax ran at 4.9-5.1 ns a score [HW sweep, built `-O2`]. Three copies
+side by side ran at the same rate. So it is compute-bound in its own loops, at about 1.1 IPC.
+
+Its exp pass carried one vector's Horner chain, ~60 cycles of dependent latency, per
+iteration. Four independent chains a step, added into the one sum in the original order, keep
+the bits and run the loop at 0.64x. The lower clamp becomes one max and the floor one
+`vcvtmq`. The argument needs no upper clamp, because it is a score minus its row maximum.
+
+### End to end
+
+Through ort-rocket, 4 intra-op threads, spinning off, same governor:
+
+| Model | direct store, against the accumulator | NEON softmax, against the direct store |
+|---|---:|---:|
+| Depth Anything v2-small, 1370 tokens | 0.919-0.948x | 0.919-0.949x |
+| SigLIP, 196 tokens | 0.959-0.976x | 0.975-0.996x |
+| CLIP, 197 tokens | 0.955-0.988x | 0.965-0.974x |
+
+Depth Anything is four passes, SigLIP and CLIP two. At `fabench`'s Gemma-4 prefill shape the
+call reads 0.875-0.896x for the store and 0.910-0.912x for the softmax, bit-identical in each.
+That shape is 512 queries against 2048 keys, head dim 256, 16 query heads over 8 KV heads,
+causal, five workers [HW sweep, same sessions].
+
+### What remains
+
+Two passes are left, ~13 ms of a 42 ms range: the scores' de-tile out of the cube, and P's
+pack back into a cube for AV. A stride-only row-major form writes C and reads A as plain
+rows, free on the device to a 4 KiB row ([../matmul-as-conv.md](../matmul-as-conv.md)
+§"Layouts"). A QK row here is 2752 bytes, so that form would remove both passes
+**[expected]**. The library does not carry it.
 
 ## Long-context: chain the heads (wins), don't tile the softmax (loses)
 
@@ -237,10 +315,11 @@ materialized speed *from below* as the tile grows back toward the full axis:
 |---|---:|---:|---:|---:|
 | tiled / materialized | 0.58x | 0.72x | 0.81x | 0.93x |
 
-The host score-matrix bandwidth that tiling saves is not the long-context bottleneck.
-Dispatch is. Each KV subdivision multiplies the per-head submit count (16 tiles × 2 matmuls
-vs 2). That trades a non-bottleneck (host score traffic / cache locality) for more of the
-bottleneck (NPU submits).
+Tiling loses on dispatch. Each KV subdivision multiplies the per-head submit count (16 tiles
+× 2 matmuls vs 2). At this shape and date, what tiling saves in host score traffic and cache
+locality is smaller than what the extra NPU submits cost. That does not make the host passes
+small: at an encoder shape they are about three quarters of a head range (§"The head range's
+host passes at an encoder shape"). Sizing them here takes a host-pass profile at `n_kv` 32K.
 
 The online softmax is correct and *more* numerically stable (fp32 running accumulation,
 cos = 1.0 incl. the per-row fully-masked-tile skip that causal / sliding-window needs). So it

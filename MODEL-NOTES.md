@@ -59,11 +59,14 @@ numerics, which is what the perplexity ratio is for.
 - Prefill (prompt eval, batched GEMM) runs on the NPU, and decode (token generation, M=1
   GEMV) stays on the CPU. Generation throughput is therefore CPU-bound and reads
   ~identical with or without the backend loaded. The NPU is a prefill engine.
-- NPU prefill wins only at scale (pp512-pp2048). Short prompts of tens of tokens are
-  below break-even. With few MACs to amortize it over, the fixed per-call cost (host
-  scatter and pack, submit, readback, the dispatch floor) dominates, and the CPU is
-  faster. Do not judge prefill speed from a short interactive prompt, whose
-  `Prompt: N t/s` figure is mostly measuring overhead. See
+- An F16 prefill beats the CPU from ~32 tokens, and the crossover sits at 21-25 rows on
+  the 0.8B, 3B and 8B models measured. At pp32 they run 1.20-1.46x the faster CPU arm
+  [HW sweep, RK1, 600 MHz, governor `performance`, 2026-10-09]. A quantized prefill stays on the CPU
+  below 512 rows (`ROCKET_MIN_M_QUANT`). Below the crossover, the fixed per-call cost (host
+  scatter and pack, submit, readback, the dispatch floor) dominates, and the CPU is faster.
+  Do not judge prefill speed from a short interactive prompt, whose `Prompt: N t/s` figure
+  is mostly measuring overhead. See
+  [perf/asr-cpu-relief.md](perf/asr-cpu-relief.md) §"Where the floor comes from" and
   [perf/not-mac-bound.md](perf/not-mac-bound.md).
 - Discard the first, cold-clock run. The NPU idles at 200 MHz and ramps under load, so a
   cold run reads ~15% low. A short job finishes before the clock reaches 600 MHz. Compare
@@ -307,8 +310,8 @@ full, so half its layers are full-attention. Its settings:
 - **Recommended flags:** `-b 2048 -ub 2048`, and nothing for the experts. The
   routed-expert offload is on by default since 2026-08-27 and gates itself. It reserves a
   whole expert stack before it claims that stack's op, and leaves on the CPU what it
-  cannot reserve. On this board that admits 63 of 72 stacks at 100% residency, which is
-  2.38x the CPU at pp2048. The `-ub` and residency detail follows this list.
+  cannot reserve. On this board that admits 63 of 72 stacks at 100% residency, which read
+  2.38x the CPU at pp2048 on 2026-08-27. The `-ub` and residency detail follows this list.
 - **Attention:** stays on the CPU, and must. The model carries a learned attention sink
   per head, and the NPU FLASH_ATTN handler has no sink term, so the handler declines the
   offload. A handler that accepts it computes a sink-less (wrong) softmax past the `n_kv`
@@ -378,10 +381,16 @@ regression that does not exist.
 The routed experts are worth 2.38x the CPU, and the offload is on by default. Prefill
 reads 22.0 t/s at pp512 and 28.1 at pp2048, with the experts held resident on the NPU as
 native int8. That is 1.81x and 2.38x the CPU, and 1.64x -> 2.08x over the experts-on-CPU
-arm across pp512-pp2048. The fp16 expert route is a net loss (4.59 / 10.18). It
-re-dequantizes every expert every micro-batch, ~75 ms each, independent of the row count.
-The native route ingests each expert once and deletes that tax, at a one-time ~36 s
-ingest inside the first prefill, per `llama_context`.
+arm across pp512-pp2048 [HW sweep 2026-08-27, 600 MHz, governor `performance`]. The fp16
+expert route is a net loss (4.59 / 10.18). It re-dequantizes every expert every micro-batch,
+~75 ms each, independent of the row count.
+
+A 2026-10-09 `librocketnpu` build runs the group-wise int8 readback as NEON. Against the build
+before it, pp512 reads 22.78-22.99 -> 24.90-25.23 t/s, 1.093-1.098x within a pass [HW sweep
+2026-10-09, 600 MHz, governor `ondemand`]. The CPU ratios above predate it and need a re-measure.
+
+The native route ingests each expert once and deletes that tax. The one-time ingest is
+~21 s inside the first prefill, per `llama_context` [HW sweep 2026-10-09, 600 MHz].
 
 A residency pre-flight keeps the sign of the offload independent of the host's RAM. A
 stack it cannot reserve stays on the CPU whole. The alternative is a half-ingested stack
@@ -418,7 +427,11 @@ quality metric. Its settings:
   experts-on-CPU arm, a real loss, while gpt-oss at `M_e` = 64 measures 1.64x. Past the
   floor it wins: 1.22x at `M_e` = 144 and 1.31x at `M_e` = 192
   [HW sweep 2026-08-27, 600 MHz pinned]. Whole-model prefill under the default is
-  25.9 -> 28.1 t/s at pp512 -> pp2048, which is 1.33x -> 1.52x the CPU.
+  25.9 -> 28.1 t/s at pp512 -> pp2048, which is 1.33x -> 1.52x the CPU. A 2026-10-09 build
+  reads pp2048 at 32.69-32.83 t/s, against 28.82-29.99 for the build before it [HW sweep
+  2026-10-09, `ondemand`]. Its faster expert pack and NEON readback both count, since
+  `llama-bench`'s timed reps carry part of the ingest. The `M_e` = 72 and 96 cells predate it
+  and need re-running.
 - **Do not read gpt-oss's MoE ratio across to this model, or this one's across to a
   third.** A per-expert row count cannot separate them: `M_e` = 96 is 1.77x on gpt-oss and
   roughly parity here.

@@ -375,16 +375,15 @@ packB ~22%, and a small read.
 
 ### Memory-bound and gather-bound CPU work
 
-Two measurements show that memory traffic and index math bound the remaining CPU cost, not
-instruction throughput:
+Two measurements show that memory traffic and index math bound the fp16 matmul's remaining CPU
+cost, its `packB` and `read` loops, not instruction throughput:
 
-- Compiler flags are flat. The builds `-O3 -mcpu=native -DNDEBUG`, `+-flto`, and
-  `+-fno-math-errno -fno-trapping-math` move the matmul within ±3% of the `-O2` baseline
-  (noise, with LTO marginally worse). The `ROCKET_MM_PROFILE` readout shows `packB` (124 ms)
-  and `read` (214 ms) byte-identical across builds on `512×15360×3840`. The compiler has
-  nothing to optimize: these loops scatter and gather over DRAM and are not ALU-bound. The
-  CPU-bound, branchy *llama.cpp decode/sampling* path is a separate case where flags/PGO could
-  still help, untested here.
+- Compiler flags are flat. The builds `-O3 -mcpu=native -DNDEBUG`, `+-flto`, and `+-fno-math-errno
+  -fno-trapping-math` move the matmul within ±3% of the `-O2` baseline (noise, with LTO marginally
+  worse). The `ROCKET_MM_PROFILE` readout shows `packB` (124 ms) and `read` (214 ms) byte-identical
+  across builds on `512×15360×3840`. The compiler has nothing to optimize in those two loops: they
+  scatter and gather over DRAM and are not ALU-bound. The CPU-bound, branchy *llama.cpp
+  decode/sampling* path is a separate case where flags/PGO could still help, untested here.
 - The readback de-tile NEON-vectorizes ~3x. The output-cube de-tile, the single largest CPU
   component, reads 8 contiguous fp16 per column-group for a fixed row. Those land in 8
   contiguous fp32 accumulators: one `vld1q_f16` -> 2x `vcvt_f32_f16` -> 2x `vaddq_f32`. The
@@ -395,6 +394,27 @@ instruction throughput:
 So the scalar de-tile is index-math-bound (restructuring the gather helps) and not
 instruction-issue-bound (flags do not help). That is consistent with the
 datatype-independent DMA/dispatch floor above.
+
+### Aliasing at `-O2`
+
+The flat flag sweep covers the fp16 `packB` and `read` loops, and no other host loop. GCC 16 at
+`-O2` does not version a loop for aliasing. A loop between two pointers it cannot prove distinct
+compiles to a byte or scalar loop, and a block-scope `restrict` does not settle it. In
+`librocketnpu`, `MM_NO_OVERLAP` (GCC `ivdep`, clang `assume_safety`) marks such a loop, and the
+mark vectorizes it [HW sweep 2026-10-09, RK1, 600 MHz, governor `ondemand`]:
+
+| Loop | Measured with the mark |
+|---|---|
+| The int8, bf16 and tf32 weight scatters' 32-byte group copy | gpt-oss's expert-ingest pack 0.69-0.71x, 0.97-0.98x of it a row-order change |
+| The int8, bf16 and tf32 activation packs' group copy | `packA` 83 -> 53-56 ms in `moe_gw_bench` at gpt-oss's expert |
+| The SigLIP-family encoder's bias add | 93-95 -> 46-48 ms an image on Depth Anything v2-small |
+| The same encoder's residual add | 19.9-20.5 ms an image unmarked, against 9.7-11.2 vectorized |
+
+Read a hot host loop's disassembly before taking a flat flag sweep as proof that it is
+memory-bound. Not every host pass is memory-bound either. The flash attention's fused softmax
+ran compute-bound at about 1.1 IPC, and four independent exp chains ran it at 0.64x
+([attention-offload-crossover.md](attention-offload-crossover.md) §"The softmax's own
+instruction rate").
 
 Offloading the de-tile to a DMA engine does not help. The move is not bandwidth-bound. The
 RGA 2D blitter's throughput ceiling (~5.8 GB/s, best case) is below a single CPU core's

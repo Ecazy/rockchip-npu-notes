@@ -114,7 +114,10 @@ The operating point is the RK1 on mainline 7.1 with the NPU @ 600 MHz and `ROCKE
 The resident figure is measured without the head fan-out and the GELU LUT, both on by
 default (§"Latency levers"). With both on, the resident warm median is 1.394-1.412 s over four
 real images, 20 calls each [HW sweep 2026-10-03, `7.2.8-1-arm64`, `rocket` 1.3.0, 600 MHz,
-`performance`, `taskset 0xf0`].
+`performance`, `taskset 0xf0`]. That build predates four `librocketnpu` changes to this encode,
+from 2026-10-09 and 2026-10-10. They cover the encoder's scratch and V transpose, its bias add
+and LayerNorm, the FA's QK de-tile and its softmax. The wall needs a re-measure on them before
+it is set against RKNN's below.
 
 On the same silicon through the vendor stack at 1000 MHz, rknn-toolkit2's fp16 whole-encoder
 build takes 1.195 s and SHARD's pack 3.600 s [HW sweep 2026-10-03, `6.1.172-vendor-rk35xx`].
@@ -182,7 +185,13 @@ slice.
 With the heads fanned across the worker fds (the default), the per-head QK/softmax/AV
 collapses into one multicore block, and the FFN is the next-largest cost. The table gives
 proportions of the FA-on encode. Absolute ms scale with the CPU governor and the box load
-(see the governor note above):
+(see the governor note above).
+
+The shares are a 2026-06-30 profile. It predates the GELU LUT and the 2026-10-09 and
+2026-10-10 host-loop changes listed under §"Latency". Those changes were measured on Depth
+Anything v2-small, which runs the same encoder [HW sweep 2026-10-09 and 2026-10-10, RK1,
+600 MHz, `ondemand`]. They cut its LayerNorm, its bias adds, its head transpose, and its
+attention's de-tile and softmax. Re-profile before ranking the phases:
 
 | Phase | Share | Bound |
 |---|---|---|
@@ -237,8 +246,10 @@ resident-scratch work carries straight over.
 
 The score `L×L` cube still round-trips host-side for the host softmax. The online/tiled
 FA-2 variant that avoids that is a dispatch-bound loss here, as on the LLM path. The host
-score bandwidth it saves is not the bottleneck
-([attention-offload-crossover.md](../perf/attention-offload-crossover.md)).
+passes over the scores are not a small term. At a ViT encoder's shape they are about three
+quarters of a worker's head range, and the device waits the rest
+([attention-offload-crossover.md](../perf/attention-offload-crossover.md) §"The head range's
+host passes at an encoder shape").
 
 ### Bit-exact fp16 GELU LUT
 
@@ -287,9 +298,9 @@ the int32 readback floor likely makes it ~fp16 speed (the LLM finding,
 ## Reproduce
 
 ```
-# on the board (venv with torch+transformers; model + artifacts on external storage):
-python tools/siglip_reference.py --out /path/to/siglip/artifacts          # fp32 oracle
-python tools/siglip_extract.py   --out /path/to/siglip/artifacts/siglip_weights.f16
+# on the board (venv with torch+transformers; model + artifacts under $MODELS, a large disk):
+python tools/siglip_reference.py --out $MODELS/siglip/artifacts                # fp32 oracle
+python tools/siglip_extract.py   --out $MODELS/siglip/artifacts/siglip_weights.f16
 ctest --test-dir build_nv -R siglip_rocket                                   # fidelity gate
 sudo rocket-userspace/tools/npu_perf_governor.sh performance                 # REQUIRED for representative latency
 ROCKET_KACC=1 ROCKET_SIGLIP_BENCH=12 taskset 0xf0 ./build_nv/siglip_rocket   # +resident bench

@@ -1440,6 +1440,11 @@ the next instrument is a caller split rather than another share. The interval is
 and one shape; the below-gate CPU attention (`flash_attn_ext_tiled`, 6.72% of cycles at `-t 4`) is
 outside the bracket.
 
+A vectorised exp ships in `librocketnpu`'s fused softmax pass of 2026-09-27. From 2026-10-10 its exp
+pass runs as four independent NEON chains, at 0.64x the loop's time
+([../attention-offload-crossover.md](../attention-offload-crossover.md) §"The softmax's own
+instruction rate"). This unit is not re-measured on either.
+
 **The leftover 13% checks from the other end.** Residency reaches 87% of the pack, so the streamed
 remainder is capped at **0.76%** of wall, against the **0.9%** the same remainder reads when it is
 derived from measured walls (42 weights, 2712 of 20790 MB). Two routes to a term a profile bucket

@@ -1308,6 +1308,37 @@ and the FOSS Mesa driver (see the [README](README.md) evidence tags).
   (ort-rocket)". Their banded sliding-window attention, query tiles with a key halo, is the form
   `librocketnpu`'s ModernBERT encoder takes for its windowed layers.
 
+- **`boundarybitlabs/rkwhisper`** and **`boundarybitlabs/rkwhisper-models`** (read 2026-10-10,
+  with the models' v0.1.0 release). The organization publishes a Rust stack on the vendor
+  runtimes. It has bindings for `librknnrt` and RKLLM, a Whisper daemon and an OpenAI-compatible
+  server. Its `rknn-inspect` prints the runtime's per-op profile. It carries no register-level
+  material. Two of its Whisper export techniques bear on this silicon.
+
+  Whisper's STFT runs on the NPU as a polyphase convolution [source-confirmed, their
+  `MELSPEC.md` and export script]. The STFT is a stride-160 conv with a 400-tap kernel over one
+  channel of 480,400 padded samples, past the 13-bit cube ceiling of
+  [encodings/dpu-lut-activation.md](encodings/dpu-lut-activation.md). With `g = gcd(400, 160)`
+  = 80, the host moves sample `80t + c` to channel `c`, column `t`. The conv becomes a 5-tap,
+  stride-2 conv over 80 channels and 6005 columns, with the weight permuted to match. The fold
+  is exact for any kernel and stride with a common factor.
+
+  On this silicon the fold also fills the channel lanes a one-channel input leaves empty. It
+  shrinks a kernel past the RK3576's 5-bit kernel field
+  ([chips/rk3576-regcmd.md](chips/rk3576-regcmd.md#the-geometry-fields-are-narrower-than-their-register-halves)).
+  They clamp the STFT's real and imaginary outputs to ±255.89 before squaring, since a larger
+  square leaves fp16's range.
+
+  The decoder runs on the NPU as one graph per token [source-confirmed, their exporter and
+  daemon]. The graph takes the token, a static 448-slot self-attention cache and every layer's
+  cross-attention keys and values. It returns the logits and the new token's keys and values.
+  Three mask inputs update the cache by multiply and add, so the graph has no scatter. One mask
+  gates attention to the filled slots, one selects the slot to write, and one keeps the rest.
+
+  Their daemon re-sends every input through `rknn_inputs_set` at each step [host-computed from
+  their model spec]. That is 12 MB for tiny, 24 MB for base and 72 MB for small. Most of it is
+  cross-attention K/V, constant within a window. The daemon also primes the prompt one token per
+  step. None of their timings is reproduced here.
+
 - **Mesa Teflon on `rocket`**
   (rpardini/mesa-teflon-etnaviv-rocket-docker, BredOS wiki `NPU/rocket.md`). Upstream
   Mesa's Teflon TFLite delegate is the public FOSS-rocket baseline: kernel >= 6.18
