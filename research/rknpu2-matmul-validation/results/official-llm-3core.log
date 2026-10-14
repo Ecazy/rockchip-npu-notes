@@ -1,0 +1,4 @@
+E RKNN: [18:11:11.445] Not support core mask: 7, fallback to single core auto mode
+E RKNN: [18:11:11.445] NN Compiler/Model Version is 0.0.0 now
+E RKNN: [18:11:11.445] rknn_set_core_mask: failed to set core mask: 7
+Official INT8 -> INT32, core_mask=7, normal A/C, B prepacked; memcpy A + blocking run + memcpy C; median of 20 after 3 warmups

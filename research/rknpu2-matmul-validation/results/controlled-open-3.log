@@ -1,0 +1,12 @@
+RK3588 INT8 LLM matmul: median of 20 runs after 3 warmups, npu_mask=0x1 cpu_mask=0xf0
+Timed call includes A pack + NPU + split-K reduction + C unpack; one-time B pack is excluded.
+layer        M      K      N median_us       value metric        Kt   Nt   check
+hidden       1   4096   4096   1629.67       10.29 weight GB/s 2048 2048   PASS
+hidden       4   4096   4096   1639.87       10.23 weight GB/s 2048 2048   PASS
+hidden     128   4096   4096   3188.60     1346.97 GOPS        2048 2048   PASS
+ffn_up       1   4096  11008   4168.01       10.82 weight GB/s 2048 2752   PASS
+ffn_up       4   4096  11008   4186.82       10.77 weight GB/s 2048 2752   PASS
+ffn_up     128   4096  11008   8250.12     1399.10 GOPS        2048 2752   PASS
+ffn_down     1  11008   4096   4316.90       10.44 weight GB/s 2048 2048   PASS
+ffn_down     4  11008   4096   4413.44       10.22 weight GB/s 2048 2048   PASS
+ffn_down   128  11008   4096   7913.68     1458.58 GOPS        2048 2048   PASS

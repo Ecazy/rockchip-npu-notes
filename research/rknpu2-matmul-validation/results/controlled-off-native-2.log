@@ -1,0 +1,11 @@
+layout=native
+Official INT8 -> INT32, core_mask=1, normal A/C, B prepacked; memcpy A + blocking run + memcpy C; median of 20 after 3 warmups
+hidden       1   4096   4096   1556.60 PASS
+hidden       4   4096   4096   1564.19 PASS
+hidden     128   4096   4096   6583.99 PASS
+ffn_up       1   4096  11008   4091.45 PASS
+ffn_up       4   4096  11008   4108.07 PASS
+ffn_up     128   4096  11008  17549.64 PASS
+ffn_down     1  11008   4096   4088.24 PASS
+ffn_down     4  11008   4096   4113.61 PASS
+ffn_down   128  11008   4096  32447.62 PASS

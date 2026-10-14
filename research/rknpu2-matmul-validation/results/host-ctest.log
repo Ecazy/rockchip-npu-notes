@@ -1,0 +1,36 @@
+Internal ctest changing into directory: /tmp/rknpu-open-validation-host
+Test project /tmp/rknpu-open-validation-host
+      Start  1: attention_f16_cpu
+ 1/15 Test  #1: attention_f16_cpu ................   Passed    0.27 sec
+      Start  2: mla_f16_cpu
+ 2/15 Test  #2: mla_f16_cpu ......................   Passed    0.00 sec
+      Start  3: mm_cpu
+ 3/15 Test  #3: mm_cpu ...........................   Passed    0.01 sec
+      Start  4: mm_tf32_cpu
+ 4/15 Test  #4: mm_tf32_cpu ......................   Passed    0.01 sec
+      Start  5: cpu_kernels
+ 5/15 Test  #5: cpu_kernels ......................   Passed    0.18 sec
+      Start  6: i4_cpu
+ 6/15 Test  #6: i4_cpu ...........................   Passed    0.00 sec
+      Start  7: w4a4_linear_cpu
+ 7/15 Test  #7: w4a4_linear_cpu ..................   Passed    0.01 sec
+      Start  8: w4a8_cpu
+ 8/15 Test  #8: w4a8_cpu .........................   Passed    0.02 sec
+      Start  9: w4a8_reduction
+ 9/15 Test  #9: w4a8_reduction ...................   Passed    0.54 sec
+      Start 10: i4_bounds
+10/15 Test #10: i4_bounds ........................   Passed    0.00 sec
+      Start 11: autotune_cpu
+11/15 Test #11: autotune_cpu .....................   Passed    0.01 sec
+      Start 12: panel_layout
+12/15 Test #12: panel_layout .....................   Passed    0.09 sec
+      Start 13: dcomp_codec
+13/15 Test #13: dcomp_codec ......................   Passed    0.05 sec
+      Start 14: w4a8_low_cpu_host
+14/15 Test #14: w4a8_low_cpu_host ................   Passed    0.03 sec
+      Start 15: w4a8_tune_layout_cpu
+15/15 Test #15: w4a8_tune_layout_cpu .............   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 15
+
+Total Test time (real) =   1.24 sec

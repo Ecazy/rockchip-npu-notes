@@ -1,0 +1,96 @@
+--- a/tests/test_perf.cpp
++++ b/tests/test_perf.cpp
+@@ -120,9 +120,9 @@
+     } else if (a.full) {
+         Ms = m_list(); Ns = n_list(); Ks = k_list();
+     } else {
+-        Ms = coarse(m_list(), {1, 4, 16, 64, 256, 1024});
+-        Ks = coarse(k_list(), {16, 64, 256, 1024, 4096, 8192});
+-        Ns = coarse(n_list(), {16, 64, 256, 384});
++        Ms = coarse(m_list(), {1, 4, 128});
++        Ks = coarse(k_list(), {1024, 2048, 8192});
++        Ns = coarse(n_list(), {512, 4096, 8192});
+     }
+     Ms = clamp_list(Ms, a.m_lo, a.m_hi);
+     Ns = clamp_list(Ns, a.n_lo, a.n_hi);
+@@ -227,7 +227,7 @@
+                 Verify v = verify(M, N, K, A.data(), B.data(), C.data(), full_budget, 4096, rng);
+                 r.pass = v.ok; r.verdict = v.ok ? "PASS" : "WRONG";
+                 if (v.ok) {
+-                    auto pp = timeit([&]{ rknpu2_matmul_open::detail::run_i8(ctx, plan, &b.in, &b.wt, &b.out); }, a.loops);
++                    auto pp = timeit([&]{ return rknpu2_matmul_open::detail::run_i8(ctx, plan, &b.in, &b.wt, &b.out); }, a.loops);
+                     r.our_us = pp.first;
+                     r.our_gops = 2.0 * M * N * K / (pp.first * 1e-6) / 1e9;
+                 }
+@@ -250,6 +250,7 @@
+             fill_i8(A, rng); fill_i8(B, rng);
+             OfficialResult orr = bench_official(r.M, r.N, r.K, A.data(), B.data(),
+                                                 full_budget, 4096, rng, a.loops, a.i32, a.ac_native);
++            if(orr.ran && !orr.ok) { fprintf(stderr,"official verification failed M=%d N=%d K=%d\n",r.M,r.N,r.K); return 4; }
+             r.off_ran = orr.ran; r.off_ok = orr.ok; r.off_verified = orr.verified;
+             r.off_us = orr.avg_us; r.off_gops = orr.gops;
+             r.off_why = orr.created ? "runfail" : "crfail";
+--- a/tests/test_common.h
++++ b/tests/test_common.h
+@@ -311,7 +311,8 @@
+     double tsum = 0, tmin = 1e30;
+     for (int i = 0; i < loops; ++i) {
+         auto t0 = clk::now();
+-        fn();
++        auto rc = fn();
++        if (rc != 0) { fprintf(stderr,"timed run failed: %d\n",rc); std::exit(3); }
+         double us = us_since(t0);
+         tsum += us; tmin = std::min(tmin, us);
+     }
+--- a/tests/official_matmul.h
++++ b/tests/official_matmul.h
+@@ -72,6 +72,7 @@
+     rknn_matmul_ctx ctx = 0;
+     if (rknn_matmul_create(&ctx, &info, &io) != 0) return r;
+     r.created = true;
++    if (rknn_matmul_set_core_mask(ctx, RKNN_NPU_CORE_0) != 0) { rknn_matmul_destroy(ctx); return r; }
+ 
+     /* No rknn_matmul_set_quant_params(): default (identity) scale -> fp32 C is the
+      * raw int32 sum, matching our int32->fp32 output. */
+@@ -79,7 +80,11 @@
+     rknn_tensor_mem* B = rknn_create_mem(ctx, io.B.size);
+     rknn_tensor_mem* C = rknn_create_mem(ctx, io.C.size);
+     if (A && B && C) {
+-        std::memcpy(A->virt_addr, A_rowmajor, (size_t)M * K);
++        std::memset(A->virt_addr, 0, io.A.size);
++        if (ac_native) {
++            for (int m=0;m<M;++m) for(int k=0;k<K;++k)
++                ((int8_t*)A->virt_addr)[(size_t)(k/16)*M*16+m*16+k%16]=A_rowmajor[(size_t)m*K+k];
++        } else std::memcpy(A->virt_addr, A_rowmajor, (size_t)M*K);
+         rknn_B_normal_layout_to_native_layout((void*)B_rowmajor, B->virt_addr, K, N, &info);
+         rknn_matmul_set_io_mem(ctx, A, &io.A);
+         rknn_matmul_set_io_mem(ctx, B, &io.B);
+@@ -104,9 +109,15 @@
+             } else {
+                 /* native A/C layout: output is in the vendor perf layout, not
+                  * comparable to our normal-layout reference -- timing only. */
+-                r.ok = true; r.verified = false;
++                std::vector<float> Cf((size_t)M*N);
++                for(int m=0;m<M;++m) for(int n=0;n<N;++n) {
++                    size_t off=(size_t)(n/4)*M*4+m*4+n%4;
++                    Cf[(size_t)m*N+n]=out_int32 ? (float)((int32_t*)C->virt_addr)[off] : ((float*)C->virt_addr)[off];
++                }
++                Verify v=verify(M,N,K,A_rowmajor,B_rowmajor,Cf.data(),full_budget,samples,rng);
++                r.ok=v.ok; r.verified=true;
+             }
+-            auto pp = timeit([&]{ rknn_matmul_run(ctx); }, loops);
++            auto pp = timeit([&]{ return rknn_matmul_run(ctx); }, loops);
+             r.avg_us = pp.first; r.min_us = pp.second;
+             r.gops = 2.0 * M * N * K / (r.avg_us * 1e-6) / 1e9;
+         }
+--- a/examples/bench_llm_i8.cpp
++++ b/examples/bench_llm_i8.cpp
+@@ -165,7 +165,7 @@
+ 
+ bool verify_samples(int M, int N, int K, const int8_t* A, const int8_t* B,
+                     const int32_t* C) {
+-    constexpr int kSamples = 16;
++    constexpr int kSamples = 4096;
+     for (int sample = 0; sample < kSamples; ++sample) {
+         const int m = (sample * 37 + M - 1) % M;
+         const int n = (sample * 1013 + N - 1) % N;
