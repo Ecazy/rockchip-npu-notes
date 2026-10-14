@@ -52,4 +52,11 @@ class EvidenceTests(unittest.TestCase):
     def test_duplicate_commit_stamp(self):
         line=next(l for l in self.trace.splitlines() if '32728.197856' in l)
         self.rejects(trace=self.trace.replace(line,line+'\n'+line))
+    def test_distinct_clock_candidates_enclosed(self):
+        line=next(l for l in self.trace.splitlines() if '32728.197856' in l)
+        candidate=line.replace('32728.197856','32728.197857')
+        out=analyze(self.rows,self.trace.replace(line,line+'\n'+candidate),self.stats)[0]
+        reference=analyze(self.rows,self.trace,self.stats)[0]
+        self.assertLessEqual(out['start_ns'][0],reference['start_ns'][0])
+        self.assertGreaterEqual(out['start_ns'][1],reference['start_ns'][1])
 if __name__=='__main__':unittest.main()

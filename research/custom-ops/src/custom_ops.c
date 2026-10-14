@@ -259,12 +259,12 @@ int co_emit_lut(co_program *p,co_view x,co_view o,enum co_act kind) {
     if(!p||!same(x,o)||x.tensor.type!=CO_F16||
        (x.tensor.layout!=CO_CUBE&&x.tensor.layout!=CO_LINEAR)||overlap(x,o)||
        (kind!=CO_HARDSIGMOID&&kind!=CO_SIGMOID&&kind!=CO_GELU_GATE&&
-        kind!=CO_EXP_BOUNDED&&kind!=CO_RSQRT_BOUNDED)) return ROCKET_E_SHAPE;
+        kind!=CO_EXP_BOUNDED&&kind!=CO_RSQRT_BOUNDED&&kind!=CO_EXP_NEG4)) return ROCKET_E_SHAPE;
     unsigned n=x.tensor.physical_rows*x.tensor.physical_cols;
     if(n/8>=8191) return ROCKET_E_TILING;
     uint16_t lut[1026];
     for(unsigned bank=0;bank<2;bank++) for(unsigned i=0;i<=512;i++) {
-        double v=(bank?(double)i:(double)i-512)*32.0/2596.0;
+        double v=(bank?(double)i:(double)i-512)*32.0/(kind==CO_EXP_NEG4?4096.0:2596.0);
         /* Output converter decodes q/32768 times S: S=64 for bounded exp,
          * S=4 for positive-domain rsqrt; unit activations keep S=1. */
         double y=kind==CO_HARDSIGMOID?fmin(1,fmax(0,v/6+0.5)):
@@ -272,13 +272,14 @@ int co_emit_lut(co_program *p,co_view x,co_view o,enum co_act kind) {
             kind==CO_GELU_GATE?0.5*(1+erf(v/sqrt(2.0))):
             /* Clamp BELOW the declared rsqrt input domain, so interpolation
              * around x=0.25 samples the smooth function on BOTH sides. */
-            kind==CO_EXP_BOUNDED?exp(v)/64.0:1/(4*sqrt(fmax(0.125,v)));
+            kind==CO_EXP_BOUNDED?exp(v)/64.0:
+            kind==CO_EXP_NEG4?exp(fmin(0,v)):1/(4*sqrt(fmax(0.125,v)));
         long q=lround(y*32768); if(q<1)q=1; if(q>32767)q=32767;
         lut[bank*513+i]=(uint16_t)q;
     }
     memset(p,0,sizeof(*p));
     lut_act_params_t a={.input_dma=address(x),.output_dma=address(o),.n=(int)n,.lut=lut,
-        .bn_mul_operand=0x6912,.bn_alu_cfg=0x80000000,.out_cvt_offset=1,.out_cvt_scale=1,
+        .bn_mul_operand=kind==CO_EXP_NEG4?0x6c00:0x6912,.bn_alu_cfg=0x80000000,.out_cvt_offset=1,.out_cvt_scale=1,
         .out_cvt_minus_exp=kind==CO_EXP_BOUNDED?9:(kind==CO_RSQRT_BOUNDED?13:15),
         .out_cvt_cvt_type=1,.lut_le_start=0xffffc000,.lut_lo_end=0x4000,
         .le_slope_scale=23107,.le_slope_shift=22,.le_index_select=5,.lo_index_select=5,.tasks=p->words};

@@ -78,6 +78,8 @@ api_response = host_done - host_begin
 [schedule_analyze.py](custom-ops/tools/python/schedule_analyze.py) 按请求 ID/TID、核内 FIFO 和 IRQ 核号关联记录。
 只匹配预期调用层级的时间函数，避免把调度切换或无关调用的取时误认成 job 开始。
 
+2026-10-10补充：过滤掉的调用/中断仍可能在这一显示层级留下多个 `ktime_get`。v2解析器将严格递增候选合成包围区间，再用驱动service时差收紧，不挑选一个调用当成精确时间点；重复/同量化时间的候选与FIFO歧义仍拒绝。原正式轮复算结果保持一致，另见 [并发与干扰诊断](JOB-CONCURRENCY-INTERFERENCE.md)。
+
 入队区间来自以下真实顺序：
 
 ```text

@@ -10,7 +10,7 @@
 static void usage(const char *name) {
     printf("usage: %s M K N X.bin W.bin b.bin Y.bin [chain|separate] [repeat]\n",name);
     printf("row-major little-endian IEEE FP16: X[M,K], W[N,K], b[N], Y[M,N]\n");
-    printf("M/N: 1..256; K: 1..%u; repeat: 1..1000; default: chain, 1 run; no CPU fallback\n",
+    printf("M/N: 1..4096; K: 1..%u; repeat: 1..1000; default: chain, 1 run; no CPU fallback\n",
            (unsigned)CO_MAX_K);
 }
 
@@ -57,7 +57,7 @@ int main(int argc,char **argv) {
         fprintf(stderr,"requires a little-endian FP16 host\n");return 1;
     }
     unsigned m,k,n,repeats=1;
-    if(number(argv[1],256,&m)||number(argv[2],CO_MAX_K,&k)||number(argv[3],256,&n)||
+    if(number(argv[1],CO_MAX_M,&m)||number(argv[2],CO_MAX_K,&k)||number(argv[3],CO_MAX_N,&n)||
        (argc==10 && number(argv[9],1000,&repeats))) {usage(argv[0]);return 1;}
     enum co_mode mode=CO_CHAIN;
     if(argc>=9) {

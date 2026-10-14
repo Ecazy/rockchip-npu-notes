@@ -9,7 +9,6 @@
 |---|---|
 | 了解现在能做什么、哪些尚未验证 | [能力总览](docs/CAPABILITIES.md) |
 | 理解目录、依赖、扩展与证据约定 | [项目结构](docs/PROJECT-STRUCTURE.md) |
-| 查阅Mac精选文档与同步核验 | [Mac同步记录](docs/MAC-SYNC.md) |
 | 开发组合算子或运行文件 CLI | [自写算子框架](research/custom-ops/README.md) |
 | 显式分配核、分离排队与服务时间 | [调度 Profiling](research/MULTICORE-SCHEDULING-PROFILING.md) |
 | 理解 K 分片与设备累计 | [FP16 K 分片](research/FP16-K-TILING.md) |
@@ -35,7 +34,8 @@ Host 测试不提交 NPU 任务；硬件验证必须在匹配的设备/驱动环
 
 ## 当前可交付能力
 
-- FP16 `HardSigmoid(XW.T+b)`：M/N 1..256、K 1..4096；单次 Submit，设备 Cube 交接，DPU 分片累计。
+- FP16 `HardSigmoid(XW.T+b)` 与通用 Linear：M/N/K 1..4096，自动分块；每个输出块一次链式 Submit，设备 Cube 交接与 DPU 分片累计。
+- 有限静态 FP16 图、RoPE、主机 KV self-attention 与单层 decoder block；混合 CPU 阶段及验证范围见能力总览。
 - 有界 MatMul、EW、LUT、末维归约、PPU、固定重排，以及明确包含 CPU 阶段的混合归一化。
 - 逐 Submit 核分配、候选集合轮询和 AUTO 映射核验；队列时间区间、驱动服务时长与其他开销分离。
 

@@ -1,0 +1,127 @@
+{
+  "schema_version": 2,
+  "suite": "smoke",
+  "blocks": 1,
+  "cells": [
+    {
+      "id": "lut-64x64x64-p4-w1-fixed-m1-a7-chain-device_ready-continuous-none",
+      "workload": "lut",
+      "dims": [
+        64,
+        64,
+        64
+      ],
+      "programs": 4,
+      "workers": 1,
+      "strategy": "fixed",
+      "mask": 1,
+      "allowed": 7,
+      "mode": "chain",
+      "path": "device_ready",
+      "start": "continuous",
+      "background": null,
+      "affinity_base": 0,
+      "trace": false,
+      "operations": 12,
+      "warmup": 2,
+      "seed": 20261010,
+      "timeout_s": 120
+    },
+    {
+      "id": "matmul-29x37x45-p1-w1-fixed-m1-a7-chain-device_ready-continuous-none",
+      "workload": "matmul",
+      "dims": [
+        29,
+        37,
+        45
+      ],
+      "programs": 1,
+      "workers": 1,
+      "strategy": "fixed",
+      "mask": 1,
+      "allowed": 7,
+      "mode": "chain",
+      "path": "device_ready",
+      "start": "continuous",
+      "background": null,
+      "affinity_base": 0,
+      "trace": false,
+      "operations": 12,
+      "warmup": 2,
+      "seed": 20261010,
+      "timeout_s": 120
+    },
+    {
+      "id": "mm_bias_hsig-29x37x45-p1-w1-fixed-m1-a7-chain-device_ready-continuous-none",
+      "workload": "mm_bias_hsig",
+      "dims": [
+        29,
+        37,
+        45
+      ],
+      "programs": 1,
+      "workers": 1,
+      "strategy": "fixed",
+      "mask": 1,
+      "allowed": 7,
+      "mode": "chain",
+      "path": "device_ready",
+      "start": "continuous",
+      "background": null,
+      "affinity_base": 0,
+      "trace": false,
+      "operations": 12,
+      "warmup": 2,
+      "seed": 20261010,
+      "timeout_s": 120
+    },
+    {
+      "id": "mm_bias_hsig-256x256x256-p1-w1-fixed-m1-a7-chain-device_ready-continuous-none",
+      "workload": "mm_bias_hsig",
+      "dims": [
+        256,
+        256,
+        256
+      ],
+      "programs": 1,
+      "workers": 1,
+      "strategy": "fixed",
+      "mask": 1,
+      "allowed": 7,
+      "mode": "chain",
+      "path": "device_ready",
+      "start": "continuous",
+      "background": null,
+      "affinity_base": 0,
+      "trace": false,
+      "operations": 12,
+      "warmup": 2,
+      "seed": 20261010,
+      "timeout_s": 120
+    },
+    {
+      "id": "lut-64x64x64-p4-w3-split-m1-a7-chain-device_ready-continuous-none",
+      "workload": "lut",
+      "dims": [
+        64,
+        64,
+        64
+      ],
+      "programs": 4,
+      "workers": 3,
+      "strategy": "split",
+      "mask": 1,
+      "allowed": 7,
+      "mode": "chain",
+      "path": "device_ready",
+      "start": "continuous",
+      "background": null,
+      "affinity_base": 0,
+      "trace": false,
+      "operations": 12,
+      "warmup": 2,
+      "seed": 20261010,
+      "timeout_s": 120
+    }
+  ]
+}

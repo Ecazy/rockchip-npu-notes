@@ -6,6 +6,10 @@
 
 当前目标为 Orange Pi 5 Plus / RK3588 / 厂商 `rknpu 0.9.8` / FP16。
 最新 [K 维分片与加速](../FP16-K-TILING.md) 将组合算子的 K 上限扩至 4096，保持单次 Submit 和设备 Cube 交接。
+新增 [静态图编译与 SwiGLU FFN](../STATIC-GRAPH-COMPILER.md) 提供 `co_linear_*`、`co_graph_plan_init/compile/run`，自动拓扑/形状分析、统一 tile 布局与 BO 生命周期规划；中间张量保持设备 Cube。
+后续 [跨 tile 混合 RMSNorm/稳定 Softmax](../CROSS-TILE-ROW-OPS.md) 已加入图接口；Softmax明确读取logits到CPU，归约/rsqrt和系数展开为混合路径，不能归入仅图边界传输。
+新增 [RoPE、KV cache 与 self-attention](../ATTENTION-KERNELS.md) 支持固定容量的MHA/GQA、prefill与增量decode、静态图RoPE/attention及受控错误回滚；QK/PV在NPU，KV/动态权重与Softmax仍为混合路径。
+新增 [完整decoder block与单行decode](../TRANSFORMER-DECODER-BLOCK.md) 提供 `co_decoder_*`，共享RMSNorm的Q/K/V多输出图、post-FFN KV回滚，以及prefill/M=1两套执行几何。
 完整算子入口为 `co_linear_hsig_create/run/run_cube/destroy`，文件程序为 `linear_hardsigmoid`。
 最新结果见 [完整算子交付验收](results/2026-10-09/OPERATOR-DELIVERY.md)；此前原语验收见 [第一阶段记录](results/2026-10-09/README.md)。
 这些是实际运行结果，与旧厂商实验分开。
@@ -13,7 +17,24 @@
 后续 [Two-Task Chaining 四组对照](../TWO-TASK-CHAINING.md) 仅使用 HardSigmoid 验证 A/B/C/D，
 覆盖真实描述符、链地址、寄存器组完成位、BO 生命周期和连续提交压力测试。
 
+[同核 MatMul/DPU 重叠实验](../SAME-CORE-OVERLAP.md) 用 256³ FP16 MatMul 与 DPU-only LUT 对照独立/链式提交，
+记录逐 Submit 服务包络与完成中断，并用 `PC_OPERATION_ENABLE` 位图消融检查启动/完成通路；已测链未观察到额外重叠收益，未排除其他模块级编排。
+
+[同核 GEMM+GEMV 链式/并发对照](../GEMM-GEMV-CONCURRENCY.md) 在同一探针上加 GEMV（逻辑 M=1、物理 M=12）、
+B8/B16 放大组、以及双进程 `P_same`/`P_cross` 正对照；已测链只省一次 Submit 包络，同核 job 串行，跨核服务包络重叠。
+并发组用独立 fd 的进程加管道 barrier，因为驱动对 BO 映射设 `VM_DONTCOPY`，同进程并发也不可靠。
+
 [多核分配与调度 Profiling](../MULTICORE-SCHEDULING-PROFILING.md) 提供 `co_schedule_execute` / `co_schedule_pick`、五种真机场景和队列/服务时间区间核验。调度单位为一次 Submit，依赖 task 链整体留在一个核。
+
+[单设备成本模型](../DEVICE-COST-MODEL.md) 和 [Job并发与资源干扰](../JOB-CONCURRENCY-INTERFERENCE.md) 已完成v2采集工具、945000次正式Submit和120次tracing诊断。离线预测API为 `tools/python/device_cost_analyze.py` 的 `DeviceCostModel`；入口为 `scripts/run-device-cost-board.sh`。模型区分validated、experimental及insufficient_geometry，不能将测量门禁PASS当作所有预测族均达标。
+
+```bash
+bash research/custom-ops/scripts/run-device-cost-board.sh smoke 1 12 2
+bash research/custom-ops/scripts/run-device-cost-board.sh cost 5 200 20
+bash research/custom-ops/scripts/run-device-cost-board.sh resident 5 600 20
+```
+
+以上命令从仓库根运行。每次上传实际源码并在新目录编译；v2 JSON配置在 `tools/python/device_cost_configs/`。DeepSeek的未完成v1草案已保存在日期结果目录中的 `handoff-v1-*`，当前入口不执行旧模板。
 
 规范目录为 `include/`、`src/`、`tools/`、`tests/`、`scripts/`；根目录同名文件是兼容符号链接。详见 [项目结构](../../docs/PROJECT-STRUCTURE.md)。
 
@@ -30,8 +51,16 @@
 
 | 文件 | 用途 |
 |---|---|
+| [co_decoder.h](include/co_decoder.h) / [co_decoder.c](src/co_decoder.c) | 完整pre-RMSNorm decoder block、两套几何和block级cache提交/回滚 |
+| [co_rope.h](include/co_rope.h) / [co_rope.c](src/co_rope.c) | 两种partial RoPE、跨tile配对，CPU重排/系数与NPU乘加 |
+| [co_attention.h](include/co_attention.h) / [co_attention.c](src/co_attention.c) | 固定容量self-attention与事务式主机KV、MHA/GQA和prefill/decode |
+| [co_row_ops.h](include/co_row_ops.h) / [co_row_ops.c](src/co_row_ops.c) | 跨tile混合RMSNorm/稳定Softmax，驻留scratch与容量/混合传输规划 |
+| [row_cli.c](tools/c/row_cli.c) / [row_gate.py](tools/python/row_gate.py) | 图归约文件接口、数学参考、mask/负尾与饱和拒绝检查 |
+| [co_graph.h](include/co_graph.h) / [co_graph.c](src/co_graph.c) | 静态 FP16 图 IR、拓扑/形状/tiling/生命周期规划与执行 |
+| [graph_cli.c](tools/c/graph_cli.c) / [graph_gate.py](tools/python/graph_gate.py) | SwiGLU FFN 文件接口、独立数值参考与边界传输计数 |
 | [custom_ops.h](include/custom_ops.h) | 支持范围与调用契约 |
 | [custom_ops.c](src/custom_ops.c) | Tensor/Buffer/View、原语发射、链提交及混合归一化 |
+| [linear_plan.c](src/linear_plan.c) | M/N/K 自动分解、输出块几何、BO 容量与提交数规划 |
 | [linear_hardsigmoid.c](src/linear_hardsigmoid.c) | 完整组合算子上下文；一次打包 W/b，重复执行新输入或调用方 cube |
 | [operator_cli.c](tools/c/operator_cli.c) | 读取用户 FP16 文件，执行完整算子，成功后写出结果 |
 | [cli_gate.py](tools/python/cli_gate.py) | 独立 Python 数学参考与真实文件接口验收，无第三方包 |
@@ -43,6 +72,8 @@
 | [two_task_probe.c](tools/c/two_task_probe.c) / [two_task_trace.c](tools/c/two_task_trace.c) | 四组对照与实际 ABI/IRQ/lifetime 采集 |
 | [two_task_verify.py](tools/python/two_task_verify.py) / [two_task_campaign.py](tools/python/two_task_campaign.py) | 独立过程核验及十二进程完整性门禁 |
 | [run-two-task-board.sh](scripts/run-two-task-board.sh) | 单独复跑 Two-Task 实验 |
+| [overlap_probe.c](tools/c/overlap_probe.c) / [overlap_verify.py](tools/python/overlap_verify.py) | 两个 suite：MatMul/LUT 与 GEMM/GEMV（B8/B16、双进程同核/跨核）、位图消融及独立证据核验 |
+| [run-overlap-board.sh](scripts/run-overlap-board.sh) | 单独复跑同核重叠/并发实验（含受控超时探索） |
 
 ## 构建与运行
 
@@ -117,10 +148,35 @@ co_linear_hsig_destroy(op);
 支持 16 B 对齐偏移，不做输入输出张量的 CPU 拆包/重包；调用方负责评分输出。
 上下文同步执行且不支持并发调用；销毁上下文之后才能关闭 fd。
 
-逻辑 M/N 支持 `1..256`，K 支持 `1..4096`。当物理输出超过 32768 元素时，LUT 以两段线性 View 覆盖完整 cube，
+逻辑 M/N/K 均支持 `1..4096`。`co_linear_plan_init` 自动将 M/N 拆成不超过 256 的输出块，
+K 拆成不超过 256 的归约块；`co_linear_plan_tile` 给出每个输出块的位置、尾块尺寸与 task 数。
+规划器在分配 BO 前计算驻留 payload、DMA 余量和 guard 的容量，默认上限为 256 MiB；
+该估计不包含驱动页对齐及提交时临时 BO。它是基于已有可靠 primitive 范围的确定性规划，尚无成本模型选 tile；静态 FP16 子图的自动规划由 `co_graph` 提供，详见上面的图编译说明。
+
+Host `create/run` 和文件 CLI 自动分解与拼接完整张量；相同的 256 行 M 块复用 N 上下文及权重，
+非满尾块最多增加一组上下文。Host 输出先暂存，全部成功后才写入调用方数组。
+每个输出块独立提交：chain 模式每个块一次 Submit，separate 模式每个 task 一次 Submit。
+K 的部分和与 bias/激活仍全部在设备上执行，CPU 仅处理输入输出边界的布局。
+
+`co_linear_hsig_run_tiles(op, inputs, mtiles, outputs, output_tiles)` 接收设备 tile 集合：
+输入按 M 分块，使用 `co_tensor_input(tile_rows,K)`；输出按 M-major/N-minor 排列，
+使用 `co_tensor_matrix(tile_rows,tile_cols,CO_F16)`。所有 View 和输入/输出、输出/输出别名在首次提交前检查。
+这一路径不读回/重排张量，但仍有输出区域标记、guard 检查和 cache 同步；设备错误可能留下已完成的前序输出块。
+`run_cube` 保持 M/N≤256 的连续 Cube 契约；大 M/N 的单个全局 Cube 不支持自动行切片，返回 unsupported，需使用 tile 集合。
+
+单个输出块的物理输出超过 32768 元素时，LUT 以两段线性 View 覆盖完整 cube，
 避免 `256×256` 输出越过单 task 的 DPU 宽度字段；仍只需要一次链式 submit。
-普通输出为 `ceil(K/256)+2` 个 task，大输出多一个 LUT task。每段累计值保存在两个设备 Cube 中交替交接。
+每个普通输出块为 `ceil(K/256)+2` 个 task，大输出块多一个 LUT task。每段累计值保存在两个设备 Cube 中交替交接。
 K<=256 仍为 3/4 个 task。大 K 输入 Cube 使用 `co_tensor_input` 描述，每个 MatMul 的实际 K tile 仍不超过 256。
+
+多 tile 验证可从仓库根运行：
+
+```bash
+bash research/custom-ops/scripts/run-multitile-board.sh
+```
+
+它上传新源码并在三个核上验证独立 Python 数值参考、chain/separate、设备 tile 集合与提交计数。
+当前实测记录见 [多 tile 验收](results/2026-10-13/multitile-20261013-144659/README.md)。
 
 ## 布局与数值契约
 
@@ -170,7 +226,7 @@ FP16 平方溢出、负方差和非有限系数会报错；尚未解决近常数
 ## 下一步扩展接口的方法
 
 给定新表达式，先拆成已有原语，再逐段添加独立 CPU 参考与 BO 边界检查。
-新增 shape 必须证明生产者输出字节与消费者输入字节匹配；多 tile 需要新的 tile 布局和容量规划，不能直接放宽本接口的 256 上限。
+新增 shape 必须证明生产者输出字节与消费者输入字节匹配；线性组合算子现有 M/N/K 分解不能直接推广到 pooling、任意 transpose 或归一化。原语的 256 上限保持不变。
 
 现有历史 Conv 发射器的后续 task 损坏根因仍未定位。
 这里已提供数值可靠的新基线；后续可保持输入、权重、输出区域及核一致，比较两条路径的配置和尾写，逐字段二分。

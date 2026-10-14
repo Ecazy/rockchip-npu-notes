@@ -24,6 +24,20 @@ def analyze(records,trace,stats):
             match=re.search(r'^'+name+r': (\d+)$',info,re.M)
             require(match and int(match[1])==0,f'{cpu} {name}: trace loss/unknown')
     stacks=collections.defaultdict(list);current={};markers=collections.defaultdict(dict);events=[];used_cpus=set()
+    def clock_event(node,time,kind,core,interval,context):
+        # Filtered-out callees/interrupts can contribute additional ktime_get
+        # leaves at this displayed depth. The audited driver stamp is among
+        # them; preserve their enclosing hull rather than choosing one caller.
+        # Exact duplicated/quantized ordering remains ambiguous and is rejected.
+        key=kind+'_clock_event'
+        if key not in node:
+            node[key]=len(events);node[key+'_last']=time
+            events.append((time,kind,core,None,interval,context))
+        else:
+            require(time>node[key+'_last'],'duplicate/ambiguous direct clock stamp')
+            node[key+'_last']=time
+            old=events[node[key]]
+            events[node[key]]=(old[0],kind,core,None,[min(old[4][0],interval[0]),max(old[4][1],interval[1])],context)
     for line in trace.splitlines():
         m=LINE.match(line)
         if not m:
@@ -45,7 +59,7 @@ def analyze(records,trace,stats):
             require(stack and stack[-1]['name']==end[1],f'unbalanced graph {line}')
             node=stack.pop()
             if node['name']=='rknpu_job_schedule':require(node.get('count')==1,'ambiguous enqueue')
-            if IRQ.fullmatch(node['name']):require(node.get('completion')==1 and node.get('task_number_calls')==2,'unexpected/intermediate IRQ')
+            if IRQ.fullmatch(node['name']):require(node.get('completion',0)>=1 and node.get('task_number_calls')==2,'unexpected/intermediate IRQ')
             continue
         call=CALL.fullmatch(body)
         require(call is not None,f'unparsed graph line: {line}')
@@ -63,13 +77,13 @@ def analyze(records,trace,stats):
             duration=re.search(r'([0-9.]+) us',m[4]);require(kind==';' and duration,'ktime leaf required')
             interval=stamp(time,int(D(duration[1])*1000))
             if stack[-1]['name']=='rknpu_job_next.part.0':
-                require(not stack[-1].get('commit'),'multiple direct commit stamps');stack[-1]['commit']=1
+                stack[-1]['commit']=stack[-1].get('commit',0)+1
                 irq=next((IRQ.fullmatch(n['name']) for n in reversed(stack) if IRQ.fullmatch(n['name'])),None)
                 core=int(irq[1]) if irq else jobs[current[tid]]['core']
-                events.append((time,'start',core,None,interval,(cpu,tid)))
+                clock_event(stack[-1],time,'start',core,interval,(cpu,tid))
             elif IRQ.fullmatch(stack[-1]['name']):
                 parent=stack[-1];parent['completion']=parent.get('completion',0)+1
-                events.append((time,'complete',int(IRQ.fullmatch(parent['name'])[1]),None,interval,(cpu,tid)))
+                clock_event(parent,time,'complete',int(IRQ.fullmatch(parent['name'])[1]),interval,(cpu,tid))
         if kind=='{':stack.append(node)
     require(all(f'cpu{cpu}' in stats for cpu in used_cpus),'missing traced CPU stats')
     require(not current and all(not s for s in stacks.values()),'truncated graph')

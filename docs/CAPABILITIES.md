@@ -1,8 +1,8 @@
 # RKNPU 当前能力总览
 
-整理日期：2026-10-09。依据当前工作区代码与现存证据；目标环境为 Orange Pi 5 Plus / RK3588，厂商 RKNPU 0.9.8，内核 `6.1.43-rockchip-rk3588-rknpu098`，历史正式轮读取 NPU 频率 1 GHz。
+整理日期：2026-10-14。依据当前工作区代码与现存证据；目标环境为 Orange Pi 5 Plus / RK3588，厂商 RKNPU 0.9.8，内核 `6.1.43-rockchip-rk3588-rknpu098`。各正式轮的 NPU 频率及控制方式以专项报告为准。
 
-这里的“自写算子”是自行安排 Tensor/BO 布局、寄存器命令、task 顺序、同步和临时缓冲，组合 CNA、CORE、DPU、PPU 等固定硬件功能。当前没有通用指令内核、任意 C/CUDA kernel 编译器或完整图编译器。
+这里的“自写算子”是自行安排 Tensor/BO 布局、寄存器命令、task 顺序、同步和临时缓冲，组合 CNA、CORE、DPU、PPU 等固定硬件功能。当前没有通用指令内核、任意 C/CUDA kernel 编译器；新增静态 FP16 rank-2 子图编译器支持有限节点集合，尚无模型导入或通用图编译。
 
 ## 1. 证据口径
 
@@ -13,7 +13,7 @@
 | **组件/上游** | 已获取组件源码或上游硬件报告 | 可以接入，但仍须本机完整验收 |
 | **待补齐** | 尚无对应实现或足够证据 | 不能据此声称硬件不支持 |
 
-**核对提醒：**旧首页/进展快照提到 `research/validation/2026-10-09/README.md` 与“核心库 95、ggml 8 等通过”统计，但该报告目录在本次工作区检查中不存在。这里不将这些统计作为当前可审计验收；也不否定其历史陈述。当前自写算子、K 分片、task 链及调度正式证据均存在。
+**核对提醒：** 旧首页/进展快照提到 `research/validation/2026-10-09/README.md` 与“核心库 95、ggml 8 等通过”统计，但该报告目录在本次工作区检查中不存在。这里不将这些统计作为当前可审计验收；也不否定其历史陈述。当前自写算子、K 分片、task 链及调度正式证据均存在。
 
 ## 2. 底层逆向与控制能力
 
@@ -41,12 +41,19 @@ CBUF/bank 容量规划、SDP precision、DMA stride 等可参考 [硬件概览](
 | Tensor/Buffer/View | FP16/FP32 输出描述、逻辑/物理维度、偏移、padding、同步、guard | 本地真机；FP32 输出不代表原生 FP32 输入 |
 | `co_emit_mm` | 有界 FP16 MatMul，单 primitive tile 的 M/K/N ≤256 | 本地真机；Host 形状可以非对齐，物理维度按契约补齐 |
 | `co_emit_mm_acc` | MatMul 后融合 DPU EW 累加，双 BO 乒乓 | 本地真机；每片累计收窄到 FP16，禁止原位别名 |
-| `co_linear_hsig_*` | `Y=HardSigmoid(XW.T+b)`；M/N 1..256，K 1..4096 | 本地真机；W/b 在创建时打包；Host 与 Cube 两个入口；链模式一次 Submit |
+| `co_graph_*` | 静态 FP16 Input/Linear/Add/Mul/SiLU/GELU/HardSigmoid 图及混合RMSNorm/Softmax/RoPE/self-attention；自动形状、tiling与生命周期规划 | 本地真机 SwiGLU FFN 三核验收；Linear/逐元素仅边界搬运，混合归约另有CPU处理；无 ONNX/GGUF 导入或动态 shape；attention为固定容量混合实现 |
+| `co_decoder_*` | 完整bias-free pre-RMSNorm decoder block；Q/K/V、RoPE/GQA、Wo/residual、SwiGLU/residual；persistent KV及M=1几何 | 本地真机三核双模式；完整block和post-FFN回滚通过；混合路径、容量固定、非真实模型runtime，API优化收益按形状限定 |
+| `co_attention_*` | 固定容量MHA/GQA/MQA self-attention；RoPE、causal/window/additive mask、prefill与增量decode、事务式主机KV | 本地真机三核双模式，QK/PV在NPU；CPU KV/动态权重/Softmax，固定满容量计算；未测整模型/优化decode |
+| `co_rope_*` | interleaved/split-half、partial、跨tile配对 | 本地真机；CPU配对/系数，NPU FP16乘加；head_dim≤256、总通道≤4096 |
+| `co_rowop_*` | 跨tile RMSNorm/稳定Softmax，M/N≤4096，mask/负尾处理 | 本地真机三核归约及前置RMSNorm FFN验收；明确CPU统计/系数，Softmax还读取logits；RMSNorm保守拒绝tile行平方和≥65504，尚非纯NPU归约 |
+| `co_linear_*` | 通用多 tile Linear，可选 bias/HardSigmoid，统一 M/K tile 输入 | 本地真机 FFN 复用；K 部分和设备 FP16 累加；每个输出 tile 一次 chain Submit |
+| `co_linear_hsig_*` | `Y=HardSigmoid(XW.T+b)`；M/N/K 1..4096，自动分解 | 本地真机覆盖 M/N/K 同时分片和尾块；Host、单块 Cube、设备 tile 集合入口；链模式每个输出块一次 Submit |
 | `linear_hardsigmoid` | FP16 row-major 文件 CLI，重复执行与 chain/separate 对照 | 本地真机；非法输入拒绝，无隐藏 CPU 计算回退 |
 | `co_emit_ew` | 同 shape add/mul | 本地真机；通过 CNA identity + DPU EW，不是任意广播 |
 | `co_emit_lut` | HardSigmoid、sigmoid、GELU gate，完整 LE/LO loader | 本地真机；近似精度以配方/验收为准 |
 | `co_gated_activation` | SiLU、erf-GELU；LUT gate + EW multiply | 本地真机；设备中间 Cube，无 CPU 激活阶段 |
 | `CO_EXP_BOUNDED` | exp，输入域 `[-4,4]` | 本地真机原型；当前验收绝对误差门限 0.0625；不等于通用 Softmax |
+| `CO_EXP_NEG4` | exp，输入域 `[-4,0]`、unit scale | 用于分段稳定Softmax；不直接接受任意负尾输入 |
 | `CO_RSQRT_BOUNDED` | rsqrt，输入域 `[0.25,4]` | 本地真机原型；当前验收门限 0.003；调用者保证值域 |
 | `co_ones_upload` + MatMul | 末维 sum/mean，K 在单 tile 范围内 | 本地真机；mean 系数先量化到 FP16，不是任意轴归约 |
 | `co_emit_pool` | FP16 max/average/global pooling 配方 | 本地真机；无 padding，kernel=stride，各轴整除，空间面≤256；核各轴1..16，average各轴至少2 |
@@ -54,7 +61,7 @@ CBUF/bank 容量规划、SDP precision、DMA stride 等可参考 [硬件概览](
 | `co_norm_hybrid` | RMSNorm/LayerNorm；NPU square/reduce/affine | 本地真机；CPU 统计、rsqrt、系数展开；FP16 square 非有限结果拒绝 |
 | `co_execute` | separate 或 task-chain 提交 | 本地真机；BO 必须存活至同步调用返回 |
 
-**K 扩展不是把 4096 塞进一个 tile：**X 全 Cube 按 256 通道拆成 View，权重预打包，每片 MatMul 用 DPU 累计，最后才执行 bias 与激活。M/N 多 tile、任意 K 尚未实现。
+**K 扩展不是把 4096 塞进一个 tile：**X 全 Cube 按 256 通道拆成 View，权重预打包，每片 MatMul 用 DPU 累计，最后才执行 bias 与激活。M/N 现已自动分块，并提供输出块容量与 task/Submit 数规划；静态子图使用统一 tile 集合直接交接；全局大 Cube 的自动行切片、任意 K 和通用模型图分解尚未实现。
 
 ## 4. 多核分配与调度观测
 
@@ -79,8 +86,25 @@ $$
 `service` 为寄存器配置到完成 IRQ 取时的驱动服务包络，包括配置和中断延迟；纯硬件执行时间仍待补齐。
 输出读同步/资源清理由另一个 `api_response` 边界记录。
 
-调度适配器目前只接 DPU program，1–64 task/job，一个阻塞 Submit；有依赖的链整体在同一核。
+调度适配器接任意已发射 program（DPU 原语及 CNA/CORE MatMul），1–64 task/job，一个阻塞 Submit；有依赖的链整体在同一核。
+同核 MatMul 与 DPU-only 的链式/分开对照见 [同核重叠实验](../research/SAME-CORE-OVERLAP.md)。
+同核 GEMM/GEMV 的单项、B8/B16 链式放大组及双进程并发对照见 [GEMM/GEMV 并发](../research/GEMM-GEMV-CONCURRENCY.md)：已测链只摊销提交包络，同核 job 串行，跨核服务包络重叠；模块级独立调度尚未证实或排除。
 抓取工具固定审核匹配内核代码与 tracer 能力，缺失/丢失/歧义证据拒绝通过。不存在可泛化到任意背景负载的无指针 job 关联保证。
+
+### 单设备成本、并发与干扰 v2
+
+本地真机完成945000次正式Submit及另120次受控tracing请求。工具为 `custom-ops/tools/c/cost_probe.c`、`interference_load.c` 和 `tools/python/device_cost_*.py`；部署入口为 `scripts/run-device-cost-board.sh`。
+
+| 能力 | 本轮证据与适用范围 |
+|---|---|
+| 隔离成本模型 | 服务包络与Host API成本分别拟合；LUT及组合链分组几何留出达标，纯MatMul仍标experimental；不支持纯硬件/queue预测 |
+| 等工作量并发 | foreground与延后全量验收resident分开；1/2/3/4/6/8worker，固定单核、分核、候选轮询、AUTO及burst |
+| 较长Job竞争 | 同8worker的256³ MatMul分核/同核吞吐约1.96×，服务包络约1.33×；不解释为理想三核倍数 |
+| 排队诊断 | 同核8worker MatMul queue上下界中位数535–538μs，分核46–48μs；仍是区间且与性能轮分开 |
+| 背景干扰 | CPU compute与内存streaming成对；4线程streaming下64³ MatMul服务约2.1×；DDR/CBUF具体归因未证实 |
+| 尾延迟 | 每条件25000请求，全量数值/padding/guard核验；block级p99及置信区间 |
+
+详见 [单设备成本模型](../research/DEVICE-COST-MODEL.md)、[并发与资源干扰](../research/JOB-CONCURRENCY-INTERFERENCE.md)。校准模型只在所测精度、形状、执行路径、频率和驱动范围内使用。
 
 ## 5. 历史厂商实验可复用的机制
 
@@ -123,11 +147,13 @@ $$
 | [Two-Task](../research/TWO-TASK-CHAINING.md) | 12进程，各128轮，15360个数值对照 | A/B/C/D、组状态、IRQ、BO与padding |
 | [K 分片](../research/FP16-K-TILING.md) | K≤4096，三核各两进程；两个对照形状 wall 加速中位数约1.43× | 单次Submit、Cube交接；相对同条件未融合设备链 |
 | [调度](../research/MULTICORE-SCHEDULING-PROFILING.md) | 96 traced job / 5766 task，另有同规模无 tracing 对照 | 核绑定、候选集合、AUTO与queue/service一致性 |
+| [同核重叠](../research/SAME-CORE-OVERLAP.md) | 两轮各64 reps×8 Submit，逐提交完成IRQ一致 | Core 0、单task原语；链内无模块并发，包络摊销约52µs |
+| [GEMM/GEMV 并发](../research/GEMM-GEMV-CONCURRENCY.md) | 两轮各64采样；链式/放大组/双进程同核与跨核对照 | 链式只省约52µs Submit包络；同核并发串行、跨核重叠1.31× |
 
 例如调度请求 `139344030004`：排队1220.131–1222.876 μs，服务455.869 μs，响应4121.775 μs；可以识别排队，而不是靠总时长猜测。
 性能结论只在各报告的形状、精度、时钟、对照和时间边界下成立。
 
-优先扩展方向：精确 enqueue/kick/job-ID tracepoint；减少 Submit 打包/分配开销；M/N tiling；有数值契约的 Softmax/纯 NPU 归一化；将历史 Conv/梯度配方迁入统一接口。
+新增 [静态图编译与 SwiGLU FFN](../research/STATIC-GRAPH-COMPILER.md) 已完成 M/N/K 分解和静态子图 BO 规划。优先扩展方向：精确 enqueue/kick/job-ID tracepoint；减少 Submit 打包/分配开销；有数值契约的 Softmax/纯 NPU 归一化；将历史 Conv/梯度配方迁入统一接口。
 RK182X 多卡和跨芯片通信没有由这些 RK3588 片内三核实验得到验证。
 
 ## 8. 开发入口
