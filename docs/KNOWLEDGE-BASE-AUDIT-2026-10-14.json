@@ -1,0 +1,274 @@
+{
+  "date": "2026-10-14",
+  "workspace_base_commit": "2763136bc581fd8259308fa51f6b7c69e1eeef71",
+  "knowledge_base": {
+    "path": "/home/maoyu/Documents/knowledge-base",
+    "git_commit": "5598ed40124f9866c70bb63cc444162f4cf79d62",
+    "markdown_pages": 78,
+    "snapshot_files": 210,
+    "before_after_sha256_equal": true,
+    "git_status_before": "clean",
+    "git_status_after": "clean",
+    "snapshot_sha256": "7956ea59fb51c365a6f63496a3a90daf45ba143857361cd20c67a3e08c190e3c",
+    "rknpu_documents": {
+      "content/hardware/on-device-npu/rknpu/README.md": "d68e7826edcb99095444cf4187eed39e216e2d9efd02bf22952890b3b0965dec",
+      "content/hardware/on-device-npu/rknpu/architecture.md": "be5b2420583e876a9c62be63c5c781edd82d13838e66d6b263cf4fc408fe4641",
+      "content/hardware/on-device-npu/rknpu/block-internals.md": "d141a08e087abe2b2efcdb6d2806e00c0555194596a94a79707d93891320340b",
+      "content/hardware/on-device-npu/rknpu/programming-model.md": "5446576a5c50c2211f9a42eec6e9a900c2ec243855d2c581abf169f8d5f68eba",
+      "content/hardware/on-device-npu/rknpu/software-stack.md": "4338ab3272834a05328ee12709c847925a02ace9584d33d739a0a99d242e0f18"
+    }
+  },
+  "verification": {
+    "host_build": "PASS",
+    "host_ctest": {
+      "passed": 18,
+      "total": 18
+    },
+    "overlap_original_campaigns": [
+      "overlap-20261014-145427: PASS",
+      "overlap-20261014-155212: PASS"
+    ],
+    "attention_oracle_recomputed": {
+      "status": "PASS",
+      "checks": [
+        {
+          "core_mask": 1,
+          "mode": "chain",
+          "cases": 6,
+          "rollback_cases": 6,
+          "stream_max_abs": 0.0005348880382807231,
+          "graph_max_abs": 0.0005348880382807231,
+          "cache_rope_max_abs": 0.0006391620918422269,
+          "cross_tile_rope_max_abs": 0.0007750701279938266
+        },
+        {
+          "core_mask": 1,
+          "mode": "separate",
+          "cases": 6,
+          "rollback_cases": 6,
+          "stream_max_abs": 0.0005348880382807231,
+          "graph_max_abs": 0.0005348880382807231,
+          "cache_rope_max_abs": 0.0006391620918422269,
+          "cross_tile_rope_max_abs": 0.0007750701279938266
+        },
+        {
+          "core_mask": 2,
+          "mode": "chain",
+          "cases": 6,
+          "rollback_cases": 6,
+          "stream_max_abs": 0.0005348880382807231,
+          "graph_max_abs": 0.0005348880382807231,
+          "cache_rope_max_abs": 0.0006391620918422269,
+          "cross_tile_rope_max_abs": 0.0007750701279938266
+        },
+        {
+          "core_mask": 2,
+          "mode": "separate",
+          "cases": 6,
+          "rollback_cases": 6,
+          "stream_max_abs": 0.0005348880382807231,
+          "graph_max_abs": 0.0005348880382807231,
+          "cache_rope_max_abs": 0.0006391620918422269,
+          "cross_tile_rope_max_abs": 0.0007750701279938266
+        },
+        {
+          "core_mask": 4,
+          "mode": "chain",
+          "cases": 6,
+          "rollback_cases": 6,
+          "stream_max_abs": 0.0005348880382807231,
+          "graph_max_abs": 0.0005348880382807231,
+          "cache_rope_max_abs": 0.0006391620918422269,
+          "cross_tile_rope_max_abs": 0.0007750701279938266
+        },
+        {
+          "core_mask": 4,
+          "mode": "separate",
+          "cases": 6,
+          "rollback_cases": 6,
+          "stream_max_abs": 0.0005348880382807231,
+          "graph_max_abs": 0.0005348880382807231,
+          "cache_rope_max_abs": 0.0006391620918422269,
+          "cross_tile_rope_max_abs": 0.0007750701279938266
+        }
+      ],
+      "kernel_interval_available": true,
+      "oracles_recomputed": true
+    },
+    "decoder_oracle_recomputed": {
+      "status": "PASS",
+      "checks": [
+        {
+          "core_mask": 1,
+          "mode": "chain",
+          "cases": 3,
+          "block_max_abs": 0.0006535234634396092,
+          "cache_max_abs": 0.001167819312142937,
+          "geometry_max_abs": 0.0,
+          "post_ffn_rollback_cases": 3,
+          "single_token_api_ratios": [
+            1.145020592222451,
+            1.7599824500698305,
+            1.0357816209309172
+          ]
+        },
+        {
+          "core_mask": 1,
+          "mode": "separate",
+          "cases": 3,
+          "block_max_abs": 0.0006535234634396092,
+          "cache_max_abs": 0.001167819312142937,
+          "geometry_max_abs": 0.0,
+          "post_ffn_rollback_cases": 3,
+          "single_token_api_ratios": [
+            1.2481200059165913,
+            1.6200279255769021,
+            0.9707423047576474
+          ]
+        },
+        {
+          "core_mask": 2,
+          "mode": "chain",
+          "cases": 3,
+          "block_max_abs": 0.0006535234634396092,
+          "cache_max_abs": 0.001167819312142937,
+          "geometry_max_abs": 0.0,
+          "post_ffn_rollback_cases": 3,
+          "single_token_api_ratios": [
+            0.9605430100711557,
+            1.5424392527886073,
+            1.0412274856127028
+          ]
+        },
+        {
+          "core_mask": 2,
+          "mode": "separate",
+          "cases": 3,
+          "block_max_abs": 0.0006535234634396092,
+          "cache_max_abs": 0.001167819312142937,
+          "geometry_max_abs": 0.0,
+          "post_ffn_rollback_cases": 3,
+          "single_token_api_ratios": [
+            0.9948045340493621,
+            1.5279848368601048,
+            1.025339765284082
+          ]
+        },
+        {
+          "core_mask": 4,
+          "mode": "chain",
+          "cases": 3,
+          "block_max_abs": 0.0006535234634396092,
+          "cache_max_abs": 0.001167819312142937,
+          "geometry_max_abs": 0.0,
+          "post_ffn_rollback_cases": 3,
+          "single_token_api_ratios": [
+            1.01643818612443,
+            1.5357373895657387,
+            1.0522576339385605
+          ]
+        },
+        {
+          "core_mask": 4,
+          "mode": "separate",
+          "cases": 3,
+          "block_max_abs": 0.0006535234634396092,
+          "cache_max_abs": 0.001167819312142937,
+          "geometry_max_abs": 0.0,
+          "post_ffn_rollback_cases": 3,
+          "single_token_api_ratios": [
+            0.8910405103411713,
+            1.4914572798983352,
+            1.0214270341636917
+          ]
+        }
+      ],
+      "kernel_interval_available": true,
+      "oracles_recomputed": true,
+      "timing_scope": "paired alternating warm API calls; 3 repeats per schedule; not model tokens/sec or a production benchmark"
+    },
+    "new_hardware_runs": 0
+  },
+  "local_evidence": [
+    {
+      "name": "multitile",
+      "directory": "research/custom-ops/results/2026-10-13/multitile-20261013-144659",
+      "git_distribution": "ignored_local_only",
+      "files": {
+        "README.md": "c13d49b35b0143d2150ad93a023e2b9bcf9f01cd3ac048ca96333b47426dd870",
+        "multitile-summary.json": "91ea8cba201a2bb90da15e92a2d730856f831100085f30dc7ee9474807865451",
+        "source-manifest.json": "8ab6df3d0b0bbecd55a368f2614f65c75d6064ebcd51f2750d4cd5c2336a85c2"
+      }
+    },
+    {
+      "name": "graph",
+      "directory": "research/custom-ops/results/2026-10-13/graph-20261013-151524",
+      "git_distribution": "ignored_local_only",
+      "files": {
+        "README.md": "8dee96a5fbe739fd74e82f8b96d9d515bfa4a6f5b1552a544d8cfb9ee3c340fa",
+        "graph-summary.json": "ee558ab868df15b2a733643e5032fcc8c396c1575c3e914ff20668a5b9ca553d",
+        "source-manifest.json": "5f7749a1d33afea2a164778106b3b5d2b0ce61793c7380620148d92325ec5531"
+      }
+    },
+    {
+      "name": "row",
+      "directory": "research/custom-ops/results/2026-10-13/row-20261013-154846",
+      "git_distribution": "ignored_local_only",
+      "files": {
+        "README.md": "27559a47b7157efdb68481ea52a9899bded6496288f82c42b20c6be5eacb75af",
+        "row-summary.json": "83a7d5197b179f9bcb3a77ae615a469686573af894efed5aa274000b4c936a06",
+        "source-manifest.json": "7f5cb4817ebcfc2554823a3ea038ddb1e10862881f8c1345649160895563d7e8"
+      }
+    },
+    {
+      "name": "attention",
+      "directory": "research/custom-ops/results/2026-10-13/attention-20261013-174358",
+      "git_distribution": "ignored_local_only",
+      "files": {
+        "README.md": "d87fec225c2c34d84095df1e2331db580c7b78cdb14017221364382ec302ef83",
+        "attention-summary.json": "8ef972b027a36184d5aad9d61eac8dc1d6b8abadc14d8e606329969bf9140ab8",
+        "source-manifest.json": "2b83d8fd51bccee5c27fe924d6c3810a2a1ac88948e9c48f82c171264575d3df"
+      }
+    },
+    {
+      "name": "decoder",
+      "directory": "research/custom-ops/results/2026-10-13/decoder-20261013-184941",
+      "git_distribution": "ignored_local_only",
+      "files": {
+        "README.md": "74eccf8f39fece95c0a13eefb566146b5a93b64f2deb3d7c6ee3ada1d36e00d6",
+        "decoder-summary.json": "053762d455160bbd5d3a23ba65158c8dd4b04b3c4bfab0394837b5ec3874c75a",
+        "source-manifest.json": "ead6de5979dea85961fe920761983f39d9cbd01384b184a0042e9c3929057c34"
+      }
+    },
+    {
+      "name": "matmul-lut-overlap",
+      "directory": "research/custom-ops/results/2026-10-14/overlap-20261014-145427",
+      "git_distribution": "ignored_local_only",
+      "files": {
+        "README.md": "016438151187d36edec956910654ccc56e4de1dc3229cf6f3d4653fe2f740a7b",
+        "analysis.json": "ed6016e047bb4b550cecd58f0bd67cb0c0a24571f5a95bec38528f9c1728a643",
+        "source-manifest.json": "cf368a1a487011d70bc796e55734401d365bd56022b21cdbb9ea6b402cbfcd32"
+      }
+    },
+    {
+      "name": "gemm-gemv-overlap",
+      "directory": "research/custom-ops/results/2026-10-14/overlap-20261014-155212",
+      "git_distribution": "ignored_local_only",
+      "files": {
+        "README.md": "8dee417ca635e8386cdfd8a736c61737ddf5ffa1fa5350939afe8575d0a93c65",
+        "analysis.json": "e859ea34783ceb49ee904a670e329763b9dd6ef21456ec9a9924f9f103e3e9c0",
+        "source-manifest.json": "28d2345dd84794516ad5c9bb1eedee8f6d0d79ed3624957cb0473037584b5ac1"
+      }
+    }
+  ],
+  "preserved_work_commits": [
+    {
+      "commit": "96a65a77d954ab4d0c87d0f255b2422386530f91",
+      "scope": "FP16 operators, graph/decoder, profiling, cost model and overlap research"
+    },
+    {
+      "commit": "8b859e70882db91d97636fd806ca5bb6e8121116",
+      "scope": "controlled INT8 matmul SDK comparison and original compact evidence"
+    }
+  ]
+}
