@@ -270,5 +270,27 @@
       "commit": "8b859e70882db91d97636fd806ca5bb6e8121116",
       "scope": "controlled INT8 matmul SDK comparison and original compact evidence"
     }
-  ]
+  ],
+  "external_repository_supplement": {
+    "path": "/home/maoyu/Documents/code/rknpu2_matmul_open",
+    "commit": "192f6ca25407fac7c0880123c0c394bd3e2f74f7",
+    "git_status": "",
+    "evidence_level": "direct source/interface review; no new hardware validation",
+    "files": {
+      "README.md": "5714e517787a03f065ceb83d7e8dd5305b3387b6c0aa6ff270229fdfa33409d8",
+      "include/rk_npu_quant_matmul.h": "bc762a25dec9358c383f307db0277e6b1b572e46f950e73ff3265965b4d8fc39",
+      "include/rk_npu_mm.h": "eadb04d466d60fd7c3e56d76e73efaaf7c54fdb239b951e7f54f4a4906f11a70",
+      "include/rk_npu_attention_f16.h": "ac88822c37eb0f3415f641bcfeeb1a6ae5144cc1e54c7e6d75fc800c02b258c6",
+      "include/rk_npu_add_rmsnorm_f16.h": "ddfeda4a88d037b9d3a21254bb4283cfbbb0273dd9da514e48d94f9998b13d4f",
+      "src/rk_npu_quant_matmul.cpp": "bb6470dc402a1fa4c4ea15c8190fc22b999e3e7a9c2c15a93fce063809d464d2",
+      "src/rk_npu_matmul_i8.cpp": "f74dbc9fbb668f6c19c96d59ed25fc945087d3befa2eaeb5921de88bf6343731",
+      "src/rk_npu_dcomp.h": "4def561f5b9cd9f2c327186bad574ca3fa1ab87657c5a8175d6d4f5052535314",
+      "src/rk_npu_dcomp.cpp": "c5720828fceb940e3344e8bc72d71d18f32de8f4faed19583aa21dfc81e73604",
+      "src/rk_npu_attention_f16.cpp": "8a36bb404f2cf9244876d326c5838bab19fdd4fbfa2f1b1d835d73c847578e9a",
+      "src/rk_npu_add_rmsnorm_f16.cpp": "54b98aa544320b60778e39649847e33a1968112739e4dd2b5a5082a0b224a4c6",
+      "docs/API.md": "01869205d5a8566f138b40a7ce0f4f2a878767e1a8c4e3e30a37afa9b2b6143e",
+      "docs/ATTENTION.md": "83d48a99f49580dd94995a56608f33f3c04945c839ab133083b71976502a88b9",
+      "docs/MM.md": "4e67bd22ebb7704290e6da7887e0939c6e2ac702bc2664e7de0f1111cb23131e"
+    }
+  }
 }

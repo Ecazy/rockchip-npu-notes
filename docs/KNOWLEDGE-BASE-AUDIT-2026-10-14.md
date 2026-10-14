@@ -25,7 +25,7 @@
 - 原文：“没有跨层累加，这是 K 分块必须回读的根因”；另一处又称“fp16 是唯一有片上 K 累加的”。
 - CORE/CACC 不能跨 task 保留部分和，但 FP16 DPU EW 可以从设备可访问 DDR BO 读取上次部分和，与新部分和相加后写入另一个 BO，CPU 最后才下载输出。**不回读主机不等于不经过 DDR，更不等于 CBUF/CACC 常驻。**
 - 证据：[上游 K 累加说明](../encodings/k-accumulation.md)、[本地 FP16 K 分片](../research/FP16-K-TILING.md)、[Linear 实现](../research/custom-ops/src/linear_hardsigmoid.c)。
-- 建议表述：“CACC 不支持跨 task 累加；当前 FP16 路径以 DPU EW 和双 DDR BO 完成设备侧部分和累计，每片会舍入到 FP16。整数 EW 有机制证据，但尚不能据此声称已有同等可靠的通用整数 K 累加接口。”
+- 建议表述：“CACC 不支持跨 task 累加；本工作区 FP16 路径以 DPU EW 和双 DDR BO 完成设备侧部分和累计，每片会舍入到 FP16。外部 `rknpu2_matmul_open` 另有可选 INT32 DPU split-K 累加接口，见 §7；该接口尚未由本次归档性能实验验收，不能把本框架未实现写成硬件不支持。”
 
 ### F02：将无 RUBIK 推成布局变换只能在主机上完成
 
@@ -158,3 +158,51 @@ python3 research/custom-ops/tools/python/decoder_campaign.py research/custom-ops
 ```
 
 构建成功；CTest 18/18；文档入口链接检查通过；两轮 overlap 核验通过；已有 attention/decoder 数学参考与证据核验通过。知识库审查前后文件 SHA256 集合与 Git 状态一致，见审查快照。没有发布、推送或修改知识库。
+
+## 7. 直接参考 rknpu2_matmul_open 的补充审查
+
+上一轮参考的是本工作区归档的性能复核，未重新精读外部 checkout。用户追问后，直接只读检查 `/home/maoyu/Documents/code/rknpu2_matmul_open` 的 README、公共头文件、实现和相关文档。其 HEAD 为 `192f6ca25407fac7c0880123c0c394bd3e2f74f7`，与已归档性能报告的版本一致；Git 状态干净。没有修改该仓库，也没有新增该库的硬件测试。
+
+### R01：整数设备侧 K 累加已有外部公共接口与执行实现
+
+`rk_npu_quant_matmul.h` 明确提供默认关闭的 `RK_NPU_I8_NPU_REDUCE=1`：通过多核 PC chain 和 offline DPU INT32 split-K 累加。浮点算子的可选 NPU dequant 使用 FP16 舍入系数，是独立精度折衷。当前限制 M≤128、K≤131071、未压缩 W8 权重，不支持的配置报错。
+
+- [公共接口与限制，L23–L33](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/include/rk_npu_quant_matmul.h#L23-L33)
+- [实际 npu_reduce 执行分支，L825–L855](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/src/rk_npu_quant_matmul.cpp#L825-L855)
+
+这进一步限制 F01 中“只有 FP16”的适用范围：它最多描述特定历史/本地框架，不能概括全部 RKNPU 软件。归档 INT8 官方对照使用默认 CPU split-K，不能用该性能表证明可选 NPU 累加后端已验收。
+
+### R02：DCOMP 不是仅有 dense 直通的研究状态
+
+知识库 `KB/block-internals.md:45` 称“寄存器映射目前只解出 dense 直通模式”“使能值未确认”。外部库已有 INT8 DCOMP encode/decode、压缩权重准备和非 dense 寄存器绑定：实际选择 `DCOMP_NORMAL_REGNUM`、控制字以及 16 路 amount。
+
+- [CPU codec 定义与 native 布局，L9–L18](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/src/rk_npu_dcomp.h#L9-L18)
+- [压缩寄存器绑定，L742–L755](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/src/rk_npu_matmul_i8.cpp#L742-L755)
+
+建议把原否定改成“所引历史 capture 尚未覆盖压缩路径”，另列该外部实现。源码存在不证明知识库所引上游历史实验已有 capture；本次也未补做 DCOMP 真机数值验证。
+
+### R03：本地混合归一化不代表所有实现都必须 CPU 统计
+
+外部库已有 fixed-template native Add+RMSNorm：M=1/128、D=4096、eps=1e-5，输入输出采用 block-8 FP16；执行入口绑定地址后提交 task 链，没有本工作区混合 RMSNorm 所用的每行统计下载/CPU rsqrt/系数回传阶段。
+
+- [公共接口与固定形状，L30–L55](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/include/rk_npu_add_rmsnorm_f16.h#L30-L55)
+- [运行路径，L267–L306](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/src/rk_npu_add_rmsnorm_f16.cpp#L267-L306)
+
+O03 应补录“通用跨 tile 混合实现”与“外部固定形状 native 模板”两个层级。本次只确认后者的源码路径，不主张任意形状、幅值或全模型下已经可靠。
+
+### R04：外部 attention 有 native device KV 与有效长度计算
+
+本工作区 `co_attention` 的主机 KV、固定满容量工作量是该实现的边界，不能推广成硬件限制。外部接口提供 DDR GEM 中的 native KV、容量增长，以及按有效 prefix/cache length 计算。它同时提供 fixed-shift experimental 与稳定 CPU Softmax 两条显式路径；不同模式、配置和文档中的历史支持范围要分别核对。
+
+- [两种显式模式，L11–L14](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/include/rk_npu_attention_f16.h#L11-L14)
+- [native KV 与有效长度，L91–L119](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/include/rk_npu_attention_f16.h#L91-L119)
+
+其 decode submit/sync 失败会 poison 状态并要求 reload/recreate，不能与本地受控错误下的 KV 回滚混为一谈。README 的“Very fast fused”不是本次性能证明，稳定模式有 CPU Softmax，也不能统一称为纯 NPU FlashAttention。
+
+### R05：软件栈应补充独立开源 SDK 替代路线
+
+该库直接使用厂商 `rknpu` DRM ABI，运行核心接口不依赖 `librknnrt` 或 RKNN compiler/model；主线 Rocket 支持仍列 TODO。公共 raw MM/BMM 提供 FP16/BF16/TF32、strides/transpose、多核与 split-K，其默认 split-K reduction 仍在 CPU FP32。它是厂商内核上的开源寄存器库，不能等同于闭源 RKNN 路线或本地 custom-ops 的接口。
+
+- [raw MM 数据类型、split-K 与数值契约，L1–L75](https://github.com/happyme531/rknpu2_matmul_open/blob/192f6ca25407fac7c0880123c0c394bd3e2f74f7/include/rk_npu_mm.h#L1-L75)
+
+知识库软件栈建议增加该路线，并补充 DCOMP、整数设备累加、固定 native RMSNorm、device KV 和量化/MLA/MoE 等“外部源码可评估能力”。这些均须与本工作区已完成的真机验收分列；没有由现有 INT8 MatMul 性能表验证全部库功能。
