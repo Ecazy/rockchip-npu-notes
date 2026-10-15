@@ -87,8 +87,8 @@ $$
 输出读同步/资源清理由另一个 `api_response` 边界记录。
 
 调度适配器接任意已发射 program（DPU 原语及 CNA/CORE MatMul），1–64 task/job，一个阻塞 Submit；有依赖的链整体在同一核。
-同核 MatMul 与 DPU-only 的链式/分开对照见 [同核重叠实验](../research/SAME-CORE-OVERLAP.md)。
-同核 GEMM/GEMV 的单项、B8/B16 链式放大组及双进程并发对照见 [GEMM/GEMV 并发](../research/GEMM-GEMV-CONCURRENCY.md)：已测链只摊销提交包络，同核 job 串行，跨核服务包络重叠；模块级独立调度尚未证实或排除。
+同核 MatMul 与 DPU-only 的完整链/两次 Submit/regcmd 重划分统一见 [同核重叠实验](../research/SAME-CORE-OVERLAP.md)：32 tile 上模块重划分相对完整链额外节省7.14%，不等于完整 attention 端到端加速。
+同核 GEMM/GEMV 的单项、B8/B16 链式放大组及双进程并发对照见 [GEMM/GEMV 并发](../research/GEMM-GEMV-CONCURRENCY.md)：已测链只摊销提交包络，同核 job 串行，跨核服务包络重叠；该报告只测完整 task/job，模块重划分的正结果见同核重叠实验。
 抓取工具固定审核匹配内核代码与 tracer 能力，缺失/丢失/歧义证据拒绝通过。不存在可泛化到任意背景负载的无指针 job 关联保证。
 
 ### 单设备成本、并发与干扰 v2
@@ -147,7 +147,7 @@ $$
 | [Two-Task](../research/TWO-TASK-CHAINING.md) | 12进程，各128轮，15360个数值对照 | A/B/C/D、组状态、IRQ、BO与padding |
 | [K 分片](../research/FP16-K-TILING.md) | K≤4096，三核各两进程；两个对照形状 wall 加速中位数约1.43× | 单次Submit、Cube交接；相对同条件未融合设备链 |
 | [调度](../research/MULTICORE-SCHEDULING-PROFILING.md) | 96 traced job / 5766 task，另有同规模无 tracing 对照 | 核绑定、候选集合、AUTO与queue/service一致性 |
-| [同核重叠](../research/SAME-CORE-OVERLAP.md) | 两轮各64 reps×8 Submit，逐提交完成IRQ一致 | Core 0、单task原语；链内无模块并发，包络摊销约52µs |
+| [同核重叠](../research/SAME-CORE-OVERLAP.md) | 最新6配置、8400次真实Submit；输出、IRQ与实际regcmd核验通过 | Core 0；32 tile 完整链比两次Submit省2.07%，重划分再省7.14%；模块周期未测 |
 | [GEMM/GEMV 并发](../research/GEMM-GEMV-CONCURRENCY.md) | 两轮各64采样；链式/放大组/双进程同核与跨核对照 | 链式只省约52µs Submit包络；同核并发串行、跨核重叠1.31× |
 
 例如调度请求 `139344030004`：排队1220.131–1222.876 μs，服务455.869 μs，响应4121.775 μs；可以识别排队，而不是靠总时长猜测。

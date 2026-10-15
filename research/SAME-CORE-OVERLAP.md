@@ -1,205 +1,254 @@
-# 同核 MatMul 与 DPU-only LUT 能否重叠
+# RK3588 同核 MatMul / DPU-only 重叠实验
 
-2026-10-14，Orange Pi 5 Plus / RK3588，内核 `6.1.43-rockchip-rk3588-rknpu098`，厂商 `rknpu 0.9.8`，
-读取 NPU 频率 1 GHz。全部提交固定在 **Core 0**（`mask=1`），只用一个 blocking Submit 路径。
-正式证据：[overlap-20261014-145427](custom-ops/results/2026-10-14/overlap-20261014-145427/)，
-汇总见 [analysis.json](custom-ops/results/2026-10-14/overlap-20261014-145427/analysis.json)。
+2026-10-14 至 2026-10-15，Orange Pi 5 Plus / RK3588 / FP16 / 厂商 rknpu 0.9.8，
+内核 `6.1.43-rockchip-rk3588-rknpu098`，Core 0，读取 NPU 频率 1 GHz。
+后续配对采集固定 CPU 4、关闭 PC task 提前取指；未修改时钟或电源设置。
 
-后续 [同核 GEMM+GEMV 链式/并发对照](GEMM-GEMV-CONCURRENCY.md) 保留本组 MatMul＋LUT，另加 GEMV、
-B8/B16 放大组、双进程同核/跨核正对照，并记录了同进程并发不可用的两个驱动约束。
+## 结论与适用范围
 
-## 结论
+**完整 MatMul / DPU-only task 直接串成一条链，只观察到提交包络摊销；
+重新划分 regcmd/task 后，找到了正确且有可重复部分重叠收益的同核编排。**
+最新三组对照中，32 tile 的普通两次 Submit 为 2.577 ms，完整 task 单链为 2.523 ms，
+regcmd 重划分为 2.343 ms：合并 Submit 节省 2.07%，重划分相对完整链额外节省 7.14%，
+相对普通串行总节省 9.06%。这些比例有不同分母，不能直接相加。
 
-**同一 Core 0 上，已测 FP16 MatMul 与独立 DPU-only LUT 编排没有显示可分辨的额外重叠收益。** 证据是：
+实验中 A 是完整 MatMul，输出仍经过自己的 DPU；B 是独立输入的 DPU-only HardSigmoid LUT。
+多 tile 对应大 MatMul 的行切片，同一配置使用相同 X/W/B 和独立输出 BO。
+B 不能直接依赖当前 A 尚未产生的结果；真实流水需使用前序 tile 或另行处理依赖。
 
-- 链式 Submit 比两次独立 Submit 少约 **52–53 µs**，但这个节省与两个 task 用哪些模块无关：
-  异质对 `[MatMul, LUT]` 与同质对 `[LUT, LUT]` 的节省在两轮里分别只差 **146 ns 和 −146 ns**。
-  它是**每个 Submit 一次的固定服务包络**被摊销，不是模块并发。
-- 链的服务 ≈ 两个 task 独立服务之和减去一次包络；`S1 − (A+B)` 的两轮中位数是 **−583 ns 和 −146 ns**，
-  即两次独立 Submit 就是加法，没有隐藏并发。
-- 每个 Submit 只产生**一个 Core 0 完成中断**：链式 1 次、分开 2 次，两轮共 1024 个 Submit 全部一致。
-- Setup 3 的位图消融不能解锁并发：清掉 MatMul 的 DPU 参与位后该 task **永不完成**（2 s 超时、驱动 soft reset）；
-  在 `[LUT_dpu, MatMul_core]` 中 DPU-only 的 LUT 正常写回，随后链停在 MatMul_core。
-  该 MatMul 的输出/完成通路依赖 DPU，已尝试的使能位消融未能解锁模块并发；尚未确认其他 PC 控制模式的可行性。
+这里验证的是自写探针中的模块编排，尚未自动接入 `co_graph` 或完整 attention。
+现有稳定 Softmax 还涉及 CPU 和矩阵路径，不能把 LUT 代理的收益当作 attention 端到端加速。
+没有获得模块时间线、纯 CNA/CORE/DPU 周期或 FIFO 占用；不能声称任意任务可独立并发或 DPU 已全部隐藏。
 
-没有声称“硬件在物理上不可能”，只声称这条厂商提交通路上不可达；范围见文末。
+## 主基线：三组应怎样比较
 
-## 对照 Ascend 的 FlashAttention tile 流水：复核补充
+| 组 | 记录名 | 执行顺序 | Submit / IRQ |
+|---|---|---|---:|
+| 普通串行 | `separate` | 完成全部完整 A task，再执行全部完整 B task，各一次 blocking Submit | 2 / 2 |
+| 同核完整 task 链 | `a_then_b` | `[A0,A1,…,B0,B1,…]`，task 保持完整，单链顺序执行 | 1 / 1 |
+| regcmd 重划分 | `overlap` | 每 tile 先启动 `CNA/CORE(Ai)+DPU(Bi)`，再接 `DPU(Ai)` | 1 / 1 |
 
-本次针对“Softmax(tile0) 与 MatMul(tile1) 能否重叠”的复核使用上述已有真机原始记录，
-没有重新提交硬件任务。独立核验 `overlap_verify.py` 返回 PASS，24 个核验器测试通过。
-源码清单中的 `tools/c/overlap_probe.c`、`src/co_row_ops.c`、`src/custom_ops.c` 与当前文件哈希一致；
-当前核验器文件已不同于采集时版本，因此这里是当前核验器对历史记录的再次核验。
+这一定义按自然 A→B 流程构建，并不表示复刻了 RKNN Runtime 的默认内部调度。
+三组采用相同 tiling、精度和 LUT 缓存策略，分别量化“合并 Submit”和“模块重叠”的作用。
 
-Ascend 场景按用户描述：AIC 执行下一块矩阵乘时，AIV 执行上一块 Softmax。
-RK3588 当前路径不能把 CNA/CORE 与 DPU 直接视为同样可独立编程的两条执行队列：
+**历史字段 `serial` 是人为构造的同布局机制对照，不是默认串行流程。**
+它先写入 CNA/CORE(A)+DPU(B) 配置但只启动 B，第二个 task 才启动完整 A。
+该对照与 overlap 每 tile 只差两个启动位图，适合检查启动时机；主收益应与上表的完整 A→B 路径比较。
 
-- **Submit 调度粒度。** 厂商驱动 `rknpu_job.c` 的 `rknpu_job_next` 在
-  `subcore_data->job` 非空时不启动下一 job；同核增加线程或异步提交只能增加待执行 job，
-  不能由此获得两条独立的模块执行队列。这是源码依据，未新增双线程实测。
-- **当前完整 Softmax 的资源需求。** `co_row_ops.c` 用 CPU 扫描行最大值、准备移位输入，
-  用 DPU LUT 计算 exp；校正乘法和最终归一化调用 `co_emit_ew`，其实现通过 identity
-  MatMul 调用 `finish_mm`；行求和直接调用 `co_emit_mm`，CPU 再合并分片统计。
-  因而完整 Softmax 同时需要 Host、矩阵计算路径和 DPU，并非仅占 DPU 的向量程序。
-- **已测链式编排。** 独立 LUT 是比完整 Softmax 更容易隔离的代理。即使输入/输出 BO
-  互不依赖，`C_AB/C_BA` 在两轮正式记录中也没有显示超过同类链对照的明显收益。
-  此结果支持“当前已测编排不能复现该流水”，不能单独证明所有寄存器编排在硬件上均不可行。
+另外保留 `ab=[A0,B0,A1,B1,…]`、反向 `ba=[B0,A0,B1,A1,…]`，以及 A、B、BB 成本臂。
+最新采集共九臂；`ab` 检查逐 tile 交错顺序，`BB` 含两倍数量的 B task。
 
-可用模型是 `T_single(A)=H+a`、`T_single(B)=H+b`。
-若链串行，则 `T_chain(A,B)≈H+a+b`，节省约为一次固定包络 H；
-若发生明显重叠，还应节省一部分 a/b。
-这里异质链节省与 `B+B` 链节省之差只有 +146 / −146.5 ns，
-并非把 B 在链中的约 50 µs 边际成本隐藏了。
-H 包含哪些驱动开销或流水填充成分仍未分解。
+## 可工作的 regcmd/task 划分
 
-**证据边界：** 链只有一个末尾完成 IRQ 本身不能证明内部串行；
-清掉 MatMul 的 DPU 位后超时，也不能单独证明 PC 必须等待每个 task 的所有模块完全排空，
-因为输出与完成通路同时被破坏。应把这些结果与服务时间对照、驱动单 job 调度一起解释。
-未测完整 online Softmax 与多 tile FlashAttention 的交错链，也未获得模块级执行时间线；
-原文中的“完整 Task 屏障”属于当前证据支持的工作解释，不能作为已经直接观测到的硬件事实。
+最初成功组合为 `M=N=K=256` 的 FP16 MatMul 与 61440 个 FP16 LUT 元素。
+完整原语分别为 126 和 1070 个命令字；重新划分为：
 
-后续可分别验证不同 NPU 核之间的分工，或 CPU Softmax 与下一次 NPU MatMul 的双缓冲流水；
-这两种并发都需要重新测数值、同步、传输与端到端收益。
-对于沿 KV 维切块的 online Softmax，必须维护运行最大值、归一化和及输出重缩放，
-不能将每个 KV tile 单独归一化后简单拼接。
+```text
+一个 blocking Submit，task_number=2，PC task ping-pong=0
 
-## 两个程序和提交形态
+Task 0（1124 words）：
+    CNA/CORE 配置来自 A
+    DPU/DPU_RDMA 配置来自 B（flying，读取 B 的独立输入）
+    标准链尾，OP_ENABLE=0x1d
+    → 启动矩阵路径 A 与 DPU-only B
 
-两个 program 由既有发射器生成，模块参与位来自 `PC_OPERATION_ENABLE` 的块位图：
-
-| Task | 发射器 | 几何 | regcmd | `PC_OPERATION_ENABLE` | 运行块 |
-|---|---|---|---:|---|---|
-| A | `gen_matmul_fp16` | FP16 `M=N=K=256` | 126 word | `0x1D` | PC、CNA、DPU、DPU_RDMA |
-| B | `gen_lut_activation_fp16` | HardSigmoid，240×256 = 61,440 元素 | 1,070 word | `0x18` | DPU、DPU_RDMA（**无 conv**） |
-
-B 是真正的 DPU-only：MRDMA 以 flying 模式直接读入 fp16 cube，BN 缩放后进入 LUT，输出转换后写回，
-不含 CNA/CORE。A 的主体是 CNA/CORE 的 MAC，DPU 只做输出转换。A、B 数据互不依赖，各有独立输入/输出 BO。
-
-| Arm | 含义 |
-|---|---|
-| `A` / `B` | 单 program、单次 blocking Submit（单项服务基线） |
-| `S1` | 先 A 后 B，两次独立 Submit（Setup 1） |
-| `C_AB` / `C_BA` | A、B 打进同一个链式 Submit，两种顺序（Setup 2） |
-| `C_AA` / `C_BB` | 两个独立同种 program 的对照链 |
-| `S3_*` | 位图消融（Setup 3，`OL_EXPLORE=1`）：MatMul 的 `0x1D→0x15`（去 DPU 位） |
-
-每轮 arm 顺序按 rep 轮换，抵消漂移；每个 arm 提交前把四个输出 BO 填 NaN 哨兵，提交后逐个实例独立评分
-（MatMul tol 0.02，LUT tol 0.002），未参与的 BO 必须仍是 NaN。任何未写、写错、越界或非有限值都会拒绝该轮。
-
-## 对照结果
-
-两轮各 64 reps、每 rep 8 个 Submit，全部数值与 guard 通过（768 checks，0 失败）。
-中位服务包络（`hw_elapse_time`，纳秒）：
-
-| run | A | B | `C_AB` | `C_BA` | `C_AA` | `C_BB` | `S1` 配对和 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| core0-a | 334,829 | 102,665 | 384,849 | 384,412 | 625,033 | 152,831 | 436,911 |
-| core0-b | 422,766 | 101,499 | 472,786 | 472,056 | 742,864 | 151,373 | 523,826 |
-
-两轮之间存在整轮的环境差：core0-b 的 MatMul 服务比 core0-a 高约 26%（422.8 vs 334.8 µs，全程稳定偏高），
-LUT 基本不变（101.5 vs 102.7 µs）。板子当时有其他登录会话，未做独占声明。
-因此下面只用**同一轮内**的配对量结论，不跨轮比较绝对值。
-
-一次 Submit 的固定包络用同质 `[LUT, LUT]` 标定（LUT 短、信噪比最好）：
-
-| run | A+B 与链的差 `saving_AB` | `saving_BB` | 异质超出同质 |
-|---|---:|---:|---:|
-| core0-a | 52,645 | 52,499 | **+146 ns** |
-| core0-b | 51,479 | 51,625 | **−146 ns** |
-
-异质对并不比同质对显示更多节省，所以本轮没有观察到“MatMul 的 CNA/CORE 与 LUT 的 DPU 并发”带来的额外收益。
-`C_AB − A` 的两轮中位数是 49,874 / 50,166 ns，等于 B 的独立服务减去一次包络（102,665−52,501=50,164；
-101,499−51,770=49,729）。也就是说，链里 LUT 的边际成本就是它自己那一段，MatMul 那一段并没有被压掉。
-
-## 逐提交分解与完成事件
-
-定义 `saving = sum − chain`，per-rep 配对（n=64）：
-
-| run | `AB` saved 中位数 [p10,p90] | `BA` | `BB` | `S1 − (A+B)` |
-|---|---:|---:|---:|---:|
-| core0-a | 52,646 [50,749, 54,249] | 52,792 | 52,501 | −583 |
-| core0-b | 50,750 [10,208, 77,290] | 51,770 | 51,770 | −146 |
-
-`C_AA` 的节省在两轮里分别约 44.6 µs 和 102.8 µs，不稳定（core0-b 的 A 单项偏高），
-所以它不作为包络标定，也不支持任何“MatMul 之间会重叠”的说法。结论只用稳定的 `AB/BA/BB` 三者。
-
-完成事件：每个 Submit 对应 `/proc/interrupts` 中三条 `fdab0000.npu` GIC 线的增量。两轮共 1024 个 Submit 中，
-每个 Submit 的增量都恰好是 Core 0 的 `[1,0,0]`，包括 2-task 链。分开提交得到 2 个完成事件，
-链式得到 1 个。`int_status` 末 task 完成位在自动乒乓下于 `0x100`/`0x200` 两组间切换，规律同
-[Two-Task Chaining](TWO-TASK-CHAINING.md)；一轮里哪种臂落到哪一组取决于 arm 轮换的奇偶，
-链式提交的完成位来自其最后一个 task。
-
-## Setup 3：位图消融与启动/完成通路
-
-尝试从寄存器层面让两个模块独立启动。本轮选择改写的相关寄存器是每个 task 尾部的
-`PC_OPERATION_ENABLE`（`0x0008`，块位图），发射器允许用 `ROCKET_LUT_ENABLE` 覆盖 DPU-only 的值；
-MatMul 的 `0x1D` 清掉 DPU 位得到 `0x15`（PC、CNA、DPU_RDMA）。结果：
-
-| Arm | 提交 | 结果 | 服务 | 完成 IRQ | 输出 |
-|---|---|---:|---:|---:|---|
-| `S3_A_CORE` | 只有 MatMul，`0x15` | `-110` 超时 | 0 | `[0,0,0]` | MatMul 未写 |
-| `S3_CORE_B` | `[MatMul_core, LUT_dpu]` | `-110` 超时 | 0 | `[0,0,0]` | 两者都未写 |
-| `S3_B_CORE` | `[LUT_dpu, MatMul_core]` | `-110` 超时 | 0 | `[0,0,0]` | **LUT 正确写回**，MatMul 未写 |
-
-判读：
-
-- 去掉 DPU 位后，task 不再产生 DPU 完成事件，驱动的 `require mask: 0x300` 永不满足，
-  2 s 后 `job timeout` 并 `soft reset`（每个 arm 各一次）。这说明 task 的完成/退役绑定其 DPU 块，
-  本次使能位消融不能把它变为可正确输出并完成的 CORE-only task。
-- `[LUT_dpu, MatMul_core]` 里 LUT 先按序完成并正确写回，链才推进到 MatMul_core 并停住。
-  该顺序与 task 按序推进相容，但不能单凭输出结果证明前一个 task 的全部模块必须完全排空，
-  也不能据此判定所有 PC 模式都存在完整 Task 屏障。
-- 驱动侧同样没有并发入口：`PC_TASK_CONTROL`（`0x30`，mode 位 `0x6` 与 task 数由驱动写）和每核
-  每核的单活动 `subcore_data->job` 调度状态均不由 userspace 控制；同一核的第二个 Submit 只能排队。
-
-因此本轮使能位消融没有找到让两个模块独立启动并正确完成的做法；把此路径记录为已尝试且未成功，
-而不是“硬件绝对不支持”。
-
-## 可获得的模块性能计数器
-
-RK3588 这条通路上**没有**可读的模块级 byte/event 计数器：
-
-- 厂商 per-core amount 计数器（`0x2234/0x2434`）在 rk3588 配置里是 `NULL`，且其所在 `0x2000` 页未解码、
-  读取会 hard-lock SoC（见 [硬件 DMA 字节计数器](../perf/hw-byte-counters.md)）。
-- DPU/SDP 只有 stall/saturation 一类 flag，不计数，也未暴露到 userspace。
-
-本轮实际可用并已记录的“模块侧”量只有：
-
-| 量 | 来源 | 用途 |
-|---|---|---|
-| 驱动服务包络 | `Submit.hw_elapse_time` | 每次 Submit 的总设备服务时间 |
-| 完成位 | 末 task `int_status` 的 `0x300` | 确认链确实执行完 |
-| 完成中断 | `/proc/interrupts` 三条 `fdab0000.npu` | 每次 Submit 的完成事件数及核归属 |
-| 块位图消融 | task 尾部 `PC_OPERATION_ENABLE` | 把“哪个块负责完成”做成差分实验 |
-
-包络本身是 `register 配置 + 执行 + 到取时之间的中断延迟`，不是纯硬件计算时间；
-约 52 µs 的固定项没有再拆成 driver/Host 与流水线填充，归因保留 unresolved。
-
-## 限制与范围
-
-- 两个 task 各是一个 primitive（单 task 的 256³ MatMul、单 task 的 LUT）；未测多 task 变体、
-  K 分片链或 tensor 更长的编排。
-- 只测 Core 0、厂商 `rknpu 0.9.8` blocking Submit 路径；不推广到 `rocket` 主线路、RK3576 或别的 datatype。
-- 服务时间含驱动配置与 IRQ 延迟，不是纯硬件边界；两轮环境差说明绝对值依赖板子状态。
-- 本轮没有测“同核两个 Submit 由两个线程并发下发”的驱动排队细节；后续 [GEMM/GEMV 并发](GEMM-GEMV-CONCURRENCY.md) 已补双进程同核/跨核对照，未验收同进程双线程配置。
-
-## 复跑
-
-```bash
-# 板端：Core 0 两轮对照 + 一次位图消融探索（会触发受控超时与 soft reset）
-bash research/custom-ops/run-overlap-board.sh
-
-# 离线复核证据（无需设备）
-python3 research/custom-ops/overlap_verify.py \
-  research/custom-ops/results/2026-10-14/overlap-20261014-145427
-
-# 本机负例（无需设备）
-python3 research/custom-ops/overlap_verify_test.py
+Task 1（74 words）：
+    DPU/DPU_RDMA 配置来自 A
+    标准终端链尾，OP_ENABLE=0x18
+    → 接收 MatMul 的结果，转换并写出
 ```
 
-入口：`tools/c/overlap_probe.c`（对照、位图消融、host 布局测试）、
-`tools/python/overlap_verify.py`（独立证据核验与配对统计）、
-`tests/python/overlap_verify_test.py`（24 个正/负例）、
-`scripts/run-overlap-board.sh` / `run-overlap-native.sh`。
-板端 `ctest` 18 项、主机 `overlap_host` 与 24 个负例均通过。
-`kernel-after.log` 只有三次受控 `job timeout`/`soft reset`（探索臂），无 IOMMU fault、无其他内核事件。
+A 和 B 共享一个 DPU，DPU(B) 与 DPU(A) 顺序使用；不是让两个 DPU 操作同时运行。
+CNA/CORE 指针仍由驱动设置，DPU/DPU_RDMA 使用原有 `S_POINTER=0xe`。
+`rkt_chain_pack_at` 按每段实际长度编码地址/长度，`rkt_chain_verify` 检查完整链；
+不是仅把两段命令拼进一个描述符，也没有破坏 A 的输出或完成通路。
+
+后续扩到 1/4/16/32 tile，最多 64 个 PC task。
+LUT 缓存开启时，每个含 B 的 Submit 都装载首份完整表，后续 B 仍完整配置几何；
+移除 MatMul 未使用的 LUT 访问端口写，不依赖前一个 job 的表状态。
+三组都应用同样的缓存策略，没有使用 CBUF weight reuse。
+生产 `co_emit_mm` 的范围未放宽；实验 wide-K 由探针直接调用底层生成器并检查打包和 BO 边界。
+
+## 最新三组实测
+
+证据：[matched-overlap-20261015-152224](custom-ops/results/2026-10-15/matched-overlap-20261015-152224/)，
+[analysis.json](custom-ops/results/2026-10-15/matched-overlap-20261015-152224/analysis.json)。
+6 个配置，各 12 轮 warmup、128 轮配对采样，共 7560 个九臂测量记录、**8400 次真实 Submit，全部验收通过**。
+采集前后普通 AB 基线通过；内核只有初始受控诊断的一次超时/soft reset，正式样本没有超时或 IOMMU fault。
+
+下表每个 MatMul tile 均为 `12×4096×32`，每 tile B 为 32768 个 FP16 元素。
+时间为驱动服务包络中位数，单位 µs；百分比先逐轮配对再取中位。
+
+| tile 数 | 普通串行 | 完整 task 链 | regcmd 重划分 | 合并 Submit 节省 | 重划分相对完整链额外节省 | 相对普通串行总节省 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 183.746 | 131.685 | 125.853 | 28.33% | 4.43% | 31.40% |
+| 16 | 1341.063 | 1287.982 | 1195.670 | 3.96% | **7.16%** | 10.85% |
+| 32 | 2576.546 | 2523.171 | 2342.923 | 2.07% | **7.14%** | 9.06% |
+
+![三组统一比较](figures/three-arm-overlap.svg)
+
+每个子图比较相同工作量，不同子图的总工作量不同。
+32 tile 对应 `A[384,4096] × W[32,4096]^T` 与 1048576 个独立 LUT 元素。
+该组增量 overlap 节省的 p10/p90 为 **6.60% / 7.55%**。
+完整提交函数耗时之和的三组中位数为 **2865.875 / 2764.376 / 2578.733 µs**，收益没有被提交打包路径完全抵消。
+
+顺序交叉检查中，32 tile 的逐对 AB 链为 2524.483 µs，旧机制 `serial` 为 2522.880 µs，
+接近主基线 `a_then_b` 的 2523.171 µs；overlap 相对三者分别节省 **7.22% / 7.17% / 7.14%**。
+这支持约 7% 的额外收益，但不能把机制对照重新称为默认流程。
+
+### 为什么 tile 增加后总提升比例下降
+
+单 tile 合并 Submit 省约 52 µs，32 tile 仍只省约 53 µs；这一项不会随 tile 数线性增加。
+模块重叠的额外节省则从约 6 µs 增至约 180 µs，平均每 tile 约 5–6 µs。
+所以单 tile 的 31.4% 主要来自提交摊销；32 tile 的绝对总节省更大，但固定开销占比更低。
+
+近似模型为 `T_sep≈2H+n(a+b)`、`T_chain≈H+n(a+b)`、`T_overlap≈H+n(a+b-o)`。
+其中 H 是未进一步分解的服务包络，o 是每 tile 的有效隐藏时间，不能直接当作某个模块周期。
+
+## 工作量匹配、隐藏比例与 tiling
+
+三个指标分开报告：
+
+```text
+合并收益 = (T_separate - T_a_then_b) / T_separate
+额外 overlap 收益 = (T_a_then_b - T_overlap) / T_a_then_b
+总收益 = (T_separate - T_overlap) / T_separate
+
+DPU 链内预算 ≈ T_BB - T_B
+隐藏比例估计 = (T_baseline - T_overlap) / (T_BB - T_B)
+```
+
+隐藏比例必须注明 baseline；历史 `hidden_dpu_budget_pct` 使用旧机制 `serial`，
+新结果另列相对 `ab`、`a_then_b` 的估计。预算包括取指、配置、DMA 和 task 推进，不是纯 DPU 周期。
+
+初筛的 168 个 M/N/K/B 组合中，152 个通过、16 个失败；随后测试批量 tile、LUT 单次装载和更早启动。
+两轮六臂正式采集各 8400 次 Submit 全部通过，独立复现了约 7% 的机制收益。
+其中相同 `12/4096/32`、16 tile 的一轮结果为：
+
+| 每 tile B 元素 | 机制对照 → overlap | 整体节省 | DPU 隐藏估计 |
+|---:|---:|---:|---:|
+| 32768 | 1287.107 → 1190.858 µs | 7.46% | 24.4% |
+| 8192 | 995.736 → 958.404 µs | 3.74% | 33.4% |
+
+将数据量缩到四分之一，并没有得到接近全部隐藏。32 tile、B=3840 的另一组隐藏估计约 46.6%，整体只节省约 3.1%。
+不能把“原任务隐藏了四分之一耗时”解释为固定不变的空窗，或认为四分之一数据量就会 free。
+DPU 时间近似含固定启动/配置成本与随数据量变化的处理成本；更换任务也可能改变 DMA 和流水推进时序。
+
+### 完整 CNA/CORE 时间不等于可隐藏窗口
+
+只有在“CNA/CORE 全部完成后 DPU(A) 才开始”的理想分阶段模型里，
+`T_serial=C+B+D`、`T_overlap=max(C,B)+D`，B≤C 才可直接视为完全隐藏。
+实际 MatMul 是流式输出：DPU(A) 可以消费首批结果，不必等全部矩阵计算结束。
+B 占住 DPU 可能使中间缓冲积压并触发 CORE 背压。
+有效窗口取决于启动阶段、数据流、缓冲和切换成本，不能用完整 CNA/CORE 忙碌时间代替。
+本轮没有直接测出该窗口；尚未验收出 DPU-only 几乎 free 的方案。
+
+### 固定总工作量下，最高 overlap 比例未必最快
+
+固定 `A[384,512] × W[32,512]^T` 与 122880 个 LUT 元素，在相同全局输入上只改变分片：
+
+| tile M / tile 数 | 完整 A→B 单链 | overlap |
+|---|---:|---:|
+| 192 / 2 | 302.746 µs | 282.329 µs |
+| 96 / 4 | **279.413 µs** | 279.996 µs |
+
+192 行方案的 overlap 比例更高，仍慢于 96 行方案的完整串行链。
+优化目标应是最小化整条调度时间；前述约 7% 限定于所列几何与划分，不代表优于任意最佳串行 tiling。
+
+## 早期完整 task 实验与失败边界
+
+2026-10-14 的粗粒度实验使用 256³ MatMul A 和 240×256 LUT B。
+两个 task 完整保留，独立输出；两轮各 64 reps×8 Submit，数值/guard 均通过：
+
+| 轮次 | A | B | 完整 AB 链 | 完整 BA 链 | 两次串行 S1 |
+|---|---:|---:|---:|---:|---:|
+| core0-a | 334.829 µs | 102.665 µs | 384.849 µs | 384.412 µs | 436.911 µs |
+| core0-b | 422.766 µs | 101.499 µs | 472.786 µs | 472.056 µs | 523.826 µs |
+
+AB 链与同质 BB 链相比，额外节省分别只有 +146 / −146 ns；当时只观察到约 52 µs 的固定包络摊销。
+两轮 A 的绝对时间不同，结论仅来自各轮内部配对。单次末尾 IRQ 本身不能证明链内部完全串行。
+**这个负结果只适用于完整 task 编排，不能推广为硬件或厂商通路无法实现模块级重叠。**
+
+| 尝试 | 观测与边界 |
+|---|---|
+| A 的 `0x1d→0x15` 去 DPU 位 | 单 A、A→B、B→A 均超时；B→A 中 B 可正确写出。破坏了 A 输出/完成通路，不能据此证明物理不支持 overlap |
+| 直接写模块 OP_EN | 单独 MatMul 和 LUT 能正确运行；不等于任意组合流都成立 |
+| 单描述符直接拼流或显式 DPU 两组指针 | 可出现 Submit 成功但第二输出缺失/部分写；等待 20 ms 仍错误，未验收成功 |
+| 只把硬件 task 数改为 2 | 单段流超时，DPU 启动次数不能代替真实 PC task 分段和链尾 |
+| PC task ping-pong=1 | 有通过轮次，也出现完整 AB/BA 的 LUT 静默错误；推荐配置固定关闭 |
+| CNA/CORE 直接提前到 LUT 取指前启动 | 短测约 10%–11% 的候选在 128 轮失败，淘汰，不用作正式收益 |
+| K=8192/12288/14336 | 独立 MatMul A 基线已超时，全部拒绝；不能用来推断 overlap 上限或扩大生产支持范围 |
+
+失败可能影响后续状态；采集器保留失败记录，通过已知诊断超时复位后核验普通 AB，再进入下一配置。
+正式配置要求所有 case 通过，且内核仅允许初始诊断的一次 soft reset。
+
+## 可观测性：现在测到的是哪一层
+
+| 量 | 当前证据 | 限制 |
+|---|---|---|
+| 驱动服务包络 | `hw_elapse_time` | 每次 Submit 的配置、执行及 IRQ 延迟，非纯硬件周期 |
+| ioctl / 提交函数耗时 | Host 单调时钟 | 含等待及相应 Host 开销，不含 CPU 数值评分 |
+| 完成位、任务数 | 末 task `int_status`、实际描述符 | 确认完成与链结构，没有链内逐 task 时间戳 |
+| 完成中断 | `/proc/interrupts` | 两次 Submit 为 2 次、单链为 1 次，不是模块时间线 |
+
+CNA/CORE/DPU 的 `S_STATUS` 和模块完成位可作为后续内核带时间戳采样的候选，
+但本轮未实施或验证该采样；idle/operating/waiting 区间也不等于纯计算时间。
+RK3588 没有在本实验中可用的分模块执行周期接口。
+已知 amount 计数器候选在 RK3588 的配置中禁用，`0x2000` 页读取有历史挂死记录，
+不应当作可直接补读的模块计时器，见 [DMA 计数器调查](../perf/hw-byte-counters.md)。
+同核新增线程或异步 Submit 仍受驱动每核单活动 job 调度约束；相关完整 task/job 实验见
+[GEMM/GEMV 并发](GEMM-GEMV-CONCURRENCY.md)，不能与本轮模块重划分混为一谈。
+
+## 证据索引
+
+所有 raw 结果都在本地 `custom-ops/results/`，按仓库既有规则不进入 Git。
+每个目录保存实际配置、源码哈希、JSONL、命令流、退出码及内核日志；只在同一采集中做配对比较。
+
+| 阶段 | 本地结果目录 | 用途 |
+|---|---|---|
+| 粗粒度完整 task | [2026-10-14/overlap-20261014-145427](custom-ops/results/2026-10-14/overlap-20261014-145427/) | 早期完整 AB/BA、同质链和位图消融 |
+| 首次模块拆分 | [regcmd-overlap-20261015-140139](custom-ops/results/2026-10-15/regcmd-overlap-20261015-140139/) / [140422](custom-ops/results/2026-10-15/regcmd-overlap-20261015-140422/) | 128 轮节省 9.771 / 8.750 µs；短 B [140247](custom-ops/results/2026-10-15/regcmd-overlap-20261015-140247/) 收益未分辨 |
+| 168 组合初筛 | [matched-overlap-20261015-143244](custom-ops/results/2026-10-15/matched-overlap-20261015-143244/) | 152 通过、16 失败，配置均在该目录 config.json |
+| tile / 表缓存 / 提前启动 | [143611](custom-ops/results/2026-10-15/matched-overlap-20261015-143611/) / [143934](custom-ops/results/2026-10-15/matched-overlap-20261015-143934/) / [144305](custom-ops/results/2026-10-15/matched-overlap-20261015-144305/) | 扫描结果与失败候选，不代替正式验收 |
+| 128 轮候选复验 | [144546](custom-ops/results/2026-10-15/matched-overlap-20261015-144546/) | 淘汰更早启动候选 |
+| 超长 K 探索 | [144941](custom-ops/results/2026-10-15/matched-overlap-20261015-144941/) | K≥8192 的独立 A 基线失败 |
+| 六臂正式复验 | [145230](custom-ops/results/2026-10-15/matched-overlap-20261015-145230/) / [145600](custom-ops/results/2026-10-15/matched-overlap-20261015-145600/) | 各 8400 次 Submit；后一轮相同全局输入与固定总量 tiling 对照 |
+| 正向 AB / 全 A→全 B | [151841](custom-ops/results/2026-10-15/matched-overlap-20261015-151841/) | 八臂，尚不含两次 Submit 基线 |
+| 最新三组统一比较 | [152224](custom-ops/results/2026-10-15/matched-overlap-20261015-152224/) | 九臂、7560 记录、8400 次真实 Submit |
+
+早期分散文档、入口和试探配置的工作树副本已清理；原文件压缩归档于
+[overlap-consolidation-20261015-180910](custom-ops/results/2026-10-15/overlap-consolidation-20261015-180910/)，附 SHA256 清单。
+保留此前采集的实际配置和源哈希，不把历史采集回写为最新九臂实验。
+
+## 复跑与核验
+
+从仓库根目录运行。依赖恢复见 [上游组件](upstream-components/README.md)，板端连接读取未跟踪的 `.env`。
+
+```bash
+# 唯一推荐入口：三组主基线、其余六臂诊断、6 配置、128 轮
+bash research/custom-ops/scripts/run-matched-overlap-board.sh \
+  research/custom-ops/tools/python/matched_overlap_configs/three-arm-baseline.json
+
+# 离线核验最新九臂，以及历史六/八臂 matched 记录
+python3 research/custom-ops/tools/python/matched_overlap_analyze.py RESULTS
+
+# 可选绘图，需要 matplotlib；默认只生成 SVG，--format png 可导出位图
+python3 research/custom-ops/tools/python/matched_overlap_plot.py RESULTS OUTPUT_PREFIX
+
+# 无设备构建与验证
+cmake -S research/custom-ops -B build-regcmd-overlap -DCMAKE_BUILD_TYPE=Release
+cmake --build build-regcmd-overlap -j4
+ctest --test-dir build-regcmd-overlap --output-on-failure
+```
+
+Board 脚本每次上传实际源码、在新目录编译，不覆盖已有结果。原始粗粒度复核器
+`tools/python/overlap_verify.py` 及原脚本仍由 GEMM/GEMV 实验使用，保持其独立入口。
+历史探索可从各结果目录的 `config.json` 恢复，不另保留重复的临时配置集合。
+
+当前维护代码为 [探针](custom-ops/tools/c/regcmd_overlap_probe.c)、
+[采集器](custom-ops/tools/python/matched_overlap_campaign.py)、
+[核验器](custom-ops/tools/python/matched_overlap_analyze.py)、
+[负例测试](custom-ops/tests/python/matched_overlap_analyze_test.py)。
+实际任务/链结构、输入输出边界、两次 Submit 求和、缺失完成事件及错误 IRQ 都有检查；
+正式数据采集时的 21 项 CTest 与清理后的 20 项 CTest 均通过；当前核验器还对历史六/八/九臂的 22 个配置只读复核通过。
+数值结果不因文档合并重新宣称采集。

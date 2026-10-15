@@ -1,0 +1,77 @@
+{
+  "require_all": true,
+  "cases": [
+    {
+      "m": 12,
+      "k": 1024,
+      "n": 32,
+      "b_elements": 8192,
+      "pairs": 16,
+      "reps": 128,
+      "warmups": 12,
+      "cache_lut": 1,
+      "early_core": 0,
+      "global_inputs": true
+    },
+    {
+      "m": 12,
+      "k": 4096,
+      "n": 32,
+      "b_elements": 32768,
+      "pairs": 1,
+      "reps": 128,
+      "warmups": 12,
+      "cache_lut": 1,
+      "early_core": 0,
+      "global_inputs": true
+    },
+    {
+      "m": 12,
+      "k": 4096,
+      "n": 32,
+      "b_elements": 32768,
+      "pairs": 16,
+      "reps": 128,
+      "warmups": 12,
+      "cache_lut": 1,
+      "early_core": 0,
+      "global_inputs": true
+    },
+    {
+      "m": 12,
+      "k": 4096,
+      "n": 32,
+      "b_elements": 32768,
+      "pairs": 32,
+      "reps": 128,
+      "warmups": 12,
+      "cache_lut": 1,
+      "early_core": 0,
+      "global_inputs": true
+    },
+    {
+      "m": 12,
+      "k": 4096,
+      "n": 32,
+      "b_elements": 3840,
+      "pairs": 32,
+      "reps": 128,
+      "warmups": 12,
+      "cache_lut": 1,
+      "early_core": 0,
+      "global_inputs": true
+    },
+    {
+      "m": 256,
+      "k": 256,
+      "n": 256,
+      "b_elements": 61440,
+      "pairs": 16,
+      "reps": 128,
+      "warmups": 12,
+      "cache_lut": 0,
+      "early_core": 0,
+      "global_inputs": true
+    }
+  ]
+}

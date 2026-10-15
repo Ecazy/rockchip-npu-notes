@@ -17,8 +17,11 @@
 后续 [Two-Task Chaining 四组对照](../TWO-TASK-CHAINING.md) 仅使用 HardSigmoid 验证 A/B/C/D，
 覆盖真实描述符、链地址、寄存器组完成位、BO 生命周期和连续提交压力测试。
 
-[同核 MatMul/DPU 重叠实验](../SAME-CORE-OVERLAP.md) 用 256³ FP16 MatMul 与 DPU-only LUT 对照独立/链式提交，
-记录逐 Submit 服务包络与完成中断，并用 `PC_OPERATION_ENABLE` 位图消融检查启动/完成通路；已测链未观察到额外重叠收益，未排除其他模块级编排。
+[同核 MatMul/DPU 重叠实验](../SAME-CORE-OVERLAP.md) 统一收录完整 task 链、regcmd 模块拆分、
+工作量匹配及三组基线修正。32 tile 上，合并 Submit 节省 2.07%，重划分相对完整链额外节省 7.14%；
+不是完整 attention 的端到端收益。旧记录的 `serial` 仅为同布局机制对照。
+复跑入口与唯一主配置见该文；本目录保留 `scripts/run-matched-overlap-board.sh` 与
+`tools/python/matched_overlap_configs/three-arm-baseline.json`。
 
 [同核 GEMM+GEMV 链式/并发对照](../GEMM-GEMV-CONCURRENCY.md) 在同一探针上加 GEMV（逻辑 M=1、物理 M=12）、
 B8/B16 放大组、以及双进程 `P_same`/`P_cross` 正对照；已测链只省一次 Submit 包络，同核 job 串行，跨核服务包络重叠。

@@ -12,7 +12,7 @@
 | [跨 tile RMSNorm 与 Softmax](CROSS-TILE-ROW-OPS.md) | 混合归约、mask、指数分段与前置 RMSNorm FFN | 真机；含明确的 CPU 阶段 |
 | [RoPE、KV cache 与 self-attention](ATTENTION-KERNELS.md) | 固定容量 MHA/GQA、prefill/decode、主机 KV 事务 | 三核双模式验收；混合实现 |
 | [Transformer decoder block](TRANSFORMER-DECODER-BLOCK.md) | 多输出 Q/K/V 图、残差/FFN、KV 回滚与单行 decode | 真机功能验收；API 收益按形状限定 |
-| [同核 MatMul/DPU 重叠](SAME-CORE-OVERLAP.md) | 异质程序链、Submit 包络摊销、位图消融与证据边界 | 真机；已测链未观察到额外重叠收益 |
+| [同核 MatMul/DPU 重叠](SAME-CORE-OVERLAP.md) | 完整 task 链、regcmd 重划分、三组基线与隐藏比例 | 真机；32 tile 重划分相对完整链额外节省约7%，完整 attention 待测 |
 | [同核 GEMM/GEMV 并发](GEMM-GEMV-CONCURRENCY.md) | 链式包络、B8/B16 放大组、同核与跨核双进程对照 | 真机；链式只省 Submit 开销，跨核重叠为正对照 |
 | [多核调度 Profiling](MULTICORE-SCHEDULING-PROFILING.md) | 核选择、队列区间、服务包络、观测边界 | 真机验证 |
 | [单设备成本模型](DEVICE-COST-MODEL.md) | 服务/Host成本预测、分组留出误差及范围 | 真机；纯MatMul预测仍为实验性 |
