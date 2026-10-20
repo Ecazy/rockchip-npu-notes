@@ -1,0 +1,26 @@
+{
+  "acquired_on": "2026-10-20",
+  "repository_head": "716914a8a875ac2b0556879c6b19c9ae8365f255",
+  "worktree_dirty_at_start": true,
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "tilelang": {
+    "install": "wheel == 0.1.15 (pinned); source commit is not exposed by the wheel",
+    "package_version": "0.1.15",
+    "bundled_tvm_version": "0.25.dev0",
+    "apache_tvm_ffi": "0.1.12",
+    "torch": "2.9.0+cpu",
+    "note": "The wheel is immutable, but this is not a git-commit lock. A source checkout must be pinned before P8."
+  },
+  "source_hashes": {
+    "research/custom-ops/src/custom_ops.c": "68e1d33b9c494a8e0195399c9134244bdb0c117e941ca4e5f0eb04ab8e5cf090",
+    "research/custom-ops/src/rk_plan_validate.c": "d5804748f43af8e60d70fdbd5200b4019aaded7f9dd26c299e9b2ecb7952d9dc",
+    "research/custom-ops/src/rk_plan_runtime.c": "8c720cd8bc69f9bb98cbd4e68d654e061c9d9218b6e751ffa5b9c7e84c888916",
+    "research/upstream-components/rocket-userspace/src/npu_regcmd.c": "752eba092073c2eb258739491901d773e734a6cf645c47022008429f3c917c91"
+  },
+  "reference_library": {
+    "path": "../rknpu2_matmul_open",
+    "head": "192f6ca25407fac7c0880123c0c394bd3e2f74f7",
+    "linked": "no"
+  }
+}

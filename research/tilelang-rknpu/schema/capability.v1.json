@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rockchip-npu-notes.local/schema/capability.v1.json",
+  "title": "RKNPU capability manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "capabilities"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"type": "object", "additionalProperties": false, "required": ["schema_version", "chip_id", "driver_abi_id", "runtime_abi_id", "custom_ops_source_hash", "generator_source_hash", "capability_manifest_hash", "tensor_layout_versions", "template_versions", "max_programs_per_submit", "max_words_per_program", "primitive_extent_limit", "execution_policy", "numeric_policy", "fallback_policy", "device_budget", "host_budget"], "properties": {"schema_version": {"const": 1}, "chip_id": {"type": "string"}, "driver_abi_id": {"type": "string"}, "runtime_abi_id": {"type": "string"}, "custom_ops_source_hash": {"type": "string"}, "generator_source_hash": {"type": "string"}, "capability_manifest_hash": {"type": "string"}, "tensor_layout_versions": {"type": "array", "items": {"type": "string"}}, "template_versions": {"type": "array", "items": {"type": "string"}}, "max_programs_per_submit": {"type": "integer", "minimum": 1, "maximum": 64}, "max_words_per_program": {"type": "integer", "minimum": 1}, "primitive_extent_limit": {"type": "integer", "minimum": 1}, "execution_policy": {"type": "array", "items": {"type": "string"}}, "numeric_policy": {"type": "string"}, "fallback_policy": {"const": "error"}, "device_budget": {"type": "integer", "minimum": 1}, "host_budget": {"type": "integer", "minimum": 1}}},
+    "capabilities": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "op", "emitter", "target_profile", "status", "inputs", "output", "numeric", "alias", "chain_recipe", "evidence"], "properties": {"id": {"type": "string"}, "op": {"type": "string"}, "emitter": {"type": "string"}, "target_profile": {"type": "string"}, "status": {"enum": ["enabled", "experimental", "unsupported"]}, "inputs": {"type": "array", "items": {"type": "string"}}, "output": {"type": "string"}, "numeric": {"type": "string"}, "alias": {"type": "string"}, "chain_recipe": {"type": "string"}, "evidence": {"type": "string"}, "validation_domain": {"type": "string"}, "uncovered_risks": {"type": "array", "items": {"type": "string"}}}}}
+  }
+}

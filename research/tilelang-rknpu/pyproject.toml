@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rknpu-backend"
+version = "0.1.0"
+description = "Static FP16 TileLang -> RKIR -> RKPlan backend for RK3588"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.23",
+  "jsonschema>=4",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+# The wheel is pinned because the structural extractor is tied to the actual
+# TVM/TileLang node classes.  Do not use a moving upstream main.
+tilelang = [
+  "tilelang==0.1.15",
+  "apache-tvm-ffi>=0.1.11,<0.1.13",
+]
+
+[project.scripts]
+rknpu-backend = "rknpu_backend.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
