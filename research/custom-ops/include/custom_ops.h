@@ -93,6 +93,15 @@ int co_emit_reformat_8x8x8(co_program *, co_view x, co_view out);
 int co_emit_pool(co_program *, co_view x, co_view out, unsigned h, unsigned w,
                  unsigned kh, unsigned kw, int average);
 int co_execute(int fd, const co_program *, unsigned nprograms, enum co_mode);
+/* Optional caller-owned command BO; synchronous, same-fd, not thread-safe.
+ * Timings are host envelopes; submit_wait_us includes provider work + blocking
+ * submit, NOT pure device execution. Separate mode accumulates per-task calls. */
+typedef struct { double allocation_us,command_us,submit_wait_us,output_sync_us; } co_execute_profile;
+typedef struct { int fd; rocket_bo commands; } co_execute_workspace;
+int co_execute_workspace_init(int fd,unsigned max_programs,co_execute_workspace *);
+void co_execute_workspace_destroy(co_execute_workspace *);
+int co_execute_profiled(int fd,const co_program *,unsigned,enum co_mode,
+                        co_execute_workspace *,co_execute_profile *);
 /* SiLU (gelu=0) or erf-GELU (gelu=1): LUT gate then identity-conv EW multiply.
  * No CPU activation math or tensor round trip during execution. */
 int co_gated_activation(int fd, co_view x, co_view out, int gelu, enum co_mode);

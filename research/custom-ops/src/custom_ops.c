@@ -9,6 +9,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 static unsigned round_up(unsigned x, unsigned a) { return (x+a-1)/a*a; }
 static unsigned width(enum co_type t) { return t == CO_F16 ? 2 : 4; }
@@ -325,7 +326,19 @@ static int add_handle(uint32_t *h,unsigned *n,uint32_t value) {
     if(*n>=CO_MAX_PROGRAMS*3+1)return ROCKET_E_SHAPE;
     h[(*n)++]=value;return 0;
 }
-int co_execute(int fd,const co_program *p,unsigned n,enum co_mode mode) {
+static double co_clock_us(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return t.tv_sec*1e6+t.tv_nsec/1e3;}
+int co_execute_workspace_init(int fd,unsigned n,co_execute_workspace *w){
+    if(!w||fd<0||!n||n>CO_MAX_PROGRAMS)return ROCKET_E_SHAPE;
+    memset(w,0,sizeof(*w));w->fd=fd;
+    return rocket_bo_alloc32(fd,(size_t)n*rkt_chain_words(CO_MAX_WORDS)*8,&w->commands);
+}
+void co_execute_workspace_destroy(co_execute_workspace *w){
+    if(w&&w->commands.handle)rocket_bo_free(w->fd,&w->commands);
+    if(w)memset(w,0,sizeof(*w));
+}
+static int execute_impl(int fd,const co_program *p,unsigned n,enum co_mode mode,
+                       co_execute_workspace *workspace,co_execute_profile *prof) {
+    if(workspace&&(workspace->fd!=fd||!workspace->commands.handle))return ROCKET_E_SHAPE;
     if(fd<0||!p||!n||n>CO_MAX_PROGRAMS||(mode!=CO_SEPARATE&&mode!=CO_CHAIN))return ROCKET_E_SHAPE;
     if(strcmp(rocket_hw_current()->name,"rk3588"))return ROCKET_E_UNSUPPORTED;
     if(mode==CO_CHAIN&&!rocket_batched_submit_supported())return ROCKET_E_UNSUPPORTED;
@@ -334,18 +347,26 @@ int co_execute(int fd,const co_program *p,unsigned n,enum co_mode mode) {
         if(!p[i].count||p[i].count>CO_MAX_WORDS||p[i].nreads>3||!valid(p[i].output)||
            p[i].output.buffer->fd!=fd)return ROCKET_E_SHAPE;
         if(mode==CO_CHAIN&&p[i].flags!=p[0].flags)return ROCKET_E_UNSUPPORTED;
+        if(workspace&&workspace->commands.handle==p[i].output.buffer->bo.handle)return ROCKET_E_SHAPE;
         for(unsigned j=0;j<p[i].nreads;j++)
-            if(!valid(p[i].reads[j])||p[i].reads[j].buffer->fd!=fd)return ROCKET_E_SHAPE;
+            if(!valid(p[i].reads[j])||p[i].reads[j].buffer->fd!=fd||
+               (workspace&&workspace->commands.handle==p[i].reads[j].buffer->bo.handle))return ROCKET_E_SHAPE;
     }
     if(mode==CO_SEPARATE&&n>1) {
-        for(unsigned i=0;i<n;i++){int rc=co_execute(fd,p+i,1,mode);if(rc)return rc;}return 0;
+        for(unsigned i=0;i<n;i++){int rc=execute_impl(fd,p+i,1,mode,workspace,prof);if(rc)return rc;}return 0;
     }
     size_t offs[CO_MAX_PROGRAMS],words=0;
     for(unsigned i=0;i<n;i++){offs[i]=words;words+=rkt_chain_words(p[i].count);}
-    rocket_bo rcbo={0};int rc=rocket_bo_alloc32(fd,words*8,&rcbo);if(rc)return rc;
+    double start=prof?co_clock_us():0;
+    rocket_bo rcbo={0};int rc=0;
+    if(workspace){if(workspace->commands.size<words*8)return ROCKET_E_SHAPE;rcbo=workspace->commands;}
+    else rc=rocket_bo_alloc32(fd,words*8,&rcbo);
+    if(prof)prof->allocation_us+=co_clock_us()-start;
+    if(rc)return rc;
+    start=prof?co_clock_us():0;
     rocket_task_desc tasks[CO_MAX_PROGRAMS];
     if((rc=rocket_bo_prep(fd,&rcbo,1,0)))goto end;
-    memset(rcbo.ptr,0,rcbo.size);
+    memset(rcbo.ptr,0,words*8);
     for(unsigned i=0;i<n;i++) {
         if(mode==CO_CHAIN)rc=rkt_chain_pack_at(&rcbo,tasks,(int)i,offs[i],i+1<n?offs[i+1]:offs[i],
             p[i].words,p[i].count,i+1<n?p[i+1].count:p[i].count);
@@ -363,13 +384,29 @@ int co_execute(int fd,const co_program *p,unsigned n,enum co_mode mode) {
         if(!written)add_handle(ins,&ni,h);
     }
     add_handle(ins,&ni,rcbo.handle);
+    if(prof)prof->command_us+=co_clock_us()-start;
+    start=prof?co_clock_us():0;
     rc=rocket_submit_tasks_flags(fd,tasks,n,ins,ni,outs,no,p[0].flags|(mode==CO_CHAIN?ROCKET_JOB_BATCHED:0));
+    if(prof)prof->submit_wait_us+=co_clock_us()-start;
+    start=prof?co_clock_us():0;
     if(!rc)for(unsigned i=0;i<n;i++) {
         rocket_bo *b=&p[i].output.buffer->bo;
         rc=rocket_bo_prep(fd,b,0,2000000000ull);if(rc)break;
         rc=rocket_bo_fini(fd,b);if(rc)break;
     }
-end: rocket_bo_free(fd,&rcbo);return rc;
+if(prof)prof->output_sync_us+=co_clock_us()-start;
+end: start=prof?co_clock_us():0;if(!workspace)rocket_bo_free(fd,&rcbo);
+    if(prof)prof->allocation_us+=co_clock_us()-start;
+    return rc;
+}
+
+int co_execute(int fd,const co_program *p,unsigned n,enum co_mode mode){
+    return execute_impl(fd,p,n,mode,NULL,NULL);
+}
+int co_execute_profiled(int fd,const co_program *p,unsigned n,enum co_mode mode,
+                        co_execute_workspace *w,co_execute_profile *prof){
+    if(prof)memset(prof,0,sizeof(*prof));
+    return execute_impl(fd,p,n,mode,w,prof);
 }
 
 int co_gated_activation(int fd,co_view x,co_view o,int gelu,enum co_mode mode) {
