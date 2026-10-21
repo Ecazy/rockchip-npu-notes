@@ -1,0 +1,89 @@
+{
+  "runs": 3,
+  "ioctl_rel_us": null,
+  "commit_rel_us": {
+    "n": 3,
+    "min": 5910.0,
+    "p50": 6195.0,
+    "max": 6416.0
+  },
+  "irq_rel_us": null,
+  "hw_minus_irq_minus_commit_us": null,
+  "rise_minus_commit_us": null,
+  "fall_minus_irq_us": null,
+  "run_count": 3,
+  "per_run": [
+    {
+      "run": "t1.txt",
+      "samples": 0,
+      "ioctl_rel_us": null,
+      "commit_rel_us": 6416.0,
+      "irq_rel_us": null,
+      "hw_elapse_ns": null,
+      "rise_us": null,
+      "fall_us": null,
+      "lifecycle": {
+        "events": 41,
+        "power_on_us": 4.0,
+        "power_off_us": null,
+        "commit_us": 6416.0,
+        "job_next_calls": 2,
+        "job_next_gap_us": 185.0,
+        "job_free_us": 6771.0,
+        "power_get_count": 24,
+        "power_put_delay_count": 5,
+        "power_on_seen": true,
+        "power_off_seen": false,
+        "domain_on_before_commit": true
+      }
+    },
+    {
+      "run": "t2.txt",
+      "samples": 0,
+      "ioctl_rel_us": null,
+      "commit_rel_us": 6195.0,
+      "irq_rel_us": null,
+      "hw_elapse_ns": null,
+      "rise_us": null,
+      "fall_us": null,
+      "lifecycle": {
+        "events": 40,
+        "power_on_us": null,
+        "power_off_us": null,
+        "commit_us": 6195.0,
+        "job_next_calls": 2,
+        "job_next_gap_us": 177.0,
+        "job_free_us": 6596.0,
+        "power_get_count": 24,
+        "power_put_delay_count": 5,
+        "power_on_seen": false,
+        "power_off_seen": false,
+        "domain_on_before_commit": false
+      }
+    },
+    {
+      "run": "t3.txt",
+      "samples": 0,
+      "ioctl_rel_us": null,
+      "commit_rel_us": 5910.0,
+      "irq_rel_us": null,
+      "hw_elapse_ns": null,
+      "rise_us": null,
+      "fall_us": null,
+      "lifecycle": {
+        "events": 40,
+        "power_on_us": null,
+        "power_off_us": null,
+        "commit_us": 5910.0,
+        "job_next_calls": 2,
+        "job_next_gap_us": 172.0,
+        "job_free_us": 6307.0,
+        "power_get_count": 24,
+        "power_put_delay_count": 5,
+        "power_on_seen": false,
+        "power_off_seen": false,
+        "domain_on_before_commit": false
+      }
+    }
+  ]
+}

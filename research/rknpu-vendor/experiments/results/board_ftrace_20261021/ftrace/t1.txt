@@ -1,0 +1,43 @@
+# tracer: function
+#
+# entries-in-buffer/entries-written: 31/31   #P:8
+#
+#                                _-----=> irqs-off/BH-disabled
+#                               / _----=> need-resched
+#                              | / _---=> hardirq/softirq
+#                              || / _--=> preempt-depth
+#                              ||| / _-=> migrate-disable
+#                              |||| /     delay
+#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION
+#              | |         |   |||||     |         |
+    min_conv_exp-41358   [006] .....  4399.997097: rknpu_power_get <-__rknpu_gem_create_ioctl
+    min_conv_exp-41358   [006] .....  4399.997101: rknpu_power_on <-rknpu_power_get
+    min_conv_exp-41358   [006] .....  4399.999867: rknpu_power_get <-__rknpu_gem_map_ioctl
+    min_conv_exp-41358   [006] .....  4400.000240: rknpu_power_get <-__rknpu_gem_create_ioctl
+    min_conv_exp-41358   [006] .....  4400.002491: rknpu_power_get <-__rknpu_gem_map_ioctl
+    min_conv_exp-41358   [006] .....  4400.002803: rknpu_power_get <-__rknpu_gem_create_ioctl
+    min_conv_exp-41358   [006] .....  4400.002918: rknpu_power_get <-__rknpu_gem_map_ioctl
+    min_conv_exp-41358   [006] .....  4400.002954: rknpu_power_get <-__rknpu_gem_create_ioctl
+    min_conv_exp-41358   [006] .....  4400.003078: rknpu_power_get <-__rknpu_gem_map_ioctl
+    min_conv_exp-41358   [006] .....  4400.003106: rknpu_power_get <-__rknpu_gem_create_ioctl
+    min_conv_exp-41358   [006] .....  4400.003239: rknpu_power_get <-__rknpu_gem_map_ioctl
+    min_conv_exp-41358   [006] .....  4400.003692: rknpu_power_get <-__rknpu_gem_sync_ioctl
+    min_conv_exp-41358   [006] .....  4400.003895: rknpu_power_get <-__rknpu_gem_sync_ioctl
+    min_conv_exp-41358   [006] .....  4400.004140: rknpu_power_get <-__rknpu_gem_sync_ioctl
+    min_conv_exp-41358   [006] .....  4400.004147: rknpu_power_get <-__rknpu_gem_sync_ioctl
+    min_conv_exp-41358   [006] .....  4400.004156: rknpu_power_get <-__rknpu_gem_sync_ioctl
+    min_conv_exp-41358   [006] .....  4400.004205: rknpu_power_get <-__rknpu_gem_sync_ioctl
+    min_conv_exp-41358   [006] .....  4400.004212: rknpu_power_get <-__rknpu_gem_sync_ioctl
+    min_conv_exp-41358   [006] .....  4400.005128: __rknpu_submit_ioctl <-drm_ioctl_kernel
+    min_conv_exp-41358   [006] .....  4400.005129: rknpu_power_get <-__rknpu_submit_ioctl
+    min_conv_exp-41358   [006] .....  4400.005131: rknpu_submit_ioctl <-__rknpu_submit_ioctl
+    min_conv_exp-41358   [006] .....  4400.005133: rknpu_job_schedule <-rknpu_submit_ioctl
+    min_conv_exp-41358   [006] .....  4400.005136: rknpu_job_next.part.0 <-rknpu_job_schedule
+          <idle>-0       [000] d.h..  4400.005251: rknpu_core0_irq_handler <-__handle_irq_event_percpu
+          <idle>-0       [000] d.h..  4400.005274: rknpu_job_next.part.0 <-rknpu_irq_handler.constprop.0
+    min_conv_exp-41358   [006] .....  4400.006123: rknpu_power_get <-__rknpu_gem_sync_ioctl
+    min_conv_exp-41358   [006] .....  4400.010671: rknpu_power_get <-rknpu_gem_free_object
+    min_conv_exp-41358   [006] .....  4400.011273: rknpu_power_get <-rknpu_gem_free_object
+    min_conv_exp-41358   [006] .....  4400.011836: rknpu_power_get <-rknpu_gem_free_object
+    min_conv_exp-41358   [006] .....  4400.011842: rknpu_power_get <-rknpu_gem_free_object
+    min_conv_exp-41358   [006] .....  4400.011855: rknpu_power_get <-rknpu_gem_free_object

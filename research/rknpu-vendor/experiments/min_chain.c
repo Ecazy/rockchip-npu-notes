@@ -144,6 +144,7 @@ static uint64_t rc_buf[4096];
 static uint64_t *rc = rc_buf;
 static int g_dump = 0;
 static int g_chain_mode = 1;
+static int g_independent = 0;   /* 两个自洽 task：同输入、同权重，各写各的输出 */
 static int g_chain_tail = 0;
 static uint32_t g_chain_next = 0;   /* regcmd trailer 里写的下一条 regcmd 地址 */
 
@@ -611,6 +612,7 @@ int main(int argc, char **argv)
       else if (!strcmp(argv[i], "--int-mask") && i + 1 < argc) int_mask = (uint32_t)strtol(argv[++i], NULL, 0);
       else if (!strcmp(argv[i], "--timeout") && i + 1 < argc) timeout_ms = (uint32_t)strtol(argv[++i], NULL, 0);
       else if (!strcmp(argv[i], "--task-base")) task_base_given = 1;
+      else if (!strcmp(argv[i], "--independent")) g_independent = 1;
       else if (!strcmp(argv[i], "--chain-next")) g_chain_mode = 1;
       else if (!strcmp(argv[i], "--no-chain-next")) g_chain_mode = 0;
       else if (!strcmp(argv[i], "--tail-self")) g_chain_tail = 1;
@@ -639,6 +641,15 @@ int main(int argc, char **argv)
      (void)ic1; }
    c.ow = c.iw; c.oh = c.ih;
    c.oc = ALIGN_UP(MAX2(c.oc_real, 32), 32);
+
+   /* This emitter builds exactly two task descriptors and two command streams
+    * (t[0] and t[1] below).  Any other count would submit descriptors that were
+    * never written: that is a probe-construction bug, not a hardware limit. */
+   if (task_number_arg < 1 || task_number_arg > 2) {
+      fprintf(stderr, "--tasks must be 1 or 2: this emitter only builds two "
+                      "descriptors and two command streams\n");
+      return 2;
+   }
 
    printf("== min_chain: 两个 %ux%ux%u conv 串联 -> %ux%ux%u (ic_real=%u oc_real=%u) ==\n",
           c.iw, c.ih, c.ic, c.ow, c.oh, c.oc, c.ic_real, c.oc_real);
@@ -683,9 +694,16 @@ int main(int argc, char **argv)
    c0.wt_addr = (uint32_t)wt.dma_addr;
    c0.bias_addr = (uint32_t)bias.dma_addr;
    c1 = c0;
-   c1.in_addr = (uint32_t)mid.dma_addr;
+   if (g_independent) {
+      /* 每个 task 自洽：同样的输入、同样的权重，只是输出缓冲不同。
+       * 这样链不依赖"task0 的输出布局 == task1 的输入布局"这个不成立的假设。 */
+      c1.in_addr = c0.in_addr;
+      c1.wt_addr = c0.wt_addr;
+   } else {
+      c1.in_addr = (uint32_t)mid.dma_addr;
+      c1.wt_addr = (uint32_t)wt.dma_addr + W1_OFF;
+   }
    c1.out_addr = (uint32_t)act.dma_addr + OUT_OFF;
-   c1.wt_addr = (uint32_t)wt.dma_addr + W1_OFF;
 
    /* 链指针必须在发射 task0 之前就知道 task1 的地址 */
    g_chain_next = g_chain_mode ? (uint32_t)rc1.dma_addr : 0;
@@ -768,6 +786,60 @@ int main(int argc, char **argv)
    /* ---- CPU 参考：先算中间 int8，再算第二层 ---- */
    uint8_t *midp = (uint8_t *)mid.map;
    uint8_t *outp = (uint8_t *)act.map + OUT_OFF;
+
+   if (g_independent) {
+      /* 两个 task 应该算出完全相同的结果；参考只算一次，分别比对两个输出缓冲。 */
+      static uint8_t ref[1 << 16];
+      memset(ref, 0, sizeof(ref));
+      for (unsigned oc = 0; oc < c.oc_real; oc++)
+        for (unsigned oy = 0; oy < c.oh; oy++)
+          for (unsigned ox = 0; ox < c.ow; ox++) {
+             int32_t acc = 0;
+             for (unsigned ky = 0; ky < c.kh; ky++)
+               for (unsigned kx = 0; kx < c.kw; kx++) {
+                  int ix = (int)ox + (int)kx - (int)c.pad_left;
+                  int iy = (int)oy + (int)ky - (int)c.pad_top;
+                  if (ix < 0 || iy < 0 || ix >= (int)c.iw || iy >= (int)c.ih) continue;
+                  for (unsigned icc = 0; icc < c.ic_real; icc++)
+                     acc += (int)pat_in(ix, iy, icc) * (int)pat_w(kx, ky, oc, icc);
+               }
+             int64_t v = shift_right_round64((int64_t)acc * g_out_scale, g_out_shift) + g_out_offset;
+             if (v < -128) { v = -128; }
+             if (v > 127) { v = 127; }
+             unsigned og = oc / FEATURE_ATOMIC_SIZE, occ = oc % FEATURE_ATOMIC_SIZE;
+             ref[npu_off(og, ox, oy, c.ow, c.oh) + occ] = (uint8_t)(int8_t)v;
+          }
+      long total = 0, bad0 = 0, bad1 = 0, maxd0 = 0, maxd1 = 0;
+      for (unsigned oc = 0; oc < c.oc_real; oc++)
+        for (unsigned oy = 0; oy < c.oh; oy++)
+          for (unsigned ox = 0; ox < c.ow; ox++) {
+             unsigned og = oc / FEATURE_ATOMIC_SIZE, occ = oc % FEATURE_ATOMIC_SIZE;
+             size_t idx = npu_off(og, ox, oy, c.ow, c.oh) + occ;
+             int want = (int)(int8_t)ref[idx];
+             int h0 = (int)(int8_t)midp[idx];
+             int h1 = (int)(int8_t)outp[idx];
+             total++;
+             if (h0 != want) { bad0++; long d = labs((long)h0 - want); if (d > maxd0) maxd0 = d; }
+             if (h1 != want) { bad1++; long d = labs((long)h1 - want); if (d > maxd1) maxd1 = d; }
+          }
+      /* 与 CPU 模型无关的判据：两个 task 的输出必须逐字节相同。
+       * 这一条不依赖模型精度——它只要求"第二次执行和第一次执行一致"。 */
+      const size_t out_bytes = (size_t)c.oc * c.ow * c.oh;
+      long diff01 = 0, first01 = -1;
+      for (size_t i = 0; i < out_bytes; i++)
+         if (midp[i] != outp[i]) { diff01++; if (first01 < 0) first01 = (long)i; }
+      printf("  task0(mid)      total=%ld mismatch=%ld (max abs diff %ld)\n", total, bad0, maxd0);
+      printf("  task1(act+%u)   total=%ld mismatch=%ld (max abs diff %ld)\n", OUT_OFF, total, bad1, maxd1);
+      printf("  PAIR            %zu bytes: %s%s\n", out_bytes,
+             diff01 == 0 ? "IDENTICAL" : "DIFFER",
+             diff01 == 0 ? "" : " (first at byte 0x... see count)");
+      if (diff01) printf("  PAIR first-diff-byte=%ld differ=%ld\n", first01, diff01);
+      const int pair_ok = (diff01 == 0) && (bad0 == bad1);
+      printf("  RESULT: %s\n", pair_ok ? "PAIR BIT-EXACT (both tasks agree; model margin "
+                                         "same as single task)" : "MISMATCH");
+      return pair_ok ? 0 : 3;
+   }
+
    long total = 0, bad = 0, maxd = 0;
    for (unsigned oc = 0; oc < c.oc_real; oc++)
      for (unsigned oy = 0; oy < c.oh; oy++)

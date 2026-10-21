@@ -157,6 +157,26 @@ static void EMIT(uint32_t reg, uint32_t value)
    emit_raw(rkt_get_target(reg) + 0x1, reg, value);
 }
 
+/* --dup-config: emit one plain configuration write twice, back to back, so the
+ * stream contains a slot that is redundant BY CONSTRUCTION (same task, same
+ * bank generation, nothing in between).  That is the only kind of slot the
+ * marker experiment is allowed to replace.  g_dup_slot records the SECOND
+ * write: it is the one the hook may overwrite. */
+static int g_dup_enabled = 0;
+static int g_dup_slot = -1;
+static uint32_t g_dup_reg = 0x1040;   /* CNA_CBUF_CON0 by default */
+
+static void EMIT_DUP(uint32_t reg, uint32_t value)
+{
+   const unsigned first = (unsigned)(rc - rc_buf);
+   EMIT(reg, value);
+   EMIT(reg, value);
+   if (g_dup_slot < 0) {
+      g_dup_slot = (int)(first + 1);
+      g_dup_reg = reg;
+   }
+}
+
 static inline int64_t shift_right_round64(int64_t value, unsigned shift)
 {
    if (shift == 0) return value;
@@ -214,8 +234,13 @@ static unsigned emit_conv(const struct conv_cfg *c)
    int offset = (int)c->output_zero_point - 0x80;
 
    /* ---- CNA ---- */
-   EMIT(REG_CNA_CBUF_CON0, CNA_CBUF_CON0_WEIGHT_BANK(weights_banks) |
-                           CNA_CBUF_CON0_DATA_BANK(input_banks));
+   if (g_dup_enabled) {
+      EMIT_DUP(REG_CNA_CBUF_CON0, CNA_CBUF_CON0_WEIGHT_BANK(weights_banks) |
+                                  CNA_CBUF_CON0_DATA_BANK(input_banks));
+   } else {
+      EMIT(REG_CNA_CBUF_CON0, CNA_CBUF_CON0_WEIGHT_BANK(weights_banks) |
+                              CNA_CBUF_CON0_DATA_BANK(input_banks));
+   }
    EMIT(REG_CNA_DCOMP_REGNUM, 0);
    EMIT(REG_CNA_DCOMP_CTRL, 0);
 
@@ -527,10 +552,17 @@ int main(int argc, char **argv)
    int pad_byte_given = 0;
    uint32_t enable_mask = 0xf;
    int iw_given = 0, ow_given = 0;
+   int dump_plan = 0;
+   const char *dump_rows = NULL;
+   const char *dump_out = NULL;
    int mode_deconv = 0, w_uniform = 0, w_oc2 = 0;
 
    for (int i = 1; i < argc; i++) {
       if (!strcmp(argv[i], "--dump")) g_dump = 1;
+      else if (!strcmp(argv[i], "--dup-config")) g_dup_enabled = 1;
+      else if (!strcmp(argv[i], "--dump-plan")) dump_plan = 1;
+      else if (!strcmp(argv[i], "--dump-rows") && i + 1 < argc) dump_rows = argv[++i];
+      else if (!strcmp(argv[i], "--dump-out") && i + 1 < argc) dump_out = argv[++i];
       else if (!strcmp(argv[i], "--mode") && i + 1 < argc) {
          i++; if (!strcmp(argv[i], "deconv")) mode_deconv = 1;
       }
@@ -573,6 +605,41 @@ int main(int argc, char **argv)
           c.iw, c.ih, c.ic, c.ic_real, c.ow, c.oh, c.oc, c.oc_real,
           c.kw, c.kh, c.stride_x, c.pad_left, c.deconv, c.deconv_stride,
           in_byte, w_byte);
+
+   if (dump_plan || dump_rows != NULL) {
+      /* Build the stream without a device so the marker plan is checkable on a
+       * host.  Only the positions matter here, so the buffer addresses are
+       * placeholders. */
+      c.in_addr = 0x10000000u; c.out_addr = 0x20000000u;
+      c.wt_addr = 0x30000000u; c.bias_addr = 0x40000000u;
+      unsigned n = emit_conv(&c);
+      if (g_dup_slot >= 0) {
+         const uint64_t word = rc_buf[g_dup_slot];
+         printf("MARKER_PLAN task=0 slot=%d reg=0x%04x orig=0x%016llx entries=%u\n",
+                g_dup_slot, (unsigned)(word & 0xffffu),
+                (unsigned long long)word, n);
+      } else {
+         printf("MARKER_PLAN none (pass --dup-config to create a redundant slot)\n");
+      }
+      if (dump_rows != NULL) {
+         FILE *f = fopen(dump_rows, "w");
+         if (f == NULL) { fprintf(stderr, "open %s: %s\n", dump_rows, strerror(errno)); return 1; }
+         fprintf(f, "task_index,task_local_regcmd_index,module,reg_offset,reg_name,op,value\n");
+         for (unsigned i = 0; i < n; i++) {
+            const uint64_t w = rc_buf[i];
+            const unsigned op = (unsigned)((w >> 48) & 0xffffu);
+            const unsigned reg = (unsigned)(w & 0xffffu);
+            const char *mod = (op >> 8) == 0x01 ? "PC" : (op >> 8) == 0x02 ? "CNA" :
+                              (op >> 8) == 0x08 ? "CORE" : (op >> 8) == 0x10 ? "DPU" :
+                              (op >> 8) == 0x20 ? "DPU_RDMA" : "OTHER";
+            fprintf(f, "0,%u,%s,0x%04x,%s,0x%04x,0x%08x\n", i, mod, reg,
+                    "reg", op, (unsigned)((w >> 16) & 0xffffffffu));
+         }
+         fclose(f);
+         printf("wrote %u rows to %s\n", n, dump_rows);
+      }
+      return 0;
+   }
 
    int fd = open(dev, O_RDWR);
    if (fd < 0) { fprintf(stderr, "open %s: %s\n", dev, strerror(errno)); return 1; }
@@ -733,6 +800,15 @@ int main(int argc, char **argv)
              total, bad_floor, maxd, bad_round);
       printf("  RESULT: %s\n", bad_floor == 0 ? "BIT-EXACT (floor)" :
              (bad_round == 0 ? "BIT-EXACT (round)" : "MISMATCH"));
+   }
+
+   if (dump_out != NULL) {
+      const size_t out_bytes = (size_t)c.ow * c.oh * c.oc;
+      FILE *f = fopen(dump_out, "wb");
+      if (f == NULL) { fprintf(stderr, "open %s: %s\n", dump_out, strerror(errno)); return 1; }
+      fwrite(outnpu, 1, out_bytes, f);
+      fclose(f);
+      printf("\nwrote %zu output bytes to %s\n", out_bytes, dump_out);
    }
 
    /* 也打印十六进制前 64 字节，便于对齐 */

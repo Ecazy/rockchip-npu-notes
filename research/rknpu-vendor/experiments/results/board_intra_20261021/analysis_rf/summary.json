@@ -1,0 +1,249 @@
+{
+  "runs": 16,
+  "samples_per_run": 20.0,
+  "spacing_ns": {
+    "0.1": 2333.0,
+    "0.5": 2625.0,
+    "0.9": 4084.0
+  },
+  "bracket_ns": {
+    "0.1": 875.0,
+    "0.5": 1166.0,
+    "0.9": 1458.0
+  },
+  "span_ns": {
+    "0.1": 53083.5,
+    "0.5": 55708.0,
+    "0.9": 95375.0
+  },
+  "first_sample_ns": {
+    "0.1": 9042.0,
+    "0.5": 9334.0,
+    "0.9": 15750.0
+  },
+  "rise_bracketed_runs": 13,
+  "fall_bracketed_runs": 14,
+  "both_bracketed_runs": 13,
+  "window_width_ns_lower_bound": 6708.0,
+  "segments_median": 3.0,
+  "runs_with_three_or_more_segments": 13,
+  "conventions": {
+    "primary": "linear-interpolated quantiles",
+    "nearest_rank": {
+      "samples_per_run": 20,
+      "spacing_p90_ns": 4084,
+      "span_p50_ns": 57166,
+      "first_sample_p50_ns": 9334
+    }
+  },
+  "per_run": [
+    {
+      "run": "r00.csv",
+      "samples": 15,
+      "segments": 2,
+      "states": "SSSSSSSSSSSSccc",
+      "first_ns": 22167,
+      "last_ns": 110834,
+      "n_set": 12,
+      "rise_lo_ns": null,
+      "rise_hi_ns": null,
+      "fall_lo_ns": 93334,
+      "fall_hi_ns": 101500
+    },
+    {
+      "run": "r01.csv",
+      "samples": 32,
+      "segments": 1,
+      "states": "cccccccccccccccccccccccccccccccc",
+      "first_ns": 12542,
+      "last_ns": 109667,
+      "n_set": 0,
+      "rise_lo_ns": null,
+      "rise_hi_ns": null,
+      "fall_lo_ns": null,
+      "fall_hi_ns": null
+    },
+    {
+      "run": "r02.csv",
+      "samples": 19,
+      "segments": 3,
+      "states": "ccccSSScccccccccccc",
+      "first_ns": 8750,
+      "last_ns": 61541,
+      "n_set": 3,
+      "rise_lo_ns": 22750,
+      "rise_hi_ns": 26250,
+      "fall_lo_ns": 30625,
+      "fall_hi_ns": 34125
+    },
+    {
+      "run": "r03.csv",
+      "samples": 20,
+      "segments": 3,
+      "states": "cccccSSSSccccccccccc",
+      "first_ns": 9334,
+      "last_ns": 63584,
+      "n_set": 4,
+      "rise_lo_ns": 24500,
+      "rise_hi_ns": 28584,
+      "fall_lo_ns": 35584,
+      "fall_hi_ns": 39084
+    },
+    {
+      "run": "r04.csv",
+      "samples": 32,
+      "segments": 3,
+      "states": "ccccSSSSSSSSSSSSSSSSSSSScccccccc",
+      "first_ns": 9334,
+      "last_ns": 93334,
+      "n_set": 20,
+      "rise_lo_ns": 24209,
+      "rise_hi_ns": 27709,
+      "fall_lo_ns": 74959,
+      "fall_hi_ns": 78167
+    },
+    {
+      "run": "r05.csv",
+      "samples": 32,
+      "segments": 3,
+      "states": "cccSSSSSSSSSSSSSSScccccccccccccc",
+      "first_ns": 16333,
+      "last_ns": 146125,
+      "n_set": 15,
+      "rise_lo_ns": 29458,
+      "rise_hi_ns": 35000,
+      "fall_lo_ns": 91875,
+      "fall_hi_ns": 97416
+    },
+    {
+      "run": "r06.csv",
+      "samples": 27,
+      "segments": 1,
+      "states": "ccccccccccccccccccccccccccc",
+      "first_ns": 15167,
+      "last_ns": 108792,
+      "n_set": 0,
+      "rise_lo_ns": null,
+      "rise_hi_ns": null,
+      "fall_lo_ns": null,
+      "fall_hi_ns": null
+    },
+    {
+      "run": "r07.csv",
+      "samples": 20,
+      "segments": 3,
+      "states": "ccccccSSSccccccccccc",
+      "first_ns": 9333,
+      "last_ns": 62125,
+      "n_set": 3,
+      "rise_lo_ns": 25958,
+      "rise_hi_ns": 29458,
+      "fall_lo_ns": 33833,
+      "fall_hi_ns": 37333
+    },
+    {
+      "run": "r08.csv",
+      "samples": 20,
+      "segments": 3,
+      "states": "cccccSSSSccccccccccc",
+      "first_ns": 9333,
+      "last_ns": 63583,
+      "n_set": 4,
+      "rise_lo_ns": 25375,
+      "rise_hi_ns": 28875,
+      "fall_lo_ns": 35583,
+      "fall_hi_ns": 39083
+    },
+    {
+      "run": "r09.csv",
+      "samples": 20,
+      "segments": 3,
+      "states": "cccccSSScccccccccccc",
+      "first_ns": 9334,
+      "last_ns": 63000,
+      "n_set": 3,
+      "rise_lo_ns": 24500,
+      "rise_hi_ns": 28292,
+      "fall_lo_ns": 32375,
+      "fall_hi_ns": 36167
+    },
+    {
+      "run": "r10.csv",
+      "samples": 32,
+      "segments": 3,
+      "states": "cccccSSSSSSSSSSSSSSSSSSSSScccccc",
+      "first_ns": 9333,
+      "last_ns": 91583,
+      "n_set": 21,
+      "rise_lo_ns": 24500,
+      "rise_hi_ns": 28292,
+      "fall_lo_ns": 77875,
+      "fall_hi_ns": 81375
+    },
+    {
+      "run": "r11.csv",
+      "samples": 32,
+      "segments": 3,
+      "states": "ccccccSSSSSSSSSSSSSSSSSSSSSSSScc",
+      "first_ns": 9334,
+      "last_ns": 92167,
+      "n_set": 24,
+      "rise_lo_ns": 26250,
+      "rise_hi_ns": 30042,
+      "fall_lo_ns": 87792,
+      "fall_hi_ns": 91000
+    },
+    {
+      "run": "r12.csv",
+      "samples": 22,
+      "segments": 3,
+      "states": "ccccccSSSSSccccccccccc",
+      "first_ns": 9042,
+      "last_ns": 66208,
+      "n_set": 5,
+      "rise_lo_ns": 24792,
+      "rise_hi_ns": 28583,
+      "fall_lo_ns": 37917,
+      "fall_hi_ns": 41417
+    },
+    {
+      "run": "r13.csv",
+      "samples": 20,
+      "segments": 3,
+      "states": "cccccSSSSccccccccccc",
+      "first_ns": 9042,
+      "last_ns": 62417,
+      "n_set": 4,
+      "rise_lo_ns": 24208,
+      "rise_hi_ns": 28000,
+      "fall_lo_ns": 34417,
+      "fall_hi_ns": 38208
+    },
+    {
+      "run": "r14.csv",
+      "samples": 19,
+      "segments": 3,
+      "states": "ccccSSScccccccccccc",
+      "first_ns": 9625,
+      "last_ns": 63583,
+      "n_set": 3,
+      "rise_lo_ns": 25375,
+      "rise_hi_ns": 29167,
+      "fall_lo_ns": 33250,
+      "fall_hi_ns": 36750
+    },
+    {
+      "run": "r15.csv",
+      "samples": 20,
+      "segments": 3,
+      "states": "cccccSSScccccccccccc",
+      "first_ns": 9334,
+      "last_ns": 62709,
+      "n_set": 3,
+      "rise_lo_ns": 24500,
+      "rise_hi_ns": 28000,
+      "fall_lo_ns": 32375,
+      "fall_hi_ns": 35875
+    }
+  ]
+}

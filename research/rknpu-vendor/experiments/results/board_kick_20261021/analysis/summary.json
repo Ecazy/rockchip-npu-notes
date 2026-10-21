@@ -1,0 +1,40 @@
+{
+  "loads": {
+    "fp16": {
+      "n": 372,
+      "status": "ok",
+      "x_star_ns": 5542.0,
+      "interpretation": "conditional transition estimate under the stated model (commit/hw/clear-on-IRQ); NOT a hard bound",
+      "is_hard_bound": false,
+      "ci95_ns": [
+        4083.5,
+        6417.0
+      ],
+      "ci95_meaning": "bootstrap spread of the estimator, not a max-latency guarantee",
+      "n_set": 214,
+      "n_clear": 158,
+      "drops": {
+        "kept": 372,
+        "no_sample (phase after the return)": 12
+      }
+    },
+    "iw32": {
+      "n": 373,
+      "status": "ok",
+      "x_star_ns": 5104.5,
+      "interpretation": "conditional transition estimate under the stated model (commit/hw/clear-on-IRQ); NOT a hard bound",
+      "is_hard_bound": false,
+      "ci95_ns": [
+        4812.5,
+        6417.5
+      ],
+      "ci95_meaning": "bootstrap spread of the estimator, not a max-latency guarantee",
+      "n_set": 213,
+      "n_clear": 160,
+      "drops": {
+        "kept": 373,
+        "no_sample (phase after the return)": 11
+      }
+    }
+  }
+}
