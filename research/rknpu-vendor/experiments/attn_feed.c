@@ -8,7 +8,7 @@
  * build (board):
  *   gcc -O2 attn_feed.c -I<rknn include> -L<rknn lib> -lrknnrt -o attn_feed
  * usage:
- *   ./attn_feed model.rknn <ramp|ones|zero> [out.bin]
+ *   ./attn_feed model.rknn <ramp|ones|zero|rand> [out.bin]
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,7 +44,7 @@ static const char *type_str(rknn_tensor_type t) {
 
 int main(int argc, char **argv) {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s model.rknn <ramp|ones|zero> [out.bin]\n", argv[0]);
+        fprintf(stderr, "usage: %s model.rknn <ramp|ones|zero|rand> [out.bin]\n", argv[0]);
         return 1;
     }
     const char *model = argv[1], *mode = argv[2];
@@ -97,9 +97,14 @@ int main(int argc, char **argv) {
     for (uint32_t i = 0; i < io.n_input; i++) {
         uint32_t ne = ia[i].n_elems;
         float *buf = malloc((size_t)ne * sizeof(float));
+        uint32_t rng = 0x12345678u + (uint32_t)(i + 1) * 0x9e3779b9u;
         for (uint32_t k = 0; k < ne; k++) {
             if (!strcmp(mode, "ones"))      buf[k] = 1.0f;
             else if (!strcmp(mode, "zero")) buf[k] = 0.0f;
+            else if (!strcmp(mode, "rand")) {
+                rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5;
+                buf[k] = (float)(rng & 0xffffffu) / 8388608.0f - 1.0f;
+            }
             else                            buf[k] = (float)((k % 16) + 1) * 0.25f;
         }
         in[i].index = i;
