@@ -35,6 +35,8 @@ void rk_mock_corrupt_guard_at(unsigned exec_index);
 void rk_mock_delay_us(unsigned us);
 void rk_mock_fail_prep_at(unsigned index);
 unsigned rk_mock_prep_calls(void);
+void rk_mock_context_fault(unsigned fd, unsigned on);
+int rk_mock_context_faulted(int fd);
 void rk_mock_force_tag_overflow(unsigned on);
 void rk_mock_reset(void);
 

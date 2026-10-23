@@ -6,6 +6,7 @@
  */
 #include <math.h>
 #include <stdint.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,6 +47,8 @@ static unsigned mock_corrupt_guard_at;
 static unsigned mock_delay_us;
 static unsigned mock_prep_count;
 static unsigned mock_fail_prep_at;
+#define MOCK_CONTEXT_FDS 4096
+static atomic_int mock_context_faulted[MOCK_CONTEXT_FDS];
 static int mock_live_bos;
 static size_t mock_resident;
 
@@ -61,6 +64,19 @@ void rk_mock_corrupt_guard_at(unsigned exec_index) {
 void rk_mock_delay_us(unsigned us) { mock_delay_us = us; }
 void rk_mock_fail_prep_at(unsigned index) { mock_fail_prep_at = index; }
 unsigned rk_mock_prep_calls(void) { return mock_prep_count; }
+void rk_mock_context_fault(unsigned fd, unsigned on) {
+    if (fd < MOCK_CONTEXT_FDS)
+        atomic_store_explicit(&mock_context_faulted[fd], on ? 1 : 0,
+                              memory_order_release);
+}
+int rk_mock_context_faulted(int fd) {
+    if (fd < 0 || fd >= MOCK_CONTEXT_FDS) return 0;
+    return atomic_load_explicit(&mock_context_faulted[fd],
+                                memory_order_acquire) ? 1 : 0;
+}
+int __wrap_rocket_context_faulted(int fd) {
+    return rk_mock_context_faulted(fd);
+}
 int rk_mock_live_bos(void) { return mock_live_bos; }
 size_t rk_mock_resident(void) { return mock_resident; }
 void rk_mock_reset(void) {
@@ -70,6 +86,9 @@ void rk_mock_reset(void) {
     mock_delay_us = 0;
     mock_prep_count = 0;
     mock_fail_prep_at = 0;
+    for (unsigned i = 0; i < MOCK_CONTEXT_FDS; i++)
+        atomic_store_explicit(&mock_context_faulted[i], 0,
+                              memory_order_relaxed);
     for (unsigned i = 0; i < mock_tag_count; i++) {
         free(mock_tags[i].snapshot);
         mock_tags[i].snapshot = NULL;
@@ -280,7 +299,12 @@ int __wrap_co_execute_profiled(int fd, const co_program *p, unsigned count,
         (mode != CO_CHAIN && mode != CO_SEPARATE))
         return ROCKET_E_SHAPE;   /* validate the call before any view access */
     if (profile) memset(profile, 0, sizeof(*profile));
-    if (++mock_execs == mock_fail_at) return ROCKET_E_DEVICE;
+    if (++mock_execs == mock_fail_at) {
+        /* A submit-path failure quarantines the shared provider context before
+         * returning.  The real provider does the same while holding submit_lock. */
+        rk_mock_context_fault(fd, 1);
+        return ROCKET_E_DEVICE;
+    }
     if (mock_tag_overflow) return ROCKET_E_SHAPE; /* table exhausted: refuse */
     for (unsigned i = 0; i < count; i++) {
         /* tags first: an unknown program is refused without dereferencing it */

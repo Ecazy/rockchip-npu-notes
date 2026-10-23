@@ -1,5 +1,8 @@
 """A concurrent run on one workspace must return RK_E_BUSY, not enter twice."""
+import json
 import os
+import subprocess
+import sys
 import threading
 import time
 import unittest
@@ -73,6 +76,47 @@ class WorkspaceBusyTests(unittest.TestCase):
         self.assertEqual(self.lib.mock_control("rk_mock_tag_overflow"), 0)
         self.assertEqual(self.lib.mock_control("rk_mock_live_bos"), baseline_bos)
         self.assertEqual(self.lib.mock_control("rk_mock_resident"), baseline_res)
+
+
+    def test_failing_run_poison_with_concurrent_entrant(self):
+        env = dict(os.environ)
+        env["RKNPU_PLAN_MOCK_LIB"] = MOCK_LIB
+        env["PYTHONPATH"] = (str(ROOT / "python") +
+                             (os.pathsep + env["PYTHONPATH"]
+                              if env.get("PYTHONPATH") else ""))
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tests" / "fixtures" /
+                                  "poison_concurrent_worker.py")],
+            cwd=str(ROOT), env=env, text=True, capture_output=True)
+        self.assertEqual(proc.returncode, 0, proc.stdout + "\n" + proc.stderr)
+        result = json.loads(proc.stdout.strip().splitlines()[-1])
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["second"], -10)  # RK_E_BUSY
+        self.assertEqual(result["third"], -11)   # RK_E_POISONED
+        self.assertTrue(result["outputs_unchanged"])
+        self.assertTrue(result["handle_retained"])
+        self.assertTrue(result["bos_retained"])
+
+
+    def test_shared_fd_context_fault_blocks_other_and_new_workspaces(self):
+        env = dict(os.environ)
+        env["RKNPU_PLAN_MOCK_LIB"] = MOCK_LIB
+        env["PYTHONPATH"] = (str(ROOT / "python") +
+                             (os.pathsep + env["PYTHONPATH"]
+                              if env.get("PYTHONPATH") else ""))
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tests" / "fixtures" /
+                                  "shared_fd_context_worker.py")],
+            cwd=str(ROOT), env=env, text=True, capture_output=True)
+        self.assertEqual(proc.returncode, 0, proc.stdout + "\n" + proc.stderr)
+        result = json.loads(proc.stdout.strip().splitlines()[-1])
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["context_faulted"], 1)
+        self.assertTrue(result["outputs_unchanged"])
+        self.assertTrue(result["handles_retained"])
+        self.assertTrue(result["bos_retained"])
+        self.assertEqual(result["execs_after_ws2"],
+                         result["execs_after_failure"])
 
 
 if __name__ == "__main__":

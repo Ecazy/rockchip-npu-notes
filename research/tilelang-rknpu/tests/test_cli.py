@@ -181,7 +181,7 @@ class CLITests(unittest.TestCase):
         class FakeCDLL:
             def __init__(self):
                 self.rocket_open = FakeFn(7)
-                self.rocket_close = FakeFn(0)
+                self.rocket_close = FakeFn(None)
 
         class FakeLib:
             def __init__(self):
@@ -194,8 +194,9 @@ class CLITests(unittest.TestCase):
             def create(cls, *args, **kwargs):
                 return cls.instance
 
-            def __init__(self, *, run_error=None):
+            def __init__(self, *, run_error=None, close_error=True):
                 self.run_error = run_error
+                self.close_error = close_error
 
             def run(self, inputs):
                 if self.run_error is not None:
@@ -203,8 +204,9 @@ class CLITests(unittest.TestCase):
                 return {"Y": np.zeros((8, 33), dtype=np.float16)}
 
             def close(self):
-                raise BackendError(RK_E_POISONED,
-                                   "workspace destroy failed", stage="cli")
+                if self.close_error:
+                    raise BackendError(RK_E_POISONED,
+                                       "workspace destroy failed", stage="cli")
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
@@ -240,9 +242,26 @@ class CLITests(unittest.TestCase):
                 if run_error is not None:
                     self.assertIn("RK_E_NUMERIC_CONTRACT", stderr.getvalue())
                 self.assertEqual(len(fake_lib.cdll.rocket_open.calls), 1)
-                self.assertEqual(len(fake_lib.cdll.rocket_close.calls), 1)
+                # Destroy did not confirm quiescence, so provider fd/context
+                # retention wins over closing the descriptor.
+                self.assertEqual(fake_lib.cdll.rocket_close.calls, [])
 
-            # Caller-owned fd: neither rocket_open nor rocket_close is invoked.
+            # Healthy destroy: the CLI owns the fd and closes it exactly once.
+            FakeWorkspace.instance = FakeWorkspace(close_error=False)
+            fake_lib = FakeLib()
+            with mock.patch.object(ffi, "default_library",
+                                   return_value=fake_lib), \
+                    mock.patch.object(bindings, "Workspace", FakeWorkspace), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                rc = cli.main(["run", str(plan), "--bindings",
+                               str(binding_path), "--output-dir",
+                               str(tmp / "out-owner")])
+            self.assertEqual(rc, 0)
+            self.assertEqual(len(fake_lib.cdll.rocket_open.calls), 1)
+            self.assertEqual(len(fake_lib.cdll.rocket_close.calls), 1)
+
+            # Caller-owned fd: neither rocket_open nor rocket_close is invoked,
+            # even when workspace destroy fails.
             FakeWorkspace.instance = FakeWorkspace()
             fake_lib = FakeLib()
             with mock.patch.object(ffi, "default_library",

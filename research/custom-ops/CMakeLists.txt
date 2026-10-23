@@ -169,7 +169,8 @@ target_link_options(rknpu_plan_mock PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc)
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=rocket_context_faulted)
 set_target_properties(rknpu_plan_mock PROPERTIES OUTPUT_NAME rknpu_plan_mock)
 
 # Compile-time check that the test-only mock API matches the ctypes table.
@@ -182,7 +183,8 @@ target_link_options(mock_signature_probe PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc)
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=rocket_context_faulted)
 target_compile_options(mock_signature_probe PRIVATE -Wall -Wextra -Werror)
 
 # Test-only scenarios driven through the production emitters.
@@ -195,7 +197,8 @@ target_link_options(rk_mock_scenarios PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc)
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=rocket_context_faulted)
 
 add_executable(rk_plan_contract_test tests/c/rk_plan_contract_test.c)
 target_link_libraries(rk_plan_contract_test PRIVATE rk_plan_core custom_ops)
@@ -211,8 +214,22 @@ target_link_options(rk_plan_host_test PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc)
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=rocket_context_faulted)
 add_test(NAME rk_plan_host COMMAND rk_plan_host_test)
+
+# Provider-boundary quarantine test: includes the real provider source, seeds a
+# fake per-fd context, and proves a queued submit cannot rewrite the task BO after
+# another submit fails while holding the provider submit lock.
+add_executable(provider_context_test
+  "${UPSTREAM_ROOT}/rknpu-submit/tests/provider_context_test.c")
+target_include_directories(provider_context_test PRIVATE
+  ${RKT}/include ${RKT}/src "${UPSTREAM_ROOT}/rknpu-submit/include"
+  "${UPSTREAM_ROOT}/rknpu-submit/src")
+find_package(Threads REQUIRED)
+target_link_libraries(provider_context_test PRIVATE Threads::Threads m)
+target_compile_options(provider_context_test PRIVATE -Wall -Wextra -Werror)
+add_test(NAME provider_context COMMAND provider_context_test)
 # MALLOC_PERTURB_ makes any read of uninitialised Host staging memory
 # deterministic instead of silently seeing zeroed fresh heap pages.
 set_tests_properties(rk_plan_host PROPERTIES

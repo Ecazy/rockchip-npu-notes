@@ -18,6 +18,8 @@
 #include <stdio.h>
 
 #include "mock_npu.h"
+#include "rocket_npu.h"
+#include "rknpu_submit.h"
 
 #define CHECK(fn, type) static type probe_##fn = fn
 
@@ -38,12 +40,18 @@ static void (*probe_rk_mock_corrupt_guard_at)(unsigned) = rk_mock_corrupt_guard_
 static void (*probe_rk_mock_delay_us)(unsigned) = rk_mock_delay_us;
 static void (*probe_rk_mock_fail_prep_at)(unsigned) = rk_mock_fail_prep_at;
 static unsigned (*probe_rk_mock_prep_calls)(void) = rk_mock_prep_calls;
+static void (*probe_rk_mock_context_fault)(unsigned, unsigned) = rk_mock_context_fault;
+static int (*probe_rk_mock_context_faulted)(int) = rk_mock_context_faulted;
 static void (*probe_rk_mock_force_tag_overflow)(unsigned) = rk_mock_force_tag_overflow;
 static void (*probe_rk_mock_reset)(void) = rk_mock_reset;
 static int (*probe_rk_mock_dma_range)(unsigned, uint32_t *, uint32_t *, size_t *) = rk_mock_dma_range;
 static uint32_t (*probe_rk_mock_dma_of)(uint32_t) = rk_mock_dma_of;
 static uint64_t (*probe_rk_mock_bo_dma_address)(uint32_t) = rk_mock_bo_dma_address;
 static int (*probe_rk_mock_find_half)(uint16_t, unsigned *, size_t *) = rk_mock_find_half;
+/* Compile-time proof against the vendor header, not a Python hand-written mirror. */
+static int (*probe_vendor_rocket_open)(void) = rocket_open;
+static void (*probe_vendor_rocket_close)(int) = rocket_close;
+static int (*probe_vendor_rocket_context_faulted)(int) = rocket_context_faulted;
 
 static const struct { const char *name, *ret, *args; } kSignatures[] = {
     {"rk_mock_execs", "unsigned", ""},
@@ -63,6 +71,8 @@ static const struct { const char *name, *ret, *args; } kSignatures[] = {
     {"rk_mock_delay_us", "void", "unsigned"},
     {"rk_mock_fail_prep_at", "void", "unsigned"},
     {"rk_mock_prep_calls", "unsigned", ""},
+    {"rk_mock_context_fault", "void", "unsigned,unsigned"},
+    {"rk_mock_context_faulted", "int", "int"},
     {"rk_mock_force_tag_overflow", "void", "unsigned"},
     {"rk_mock_reset", "void", ""},
     {"rk_mock_dma_range", "int", "unsigned,uint32_t *,uint32_t *,size_t *"},
@@ -86,9 +96,16 @@ int main(void) {
     (void)probe_rk_mock_delay_us;
     (void)probe_rk_mock_fail_prep_at;
     (void)probe_rk_mock_prep_calls;
+    (void)probe_rk_mock_context_fault;
+    (void)probe_rk_mock_context_faulted;
     (void)probe_rk_mock_force_tag_overflow; (void)probe_rk_mock_reset;
     (void)probe_rk_mock_dma_range;  (void)probe_rk_mock_dma_of;
     (void)probe_rk_mock_bo_dma_address; (void)probe_rk_mock_find_half;
+    (void)probe_vendor_rocket_open; (void)probe_vendor_rocket_close;
+    (void)probe_vendor_rocket_context_faulted;
+    printf("VENDOR_SIG\trocket_context_faulted\tint\tint\n");
+    printf("VENDOR_SIG\trocket_open\tint\t\n");
+    printf("VENDOR_SIG\trocket_close\tvoid\tint\n");
     for (unsigned i = 0; i < sizeof(kSignatures) / sizeof(kSignatures[0]); i++)
         printf("MOCK_SIG\t%s\t%s\t%s\n", kSignatures[i].name,
                kSignatures[i].ret, kSignatures[i].args);
