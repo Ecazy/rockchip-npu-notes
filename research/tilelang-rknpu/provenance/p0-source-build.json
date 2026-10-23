@@ -1,0 +1,158 @@
+{
+  "board_validation": {
+    "cases": "27 x 3 serial single-core masks = 81/81 PASS",
+    "note": "campaign plans were generated with the source-built TileLang/TVM import path; board runs use the production runtime build",
+    "result": "results/20261023T141328Z-rk3588/",
+    "source_generation_log": "results/20261023T141328Z-rk3588/make-campaign.log"
+  },
+  "build_configuration": {
+    "CMAKE_BUILD_TYPE": "Release",
+    "HIDE_PRIVATE_SYMBOLS": "OFF",
+    "TVM_FFI_USE_LIBBACKTRACE": "ON from locked TVM config, source supplied",
+    "TVM_ROOT": ".src/p0-build-src/tvm",
+    "USE_ASCEND": "OFF",
+    "USE_CUDA": "OFF",
+    "USE_GTEST": "OFF",
+    "USE_LLVM": "OFF",
+    "USE_METAL": "OFF",
+    "USE_OPENCL": "OFF",
+    "USE_ROCM": "OFF",
+    "build_dir": ".src/p0-build-tilelang",
+    "cutlass": "not required because CUDA/backend codegen disabled",
+    "source_dir": ".src/p0-build-src/tilelang"
+  },
+  "built_at_utc": "2026-10-23T14:16:29Z",
+  "libraries": {
+    "libtilelang.so": "6146101089cd8c4fa6e621b52b07f1a155b88e24a1d4571343ecec0c95a0bf75",
+    "libtvm_compiler.so": "654fdaaca27af59f337a28f0824a52f2f146cc28920c7b23eaa274f3c1f643ba",
+    "libtvm_ffi.so": "3136acafd189050bf37338c78243a148ddc63e67352bdc550a7be25759242594",
+    "libtvm_runtime.so": "ef825574b2337456074bbd91eff73b9fd13c72c0e97afaf415e89b7e1a0855fd",
+    "tilelang_cython_wrapper.cpython-312-x86_64-linux-gnu.so": "e990d7b18fe4982055c8407173cec9a149b30512042189bd2cf6f48a514eaac6"
+  },
+  "loaded_paths_log": "provenance/p0-source-build/import-paths.log",
+  "logs": {
+    "cmake_cache": "provenance/p0-source-build/CMakeCache.txt",
+    "compile_commands": "provenance/p0-source-build/compile_commands.json",
+    "configure": "provenance/p0-source-build/configure.log",
+    "cython_build": "provenance/p0-source-build/tilelang-cython-build.log",
+    "source_inventory": "provenance/p0-source-build/source-tree-inventory.sha256",
+    "tilelang_build_attempt1": "provenance/p0-source-build/tilelang-build-attempt1.log",
+    "tilelang_build_final": "provenance/p0-source-build/tilelang-build-final.log",
+    "tvm_build_options": "provenance/p0-source-build/TVMBuildOptions.txt"
+  },
+  "notes": [
+    "No source patches were applied to TileLang/TVM/tvm-ffi/dlpack/libbacktrace.",
+    "The source-built libraries are not required to be byte-identical to official wheel binaries.",
+    "Backend behavior was validated through the full test suite and semantically identical plans.",
+    "TVM CMake detected the enclosing worktree hash 9baf... because the extracted source is nested under the project; the actual TVM source is archive commit 4211874e... and the source-tree inventory is authoritative for that component.",
+    "The source build is not required to be byte-identical to the official wheel; compatibility is measured by import paths, full tests, semantic plan equality and the source-built-plan board campaign."
+  ],
+  "plan_equivalence": {
+    "cases": 27,
+    "difference": "source_hash/plan_hash/source-span metadata only",
+    "evidence": "provenance/p0-source-build/plan-equivalence.json",
+    "keys": [
+      "bindings",
+      "constants",
+      "buffers",
+      "views",
+      "actions",
+      "submits",
+      "publish",
+      "accounting"
+    ],
+    "status": "PASS"
+  },
+  "prebuilt_components": [
+    {
+      "name": "Z3",
+      "note": "prebuilt wheel dependency used by source-built TileLang/TVM",
+      "source": ".pydeps-p0/z3",
+      "version": "4.15.0"
+    },
+    {
+      "name": "tvm_ffi Python package",
+      "note": "Python wrapper only; native libtvm_ffi.so comes from source build",
+      "source": ".pydeps-p0/tvm_ffi"
+    },
+    {
+      "artifact": ".src/p0-wheel-cache/Cython-3.0.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "name": "Cython",
+      "sha256": "2f020fa1c0552052e0660790b8153b79e3fc9a15dbd8f1d0b841fe5d204a6ae6",
+      "version": "3.0.8"
+    },
+    {
+      "artifact": ".src/p0-apt-cache/libpython3.12-dev_3.12.3-1ubuntu0.17_amd64.deb",
+      "name": "libpython3.12-dev",
+      "sha256": "c123ddab7763e45199e21b4ac8545e705f20a0315b9ada4c236b52fb088c4e16",
+      "version": "3.12.3-1ubuntu0.17"
+    }
+  ],
+  "schema_version": 1,
+  "source_archives": [
+    {
+      "archive": ".src/p0-download-cache/tilelang-a35f8ddf.tar.gz",
+      "commit": "a35f8ddf45eba16c21211ec8822d56ce5363036f",
+      "name": "tilelang",
+      "repository": "https://github.com/tile-ai/tilelang",
+      "sha256": "2e85edecef4cbeb795f4f8a3b2ac2ad4020d89f3d35687c624c3bbcf429b73bc",
+      "tag": "v0.1.15",
+      "url": "https://gh-proxy.com/https://github.com/tile-ai/tilelang/archive/a35f8ddf45eba16c21211ec8822d56ce5363036f.tar.gz"
+    },
+    {
+      "archive": ".src/p0-download-cache/tvm-4211874e.tar.gz",
+      "commit": "4211874e9e4b8770fd20ad0d98ab80afd1df5028",
+      "name": "tvm",
+      "repository": "https://github.com/apache/tvm",
+      "sha256": "ee73c88f82d949f451e541182f69973f8c4c452f658695442931c686faffadfa",
+      "url": "https://gh-proxy.com/https://github.com/apache/tvm/archive/4211874e9e4b8770fd20ad0d98ab80afd1df5028.tar.gz"
+    },
+    {
+      "archive": ".src/p0-download-cache/tvm-ffi-3c35034f.tar.gz",
+      "commit": "3c35034fd1026011736e19a4e0e1ed0f22058c42",
+      "name": "tvm-ffi",
+      "repository": "https://github.com/apache/tvm-ffi",
+      "sha256": "b2c1947d91c0b7e8092d38d31c60f0ea5ad34bc45a05b315224774bdd0dd86a7",
+      "url": "https://gh-proxy.com/https://github.com/apache/tvm-ffi/archive/3c35034fd1026011736e19a4e0e1ed0f22058c42.tar.gz"
+    },
+    {
+      "archive": ".src/p0-download-cache/dlpack-84d107bf.tar.gz",
+      "commit": "84d107bf416c6bab9ae68ad285876600d230490d",
+      "name": "dlpack",
+      "repository": "https://github.com/dmlc/dlpack",
+      "sha256": "9978ddb7f533fcee7e0c0ab81a978257d3f8dc475eb83319a5e632738cafb271",
+      "url": "https://gh-proxy.com/https://github.com/dmlc/dlpack/archive/84d107bf416c6bab9ae68ad285876600d230490d.tar.gz"
+    },
+    {
+      "archive": ".src/p0-download-cache/libbacktrace-79392187.tar.gz",
+      "commit": "793921876c981ce49759114d7bb89bb89b2d3a2d",
+      "name": "libbacktrace",
+      "repository": "https://github.com/ianlancetaylor/libbacktrace",
+      "sha256": "858b1225351052234f7e71f0f36622fc9ad33aac947db7816d0b443ae0dd33ce",
+      "url": "https://gh-proxy.com/https://github.com/ianlancetaylor/libbacktrace/archive/793921876c981ce49759114d7bb89bb89b2d3a2d.tar.gz"
+    }
+  ],
+  "source_assembly": {
+    "cutlass": "not fetched/downloaded for this CPU compiler build; CUDA/ROCm/Metal/Ascend/LLVM/OpenCL all OFF",
+    "tilelang_3rdparty_tvm": "symlink to locked tvm checkout",
+    "tvm_3rdparty_dlpack": "copy of same dlpack checkout",
+    "tvm_3rdparty_tvm_ffi": "tvm-ffi checkout",
+    "tvm_3rdparty_tvm_ffi_3rdparty_dlpack": "dlpack checkout"
+  },
+  "status": "COMPLETE",
+  "tests": {
+    "ctest": "provenance/p0-source-build/ctest.log",
+    "ctest_result": "27/27 passed",
+    "pytest": "provenance/p0-source-build/pytest.log",
+    "pytest_result": "213 passed, 40 subtests"
+  },
+  "toolchain": {
+    "cmake": "3.28.3",
+    "g++": "13.3.0",
+    "gcc": "13.3.0",
+    "kernel": "7.0.0-38-generic",
+    "libc": "2.39",
+    "make": "4.3",
+    "python": "3.12.3"
+  }
+}

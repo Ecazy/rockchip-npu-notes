@@ -129,7 +129,7 @@ Because this Host has no usable PTY, the SSH path uses
 `SSH_ASKPASS_REQUIRE=force` instead of `sshpass`, without changing the deployment
 shape.
 
-Evidence: `results/20261023T131610Z-rk3588/`
+Evidence: `results/20261023T141328Z-rk3588/`
 
 - Device: `RK3588 OPi 5 Plus`; kernel `6.1.43-rockchip-rk3588-rknpu098`
 - Driver: `RKNPU driver: v0.9.8`; NPU 1 GHz; runtime ABI 1
@@ -205,7 +205,7 @@ bundle SHA-256; the remote loaded-library SHA-256 is labelled **recorded-only**
 because the library bytes are not rehashed on the Host.
 
 Offline recomputation of the archived raw outputs is recorded at
-`results/20261023T131610Z-rk3588/recomputed/summary.md` (and for the prior archive
+`results/20261023T141328Z-rk3588/recomputed/summary.md` (and for the prior archive
 at `results/20261023T101551Z-rk3588/recomputed/summary.md`).  The recomputation
 uses unquantized float64 math references; the latest declared-path and math-path
 max errors match the campaign summary values above.
@@ -220,13 +220,13 @@ and long-duration stress are **extension validation**, not MVP/P8 blockers.
 - [ACCEPTANCE-MATRIX.md](ACCEPTANCE-MATRIX.md): one-row-per-necessary-condition
   map to code, tests and archived logs, with implementation/verification/
   unsupported/future/blocked classifications.
-- [REPLAY.md](REPLAY.md): Host, board, CLI, offline-recompute and P0 retry commands.
+- [REPLAY.md](REPLAY.md): Host, board, CLI, offline-recompute and source-build commands.
 - [REVIEW-CLOSURE.md](REVIEW-CLOSURE.md): the four evidence-semantic review items.
 - [RUNTIME-LIFECYCLE.md](RUNTIME-LIFECYCLE.md): command/task/data BO ownership,
   pre-submit safety, unknown-state poisoning/retention, BUSY and CLI cleanup.
-- P0 bounded retries: `exit 124` (`provenance/p0-rebuild-attempt.log`) and
-  `curl_rc=28` (`provenance/p0-rebuild-attempt-2.log`); P0 remains externally
-  blocked and is not claimed complete.
+- P0 source build: **COMPLETE** via resumable GitHub mirror archives and an
+  independent CMake tree; see [provenance/p0-source-build.json](provenance/p0-source-build.json)
+  and `provenance/p0-source-build/`.  Earlier timeout retries remain as history.
 
 ## Runtime contract closure (2026-10-23)
 
@@ -265,11 +265,11 @@ matrix: real TileLang multi-block staged projection/FFN/branch, tiled RKIR graph
 CLI, guards, bindings/BO/budget/BUSY/pre-submit/unknown-poison host regressions and
 same-board execution.
 
-The entire normative MVP is **not claimed closed** because exactly two concrete
-conditions remain: (1) P0 source-built `libtvm` is externally blocked; (2) a real
-RK3588 submit/recovery fault was not injected, so driver quiescence and physical
-release after unknown device state remain unmeasured.  These are recorded as
-limitations/external blockers, not hidden behind an undefined release-gate label.
+The entire normative MVP is **not claimed closed** because one concrete condition
+remains: a real RK3588 submit/recovery fault was not injected, so driver
+quiescence and physical release after unknown device state remain unmeasured.
+P0 source rebuild is complete; the code isolation contract is verified.  The
+remaining limitation is not hidden behind an undefined release-gate label.
 
 ## Verification state
 

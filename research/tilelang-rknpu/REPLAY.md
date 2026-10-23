@@ -22,9 +22,10 @@ isolated source/campaign bundle, runs the three single-core masks serially,
 retrieves raw outputs, verifies source/library records and fails on any exact
 credential value in the result tree.
 
-Current evidence: `results/20261023T131610Z-rk3588/` (27 cases × 3 masks = 81/81,
+Current evidence: `results/20261023T141328Z-rk3588/` (27 cases × 3 masks = 81/81,
 chain/separate, tiled RKIR and real multi-block TileLang staged
-projection/FFN/branch, CLI path).  Runtime ownership/failure semantics are in
+projection/FFN/branch, CLI path).  This campaign was generated with the independent
+source-built TileLang/TVM tree.  Runtime ownership/failure semantics are in
 `RUNTIME-LIFECYCLE.md`.
 
 ## Offline reference/raw-output recomputation
@@ -32,9 +33,9 @@ projection/FFN/branch, CLI path).  Runtime ownership/failure semantics are in
 ```bash
 PYTHONPATH=$PWD/python:$PWD/.pydeps-p0 \
 python3 tools/recompute_board_metrics.py \
-  --campaign results/20261023T131610Z-rk3588/campaign \
-  --results results/20261023T131610Z-rk3588/board \
-  --out results/20261023T131610Z-rk3588/recomputed
+  --campaign results/20261023T141328Z-rk3588/campaign \
+  --results results/20261023T141328Z-rk3588/board \
+  --out results/20261023T141328Z-rk3588/recomputed
 ```
 
 The recomputation uses archived inputs/raw outputs and unquantized float64 math
@@ -47,19 +48,42 @@ PYTHONPATH=$PWD/python:$PWD/.pydeps-p0 \
 RKNPU_PLAN_LIB=$PWD/../custom-ops/build-host-mvp/librknpu_plan_mock.so \
 RKNPU_CHIP=rk3588 \
 python3 tools/board_cli_check.py \
-  --campaign results/20261023T131610Z-rk3588/campaign \
+  --campaign results/20261023T141328Z-rk3588/campaign \
   --out /tmp/rk-cli-check --fd 0
 ```
 
 On the board the same helper is run without `--fd`; the CLI opens and closes its
 own fd.
 
-## P0 bounded source retry
+## P0 source build (completed)
 
-The 2026-10-23 attempts and their timeout exit codes are recorded in
+Earlier short-timeout attempts remain recorded as history:
 `provenance/p0-rebuild-attempt.log` (`git_clone_rc=124`) and
-`provenance/p0-rebuild-attempt-2.log` (`curl_rc=28`).  Partial downloads are not
-used as source evidence; P0 remains open.
+`provenance/p0-rebuild-attempt-2.log` (`curl_rc=28`).  The successful build used
+resumable mirror downloads, exact locked archives, a separate CMake tree and
+source-built `libtilelang`/`libtvm_*` libraries.  Full source list, archive and
+library hashes, toolchain, build flags, logs and source-tree inventory are in
+`provenance/p0-source-build.json` and `provenance/p0-source-build/README.md`.
+
+Source-built host validation:
+
+```bash
+PYTHONPATH=$PWD/.src/p0-build-src/tilelang:$PWD/python:$PWD/.pydeps-p0 \
+LD_LIBRARY_PATH=$PWD/.src/p0-build-tilelang/lib:$PWD/.pydeps-p0/z3/lib \
+TILELANG_CACHE_DIR=$PWD/.src/p0-tilelang-cache \
+RKNPU_PLAN_LIB=$PWD/../custom-ops/build-host-mvp/librknpu_plan.so \
+RKNPU_PLAN_MOCK_LIB=$PWD/../custom-ops/build-host-mvp/librknpu_plan_mock.so \
+python3 -m pytest tests
+```
+
+Source-built board campaign:
+
+```bash
+TILELANG_SOURCE_PYTHONPATH=$PWD/.src/p0-build-src/tilelang \
+TILELANG_SOURCE_LIBDIR=$PWD/.src/p0-build-tilelang/lib \
+TILELANG_CACHE_DIR=$PWD/.src/p0-tilelang-cache \
+./scripts/run-board-admission.sh
+```
 
 ## Upstream provider patch
 

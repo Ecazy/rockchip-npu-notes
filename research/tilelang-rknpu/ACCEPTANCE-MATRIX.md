@@ -1,6 +1,6 @@
 # MVP acceptance matrix
 
-Checkpoint evidence: board `results/20261023T131610Z-rk3588/`, Host
+Checkpoint evidence: board `results/20261023T141328Z-rk3588/`, Host
 `results/20261023T131916Z-host/` (213 pytest / 40 subtests, 27/27 ctest, 711 C
 checks, sanitizer enabled).  Status terms are deliberately narrow:
 **implemented+verified**, **verification gap**, **explicitly unsupported**,
@@ -10,7 +10,7 @@ checks, sanitizer enabled).  Status terms are deliberately narrow:
 
 | Item | Status | Code | Tests / logs |
 |---|---|---|---|
-| P0 source/dependency lock | **verification gap (external)** | `provenance/source-lock.json`, `requirements.lock`, `scripts/lock_source.py`, `scripts/lock_deps.sh` | source/dependency scopes and isolated-wheel runs are recorded in `P0-SOURCE-LOCK.md`; bounded 2026-10-23 retries failed with `git_clone_rc=124` and `curl_rc=28` (`provenance/p0-rebuild-attempt*.log`). Source-built `libtvm` is not claimed. |
+| P0 source/dependency lock | **implemented+verified** | `provenance/source-lock.json`, `requirements.lock`, `scripts/lock_source.py`, `scripts/lock_deps.sh`; `provenance/p0-source-build.json` | source/dependency scopes and isolated-wheel runs are recorded in `P0-SOURCE-LOCK.md`. Locked TileLang/TVM/tvm-ffi/dlpack/libbacktrace archives were independently built with exact commit/hash/source-tree inventory, CMakeCache/compile commands, toolchain and library hashes. Source-built import full pytest 213/40 and CTest 27/27; 27 gate plans semantically equal; same board campaign 81/81. |
 | P1 frontend | **implemented+verified for finite accepted forms** | `python/rknpu_backend/frontend/tilelang_adapter.py` | `test_frontend*.py` and `test_staged_tilelang.py`; real multi-block TileLang projection/FFN/branch fixtures now feed the tiled RKIR backend. Same-grid cross-block dependencies, FP32-only K accumulation and inexact block coverage are rejected. Board cases `*_tilelang_staged_chain` pass on all three masks. |
 | P2 RKIR/RKPlan/schema/capabilities | **implemented+verified** | `ir.py`, `plan.py`, `schema/*.json`, capability manifest | `test_ir.py`, `test_capabilities.py`, `test_plan_verify.py`; C contract 26/26. |
 | P3 planner | **implemented+verified for the finite representative shape list** | `passes/dag.py`, `passes/tile.py`, `passes/storage.py` | `test_lowering.py`, `test_storage.py`, `test_dataflow_multitile.py`, `test_staged_tilelang.py`; representative boundaries include 1/13/257/300/512-wide M/N/K, ragged K=257, M/N multi-tile, odd/even K shards, and staged source shapes `512x256x512`. The 1..4096 limits are rule-checked; exhaustive combination enumeration is explicitly not required. |
@@ -18,7 +18,7 @@ checks, sanitizer enabled).  Status terms are deliberately narrow:
 | P5 C descriptor/FFI | **implemented+verified** | `custom-ops/src/rk_plan_validate.c`, `include/rk_plan.h`, `runtime/ffi.py` | `rk_plan_contract_test` 26 checks, `rk_plan_host_test` 711 checks; `test_ffi.py`, `test_plan_verify.py`. |
 | P6 instantiate/execute | **implemented+verified on Host/mock; real-device failure unmeasured** | `custom-ops/src/rk_plan_runtime.c`, `RUNTIME-LIFECYCLE.md` | Pre-submit binding/nonfinite/upload failures are safe; executor errors poison and retain command+data BOs; BUSY and final publication guard regressions pass. Board success path passes. No dangerous timeout is injected; real-device recovery is not claimed. |
 | P7 CLI | **implemented+verified on Host and RK3588** | `python/rknpu_backend/cli.py`, `tools/board_cli_check.py` | `test_cli.py` covers caller/owned fd, cleanup failure not masked, and rc mapping; board `core-*/cli/cli-report.json` shows compile/validate/explain rc0, two successful runs with stable fd count, bad binding rc2/no publish. |
-| P8 board admission | **representative campaign passed; MVP not fully closed** | campaign/verifier scripts | Final rerun `results/20261023T131610Z-rk3588/`: **27 cases × 3 serial masks = 81/81 PASS**, including projection/FFN/branch from real multi-block TileLang staged sources, tiled RKIR cases, broadcast, dual output, ragged tail, K shards, guards and the full CLI path. Source hash recomputed true; raw outputs and dual references archived. Remaining blockers are only the two concrete items below. |
+| P8 board admission | **representative campaign passed; MVP not fully closed** | campaign/verifier scripts | Final source-built rerun `results/20261023T141328Z-rk3588/`: **27 cases × 3 serial masks = 81/81 PASS**, including projection/FFN/branch from real multi-block TileLang staged sources, tiled RKIR cases, broadcast, dual output, ragged tail, K shards, guards and the full CLI path. Source hash recomputed true; raw outputs and dual references archived. Remaining blocker is only the real-device fault/recovery item below. |
 | P9 expansion | **future extension** | n/a | Dynamic host broadcast, state/recurrent/hybrid, online core scheduling and unverified composite templates remain outside P0–P8 closure. |
 
 ## Specific cross-cutting conditions
@@ -35,26 +35,20 @@ checks, sanitizer enabled).  Status terms are deliberately narrow:
 | Shared-fd provider context quarantine | **implemented+verified on Host/mock/provider boundary; real-device fault unmeasured** | `rknpu_provider.c`: atomic per-fd `faulted` set inside `submit_lock` before unlock; later submits return `-EPIPE` without task-BO rewrite; runtime rejects same-fd existing/new workspaces; faulted `rocket_close` retains fd/task BO. Patch record: `provenance/upstream-patches.json` | C `provider_context` queued-submit + healthy-close test; `test_workspace_busy.py::test_shared_fd_context_fault_blocks_other_and_new_workspaces`; `test_runtime_abi.py`. |
 | Command/task/data and provider-context failure lifecycle | **implemented+verified on Host/mock; real-device unknown state unmeasured** | `RUNTIME-LIFECYCLE.md`: creation failure frees command+data BOs; pre-submit failures are safe; executor errors poison the workspace; provider `atomic_int faulted` is set under `submit_lock` before unlock, blocks queued/shared-fd/new-workspace submits, and faulted `rocket_close` retains fd/task BO. Upstream patch recorded in `provenance/upstream-patches.json`. | `test_ws_poison.py`; `test_workspace_busy.py` concurrent failing-run and shared-fd two-workspace/new-workspace paths; `test_runtime_abi.py`; C `provider_context` queued-submit task-BO/close test. `live_bos == 7` is only an allocation-count check, not lifecycle proof. |
 | Source/library provenance | **source independently verified; library recorded-only** | `scripts/run-board-admission.sh`, verifier `artifact_verification` | board `source-bundle.sha256` recomputed equal; `board/library.sha256` is a remote record and is explicitly `verified=false` on the Host. |
-| Credential hygiene | **implemented+verified** | `.env` ignored; askpass + exact-value scan | board campaign `credential scan: PASS`; exact scan of `results/20261023T131610Z-rk3588/` is zero-match. |
+| Credential hygiene | **implemented+verified** | `.env` ignored; askpass + exact-value scan | board campaign `credential scan: PASS`; exact scan of `results/20261023T141328Z-rk3588/` is zero-match. |
 
 ## Remaining MVP closure conditions
 
 The exhaustive-shape, multi-board, concurrency, long-stress and undefined
-“full release gate” items are removed.  The finite representative matrix and the
-same-board rerun are complete.  Two concrete conditions remain:
+“full release gate” items are removed.  The finite representative matrix, P0
+source rebuild and same-board rerun are complete.  One concrete condition remains:
 
-1. **P0 source build — blocked external.** Source/dependency hashes and wheel
-   equivalence are recorded, but no source-built `libtvm` exists.  Both bounded
-   retries failed with `git_clone_rc=124` and `curl_rc=28`; logs are
-   `provenance/p0-rebuild-attempt.log` and
-   `provenance/p0-rebuild-attempt-2.log`.  The current traceable wheel artifact
-   and lock files remain usable for the verified MVP domain.
-2. **Real RK3588 submit/recovery — unmeasured.** Host/mock verifies pre-submit
+1. **Real RK3588 submit/recovery — unmeasured.** Host/mock verifies pre-submit
    safety, BUSY, poison-on-unknown, output non-publication and command/data BO
    retention.  No real device fault was injected, so driver quiescence/context
    recovery/physical release is not claimed.  The success path on the real board
    is verified.
 
-No other P0–P8 blocker is currently claimed.  These two conditions prevent a
-statement that the **entire** normative MVP is closed; they do not invalidate the
-verified implementation domain above.
+No other P0–P8 blocker is currently claimed.  This condition prevents a statement
+that the **entire** normative MVP is closed; it does not invalidate the verified
+implementation domain above.

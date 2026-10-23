@@ -2,7 +2,7 @@
 
 日期：2026-10-20。范围：只做锁定与重验，不混入前端功能扩展。
 
-**总状态：`in_progress`。**
+**总状态：`complete`（源码构建已完成；真实设备故障恢复不属于 P0）。**
 
 | 交付项 | 状态 | 证据 |
 |---|---|---|
@@ -11,7 +11,7 @@
 | 当前 wheel Host 回归 | 通过 | `.pydeps` 基线记录（计数与第 4 节一致） |
 | 隔离依赖环境重验 | 完成 | `.venv-p0` + `.pydeps-p0`，`isolation` 步骤断言通过 |
 | 完整 Python 文件集合校验 | 完成 | `provenance/wheel-vs-source.json`：0 缺失、0 无法解释的额外文件 |
-| 源码构建及产物重验 | **阻塞待闭合** | 第 5 节只记录**已尝试路径**的失败 |
+| 源码构建及产物重验 | **完成** | [provenance/p0-source-build.json](provenance/p0-source-build.json)、`provenance/p0-source-build/` 构建日志与库哈希、源码树清单 |
 
 ## 1. 源码锁
 
@@ -160,8 +160,8 @@ exit:    124 (timeout)
 log:     provenance/p0-rebuild-attempt.log
 ```
 
-未保留半下载目录；没有源码或 `libtvm` 产物被标记为成功。P0 仍为
-**in_progress / externally blocked**。其他 P1–P8 工作继续，不以该外部阻塞停止。
+未保留半下载目录；没有源码或 `libtvm` 产物被标记为成功。**当时** P0 为
+`in_progress / externally blocked`；后续第 9 节改用可续传镜像完成了源码构建。
 
 同一尝试的机器可读记录：`provenance/p0-rebuild-attempt.json`。
 
@@ -179,6 +179,54 @@ log:     provenance/p0-rebuild-attempt-2.log
 record:  provenance/p0-rebuild-attempt-2.json
 ```
 
-没有可用完整源码，也没有执行/伪造源码构建产物；P0 仍为
-**in_progress / externally blocked**。当前可追溯制品仍是已锁定的 wheel 与
-`requirements.lock`/`source-lock.json`，不把部分下载当作源码证据。
+没有可用完整源码，也没有执行/伪造源码构建产物。**当时** P0 仍未完成；后续
+第 9 节通过可续传镜像完成，且仍不把部分下载当作源码证据。
+
+
+## 9. 2026-10-23 源码构建完成
+
+使用可续传的 `gh-proxy.com` 镜像取得锁定 commit 的 GitHub archives；archive 名称包含
+commit，下载后计算 SHA-256 并解压到独立目录：
+
+| 组件 | 锁定 commit | archive SHA-256 | 用途 |
+|---|---|---|---|
+| TileLang | `a35f8ddf45eba16c21211ec8822d56ce5363036f` | `2e85edecef4cbeb795f4f8a3b2ac2ad4020d89f3d35687c624c3bbcf429b73bc` | compiler/frontend source |
+| TVM | `4211874e9e4b8770fd20ad0d98ab80afd1df5028` | `ee73c88f82d949f451e541182f69973f8c4c452f658695442931c686faffadfa` | `libtvm_*` |
+| tvm-ffi | `3c35034fd1026011736e19a4e0e1ed0f22058c42` | `b2c1947d91c0b7e8092d38d31c60f0ea5ad34bc45a05b315224774bdd0dd86a7` | TVM FFI |
+| dlpack | `84d107bf416c6bab9ae68ad285876600d230490d` | `9978ddb7f533fcee7e0c0ab81a978257d3f8dc475eb83319a5e632738cafb271` | DLPack headers |
+| libbacktrace | `793921876c981ce49759114d7bb89bb89b2d3a2d` | `858b1225351052234f7e71f0f36622fc9ad33aac947db7816d0b443ae0dd33ce` | TVM FFI optional backtrace, source supplied |
+
+构建方式：
+
+- 独立 build tree：`.src/p0-build-tilelang`；源树：`.src/p0-build-src/{tilelang,tvm}`。
+- `TVM_ROOT` 指向锁定 TVM 源；TVM 的 `3rdparty/tvm-ffi`、`dlpack`、`libbacktrace`
+  使用上述锁定源码。
+- 本次目标为 CPU/编译器/RKNPU 后端，显式关闭 CUDA、ROCm、Metal、LLVM、Ascend、
+  OpenCL；因此未下载/编译 cutlass（wheel 内 cutlass 子集不参与本次 native 构建）。
+- 构建使用 source-built `libtilelang.so`、`libtvm_compiler.so`、`libtvm_runtime.so`、
+  `libtvm_ffi.so` 和 Cython wrapper；不加载 wheel 内旧 `.so`。
+- 仍来自预构建依赖的明确项：Z3 `.pydeps-p0/z3`、Python `tvm_ffi` wrapper、
+  Cython 3.0.8 wheel、Ubuntu 3.12.3 dev headers；均记录在
+  `provenance/p0-source-build.json`。
+
+实际加载路径：
+
+- TileLang：`.src/p0-build-src/tilelang/tilelang/__init__.py`
+- TVM/tirx：`.src/p0-build-src/tilelang/3rdparty/tvm/python/tvm/...`
+- native libs：`.src/p0-build-tilelang/lib`
+- 日志：`provenance/p0-source-build/import-paths.log`
+
+验证结果：
+
+- source-built import + full pytest：`213 passed, 40 subtests`
+- CTest（同一 Host native build）：`27/27`
+- 27 个 campaign plan 中，wheel 与 source-built 的
+  `bindings/constants/buffers/views/actions/submits/publish/accounting` 全部逐项相同；
+  只有 source span/hash 元数据差异（`plan-equivalence.json` 全部 `semantic_equal=true`）。
+- 用 source-built TileLang/TVM 重新生成同一 27-case campaign，并在同一 RK3588 上执行：
+  `results/20261023T141328Z-rk3588/`，**81/81 PASS**，三核 CLI PASS，source bundle hash
+  独立重算通过。
+
+构建系统的一条诊断信息 `Found TVM_GIT_COMMIT_HASH=9baf...` 来自 TVM 源树位于
+外层 git checkout 内这一事实；实际 TVM 版本以 archive commit `4211874e...` 和
+源码树清单为准，不把该诊断字段当作 TVM commit。

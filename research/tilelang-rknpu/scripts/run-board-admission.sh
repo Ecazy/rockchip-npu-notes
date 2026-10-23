@@ -22,9 +22,14 @@ DEPS_DIR=${TILELANG_DEPS_DIR:-$HERE/.pydeps-p0}
 VENV=${TILELANG_VENV_DIR:-$HERE/.venv-p0}
 PY=python3
 [[ -x "$VENV/bin/python" ]] && PY="$VENV/bin/python"
-export PYTHONPATH="$HERE/python:$DEPS_DIR${PYTHONPATH:+:$PYTHONPATH}"
-export LD_LIBRARY_PATH="$DEPS_DIR/z3/lib:$DEPS_DIR/tilelang/lib:$DEPS_DIR/tvm_ffi/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-export TILELANG_CACHE_DIR="$HERE/.cache"
+if [[ -n "${TILELANG_SOURCE_PYTHONPATH:-}" ]]; then
+  export PYTHONPATH="$HERE/python:$TILELANG_SOURCE_PYTHONPATH:$DEPS_DIR${PYTHONPATH:+:$PYTHONPATH}"
+  export LD_LIBRARY_PATH="${TILELANG_SOURCE_LIBDIR:-}:$DEPS_DIR/z3/lib:$DEPS_DIR/tilelang/lib:$DEPS_DIR/tvm_ffi/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+else
+  export PYTHONPATH="$HERE/python:$DEPS_DIR${PYTHONPATH:+:$PYTHONPATH}"
+  export LD_LIBRARY_PATH="$DEPS_DIR/z3/lib:$DEPS_DIR/tilelang/lib:$DEPS_DIR/tvm_ffi/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
+export TILELANG_CACHE_DIR="${TILELANG_CACHE_DIR:-$HERE/.cache}"
 "$PY" "$HERE/tools/make_board_campaign.py" --out-dir "$CAMPAIGN" > "$LOCAL/make-campaign.log" 2>&1
 
 askpass=$(mktemp /tmp/rk-board-askpass-XXXXXX)

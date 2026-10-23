@@ -2,11 +2,12 @@
 
 **Experimental, incomplete checkpoint.  Not approved as a general release or for
 unbounded device execution.**  Review blockers 1-4 and their follow-ups are fixed on
-the Host with negative tests.  P0 (source + dependency lock) is `in_progress`: the
-source commit, dependency hashes, clean isolated-environment verification and full
-Python-file-set check are done; the from-source `libtvm` rebuild is network-blocked.
-A small-shape RK3588 real-device admission campaign now passes on three serial
-single-core masks, while P0/P8 release gates and RK1228 remain open.  See
+the Host with negative tests.  P0 is `complete`: the locked TileLang/TVM sources
+were independently built, imported from an isolated source-build tree, and exercised
+by the existing frontend/planner/FFI regressions.  A source-built-plan RK3588
+admission campaign passes on three serial single-core masks.  The remaining MVP
+boundary is real-device fault recovery, which is explicitly unmeasured; RK1228
+remains independent.  See
 [P0-SOURCE-LOCK.md](P0-SOURCE-LOCK.md), [review findings](REVIEW-2026-10-20.md),
 [status](IMPLEMENTATION-STATUS.md) and [RK1228-TARGET.md](RK1228-TARGET.md).
 
@@ -28,13 +29,13 @@ Current status and remaining review items: [IMPLEMENTATION-STATUS.md](IMPLEMENTA
 The compile/validate/explain path never opens a device.  Runtime is synchronous and
 uses a caller-owned fd.  Host tests use BO/execution mocks.  RK3588 real-device
 admission is reproducible through `scripts/run-board-admission.sh`; the latest
-evidence is `results/20261023T131610Z-rk3588/`: representative small-shape
+evidence is `results/20261023T141328Z-rk3588/`: representative small-shape
 admission, 27 cases on each of three **serially run** single-core masks, with raw per-round outputs,
 declared + unquantized float64 math references, byte-level chain/separate
 comparison, final-publication BO guard, numeric guards, tiled per-node
 dataflow, the board CLI path and exact C runtime target identity check.  P8 is
-not closed only on two concrete conditions: the external P0 source-build blocker
-and the unmeasured real-device submit/recovery path.  Support boundaries are in
+not closed only on one concrete condition: the unmeasured real-device
+submit/recovery path.  Support boundaries are in
 [SUPPORT-DOMAIN.md](SUPPORT-DOMAIN.md), necessary-condition evidence in
 [ACCEPTANCE-MATRIX.md](ACCEPTANCE-MATRIX.md), runtime failure ownership in
 [RUNTIME-LIFECYCLE.md](RUNTIME-LIFECYCLE.md) and replay commands in
@@ -103,7 +104,7 @@ research/tilelang-rknpu/scripts/run-board-admission.sh
 # evidence: results/<utc>-rk3588/board/summary.md
 ```
 
-The latest run is `results/20261023T131610Z-rk3588/`: RK3588 OPi 5 Plus, driver
+The latest run is `results/20261023T141328Z-rk3588/`: RK3588 OPi 5 Plus, driver
 `v0.9.8`, ABI 1, **27 cases × 3 masks = 81/81 small-shape case runs PASS**.
 Coverage includes MatMul, projection, staged-FP16 FFN, one explicit guarded
 ragged K/M/N tail shape, scalar/per-channel constant Add/Mul, independent
