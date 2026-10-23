@@ -56,7 +56,7 @@ QK/PV使用既有256上限分解；PV每个K tile的部分和收窄至FP16。sco
 
 ## API
 
-[co_attention.h](custom-ops/include/co_attention.h) 的独立上下文用于跨调用持久KV：
+[co_attention.h](../custom-ops/include/co_attention.h) 的独立上下文用于跨调用持久KV：
 
 ```c
 co_attention_config cfg = {
@@ -78,7 +78,7 @@ co_attention_destroy(attn); /* 调用方最后关闭fd */
 
 可选mask形状为 `[本次tokens,旧长度+本次tokens]`。cache export复制 `[length,kv_heads,head_dim]` 的旋转K与原始V，调用方先查询length并提供不重叠数组。所有接口同步执行，不支持并发使用同一个上下文。
 
-[co_rope.h](custom-ops/include/co_rope.h) 单独消费/生成规范的图tile集合；[co_graph.h](custom-ops/include/co_graph.h) 的静态节点示例：
+[co_rope.h](../custom-ops/include/co_rope.h) 单独消费/生成规范的图tile集合；[co_graph.h](../custom-ops/include/co_graph.h) 的静态节点示例：
 
 ```c
 co_graph_node nodes[] = {
@@ -114,9 +114,9 @@ ctest --test-dir research/custom-ops/build-host --output-on-failure
 bash research/custom-ops/scripts/run-attention-board.sh
 ```
 
-工具 [attention_probe.c](custom-ops/tools/c/attention_probe.c) 生成原始Q/K/V/mask、stream与graph输出、旋转KV、失败前后prefix和输出marker；每种执行重复三次。
-[attention_gate.py](custom-ops/tools/python/attention_gate.py) 独立计算RoPE和double数学SDPA，不调用设备布局/图规划辅助函数。
-[attention_campaign.py](custom-ops/tools/python/attention_campaign.py) 回收后重新核对数学结果、哈希、cache进度、计数和chain/separate字节一致性。
+工具 [attention_probe.c](../custom-ops/tools/c/attention_probe.c) 生成原始Q/K/V/mask、stream与graph输出、旋转KV、失败前后prefix和输出marker；每种执行重复三次。
+[attention_gate.py](../custom-ops/tools/python/attention_gate.py) 独立计算RoPE和double数学SDPA，不调用设备布局/图规划辅助函数。
+[attention_campaign.py](../custom-ops/tools/python/attention_campaign.py) 回收后重新核对数学结果、哈希、cache进度、计数和chain/separate字节一致性。
 
 覆盖的配置为：
 
@@ -135,10 +135,10 @@ bash research/custom-ops/scripts/run-attention-board.sh
 
 ## 当前实测结果
 
-[原始记录](custom-ops/results/2026-10-13/attention-20261013-174358/README.md) 保留全部输入/输出、失败前后cache、输出marker、源码/文件SHA256和真实task/Submit/传输计数。
+[原始记录](../custom-ops/results/2026-10-13/attention-20261013-174358/README.md) 保留全部输入/输出、失败前后cache、输出marker、源码/文件SHA256和真实task/Submit/传输计数。
 三个核×两种提交模式，每个配置的流式与静态图各重复3次，共36组受控错误回滚；所有计数、缓存进度、字节重复性及chain/separate对照通过。
 
 最大绝对误差：stream/graph SDPA均为 `0.000534888038`，旋转K cache为 `0.000639162092`，跨tile RoPE为 `0.000775070128`。
 Host16/16、ASan/UBSan和原多tile路径回归通过；kernel journal区间无新增消息。
 
-后续 [完整decoder block与M=1执行几何](TRANSFORMER-DECODER-BLOCK.md) 已加入七个投影/FFN矩阵和两个残差，并用cache clone/truncate在几何切换及post-FFN失败时保持逻辑历史。
+后续 [完整decoder block与M=1执行几何](../graphs/TRANSFORMER-DECODER-BLOCK.md) 已加入七个投影/FFN矩阵和两个残差，并用cache clone/truncate在几何切换及post-FFN失败时保持逻辑历史。

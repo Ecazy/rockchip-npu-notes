@@ -24,7 +24,7 @@
 - 位置：`KB/block-internals.md:75`、`KB/architecture.md:124`、`:129`、`:138`。
 - 原文：“没有跨层累加，这是 K 分块必须回读的根因”；另一处又称“fp16 是唯一有片上 K 累加的”。
 - CORE/CACC 不能跨 task 保留部分和，但 FP16 DPU EW 可以从设备可访问 DDR BO 读取上次部分和，与新部分和相加后写入另一个 BO，CPU 最后才下载输出。**不回读主机不等于不经过 DDR，更不等于 CBUF/CACC 常驻。**
-- 证据：[上游 K 累加说明](../encodings/k-accumulation.md)、[本地 FP16 K 分片](../research/FP16-K-TILING.md)、[Linear 实现](../research/custom-ops/src/linear_hardsigmoid.c)。
+- 证据：[上游 K 累加说明](../encodings/k-accumulation.md)、[本地 FP16 K 分片](../research/kernels/FP16-K-TILING.md)、[Linear 实现](../research/custom-ops/src/linear_hardsigmoid.c)。
 - 建议表述：“CACC 不支持跨 task 累加；本工作区 FP16 路径以 DPU EW 和双 DDR BO 完成设备侧部分和累计，每片会舍入到 FP16。外部 `rknpu2_matmul_open` 另有可选 INT32 DPU split-K 累加接口，见 §7；该接口尚未由本次归档性能实验验收，不能把本框架未实现写成硬件不支持。”
 
 ### F02：将无 RUBIK 推成布局变换只能在主机上完成
@@ -44,7 +44,7 @@
 - 位置：`KB/architecture.md:47`，对照 `KB/programming-model.md:89`。
 - 前者称有依赖的后继必须由软件等生产者完成后再调度，后者又允许一次链式 Submit 内直接交接依赖输出。需要说明“软件安排 task 顺序/完成机制”与“每段必须独立回到主机等待”的区别。
 - 更重要的是，DPU-only LUT 可以独立发射，不代表同核 CNA/CORE 与 DPU 有两条用户可独立调度的计算队列。完整混合 Softmax 还使用 Host、identity MatMul、归约 MatMul 和 DPU。
-- 证据：[Two-Task 依赖链](../research/TWO-TASK-CHAINING.md)、[MatMul/LUT 对照](../research/SAME-CORE-OVERLAP.md)、[GEMM/GEMV 对照](../research/GEMM-GEMV-CONCURRENCY.md)。本次两轮记录核验 PASS。
+- 证据：[Two-Task 依赖链](../research/scheduling/TWO-TASK-CHAINING.md)、[MatMul/LUT 对照](../research/scheduling/SAME-CORE-OVERLAP.md)、[GEMM/GEMV 对照](../research/scheduling/GEMM-GEMV-CONCURRENCY.md)。本次两轮记录核验 PASS。
 - 已测链式收益主要为一次约 52–53 μs 的固定 Submit 服务包络；同核双 job 在当前厂商路径串行；跨核服务重叠约 1.31–1.32×。这些不能等同于纯 MAC 时间线，也不能证明所有潜在硬件编排均不可能。
 
 ### F04：M=1 pad 到 4 被写成通用 MatMul/组合算子的规则
@@ -54,7 +54,7 @@
 - 位置：`KB/programming-model.md:154`。
 - 原文：“M<4 会算错，必须 M%4=0（单行 matmul 要 pad 到 4 行）”。这是特定历史路径的规则；不能当成所有 FP16 DPU EW 和当前 API 的最小物理行数。
 - 当前 `co_tensor_matrix` / `co_tensor_input` 采用 `round_up(max(M,12),4)`，逻辑 M=1 被支持，但物理执行至少 12 行。原 primitive 的 M/K/N≤256 与组合接口逻辑 1..4096 也须区分。
-- 证据：[张量构造实现](../research/custom-ops/src/custom_ops.c)、[EW 的 M≥12 配方](../encodings/dpu-lut-activation.md)、[decoder 几何优化](../research/TRANSFORMER-DECODER-BLOCK.md)。
+- 证据：[张量构造实现](../research/custom-ops/src/custom_ops.c)、[EW 的 M≥12 配方](../encodings/dpu-lut-activation.md)、[decoder 几何优化](../research/graphs/TRANSFORMER-DECODER-BLOCK.md)。
 - 建议按驱动、发射器和算子列出 padding 契约；不要把接口的保守范围写成硅片普适限制。
 
 ### F05：460 GOP/s、三核 3×、默认 200 MHz 等数字被抽离测量条件
@@ -64,7 +64,7 @@
 - 位置：`KB/README.md:84`，`KB/architecture.md:147`，`KB/programming-model.md:159`、`:164`。
 - 460 GOP/s 与量化近似等速来自特定 Rocket / 600 MHz / 权重驻留工作点，不能支撑所有形状及路径“量化不省时间”。时钟 200/600/900 MHz 的建议同样属于相应主线内核和调频实现。
 - 本地厂商实验运行在 NPU 1 GHz；等工作量、同 8 worker 的长 Job 分核/同核吞吐约 1.96×，服务包络还会膨胀，不能套用理想 3×。
-- 证据：[历史性能条件](../perf/not-mac-bound.md)、[时钟说明](../perf/clock.md)、[当前并发与干扰](../research/JOB-CONCURRENCY-INTERFERENCE.md)、[INT8 官方对照](../research/rknpu2-matmul-validation/README.md)。
+- 证据：[历史性能条件](../perf/not-mac-bound.md)、[时钟说明](../perf/clock.md)、[当前并发与干扰](../research/scheduling/JOB-CONCURRENCY-INTERFERENCE.md)、[INT8 官方对照](../research/rknpu2-matmul-validation/README.md)。
 - 建议每个数字带上 shape、dtype、核数、频率、驱动、驻留方式和计时边界；“service”不写成纯硬件执行时间。
 
 ### F06：“单行 decode 不要上 NPU”是部署建议，不是硬件能力禁令
@@ -74,7 +74,7 @@
 - 位置：`KB/programming-model.md:162`。
 - 本地 decoder 已实现逻辑 M=1；max_query=129 时 warm 单层 API 的特定对照有 1.491–1.760× 收益，小形状仍可能变慢。这是相对固定多行计算基线，不是相对 CPU decode 的同等收益。
 - 上游最新 Whisper 单步对照也表明：NPU 相对四线程 CPU 墙钟约慢 2.6–2.8×，但 CPU 时间约减半，说明时延和 CPU 腾挪是不同目标。82× 的 GEMV/GEMM 数字不能读成相对 CPU 的 slowdown。
-- 证据：[decoder 报告](../research/TRANSFORMER-DECODER-BLOCK.md)、[上游 decode 说明与 Whisper 补充](../perf/decode-gemv.md)。
+- 证据：[decoder 报告](../research/graphs/TRANSFORMER-DECODER-BLOCK.md)、[上游 decode 说明与 Whisper 补充](../perf/decode-gemv.md)。
 - 建议保留“该 Rocket 部署通常优先 CPU decode”，同时说明路径、比较基线与目标；不能由此否认 NPU decode 可实现。
 
 ### F07：软件栈对上游 notes 的定位没有与当前工作区分开
@@ -83,7 +83,7 @@
 
 - 位置：`KB/software-stack.md:6`、`:47`、`:83`。
 - “不是运行时库、不是编译器、只有文档”可以描述其引用的上游 notes 快照，却不能描述本地扩展分支。本地已有 `custom-ops` C 静态库、有限 FP16 DAG 编译器、调度适配器和 CLI。
-- 证据：[工作区首页](../README.md)、[能力总览](CAPABILITIES.md)、[静态图编译](../research/STATIC-GRAPH-COMPILER.md)、[CMake 目标](../research/custom-ops/CMakeLists.txt)。
+- 证据：[工作区首页](../README.md)、[能力总览](CAPABILITIES.md)、[静态图编译](../research/graphs/STATIC-GRAPH-COMPILER.md)、[CMake 目标](../research/custom-ops/CMakeLists.txt)。
 - 建议分别列“上游硬件参考”“本地编程与实验扩展”“独立 upstream checkout”。有限图编译器仍没有 ONNX/GGUF 导入、动态 shape 或任意 kernel 编译能力。
 
 ### F08：将 LE/LO 的负/正分支配方写成 LUT 的普遍定义
@@ -110,7 +110,7 @@
 
 - 位置：`KB/block-internals.md:144`。
 - “DDMA/SDMA：字节计数（无可用计数器）”应限定为当前安全可用的 NPU per-op 计数接口。上游还研究了 DDR controller PMU 的全系统计数，它可用于差分实验，但不是每个 NPU task 的精确流量归因。
-- 证据：[NPU/DDR 字节计数器调查](../perf/hw-byte-counters.md)、[本地成本模型](../research/DEVICE-COST-MODEL.md)。本地 `estimated_bytes` 是访问量估计，不是已测 DDR bytes。
+- 证据：[NPU/DDR 字节计数器调查](../perf/hw-byte-counters.md)、[本地成本模型](../research/scheduling/DEVICE-COST-MODEL.md)。本地 `estimated_bytes` 是访问量估计，不是已测 DDR bytes。
 
 ## 3. 应补录的成果及收录边界
 
@@ -118,11 +118,11 @@
 
 | 编号 | 建议知识点 | 本工作区入口 | 必须保留的边界 |
 |---|---|---|---|
-| O01 | FP16 多 tile Linear 与设备 K 累加 | [K 分片](../research/FP16-K-TILING.md)、[接口](../research/custom-ops/README.md) | 逻辑 M/N/K 1..4096；primitive≤256；DDR BO 双缓冲、每片 FP16 舍入；不是 CBUF 常驻 |
-| O02 | 有限静态图编译与 SwiGLU FFN | [静态图](../research/STATIC-GRAPH-COMPILER.md) | 形状/tiling/生命周期/BO 预算；每节点每输出 tile Submit；无模型 importer、自动性能搜索或跨核图执行 |
-| O03 | 跨 tile RMSNorm / 稳定 Softmax | [跨 tile 行操作](../research/CROSS-TILE-ROW-OPS.md) | 明确 CPU 统计、系数及 logits 处理；FP16 平方和/值域保护；不是纯 NPU 任意幅值归一化 |
-| O04 | RoPE / GQA / KV / decoder 的功能闭环 | [attention](../research/ATTENTION-KERNELS.md)、[decoder](../research/TRANSFORMER-DECODER-BLOCK.md) | 主机 KV、固定容量、动态权重重排、混合 Softmax；错误回滚有受控调用层证据；不是 FlashAttention 或真实完整 LLM runtime |
-| O05 | 调度观测、成本模型、同核与跨核并发 | [profiling](../research/MULTICORE-SCHEDULING-PROFILING.md)、[成本模型](../research/DEVICE-COST-MODEL.md)、[资源干扰](../research/JOB-CONCURRENCY-INTERFERENCE.md)、[重叠](../research/GEMM-GEMV-CONCURRENCY.md) | mask 1/2/4 与 AUTO=0；候选集合在用户态选单核；queue 为区间、service 为驱动包络；纯 MatMul 预测仍 experimental |
+| O01 | FP16 多 tile Linear 与设备 K 累加 | [K 分片](../research/kernels/FP16-K-TILING.md)、[接口](../research/custom-ops/README.md) | 逻辑 M/N/K 1..4096；primitive≤256；DDR BO 双缓冲、每片 FP16 舍入；不是 CBUF 常驻 |
+| O02 | 有限静态图编译与 SwiGLU FFN | [静态图](../research/graphs/STATIC-GRAPH-COMPILER.md) | 形状/tiling/生命周期/BO 预算；每节点每输出 tile Submit；无模型 importer、自动性能搜索或跨核图执行 |
+| O03 | 跨 tile RMSNorm / 稳定 Softmax | [跨 tile 行操作](../research/kernels/CROSS-TILE-ROW-OPS.md) | 明确 CPU 统计、系数及 logits 处理；FP16 平方和/值域保护；不是纯 NPU 任意幅值归一化 |
+| O04 | RoPE / GQA / KV / decoder 的功能闭环 | [attention](../research/kernels/ATTENTION-KERNELS.md)、[decoder](../research/graphs/TRANSFORMER-DECODER-BLOCK.md) | 主机 KV、固定容量、动态权重重排、混合 Softmax；错误回滚有受控调用层证据；不是 FlashAttention 或真实完整 LLM runtime |
+| O05 | 调度观测、成本模型、同核与跨核并发 | [profiling](../research/scheduling/MULTICORE-SCHEDULING-PROFILING.md)、[成本模型](../research/scheduling/DEVICE-COST-MODEL.md)、[资源干扰](../research/scheduling/JOB-CONCURRENCY-INTERFERENCE.md)、[重叠](../research/scheduling/GEMM-GEMV-CONCURRENCY.md) | mask 1/2/4 与 AUTO=0；候选集合在用户态选单核；queue 为区间、service 为驱动包络；纯 MatMul 预测仍 experimental |
 | O06 | INT8 开源实现对官方 SDK 的公平比较 | [官方对照复核](../research/rknpu2-matmul-validation/README.md) | 单核、完整主机调用、normal/native 取较快者；M=128 三形状 2.01/2.05/4.10×，M=1/4 略慢；正确性为 4096 点抽样，不是全矩阵检查或整模型 tokens/s |
 
 推荐组织：先修正 F01–F06，再补软件栈的本地分支入口和 O01–O05；O06 独立成性能案例。每篇标注来源版本与证据等级，引用本地新增函数时使用**实际提交后**的可发布 commit 链接，不将它们挂到上游历史 commit。

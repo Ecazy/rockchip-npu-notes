@@ -46,7 +46,7 @@ Softmax每个tile是 `ceil(physical_elements/32768)+3` 个task，chain模式两�
 
 ## 图规划与调用
 
-接口为 [co_row_ops.h](custom-ops/include/co_row_ops.h) 和 [co_graph.h](custom-ops/include/co_graph.h)。Row算子的所有scratch BO、identity/ones权重在创建时分配；跨M块复用，不在每次执行时重新分配。图规划加入 `rowop_bytes` 和明确的混合处理计数：
+接口为 [co_row_ops.h](../custom-ops/include/co_row_ops.h) 和 [co_graph.h](../custom-ops/include/co_graph.h)。Row算子的所有scratch BO、identity/ones权重在创建时分配；跨M块复用，不在每次执行时重新分配。图规划加入 `rowop_bytes` 和明确的混合处理计数：
 
 | 每次节点运行 | RMSNorm | Softmax |
 |---|---:|---:|
@@ -93,7 +93,7 @@ bash research/custom-ops/scripts/run-row-board.sh
 
 ## 实测结果
 
-[原始验收与复核说明](custom-ops/results/2026-10-13/row-20261013-154846/README.md) 保留三核逐组输入/输出、命令、混合传输计数、代码SHA256和kernel journal区间。
+[原始验收与复核说明](../custom-ops/results/2026-10-13/row-20261013-154846/README.md) 保留三核逐组输入/输出、命令、混合传输计数、代码SHA256和kernel journal区间。
 
 三个核的最大误差一致：RMSNorm `0.00188537460`、Softmax `0.000115289912`、前置RMSNorm FFN `0.00048828125`；Softmax行和误差最大 `0.000378668308`。
 每核22个归约shape/mode检查及3个负例、16个归一化FFN检查及2个负例，重复3次；chain/separate字节一致，旧路径回归通过。Host、ASan/UBSan和artifact完整性负例通过，kernel区间无新增消息。

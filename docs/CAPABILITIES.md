@@ -20,7 +20,7 @@
 | 能力 | 当前可做的工作 | 证据与边界 |
 |---|---|---|
 | 寄存器命令编码 | 生成/解码 64 位 regcmd，分辨 target/value/register | 历史厂商与组件；字段编码见 [命令模型](../encodings/regcmd-task-model.md) |
-| 厂商提交 ABI | 构造 packed 40 B task、regcmd 链、subcore 范围和阻塞 Submit | 本地真机；[task 链](../research/TWO-TASK-CHAINING.md) |
+| 厂商提交 ABI | 构造 packed 40 B task、regcmd 链、subcore 范围和阻塞 Submit | 本地真机；[task 链](../research/scheduling/TWO-TASK-CHAINING.md) |
 | CNA/CORE MatMul | 用 1×1 Conv 路径组合矩阵计算，控制张量、权重和输出布局 | 本地 FP16 真机；整数/其他精度的范围另行登记 |
 | DPU 后处理 | EW add/mul、bias、LUT，组合到 MatMul 后处理 | 本地真机；没有任意公式解释器 |
 | PPU | 有界池化与空间归约配方 | 本地真机；独立 PPU 路径，不假设可任意混入 DPU 链 |
@@ -65,7 +65,7 @@ CBUF/bank 容量规划、SDP precision、DMA stride 等可参考 [硬件概览](
 
 ## 4. 多核分配与调度观测
 
-接口：[co_schedule.h](../research/custom-ops/include/co_schedule.h)，[详细报告](../research/MULTICORE-SCHEDULING-PROFILING.md)。
+接口：[co_schedule.h](../research/custom-ops/include/co_schedule.h)，[详细报告](../research/scheduling/MULTICORE-SCHEDULING-PROFILING.md)。
 
 | 能力 | 可实现内容 | 不能误解为 |
 |---|---|---|
@@ -87,8 +87,8 @@ $$
 输出读同步/资源清理由另一个 `api_response` 边界记录。
 
 调度适配器接任意已发射 program（DPU 原语及 CNA/CORE MatMul），1–64 task/job，一个阻塞 Submit；有依赖的链整体在同一核。
-同核 MatMul 与 DPU-only 的完整链/两次 Submit/regcmd 重划分统一见 [同核重叠实验](../research/SAME-CORE-OVERLAP.md)：32 tile 上模块重划分相对完整链额外节省7.14%，不等于完整 attention 端到端加速。
-同核 GEMM/GEMV 的单项、B8/B16 链式放大组及双进程并发对照见 [GEMM/GEMV 并发](../research/GEMM-GEMV-CONCURRENCY.md)：已测链只摊销提交包络，同核 job 串行，跨核服务包络重叠；该报告只测完整 task/job，模块重划分的正结果见同核重叠实验。
+同核 MatMul 与 DPU-only 的完整链/两次 Submit/regcmd 重划分统一见 [同核重叠实验](../research/scheduling/SAME-CORE-OVERLAP.md)：32 tile 上模块重划分相对完整链额外节省7.14%，不等于完整 attention 端到端加速。
+同核 GEMM/GEMV 的单项、B8/B16 链式放大组及双进程并发对照见 [GEMM/GEMV 并发](../research/scheduling/GEMM-GEMV-CONCURRENCY.md)：已测链只摊销提交包络，同核 job 串行，跨核服务包络重叠；该报告只测完整 task/job，模块重划分的正结果见同核重叠实验。
 抓取工具固定审核匹配内核代码与 tracer 能力，缺失/丢失/歧义证据拒绝通过。不存在可泛化到任意背景负载的无指针 job 关联保证。
 
 ### 单设备成本、并发与干扰 v2
@@ -104,7 +104,7 @@ $$
 | 背景干扰 | CPU compute与内存streaming成对；4线程streaming下64³ MatMul服务约2.1×；DDR/CBUF具体归因未证实 |
 | 尾延迟 | 每条件25000请求，全量数值/padding/guard核验；block级p99及置信区间 |
 
-详见 [单设备成本模型](../research/DEVICE-COST-MODEL.md)、[并发与资源干扰](../research/JOB-CONCURRENCY-INTERFERENCE.md)。校准模型只在所测精度、形状、执行路径、频率和驱动范围内使用。
+详见 [单设备成本模型](../research/scheduling/DEVICE-COST-MODEL.md)、[并发与资源干扰](../research/scheduling/JOB-CONCURRENCY-INTERFERENCE.md)。校准模型只在所测精度、形状、执行路径、频率和驱动范围内使用。
 
 ## 5. 历史厂商实验可复用的机制
 
@@ -144,16 +144,16 @@ $$
 | 现存证据 | 结果 | 范围 |
 |---|---|---|
 | [完整算子交付](../research/custom-ops/results/2026-10-09/OPERATOR-DELIVERY.md) | 三核各两进程，2094 个在线检查、102 个文件接口检查 | 初版 K≤256 与原语/混合路径；不是2094种算子 |
-| [Two-Task](../research/TWO-TASK-CHAINING.md) | 12进程，各128轮，15360个数值对照 | A/B/C/D、组状态、IRQ、BO与padding |
-| [K 分片](../research/FP16-K-TILING.md) | K≤4096，三核各两进程；两个对照形状 wall 加速中位数约1.43× | 单次Submit、Cube交接；相对同条件未融合设备链 |
-| [调度](../research/MULTICORE-SCHEDULING-PROFILING.md) | 96 traced job / 5766 task，另有同规模无 tracing 对照 | 核绑定、候选集合、AUTO与queue/service一致性 |
-| [同核重叠](../research/SAME-CORE-OVERLAP.md) | 最新6配置、8400次真实Submit；输出、IRQ与实际regcmd核验通过 | Core 0；32 tile 完整链比两次Submit省2.07%，重划分再省7.14%；模块周期未测 |
-| [GEMM/GEMV 并发](../research/GEMM-GEMV-CONCURRENCY.md) | 两轮各64采样；链式/放大组/双进程同核与跨核对照 | 链式只省约52µs Submit包络；同核并发串行、跨核重叠1.31× |
+| [Two-Task](../research/scheduling/TWO-TASK-CHAINING.md) | 12进程，各128轮，15360个数值对照 | A/B/C/D、组状态、IRQ、BO与padding |
+| [K 分片](../research/kernels/FP16-K-TILING.md) | K≤4096，三核各两进程；两个对照形状 wall 加速中位数约1.43× | 单次Submit、Cube交接；相对同条件未融合设备链 |
+| [调度](../research/scheduling/MULTICORE-SCHEDULING-PROFILING.md) | 96 traced job / 5766 task，另有同规模无 tracing 对照 | 核绑定、候选集合、AUTO与queue/service一致性 |
+| [同核重叠](../research/scheduling/SAME-CORE-OVERLAP.md) | 最新6配置、8400次真实Submit；输出、IRQ与实际regcmd核验通过 | Core 0；32 tile 完整链比两次Submit省2.07%，重划分再省7.14%；模块周期未测 |
+| [GEMM/GEMV 并发](../research/scheduling/GEMM-GEMV-CONCURRENCY.md) | 两轮各64采样；链式/放大组/双进程同核与跨核对照 | 链式只省约52µs Submit包络；同核并发串行、跨核重叠1.31× |
 
 例如调度请求 `139344030004`：排队1220.131–1222.876 μs，服务455.869 μs，响应4121.775 μs；可以识别排队，而不是靠总时长猜测。
 性能结论只在各报告的形状、精度、时钟、对照和时间边界下成立。
 
-新增 [静态图编译与 SwiGLU FFN](../research/STATIC-GRAPH-COMPILER.md) 已完成 M/N/K 分解和静态子图 BO 规划。优先扩展方向：精确 enqueue/kick/job-ID tracepoint；减少 Submit 打包/分配开销；有数值契约的 Softmax/纯 NPU 归一化；将历史 Conv/梯度配方迁入统一接口。
+新增 [静态图编译与 SwiGLU FFN](../research/graphs/STATIC-GRAPH-COMPILER.md) 已完成 M/N/K 分解和静态子图 BO 规划。优先扩展方向：精确 enqueue/kick/job-ID tracepoint；减少 Submit 打包/分配开销；有数值契约的 Softmax/纯 NPU 归一化；将历史 Conv/梯度配方迁入统一接口。
 RK182X 多卡和跨芯片通信没有由这些 RK3588 片内三核实验得到验证。
 
 ## 8. 开发入口

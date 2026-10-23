@@ -71,8 +71,8 @@ LUT 缓存开启时，每个含 B 的 Submit 都装载首份完整表，后续 B
 
 ## 最新三组实测
 
-证据：[matched-overlap-20261015-152224](custom-ops/results/2026-10-15/matched-overlap-20261015-152224/)，
-[analysis.json](custom-ops/results/2026-10-15/matched-overlap-20261015-152224/analysis.json)。
+证据：[matched-overlap-20261015-152224](../custom-ops/results/2026-10-15/matched-overlap-20261015-152224)，
+[analysis.json](../custom-ops/results/2026-10-15/matched-overlap-20261015-152224/analysis.json)。
 6 个配置，各 12 轮 warmup、128 轮配对采样，共 7560 个九臂测量记录、**8400 次真实 Submit，全部验收通过**。
 采集前后普通 AB 基线通过；内核只有初始受控诊断的一次超时/soft reset，正式样本没有超时或 IOMMU fault。
 
@@ -85,7 +85,7 @@ LUT 缓存开启时，每个含 B 的 Submit 都装载首份完整表，后续 B
 | 16 | 1341.063 | 1287.982 | 1195.670 | 3.96% | **7.16%** | 10.85% |
 | 32 | 2576.546 | 2523.171 | 2342.923 | 2.07% | **7.14%** | 9.06% |
 
-![三组统一比较](figures/three-arm-overlap.svg)
+![三组统一比较](../figures/three-arm-overlap.svg)
 
 每个子图比较相同工作量，不同子图的总工作量不同。
 32 tile 对应 `A[384,4096] × W[32,4096]^T` 与 1048576 个独立 LUT 元素。
@@ -195,7 +195,7 @@ CNA/CORE/DPU 的 `S_STATUS` 和模块完成位可作为后续内核带时间戳�
 但本轮未实施或验证该采样；idle/operating/waiting 区间也不等于纯计算时间。
 RK3588 没有在本实验中可用的分模块执行周期接口。
 已知 amount 计数器候选在 RK3588 的配置中禁用，`0x2000` 页读取有历史挂死记录，
-不应当作可直接补读的模块计时器，见 [DMA 计数器调查](../perf/hw-byte-counters.md)。
+不应当作可直接补读的模块计时器，见 [DMA 计数器调查](../../perf/hw-byte-counters.md)。
 同核新增线程或异步 Submit 仍受驱动每核单活动 job 调度约束；相关完整 task/job 实验见
 [GEMM/GEMV 并发](GEMM-GEMV-CONCURRENCY.md)，不能与本轮模块重划分混为一谈。
 
@@ -206,23 +206,23 @@ RK3588 没有在本实验中可用的分模块执行周期接口。
 
 | 阶段 | 本地结果目录 | 用途 |
 |---|---|---|
-| 粗粒度完整 task | [2026-10-14/overlap-20261014-145427](custom-ops/results/2026-10-14/overlap-20261014-145427/) | 早期完整 AB/BA、同质链和位图消融 |
-| 首次模块拆分 | [regcmd-overlap-20261015-140139](custom-ops/results/2026-10-15/regcmd-overlap-20261015-140139/) / [140422](custom-ops/results/2026-10-15/regcmd-overlap-20261015-140422/) | 128 轮节省 9.771 / 8.750 µs；短 B [140247](custom-ops/results/2026-10-15/regcmd-overlap-20261015-140247/) 收益未分辨 |
-| 168 组合初筛 | [matched-overlap-20261015-143244](custom-ops/results/2026-10-15/matched-overlap-20261015-143244/) | 152 通过、16 失败，配置均在该目录 config.json |
-| tile / 表缓存 / 提前启动 | [143611](custom-ops/results/2026-10-15/matched-overlap-20261015-143611/) / [143934](custom-ops/results/2026-10-15/matched-overlap-20261015-143934/) / [144305](custom-ops/results/2026-10-15/matched-overlap-20261015-144305/) | 扫描结果与失败候选，不代替正式验收 |
-| 128 轮候选复验 | [144546](custom-ops/results/2026-10-15/matched-overlap-20261015-144546/) | 淘汰更早启动候选 |
-| 超长 K 探索 | [144941](custom-ops/results/2026-10-15/matched-overlap-20261015-144941/) | K≥8192 的独立 A 基线失败 |
-| 六臂正式复验 | [145230](custom-ops/results/2026-10-15/matched-overlap-20261015-145230/) / [145600](custom-ops/results/2026-10-15/matched-overlap-20261015-145600/) | 各 8400 次 Submit；后一轮相同全局输入与固定总量 tiling 对照 |
-| 正向 AB / 全 A→全 B | [151841](custom-ops/results/2026-10-15/matched-overlap-20261015-151841/) | 八臂，尚不含两次 Submit 基线 |
-| 最新三组统一比较 | [152224](custom-ops/results/2026-10-15/matched-overlap-20261015-152224/) | 九臂、7560 记录、8400 次真实 Submit |
+| 粗粒度完整 task | [2026-10-14/overlap-20261014-145427](../custom-ops/results/2026-10-14/overlap-20261014-145427) | 早期完整 AB/BA、同质链和位图消融 |
+| 首次模块拆分 | [regcmd-overlap-20261015-140139](../custom-ops/results/2026-10-15/regcmd-overlap-20261015-140139) / [140422](../custom-ops/results/2026-10-15/regcmd-overlap-20261015-140422) | 128 轮节省 9.771 / 8.750 µs；短 B [140247](../custom-ops/results/2026-10-15/regcmd-overlap-20261015-140247) 收益未分辨 |
+| 168 组合初筛 | [matched-overlap-20261015-143244](../custom-ops/results/2026-10-15/matched-overlap-20261015-143244) | 152 通过、16 失败，配置均在该目录 config.json |
+| tile / 表缓存 / 提前启动 | [143611](../custom-ops/results/2026-10-15/matched-overlap-20261015-143611) / [143934](../custom-ops/results/2026-10-15/matched-overlap-20261015-143934) / [144305](../custom-ops/results/2026-10-15/matched-overlap-20261015-144305) | 扫描结果与失败候选，不代替正式验收 |
+| 128 轮候选复验 | [144546](../custom-ops/results/2026-10-15/matched-overlap-20261015-144546) | 淘汰更早启动候选 |
+| 超长 K 探索 | [144941](../custom-ops/results/2026-10-15/matched-overlap-20261015-144941) | K≥8192 的独立 A 基线失败 |
+| 六臂正式复验 | [145230](../custom-ops/results/2026-10-15/matched-overlap-20261015-145230) / [145600](../custom-ops/results/2026-10-15/matched-overlap-20261015-145600) | 各 8400 次 Submit；后一轮相同全局输入与固定总量 tiling 对照 |
+| 正向 AB / 全 A→全 B | [151841](../custom-ops/results/2026-10-15/matched-overlap-20261015-151841) | 八臂，尚不含两次 Submit 基线 |
+| 最新三组统一比较 | [152224](../custom-ops/results/2026-10-15/matched-overlap-20261015-152224) | 九臂、7560 记录、8400 次真实 Submit |
 
 早期分散文档、入口和试探配置的工作树副本已清理；原文件压缩归档于
-[overlap-consolidation-20261015-180910](custom-ops/results/2026-10-15/overlap-consolidation-20261015-180910/)，附 SHA256 清单。
+[overlap-consolidation-20261015-180910](../custom-ops/results/2026-10-15/overlap-consolidation-20261015-180910)，附 SHA256 清单。
 保留此前采集的实际配置和源哈希，不把历史采集回写为最新九臂实验。
 
 ## 复跑与核验
 
-从仓库根目录运行。依赖恢复见 [上游组件](upstream-components/README.md)，板端连接读取未跟踪的 `.env`。
+从仓库根目录运行。依赖恢复见 [上游组件](../upstream-components/README.md)，板端连接读取未跟踪的 `.env`。
 
 ```bash
 # 唯一推荐入口：三组主基线、其余六臂诊断、6 配置、128 轮
@@ -245,10 +245,10 @@ Board 脚本每次上传实际源码、在新目录编译，不覆盖已有结�
 `tools/python/overlap_verify.py` 及原脚本仍由 GEMM/GEMV 实验使用，保持其独立入口。
 历史探索可从各结果目录的 `config.json` 恢复，不另保留重复的临时配置集合。
 
-当前维护代码为 [探针](custom-ops/tools/c/regcmd_overlap_probe.c)、
-[采集器](custom-ops/tools/python/matched_overlap_campaign.py)、
-[核验器](custom-ops/tools/python/matched_overlap_analyze.py)、
-[负例测试](custom-ops/tests/python/matched_overlap_analyze_test.py)。
+当前维护代码为 [探针](../custom-ops/tools/c/regcmd_overlap_probe.c)、
+[采集器](../custom-ops/tools/python/matched_overlap_campaign.py)、
+[核验器](../custom-ops/tools/python/matched_overlap_analyze.py)、
+[负例测试](../custom-ops/tests/python/matched_overlap_analyze_test.py)。
 实际任务/链结构、输入输出边界、两次 Submit 求和、缺失完成事件及错误 IRQ 都有检查；
 正式数据采集时的 21 项 CTest 与清理后的 20 项 CTest 均通过；当前核验器还对历史六/八/九臂的 22 个配置只读复核通过。
 数值结果不因文档合并重新宣称采集。

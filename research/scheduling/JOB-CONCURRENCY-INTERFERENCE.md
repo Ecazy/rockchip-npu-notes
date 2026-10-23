@@ -6,12 +6,12 @@
 
 | 实验 | runs | 正式Submit | 证据 |
 |---|---:|---:|---|
-| foreground | 435 | 261000 | [analysis](custom-ops/results/2026-10-10/device-cost-concurrency-20261010-170013/analysis.json) |
-| resident | 435 | 261000 | [analysis](custom-ops/results/2026-10-10/device-cost-resident-20261010-171054/analysis.json) |
-| saturation | 90 | 54000 | [analysis](custom-ops/results/2026-10-10/device-cost-saturation-20261010-172338/analysis.json) |
-| interference | 150 | 90000 | [analysis](custom-ops/results/2026-10-10/device-cost-interference-20261010-170421/analysis.json) |
-| tail | 30 | 150000 | [analysis](custom-ops/results/2026-10-10/device-cost-tail-20261010-173208/analysis.json) |
-| trace | 5 | 120 | [analysis](custom-ops/results/2026-10-10/device-cost-trace-20261010-173033/analysis.json) |
+| foreground | 435 | 261000 | [analysis](../custom-ops/results/2026-10-10/device-cost-concurrency-20261010-170013/analysis.json) |
+| resident | 435 | 261000 | [analysis](../custom-ops/results/2026-10-10/device-cost-resident-20261010-171054/analysis.json) |
+| saturation | 90 | 54000 | [analysis](../custom-ops/results/2026-10-10/device-cost-saturation-20261010-172338/analysis.json) |
+| interference | 150 | 90000 | [analysis](../custom-ops/results/2026-10-10/device-cost-interference-20261010-170421/analysis.json) |
+| tail | 30 | 150000 | [analysis](../custom-ops/results/2026-10-10/device-cost-tail-20261010-173208/analysis.json) |
+| trace | 5 | 120 | [analysis](../custom-ops/results/2026-10-10/device-cost-trace-20261010-173033/analysis.json) |
 
 每轮请求预算固定，worker各分得确定配额；同策略对照保持总工作量、形状、program清单、CPU分配和运行路径一致。每个worker独立fd/BO，输入有两种符号变体，输出预置NaN；全部请求逐元素评分，包含padding与BO guard。
 foreground逐请求评分；resident预上传输入，每请求保留独立输出，全部worker完成测量后才逐请求验收，不是稀疏抽查。resident测量窗口仍包含现有适配器的每次命令/描述符分配、打包与同步，尚未做持久提交上下文优化。
@@ -79,7 +79,7 @@ victim在CPU0提交；背景固定到A76的CPU4–7。背景私有缓冲总量25
 | matmul | stream:4 | 2.100 [2.063,2.137] |
 
 不同核的同质/异质pair覆盖核集合0/1、0/2、1/2，另有三核同质Job；异质条件交换victim/competitor类型。service包含驱动配置与IRQ延迟，部分worker的CPU类型不同，具体资源归因保留unresolved。
-[干扰校准表](custom-ops/results/2026-10-10/device-cost-interference-20261010-170421/interference-model.json) 用前4个block预测第5个block；service乘数留出误差p50=0.56%、p90=2.90%。
+[干扰校准表](../custom-ops/results/2026-10-10/device-cost-interference-20261010-170421/interference-model.json) 用前4个block预测第5个block；service乘数留出误差p50=0.56%、p90=2.90%。
 另提供固定常数/线性基线的组合留出检查；这是事后探索性检验，未提升为普适预测能力。校准仅覆盖64×64所测条件，不支持未知形状、背景或由线程数推导反事实DDR带宽。
 
 ## 实现、复跑与限制

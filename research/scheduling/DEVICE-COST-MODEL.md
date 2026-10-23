@@ -5,7 +5,7 @@ NPU 1 GHz，DMC performance，CPU performance；实际频率与温度采样随�
 
 正式隔离轮：102 个 cell × 5 个独立随机化 block × 200 次 operation，合计 102000 个 operation / 129000 次 Submit。
 
-证据：[隔离成本轮](custom-ops/results/2026-10-10/device-cost-cost-20261010-165249/analysis.json)，[模型 JSON](custom-ops/results/2026-10-10/device-cost-cost-20261010-165249/model.json)。
+证据：[隔离成本轮](../custom-ops/results/2026-10-10/device-cost-cost-20261010-165249/analysis.json)，[模型 JSON](../custom-ops/results/2026-10-10/device-cost-cost-20261010-165249/model.json)。
 
 ## 测量与数据边界
 

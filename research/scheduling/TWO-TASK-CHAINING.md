@@ -7,9 +7,9 @@
 每个进程连续 128 轮，每轮依次执行四组实验。合计 1,536 轮、15,360 个在线数值对照、
 7,680 次 submit、10,752 个 task。每轮均验证输出和内存边界。
 
-最终记录：[two-task-20261009-174616](custom-ops/results/2026-10-09/two-task-20261009-174616/)，
-汇总与文件 SHA256 见 [campaign.json](custom-ops/results/2026-10-09/two-task-20261009-174616/campaign.json)。
-当前源码已与该轮 [源码清单](custom-ops/results/2026-10-09/two-task-20261009-174616/source-manifest.json) 逐文件核对。
+最终记录：[two-task-20261009-174616](../custom-ops/results/2026-10-09/two-task-20261009-174616)，
+汇总与文件 SHA256 见 [campaign.json](../custom-ops/results/2026-10-09/two-task-20261009-174616/campaign.json)。
+当前源码已与该轮 [源码清单](../custom-ops/results/2026-10-09/two-task-20261009-174616/source-manifest.json) 逐文件核对。
 
 ## 对照与数值结果
 
@@ -48,7 +48,7 @@ Xa 的符号/偏移及 Xb 的偏移逐轮交替；每 13 轮加入一次全零 X
 
 ## 描述符与 Regcmd 边界
 
-[只读采集器](custom-ops/tools/c/two_task_trace.c) 读取实际 MEM_CREATE/MEM_MAP/mmap 和 submit 参数，
+[只读采集器](../custom-ops/tools/c/two_task_trace.c) 读取实际 MEM_CREATE/MEM_MAP/mmap 和 submit 参数，
 在 ioctl 前解析真实 task BO 与 regcmd BO，而不是记录发射器的预期参数。
 
 每个 task 描述符为 40 B；二任务的描述符偏移为 `0/40`，使用区间为 80 B。
@@ -102,11 +102,11 @@ D 的 task1.src 与 task0.dst 的设备地址和分配 ID 完全相同。
 
 入口文件：
 
-- [two_task_probe.c](custom-ops/tools/c/two_task_probe.c)：四组实验、IRQ、输出/输入/留白/padding 检查。
-- [two_task_trace.c](custom-ops/tools/c/two_task_trace.c)：实际 ABI、完成回写和分配生命周期采集。
-- [two_task_verify.py](custom-ops/tools/python/two_task_verify.py)：独立协议与张量证据核验。
-- [two_task_verify_test.py](custom-ops/tests/python/two_task_verify_test.py)：15 个主机测试，包括错链、描述符溢出/杂写、提前释放、错误 IRQ/完成位、未切组、缺记录、坏张量及 JSON 归档一致性。
-- [run-two-task-board.sh](custom-ops/scripts/run-two-task-board.sh)：从新目录上传源码、构建、串行跑完并回收证据。
+- [two_task_probe.c](../custom-ops/tools/c/two_task_probe.c)：四组实验、IRQ、输出/输入/留白/padding 检查。
+- [two_task_trace.c](../custom-ops/tools/c/two_task_trace.c)：实际 ABI、完成回写和分配生命周期采集。
+- [two_task_verify.py](../custom-ops/tools/python/two_task_verify.py)：独立协议与张量证据核验。
+- [two_task_verify_test.py](../custom-ops/tests/python/two_task_verify_test.py)：15 个主机测试，包括错链、描述符溢出/杂写、提前释放、错误 IRQ/完成位、未切组、缺记录、坏张量及 JSON 归档一致性。
+- [run-two-task-board.sh](../custom-ops/scripts/run-two-task-board.sh)：从新目录上传源码、构建、串行跑完并回收证据。
 
 ```bash
 bash research/custom-ops/run-two-task-board.sh
@@ -117,10 +117,10 @@ python3 research/custom-ops/two_task_campaign.py \
 第一条需板端配置与权限，执行硬件实验；第二条只复核已有证据。
 已有 `campaign.json` 与 `validation.json` 不会被重新签入新哈希；文件变更或记录不一致会失败。
 主机和板端五个 CTest 门均通过；主机 ASan/UBSan 覆盖的测试路径也通过。
-[kernel-after.log](custom-ops/results/2026-10-09/two-task-20261009-174616/kernel-after.log) 为 `-- No entries --`，没有 NPU timeout、IOMMU fault 或 reset 日志。
+[kernel-after.log](../custom-ops/results/2026-10-09/two-task-20261009-174616/kernel-after.log) 为 `-- No entries --`，没有 NPU timeout、IOMMU fault 或 reset 日志。
 
 首轮数值与硬件门通过，但归档复核因整数 bank 键在 JSON 中变成字符串而失败，
-记录保留于 [171011 轮](custom-ops/results/2026-10-09/two-task-20261009-171011/)。
+记录保留于 [171011 轮](../custom-ops/results/2026-10-09/two-task-20261009-171011)。
 修复验证器的序列化稳定性后重新运行，最终记录另存于上述 174616 目录，没有覆盖失败记录。
 
 实验工具和验证器最终由本助手完成。CSU/DeepSeek 两次调用返回 Internal Server Error，未生成代码；

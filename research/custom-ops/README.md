@@ -5,31 +5,31 @@
 新增代码负责张量契约、打包、边界检查、LUT 内容、原语组合、执行顺序及数值验收。
 
 当前目标为 Orange Pi 5 Plus / RK3588 / 厂商 `rknpu 0.9.8` / FP16。
-最新 [K 维分片与加速](../FP16-K-TILING.md) 将组合算子的 K 上限扩至 4096，保持单次 Submit 和设备 Cube 交接。
-新增 [静态图编译与 SwiGLU FFN](../STATIC-GRAPH-COMPILER.md) 提供 `co_linear_*`、`co_graph_plan_init/compile/run`，自动拓扑/形状分析、统一 tile 布局与 BO 生命周期规划；中间张量保持设备 Cube。
-后续 [跨 tile 混合 RMSNorm/稳定 Softmax](../CROSS-TILE-ROW-OPS.md) 已加入图接口；Softmax明确读取logits到CPU，归约/rsqrt和系数展开为混合路径，不能归入仅图边界传输。
-新增 [RoPE、KV cache 与 self-attention](../ATTENTION-KERNELS.md) 支持固定容量的MHA/GQA、prefill与增量decode、静态图RoPE/attention及受控错误回滚；QK/PV在NPU，KV/动态权重与Softmax仍为混合路径。
-新增 [完整decoder block与单行decode](../TRANSFORMER-DECODER-BLOCK.md) 提供 `co_decoder_*`，共享RMSNorm的Q/K/V多输出图、post-FFN KV回滚，以及prefill/M=1两套执行几何。
+最新 [K 维分片与加速](../kernels/FP16-K-TILING.md) 将组合算子的 K 上限扩至 4096，保持单次 Submit 和设备 Cube 交接。
+新增 [静态图编译与 SwiGLU FFN](../graphs/STATIC-GRAPH-COMPILER.md) 提供 `co_linear_*`、`co_graph_plan_init/compile/run`，自动拓扑/形状分析、统一 tile 布局与 BO 生命周期规划；中间张量保持设备 Cube。
+后续 [跨 tile 混合 RMSNorm/稳定 Softmax](../kernels/CROSS-TILE-ROW-OPS.md) 已加入图接口；Softmax明确读取logits到CPU，归约/rsqrt和系数展开为混合路径，不能归入仅图边界传输。
+新增 [RoPE、KV cache 与 self-attention](../kernels/ATTENTION-KERNELS.md) 支持固定容量的MHA/GQA、prefill与增量decode、静态图RoPE/attention及受控错误回滚；QK/PV在NPU，KV/动态权重与Softmax仍为混合路径。
+新增 [完整decoder block与单行decode](../graphs/TRANSFORMER-DECODER-BLOCK.md) 提供 `co_decoder_*`，共享RMSNorm的Q/K/V多输出图、post-FFN KV回滚，以及prefill/M=1两套执行几何。
 完整算子入口为 `co_linear_hsig_create/run/run_cube/destroy`，文件程序为 `linear_hardsigmoid`。
 最新结果见 [完整算子交付验收](results/2026-10-09/OPERATOR-DELIVERY.md)；此前原语验收见 [第一阶段记录](results/2026-10-09/README.md)。
 这些是实际运行结果，与旧厂商实验分开。
 
-后续 [Two-Task Chaining 四组对照](../TWO-TASK-CHAINING.md) 仅使用 HardSigmoid 验证 A/B/C/D，
+后续 [Two-Task Chaining 四组对照](../scheduling/TWO-TASK-CHAINING.md) 仅使用 HardSigmoid 验证 A/B/C/D，
 覆盖真实描述符、链地址、寄存器组完成位、BO 生命周期和连续提交压力测试。
 
-[同核 MatMul/DPU 重叠实验](../SAME-CORE-OVERLAP.md) 统一收录完整 task 链、regcmd 模块拆分、
+[同核 MatMul/DPU 重叠实验](../scheduling/SAME-CORE-OVERLAP.md) 统一收录完整 task 链、regcmd 模块拆分、
 工作量匹配及三组基线修正。32 tile 上，合并 Submit 节省 2.07%，重划分相对完整链额外节省 7.14%；
 不是完整 attention 的端到端收益。旧记录的 `serial` 仅为同布局机制对照。
 复跑入口与唯一主配置见该文；本目录保留 `scripts/run-matched-overlap-board.sh` 与
 `tools/python/matched_overlap_configs/three-arm-baseline.json`。
 
-[同核 GEMM+GEMV 链式/并发对照](../GEMM-GEMV-CONCURRENCY.md) 在同一探针上加 GEMV（逻辑 M=1、物理 M=12）、
+[同核 GEMM+GEMV 链式/并发对照](../scheduling/GEMM-GEMV-CONCURRENCY.md) 在同一探针上加 GEMV（逻辑 M=1、物理 M=12）、
 B8/B16 放大组、以及双进程 `P_same`/`P_cross` 正对照；已测链只省一次 Submit 包络，同核 job 串行，跨核服务包络重叠。
 并发组用独立 fd 的进程加管道 barrier，因为驱动对 BO 映射设 `VM_DONTCOPY`，同进程并发也不可靠。
 
-[多核分配与调度 Profiling](../MULTICORE-SCHEDULING-PROFILING.md) 提供 `co_schedule_execute` / `co_schedule_pick`、五种真机场景和队列/服务时间区间核验。调度单位为一次 Submit，依赖 task 链整体留在一个核。
+[多核分配与调度 Profiling](../scheduling/MULTICORE-SCHEDULING-PROFILING.md) 提供 `co_schedule_execute` / `co_schedule_pick`、五种真机场景和队列/服务时间区间核验。调度单位为一次 Submit，依赖 task 链整体留在一个核。
 
-[单设备成本模型](../DEVICE-COST-MODEL.md) 和 [Job并发与资源干扰](../JOB-CONCURRENCY-INTERFERENCE.md) 已完成v2采集工具、945000次正式Submit和120次tracing诊断。离线预测API为 `tools/python/device_cost_analyze.py` 的 `DeviceCostModel`；入口为 `scripts/run-device-cost-board.sh`。模型区分validated、experimental及insufficient_geometry，不能将测量门禁PASS当作所有预测族均达标。
+[单设备成本模型](../scheduling/DEVICE-COST-MODEL.md) 和 [Job并发与资源干扰](../scheduling/JOB-CONCURRENCY-INTERFERENCE.md) 已完成v2采集工具、945000次正式Submit和120次tracing诊断。离线预测API为 `tools/python/device_cost_analyze.py` 的 `DeviceCostModel`；入口为 `scripts/run-device-cost-board.sh`。模型区分validated、experimental及insufficient_geometry，不能将测量门禁PASS当作所有预测族均达标。
 
 ```bash
 bash research/custom-ops/scripts/run-device-cost-board.sh smoke 1 12 2

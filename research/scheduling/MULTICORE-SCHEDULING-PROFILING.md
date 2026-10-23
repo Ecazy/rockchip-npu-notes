@@ -8,7 +8,7 @@
 
 ## 多核控制
 
-[co_schedule.h](custom-ops/include/co_schedule.h) / [co_schedule.c](custom-ops/src/co_schedule.c) 提供局部提交适配层，绕开上游 provider 的进程级环境变量缓存。无需修改上游依赖。
+[co_schedule.h](../custom-ops/include/co_schedule.h) / [co_schedule.c](../custom-ops/src/co_schedule.c) 提供局部提交适配层，绕开上游 provider 的进程级环境变量缓存。无需修改上游依赖。
 
 | 调用参数 | 含义 | 验证方式 |
 |---|---|---|
@@ -74,8 +74,8 @@ api_response = host_done - host_begin
 ## 如何分离队列和服务
 
 当前内核没有 kprobe / BTF 接口，但支持全局 function graph tracer。
-[schedule_capture.py](custom-ops/tools/python/schedule_capture.py) 采集提交、调度、取队列、核 IRQ 和相应 `ktime_get` 调用。
-[schedule_analyze.py](custom-ops/tools/python/schedule_analyze.py) 按请求 ID/TID、核内 FIFO 和 IRQ 核号关联记录。
+[schedule_capture.py](../custom-ops/tools/python/schedule_capture.py) 采集提交、调度、取队列、核 IRQ 和相应 `ktime_get` 调用。
+[schedule_analyze.py](../custom-ops/tools/python/schedule_analyze.py) 按请求 ID/TID、核内 FIFO 和 IRQ 核号关联记录。
 只匹配预期调用层级的时间函数，避免把调度切换或无关调用的取时误认成 job 开始。
 
 2026-10-10补充：过滤掉的调用/中断仍可能在这一显示层级留下多个 `ktime_get`。v2解析器将严格递增候选合成包围区间，再用驱动service时差收紧，不挑选一个调用当成精确时间点；重复/同量化时间的候选与FIFO歧义仍拒绝。原正式轮复算结果保持一致，另见 [并发与干扰诊断](JOB-CONCURRENCY-INTERFERENCE.md)。
@@ -95,9 +95,9 @@ rknpu_job_schedule 入口
 同核插入顺序使用持有队列锁时的 task-number 调用确定；开始由真正取出 FIFO job 后的 commit 取时确定。
 繁忙核上的下一 job 可以由上一 job 的 IRQ 启动，解析器覆盖这一交接路径。
 
-该顺序同时核对了 [0.9.8 驱动源码](rknpu-vendor/refs/rknpu-driver-0.9.8/drivers/rknpu/rknpu_job.c) 和板端 boot Image 的实际指令。
+该顺序同时核对了 [0.9.8 驱动源码](../../../RKNPU/refs/rknpu-driver-0.9.8/drivers/rknpu/rknpu_job.c) 和板端 boot Image 的实际指令。
 编译后链表写入在 `0xffffffc009003534..353c`，随后的 `0xffffffc009003540` 调用 `rknpu_get_task_number`。
-[schedule_kernel_audit.py](custom-ops/tools/python/schedule_kernel_audit.py) 固定核对这段代码的 SHA256，未审计的内核拒绝运行。
+[schedule_kernel_audit.py](../custom-ops/tools/python/schedule_kernel_audit.py) 固定核对这段代码的 SHA256，未审计的内核拒绝运行。
 
 function graph 的 leaf 行使用入口事件时间和调用时长；格式依据 Linux v6.1 的
 [trace_functions_graph.c](https://github.com/torvalds/linux/blob/v6.1/kernel/trace/trace_functions_graph.c) 的 `print_graph_entry` / `get_return_for_leaf`。
@@ -110,7 +110,7 @@ function graph 的 leaf 行使用入口事件时间和调用时长；格式依�
 
 ## 真机结果
 
-正式证据：[scheduling-20261009-213637](custom-ops/results/2026-10-09/scheduling-20261009-213637/summary.json)。
+正式证据：[scheduling-20261009-213637](../custom-ops/results/2026-10-09/scheduling-20261009-213637/summary.json)。
 环境：`6.1.43-rockchip-rk3588-rknpu098`、RKNPU 0.9.8、NPU 1 GHz。
 每个 task 为 64×64 FP16 HardSigmoid；worker 使用独立输入/输出，逐元素数学参考与 BO guard 验证通过。
 

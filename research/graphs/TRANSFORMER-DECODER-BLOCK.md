@@ -40,7 +40,7 @@ cache clone检查KV/RoPE编码和容量，不复制scratch/weight BO；下一步
 
 ## 接口
 
-[co_decoder.h](custom-ops/include/co_decoder.h) 提供计划、创建、reset、step、cache export与诊断getter。矩阵都是row-major FP16：
+[co_decoder.h](../custom-ops/include/co_decoder.h) 提供计划、创建、reset、step、cache export与诊断getter。矩阵都是row-major FP16：
 
 | 参数 | 形状 |
 |---|---|
@@ -84,7 +84,7 @@ RMSNorm仍有FP16平方与tile行能量门禁，attention/PV仍有FP16分片收�
 
 ## 实测
 
-[原始记录](custom-ops/results/2026-10-13/decoder-20261013-184941/README.md) 包含三个核×chain/separate、三种形状、两条流式路径与一条16-node静态完整图。
+[原始记录](../custom-ops/results/2026-10-13/decoder-20261013-184941/README.md) 包含三个核×chain/separate、三种形状、两条流式路径与一条16-node静态完整图。
 所有模式各重复3次，matrices/gammas在compile后清零并释放，以检查权重所有权。
 
 | tokens / max_query / capacity | model / FFN | Hq / Hkv / D / rotary | step |

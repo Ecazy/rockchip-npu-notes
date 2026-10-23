@@ -6,11 +6,11 @@
 
 自写组合算子的实现入口为 [research/custom-ops/](../../research/custom-ops/README.md)：Tensor/Buffer/View 契约、可调用的 FP16 `HardSigmoid(XW+b)` 上下文和文件 CLI、直接 BO 交接、task 链、EW/LUT/归约/PPU/固定 transpose 及混合归一化。2026-10-09 的 [完整算子交付验收](../../research/custom-ops/results/2026-10-09/OPERATOR-DELIVERY.md) 在 RK3588 三个核各运行两个独立进程，2,094 个数值对照和 102 个文件接口检查全部通过。
 
-[Two-Task Chaining 四组对照](../../research/TWO-TASK-CHAINING.md) 的 A/B/C/D 均通过：12 个进程各连续 128 轮，共 15,360 个数值对照，核对实际描述符、寄存器组完成位、IRQ、BO 生存期与 padding，未观察到超时、错误写回或跨任务污染。
+[Two-Task Chaining 四组对照](../../research/scheduling/TWO-TASK-CHAINING.md) 的 A/B/C/D 均通过：12 个进程各连续 128 轮，共 15,360 个数值对照，核对实际描述符、寄存器组完成位、IRQ、BO 生存期与 padding，未观察到超时、错误写回或跨任务污染。
 
-[FP16 K 维分片与加速](../../research/FP16-K-TILING.md) 将 HardSigmoid 组合算子的 K 上限从 256 扩至 4096，保持 RK3588、单次 Submit 与设备 Cube 交接。三核各两次进程验证通过；融合 DPU 累加相对未融合、同为单次 Submit 的设备链，两个测试形状的计算链 wall 加速比中位数均约 1.43×。
+[FP16 K 维分片与加速](../../research/kernels/FP16-K-TILING.md) 将 HardSigmoid 组合算子的 K 上限从 256 扩至 4096，保持 RK3588、单次 Submit 与设备 Cube 交接。三核各两次进程验证通过；融合 DPU 累加相对未融合、同为单次 Submit 的设备链，两个测试形状的计算链 wall 加速比中位数均约 1.43×。
 
-[可控多核分配与调度 Profiling](../../research/MULTICORE-SCHEDULING-PROFILING.md) 已验证逐次 Submit 的单核 Mask、用户态候选集合选择与实际 IRQ 映射，并可靠区分排队区间、驱动服务时长和剩余 Host 开销；精确入队和纯硬件起止时间仍未暴露。
+[可控多核分配与调度 Profiling](../../research/scheduling/MULTICORE-SCHEDULING-PROFILING.md) 已验证逐次 Submit 的单核 Mask、用户态候选集合选择与实际 IRQ 映射，并可靠区分排队区间、驱动服务时长和剩余 Host 开销；精确入队和纯硬件起止时间仍未暴露。
 
 2026-10-09 的 [README 能力真机验证](../../research/validation/2026-10-09/README.md) 记录 RK3588 厂商驱动上的算子和前端测试结果，包含跳过项、构建问题与原始日志。
 

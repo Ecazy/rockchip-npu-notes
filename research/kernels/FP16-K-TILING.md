@@ -25,11 +25,11 @@ M/N 仍为 1..256。该实现不使用 CPU 累计、CPU 中间激活或每个 K 
 
 ## 真机验证
 
-最终记录：[ktiling-20261009-194732](custom-ops/results/2026-10-09/ktiling-20261009-194732/)，
-[不可变清单](custom-ops/results/2026-10-09/ktiling-20261009-194732/campaign.json) 保存全部证据 SHA256。
+最终记录：[ktiling-20261009-194732](../custom-ops/results/2026-10-09/ktiling-20261009-194732)，
+[不可变清单](../custom-ops/results/2026-10-09/ktiling-20261009-194732/campaign.json) 保存全部证据 SHA256。
 环境为 Orange Pi 5 Plus / RK3588，`6.1.43-rockchip-rk3588-rknpu098`，厂商 `rknpu 0.9.8`，读取 NPU 频率 1 GHz，GCC 11.4.0。
 三个核分别固定 mask 1/2/4，各跑两个独立进程，串行执行；未修改时钟、驱动或 debug counter。
-当前源码已与 [源码清单](custom-ops/results/2026-10-09/ktiling-20261009-194732/source-manifest.json) 逐文件核对。
+当前源码已与 [源码清单](../custom-ops/results/2026-10-09/ktiling-20261009-194732/source-manifest.json) 逐文件核对。
 
 每个进程的在线检查统计为 264，六个进程均通过。
 归档共 282 条被评分的功能/性能记录：66 条完整算子、96 条变化输入、96 条未激活累计、24 条性能图记录。
@@ -55,7 +55,7 @@ M/N 仍为 1..256。该实现不使用 CPU 累计、CPU 中间激活或每个 K 
 
 独立 Python 标准库 oracle 重新读取保存的输入、权重、bias 和硬件输出，复核相同结果。
 主机与板端 7 个 CTest 门通过，主机 ASan/UBSan 覆盖的主机路径通过。
-[kernel-after.log](custom-ops/results/2026-10-09/ktiling-20261009-194732/kernel-after.log) 为 `-- No entries --`，测试区间未见 timeout、IOMMU fault 或 reset。
+[kernel-after.log](../custom-ops/results/2026-10-09/ktiling-20261009-194732/kernel-after.log) 为 `-- No entries --`，测试区间未见 timeout、IOMMU fault 或 reset。
 
 ## 实际命令流
 
@@ -102,9 +102,9 @@ python3 research/custom-ops/ktiling_campaign.py \
   research/custom-ops/results/2026-10-09/ktiling-20261009-194732
 ```
 
-入口：[生产实现](custom-ops/src/linear_hardsigmoid.c)、[原语/切片](custom-ops/src/custom_ops.c)、
-[主机边界测试](custom-ops/tests/c/ktiling_host_test.c)、[真机测试与对照图](custom-ops/tools/c/ktiling_probe.c)、
-[独立 oracle](custom-ops/tools/python/ktiling_gate.py)、[归档核验](custom-ops/tools/python/ktiling_campaign.py)。
+入口：[生产实现](../custom-ops/src/linear_hardsigmoid.c)、[原语/切片](../custom-ops/src/custom_ops.c)、
+[主机边界测试](../custom-ops/tests/c/ktiling_host_test.c)、[真机测试与对照图](../custom-ops/tools/c/ktiling_probe.c)、
+[独立 oracle](../custom-ops/tools/python/ktiling_gate.py)、[归档核验](../custom-ops/tools/python/ktiling_campaign.py)。
 K>4096 或 M/N>256 明确拒绝，不静默截断。未实现 M/N 多 tile、任意 K 或其他精度。
 
 初版实现和测试脚手架由按仓库 skill 配置的 CSU/DeepSeek 提供；Codex 独立检查代码和测试。

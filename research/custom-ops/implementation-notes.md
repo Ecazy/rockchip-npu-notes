@@ -2,7 +2,7 @@
 
 2026-10-10。当前执行器、schema、配置和分析均为 v2；原未完成 v1 源码保存于本地 `results/2026-10-10/handoff-v1-164818/`，旧 P0 证据不覆盖。
 
-完整结果见 [成本模型](../DEVICE-COST-MODEL.md) 和 [并发/干扰](../JOB-CONCURRENCY-INTERFERENCE.md)。原始运行记录、源码摘要与失败轮次保留在本地结果目录；它们不随 Git 提交分发。
+完整结果见 [成本模型](../scheduling/DEVICE-COST-MODEL.md) 和 [并发/干扰](../scheduling/JOB-CONCURRENCY-INTERFERENCE.md)。原始运行记录、源码摘要与失败轮次保留在本地结果目录；它们不随 Git 提交分发。
 
 ## 可执行组件
 

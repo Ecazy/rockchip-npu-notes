@@ -2,8 +2,8 @@
 
 2026-10-14，Orange Pi 5 Plus / RK3588，内核 `6.1.43-rockchip-rk3588-rknpu098`，厂商 `rknpu 0.9.8`，NPU 1 GHz。
 链式组固定在 Core 0；并发组用两个 barrier 同步的进程，提交线程 `taskset -c 4,5`（两个 A76）。
-正式证据：[overlap-20261014-155212](custom-ops/results/2026-10-14/overlap-20261014-155212/)，
-汇总见 [analysis.json](custom-ops/results/2026-10-14/overlap-20261014-155212/analysis.json)。
+正式证据：[overlap-20261014-155212](../custom-ops/results/2026-10-14/overlap-20261014-155212)，
+汇总见 [analysis.json](../custom-ops/results/2026-10-14/overlap-20261014-155212/analysis.json)。
 本轮是 [同核 MatMul/DPU 重叠实验](SAME-CORE-OVERLAP.md) 的扩展：保留原 MatMul＋LUT 组，新增 GEMV、放大组与跨核并发正对照。
 
 ## 结论
