@@ -1,0 +1,55 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        32,
+        64
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        64,
+        48
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        32,
+        48
+      ]
+    }
+  ],
+  "case": "matmul_guard_nonfinite_output",
+  "core_mask_env": "4",
+  "guard": "nonfinite_output",
+  "guard_code": -4,
+  "guard_message": "downloaded output tile is not finite; refusing to publish",
+  "guard_output_unchanged": true,
+  "kind": "guard",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "1b13b469f66b81f3ceefd4c522bc09765756be98826006e9c04fc1203bdaa5b6",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "raw_outputs": "matmul_guard_nonfinite_output.npz",
+  "rounds": [],
+  "status": "PASS",
+  "submit_count": 1,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 1,
+  "wall_seconds": 0.006117820739746094
+}

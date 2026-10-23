@@ -7,7 +7,7 @@ payloads needed for independent numerical replay.
 
 ## Workspace checkpoint cleanup (2026-10-23)
 
-- The current implementation checkpoint is board `20261023T141328Z-rk3588`
+- The current implementation checkpoint is board `20261023T144054Z-rk3588`
   (27 cases × 3 serial masks) and Host `20261023T131916Z-host` (213 pytest,
   27/27 ctest). The cleanup preflight is `20261023T122811Z-host`; the final cleanup
   verification is `20261023T123836Z-host` (212 pytest, 26/26 ctest,
@@ -112,7 +112,7 @@ result tree):
   chain/separate bytes, target/profile/ABI, source-bundle hash recomputation,
   password scan).
 
-Latest campaign: `20261023T141328Z-rk3588/` on RK3588 OPi 5 Plus, driver v0.9.8,
+Latest campaign: `20261023T144054Z-rk3588/` on RK3588 OPi 5 Plus, driver v0.9.8,
 runtime ABI 1: **27 cases × 3 serial single-core masks = 81/81 PASS**.  Coverage
 includes MatMul, projection and staged-FP16 FFN chain/separate, one explicit
 guarded ragged tail, scalar/per-channel broadcast, independent activation, a

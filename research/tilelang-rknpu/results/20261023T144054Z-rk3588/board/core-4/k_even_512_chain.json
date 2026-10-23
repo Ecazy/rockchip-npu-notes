@@ -1,0 +1,80 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        8,
+        512
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        512,
+        33
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        8,
+        33
+      ]
+    }
+  ],
+  "case": "k_even_512_chain",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "kchain",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "c21ce0aa4fec532810cf4c60b21e35b3961812572c2215c751e5aa7712c9250c",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "raw_outputs": "k_even_512_chain.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 264,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 264,
+          "max_abs": 0.0005320787313394248,
+          "max_rel": 0.0700642862262964,
+          "mismatch_elements": 264
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 1536,
+      "download_calls": 1,
+      "emit_us": 10.7919921875,
+      "output_sync_us": 4.9580078125,
+      "pack_us": 36.750030517578125,
+      "round": 0,
+      "submit_count": 1,
+      "submit_wait_us": 152.83200073242188,
+      "task_count": 2,
+      "upload_bytes": 12288,
+      "upload_calls": 2
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 1,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    }
+  ],
+  "task_count": 2,
+  "wall_seconds": 0.009732961654663086
+}
