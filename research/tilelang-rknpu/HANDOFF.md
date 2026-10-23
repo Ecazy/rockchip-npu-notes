@@ -129,7 +129,7 @@ Because this Host has no usable PTY, the SSH path uses
 `SSH_ASKPASS_REQUIRE=force` instead of `sshpass`, without changing the deployment
 shape.
 
-Evidence: `results/20261023T121507Z-rk3588/`
+Evidence: `results/20261023T131610Z-rk3588/`
 
 - Device: `RK3588 OPi 5 Plus`; kernel `6.1.43-rockchip-rk3588-rknpu098`
 - Driver: `RKNPU driver: v0.9.8`; NPU 1 GHz; runtime ABI 1
@@ -161,7 +161,8 @@ Result: **27/27 cases passed on each of masks 1, 2, 4 (81/81)**:
 - full board CLI path on every core mask: `compile-rkir`, `validate`,
   `explain`, two successful `run` calls with stable fd count/output publication,
   and a missing-constant binding returning rc2 without publishing; Host
-  regressions cover caller-owned fd and destroy/close failure propagation
+  regressions cover caller-owned fd, real void `rocket_close` ABI, and poisoned
+  destroy retaining the provider fd/task BO
 
 Numeric evidence:
 
@@ -204,7 +205,7 @@ bundle SHA-256; the remote loaded-library SHA-256 is labelled **recorded-only**
 because the library bytes are not rehashed on the Host.
 
 Offline recomputation of the archived raw outputs is recorded at
-`results/20261023T121507Z-rk3588/recomputed/summary.md` (and for the prior archive
+`results/20261023T131610Z-rk3588/recomputed/summary.md` (and for the prior archive
 at `results/20261023T101551Z-rk3588/recomputed/summary.md`).  The recomputation
 uses unquantized float64 math references; the latest declared-path and math-path
 max errors match the campaign summary values above.
@@ -227,6 +228,36 @@ and long-duration stress are **extension validation**, not MVP/P8 blockers.
   `curl_rc=28` (`provenance/p0-rebuild-attempt-2.log`); P0 remains externally
   blocked and is not claimed complete.
 
+## Runtime contract closure (2026-10-23)
+
+Three code-level contract issues are closed:
+
+1. `rocket_close` is declared and called as the vendor `void rocket_close(int)`;
+   no return value is inspected or invented.  The C signature probe compiles
+   against `rocket_npu.h`, and the Python ctypes mirror is tested in
+   `tests/test_runtime_abi.py`.
+2. A poisoned/BUSY workspace destroy never leads to `rocket_close`: the provider
+   fd/context (including `taskbo`) are retained for process-level recovery.  The
+   CLI reports the cleanup failure, preserves the original execution error and
+   does not close its owned fd after an unconfirmed destroy.  Caller-owned fd is
+   never closed.
+3. `poisoned` is `atomic_int`; runs acquire the atomic busy gate before observing
+   poison, a failing run sets poison while holding busy, and destroy also acquires
+   the busy gate before checking it.  A concurrent failing-run regression verifies
+   the entrant gets `RK_E_BUSY`, no second submit occurs, and later calls get
+   `RK_E_POISONED`; no output is published.
+4. The provider context itself is quarantined per fd: an `atomic_int faulted` is
+   set by `submit_kick()` **before releasing `submit_lock`** on any submit
+   failure.  A queued submit acquires the lock afterwards and returns `-EPIPE`
+   without rewriting the task BO.  Existing and newly created workspaces on the
+   same fd are refused, outputs stay unpublished, and `rocket_close` on a
+   faulted context retains the fd/task BO for process-level recovery.  The
+   provider patch and base commit are recorded in
+   `provenance/upstream-patches.json` and
+   `provenance/patches/rknpu-submit-context-fault.patch`.
+
+Details and exact test/log references: [RUNTIME-LIFECYCLE.md](RUNTIME-LIFECYCLE.md).
+
 ## Final MVP status
 
 The implemented and board-verified domain is complete for the finite representative
@@ -242,11 +273,11 @@ limitations/external blockers, not hidden behind an undefined release-gate label
 
 ## Verification state
 
-* `pytest tests` → **207 passed, 38 subtests**, 0 skipped.
-* `ctest --test-dir research/custom-ops/build-host-mvp` → **26/26 passed**.
+* `pytest tests` → **213 passed, 40 subtests**, 0 skipped.
+* `ctest --test-dir research/custom-ops/build-host-mvp` → **27/27 passed**.
 * `scripts/run-verification.sh --keep-build` → exit 0;
-  `results/20261023T121654Z-host/`:
-  - pytest 207 passed / 0 failed / 0 skipped;
+  `results/20261023T131916Z-host/`:
+  - pytest 213 passed / 0 failed / 0 skipped;
   - ASan+UBSan contract/host checks pass;
   - evidence complete.  This host record opens no device; the RK3588 evidence is
     the separate campaign above.

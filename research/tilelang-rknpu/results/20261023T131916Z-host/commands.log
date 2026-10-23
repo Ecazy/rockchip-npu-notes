@@ -1,0 +1,63 @@
+=== [environment] shell function capture_environment
+--- started: 2026-10-23T13:19:16Z
+--- exit: 0
+=== [isolation] shell function check_isolation
+--- started: 2026-10-23T13:19:17Z
+--- exit: 0
+=== [source-hashes] shell function capture_hashes
+--- started: 2026-10-23T13:19:18Z
+--- exit: 0
+=== [prepare-build] shell function prepare_build_dirs
+--- started: 2026-10-23T13:19:18Z
+--- exit: 0
+=== [configure] cmake -S /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops -B /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPython3_EXECUTABLE=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python
+--- started: 2026-10-23T13:19:18Z
+--- exit: 0
+=== [build] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp -j4
+--- started: 2026-10-23T13:19:18Z
+--- exit: 0
+=== [ctest] ctest --test-dir /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp --output-on-failure
+--- started: 2026-10-23T13:19:18Z
+--- exit: 0
+=== [rk_plan_contract] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_contract_test
+--- started: 2026-10-23T13:19:29Z
+--- exit: 0
+=== [rk_plan_host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_host_test
+--- started: 2026-10-23T13:19:29Z
+--- exit: 0
+=== [graph_host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/graph_host_test
+--- started: 2026-10-23T13:19:29Z
+--- exit: 0
+=== [mock_scenarios] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_mock_scenarios
+--- started: 2026-10-23T13:19:34Z
+--- exit: 0
+=== [configure-sanitize] shell function configure_sanitize
+--- started: 2026-10-23T13:19:34Z
+--- exit: 0
+=== [build-sanitize] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk --target rk_plan_contract_test rk_plan_host_test -j4
+--- started: 2026-10-23T13:19:35Z
+--- exit: 0
+=== [sanitize-contract] env ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 MALLOC_PERTURB_=128 /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_contract_test
+--- started: 2026-10-23T13:19:35Z
+--- exit: 0
+=== [sanitize-host] env ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 MALLOC_PERTURB_=128 /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_host_test
+--- started: 2026-10-23T13:19:35Z
+--- exit: 0
+=== [sanitize-mock-build] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk --target rknpu_plan_mock -j4
+--- started: 2026-10-23T13:19:35Z
+--- exit: 0
+=== [sanitize-poison-worker] env LD_PRELOAD=/usr/lib/gcc/x86_64-linux-gnu/13/libasan.so ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 UBSAN_OPTIONS=halt_on_error=1 RKNPU_POISON_CHILD=1 RKNPU_PLAN_MOCK_LIB=/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/librknpu_plan_mock.so TILELANG_CACHE_DIR=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.cache PYTHONPATH=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0 LD_LIBRARY_PATH=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/z3/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tilelang/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tvm_ffi/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/z3/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tilelang/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tvm_ffi/lib /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tests/test_ws_poison.py
+--- started: 2026-10-23T13:19:35Z
+--- exit: 0
+=== [sanitize-ffn-worker] env LD_PRELOAD=/usr/lib/gcc/x86_64-linux-gnu/13/libasan.so ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 UBSAN_OPTIONS=halt_on_error=1 RKNPU_PLAN_MOCK_LIB=/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/librknpu_plan_mock.so TILELANG_CACHE_DIR=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.cache PYTHONPATH=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0 LD_LIBRARY_PATH=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/z3/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tilelang/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tvm_ffi/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/z3/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tilelang/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tvm_ffi/lib /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python -m pytest /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tests/test_ffn_execution.py -o addopts= -q
+--- started: 2026-10-23T13:19:35Z
+--- exit: 0
+=== [archive-flags] shell function archive_flags
+--- started: 2026-10-23T13:19:37Z
+--- exit: 0
+=== [pytest] /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python -m pytest /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tests -o addopts= -q -rs --tb=short
+--- started: 2026-10-23T13:19:37Z
+--- exit: 0
+=== [summary] shell function build_summary
+--- started: 2026-10-23T13:20:02Z
+--- exit: 0

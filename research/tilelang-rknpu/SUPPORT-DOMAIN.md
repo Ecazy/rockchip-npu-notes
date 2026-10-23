@@ -85,9 +85,11 @@ as `<output>.npy`, and returns:
 - `2` schema/binding/numeric/unsupported error
 - `3` resource/device/BUSY/POISONED error
 
-If `run` opens the fd it closes it before returning; with `--fd` the caller
-retains ownership.  A workspace-destroy or owned-fd close failure is written to
-stderr and returns a resource error even when the execution itself succeeded; a
-simultaneous execution error remains the primary exit code and cleanup failures
-are still reported.  The CLI never returns 0 while holding an unreported cleanup
-failure.
+If `run` opens the fd it closes it only after workspace destruction confirms
+quiescence; with `--fd` the caller retains ownership.  The vendor
+`void rocket_close(int)` has no status result, so the CLI does not claim confirmed
+fd closure.  A workspace-destroy failure is written to stderr and returns a
+resource error; when the workspace is poisoned/BUSY the provider fd and task BO
+are retained for process-level recovery rather than closed.  A simultaneous
+execution error remains the primary exit code and cleanup diagnostics are still
+reported.

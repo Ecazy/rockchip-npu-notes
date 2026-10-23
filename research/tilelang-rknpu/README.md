@@ -28,7 +28,7 @@ Current status and remaining review items: [IMPLEMENTATION-STATUS.md](IMPLEMENTA
 The compile/validate/explain path never opens a device.  Runtime is synchronous and
 uses a caller-owned fd.  Host tests use BO/execution mocks.  RK3588 real-device
 admission is reproducible through `scripts/run-board-admission.sh`; the latest
-evidence is `results/20261023T121507Z-rk3588/`: representative small-shape
+evidence is `results/20261023T131610Z-rk3588/`: representative small-shape
 admission, 27 cases on each of three **serially run** single-core masks, with raw per-round outputs,
 declared + unquantized float64 math references, byte-level chain/separate
 comparison, final-publication BO guard, numeric guards, tiled per-node
@@ -103,7 +103,7 @@ research/tilelang-rknpu/scripts/run-board-admission.sh
 # evidence: results/<utc>-rk3588/board/summary.md
 ```
 
-The latest run is `results/20261023T121507Z-rk3588/`: RK3588 OPi 5 Plus, driver
+The latest run is `results/20261023T131610Z-rk3588/`: RK3588 OPi 5 Plus, driver
 `v0.9.8`, ABI 1, **27 cases × 3 masks = 81/81 small-shape case runs PASS**.
 Coverage includes MatMul, projection, staged-FP16 FFN, one explicit guarded
 ragged K/M/N tail shape, scalar/per-channel constant Add/Mul, independent
@@ -141,9 +141,13 @@ python -m rknpu_backend.cli run plan.json --bindings bindings.json \
   --output-dir out/
 ```
 
-Bindings values are `.npy` paths resolved relative to the bindings JSON.  The
-CLI opens `/dev/dri` and closes it on return; the additive `--fd N` option uses a
-caller-owned descriptor instead.  Success publishes `<output>.npy` atomically;
+Bindings values are `.npy` paths resolved relative to the bindings JSON.  The CLI
+opens `/dev/dri` and calls the vendor's real `void rocket_close(int)` only after
+workspace destroy confirms quiescence; `rocket_close` has no status result, so
+successful fd release is not separately claimed.  The additive `--fd N` option
+uses a caller-owned descriptor that the CLI never closes.  If destroy returns
+POISONED/BUSY, the provider fd/task BO are retained for process-level recovery
+rather than closed.  Success publishes `<output>.npy` atomically;
 schema/binding/numeric failures return 2 without publishing, and resource/device
 failures return 3.  Board evidence is under `board/core-*/cli/cli-report.json` in
 the campaign result.

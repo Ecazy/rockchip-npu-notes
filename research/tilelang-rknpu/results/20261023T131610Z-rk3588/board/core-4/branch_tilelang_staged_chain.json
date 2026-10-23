@@ -1,0 +1,135 @@
+{
+  "bindings": [
+    {
+      "name": "X",
+      "role": "input",
+      "shape": [
+        512,
+        256
+      ]
+    },
+    {
+      "name": "W1",
+      "role": "constant",
+      "shape": [
+        256,
+        512
+      ]
+    },
+    {
+      "name": "W2",
+      "role": "constant",
+      "shape": [
+        256,
+        256
+      ]
+    },
+    {
+      "name": "Y1",
+      "role": "output",
+      "shape": [
+        512,
+        512
+      ]
+    },
+    {
+      "name": "Y2",
+      "role": "output",
+      "shape": [
+        512,
+        256
+      ]
+    }
+  ],
+  "case": "branch_tilelang_staged_chain",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "branch_tilelang_staged",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "c0b2d3b93b2966d4034092624504a8ff7eba021874b609f701fdfd0f72321e01",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 6,
+  "raw_outputs": "branch_tilelang_staged_chain.npz",
+  "rounds": [
+    {
+      "Y1": {
+        "allclose": true,
+        "element_count": 262144,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 262144,
+          "max_abs": 0.00030861862796882633,
+          "max_rel": 0.014120667522464698,
+          "mismatch_elements": 262144
+        },
+        "max_abs": 0.000244140625,
+        "max_rel": 0.010101010101010102,
+        "mismatch_elements": 97
+      },
+      "Y2": {
+        "allclose": true,
+        "element_count": 131072,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 131072,
+          "max_abs": 0.0002438753544993233,
+          "max_rel": 0.013917936835136396,
+          "mismatch_elements": 131072
+        },
+        "max_abs": 0.000244140625,
+        "max_rel": 0.009009009009009009,
+        "mismatch_elements": 42
+      },
+      "download_bytes": 786432,
+      "download_calls": 6,
+      "emit_us": 20.998992919921875,
+      "output_sync_us": 65.916015625,
+      "pack_us": 671.4079895019531,
+      "round": 0,
+      "submit_count": 6,
+      "submit_wait_us": 2504.7990112304688,
+      "task_count": 6,
+      "upload_bytes": 262144,
+      "upload_calls": 2
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 6,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 6,
+  "wall_seconds": 0.17182278633117676
+}

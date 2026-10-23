@@ -1,0 +1,112 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        13,
+        257
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        257,
+        33
+      ]
+    },
+    {
+      "name": "C",
+      "role": "output",
+      "shape": [
+        13,
+        33
+      ]
+    }
+  ],
+  "case": "ragged_separate",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "ragged",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "3cb007406a57423c4e1a8bc2f88dca094fc53c82beb56e78af1150a4c9cad0ef",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "raw_outputs": "ragged_separate.npz",
+  "rounds": [
+    {
+      "C": {
+        "allclose": true,
+        "element_count": 429,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 429,
+          "max_abs": 0.0004865511364187114,
+          "max_rel": 0.008958475214348028,
+          "mismatch_elements": 429
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 9.040985107421875,
+      "output_sync_us": 7.0,
+      "pack_us": 31.790985107421875,
+      "round": 0,
+      "submit_count": 2,
+      "submit_wait_us": 228.95501708984375,
+      "task_count": 2,
+      "upload_bytes": 9216,
+      "upload_calls": 2
+    },
+    {
+      "C": {
+        "allclose": true,
+        "element_count": 429,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 429,
+          "max_abs": 0.0004164222191320732,
+          "max_rel": 0.002292938500391153,
+          "mismatch_elements": 429
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 5.540985107421875,
+      "output_sync_us": 6.7080078125,
+      "pack_us": 26.83197021484375,
+      "round": 1,
+      "submit_count": 2,
+      "submit_wait_us": 146.9990234375,
+      "task_count": 2,
+      "upload_bytes": 9216,
+      "upload_calls": 2
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 2,
+  "submits": [
+    {
+      "mode": "separate",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "separate",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 2,
+  "wall_seconds": 0.012887239456176758
+}

@@ -1,0 +1,220 @@
+{
+  "bindings": [
+    {
+      "name": "X",
+      "role": "input",
+      "shape": [
+        512,
+        256
+      ]
+    },
+    {
+      "name": "Wg",
+      "role": "constant",
+      "shape": [
+        256,
+        512
+      ]
+    },
+    {
+      "name": "Wu",
+      "role": "constant",
+      "shape": [
+        256,
+        512
+      ]
+    },
+    {
+      "name": "Wd",
+      "role": "constant",
+      "shape": [
+        512,
+        256
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        512,
+        256
+      ]
+    },
+    {
+      "name": "__identity_256",
+      "role": "constant",
+      "shape": [
+        256,
+        256
+      ]
+    }
+  ],
+  "case": "ffn_tilelang_staged_chain",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "ffn_tilelang_staged",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.linear.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "3f1e23ff1d5b285b8e032d2966202ad19ec6eda9fdb640a99a2235ba1a7b70c4",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 2,
+  "raw_outputs": "ffn_tilelang_staged_chain.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 131072,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 131072,
+          "max_abs": 0.00026855496432443005,
+          "max_rel": 23.39544229670189,
+          "mismatch_elements": 131072
+        },
+        "max_abs": 0.00048828125,
+        "max_rel": 61035156.25,
+        "mismatch_elements": 18659
+      },
+      "download_bytes": 262144,
+      "download_calls": 2,
+      "emit_us": 251.99398803710938,
+      "output_sync_us": 246.74603271484375,
+      "pack_us": 671.406982421875,
+      "round": 0,
+      "submit_count": 24,
+      "submit_wait_us": 10237.076904296875,
+      "task_count": 30,
+      "upload_bytes": 262144,
+      "upload_calls": 2
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 24,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 30,
+  "wall_seconds": 0.11173486709594727
+}

@@ -1,0 +1,107 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        32,
+        64
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        64,
+        48
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        32,
+        48
+      ]
+    }
+  ],
+  "case": "matmul_chain",
+  "core_mask_env": "2",
+  "guard": null,
+  "kind": "matmul",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "69efa9a497db70a85fb13752ca2e6c98ad5644f914cef10e6e5c046242431471",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "raw_outputs": "matmul_chain.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 1536,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 1536,
+          "max_abs": 0.00048172054812312126,
+          "max_rel": 0.0004788054764975207,
+          "mismatch_elements": 1536
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 4096,
+      "download_calls": 1,
+      "emit_us": 18.375,
+      "output_sync_us": 4.0830078125,
+      "pack_us": 17.207977294921875,
+      "round": 0,
+      "submit_count": 1,
+      "submit_wait_us": 157.49798583984375,
+      "task_count": 1,
+      "upload_bytes": 4096,
+      "upload_calls": 1
+    },
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 1536,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 1536,
+          "max_abs": 0.00047551069292239845,
+          "max_rel": 0.0004803616245628966,
+          "mismatch_elements": 1536
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 4096,
+      "download_calls": 1,
+      "emit_us": 9.0419921875,
+      "output_sync_us": 3.208984375,
+      "pack_us": 16.3330078125,
+      "round": 1,
+      "submit_count": 1,
+      "submit_wait_us": 87.20797729492188,
+      "task_count": 1,
+      "upload_bytes": 4096,
+      "upload_calls": 1
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 1,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 1,
+  "wall_seconds": 0.01735544204711914
+}

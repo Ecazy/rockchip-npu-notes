@@ -673,7 +673,7 @@ python -m rknpu_backend.cli run /tmp/mm_silu.rkplan.json \
 
 退出码：成功0，用户输入/编译拒绝2，资源或设备执行失败3。诊断写stderr；`explain --format json` stdout只能是单个JSON对象。CLI失败不留下看似有效的输出plan/结果文件。
 
-实现补充（2026-10-23）：`run` 增加可选 `--fd N`。不提供时 CLI 自行 `rocket_open` 并在返回前关闭；提供时使用调用者拥有的 fd 且不关闭。板端 bundle 不携带 pinned TileLang，因此板端路径使用 `compile-rkir`，`compile-tilelang` 只在 Host 执行。RK3588 三个单核 mask 已逐例验证 compile/validate/explain/两次成功 run/缺少常量 binding 的 rc2 不发布路径（`board/core-*/cli/cli-report.json`）。
+实现补充（2026-10-23）：`run` 增加可选 `--fd N`。不提供时 CLI 自行 `rocket_open`；提供时使用调用者拥有的 fd 且不关闭。vendor `rocket_close(int)` 是 **void**，CLI 不读取或伪造关闭状态；只有 workspace destroy 确认静态后才关闭自有 fd。POISONED/BUSY destroy 后 fd/provider task BO 保留用于进程级恢复，CLI 报告 cleanup 并保留原始执行错误。板端 bundle 不携带 pinned TileLang，因此板端路径使用 `compile-rkir`，`compile-tilelang` 只在 Host 执行。RK3588 三个单核 mask 已逐例验证 compile/validate/explain/两次成功 run/缺少常量 binding 的 rc2 不发布路径（`board/core-*/cli/cli-report.json`）。
 
 ### 15.3 板端入口与证据
 

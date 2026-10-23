@@ -12,7 +12,7 @@
   可审计运行记录。
 - RK3588 真机：27 cases × 3 个单核串行 mask = 81/81 PASS，包含多 tile projection/
   generic FFN/branch/activation、广播、双输出、K 奇偶分片和完整 CLI 路径；证据
-  `results/20261023T121507Z-rk3588/`；仍属小形状准入，P8 未关闭。
+  `results/20261023T131610Z-rk3588/`；仍属小形状准入，P8 未关闭。
 
 四项证据语义复核项已关闭并留有回归：FP64 数学参考保持 float64、BO guard 位于最终
 发布门禁、verifier 的 pair/字节/源包哈希语义收紧、target 使用完整 NUL 兼容项和精确
@@ -24,6 +24,15 @@ MVP 收口矩阵见 [ACCEPTANCE-MATRIX.md](ACCEPTANCE-MATRIX.md)，支持域与�
 [RUNTIME-LIFECYCLE.md](RUNTIME-LIFECYCLE.md)，重放命令见 [REPLAY.md](REPLAY.md)。
 P0 两次有界源码获取分别以 `exit 124` 和 `curl_rc=28` 失败，记录在
 `provenance/p0-rebuild-attempt{,-2}.log`，仍为外部阻塞，未标完成。
+
+## 运行契约缺口关闭（2026-10-23）
+
+- `rocket_close` 按 vendor header 的真实 `void` ABI 配置和调用，不再读取伪造返回值。
+- poisoned/BUSY destroy 后不调用 `rocket_close`；provider fd/context/task BO 保留，CLI 保留原始执行错误和 cleanup 诊断，caller fd 不关闭。
+- `poisoned` 改为 `atomic_int`；run 先取得 atomic busy gate 再读 poison，失败 run 在持有 gate 时置 poison；destroy 也先取得 gate。并发失败 regress 验证 BUSY、无第二次提交、后续 POISONED。
+- **provider 共享上下文隔离**：`rknpu-submit` 每 fd 增加 `atomic_int faulted`；`submit_kick()` 在释放 `submit_lock` 前置位；排队提交随后得到 `-EPIPE` 而不改写 task BO；同 fd 既有/新建 workspace 被拒绝；faulted context 的 `rocket_close` 保留 fd/task BO。
+- 上游补丁记录：`provenance/upstream-patches.json`、`provenance/patches/rknpu-submit-context-fault.patch`（base `6b144b19...`）。
+- 证据：`tests/test_runtime_abi.py`、`tests/test_workspace_busy.py`、`tests/test_cli.py`、`tests/test_ws_poison.py`、C `provider_context`，详见 [RUNTIME-LIFECYCLE.md](RUNTIME-LIFECYCLE.md)。
 
 ## 最终 MVP 状态（2026-10-23）
 
@@ -387,9 +396,9 @@ P1 批次一（K 循环提取）与顺带发现的 C 校验缺陷：
 | P3 MatMul planner | `in_progress` | 单 GEMM M/N 多 tile、K 链/ping-pong/尾块；逐节点 RKIR 值 tile 集合（256x256 输出、256-wide K slice）已支持 projection/FFN/branch/activation 并真机通过；设备驻留中间值、残差/输出保活 | 全部 1..4096 形状组合、跨 tile completion 语义和真实设备失败类别未穷举 |
 | P4 组合/存储/提交 | `in_progress` | SiLU/GELU/sigmoid/HardSigmoid；同 shape Add/Mul；编译期常量 rank-0 标量 / rank-1 `[N]` 每通道广播（显式 Host 展开 + 单次 constant upload）；LUT 分段；first-fit slot | 运行时 Tensor 广播、动态 Host 标量、任意 NumPy 广播、原生 scalar EW 模板未实现 |
 | P5 C descriptor 校验/FFI | `in_progress` | 深拷贝；上传边界、单写者、发射顺序、slot 复用、publish 覆盖、ABI 版本、预算均独立校验；ctypes 尺寸对照；ASan/UBSan 通过 | 未覆盖全部旧 custom-ops 回归的 sanitizer |
-| P6 资源实例化/执行 | `in_progress` | 线性 action 调度；多 tile 输出拼装；有限值闸门；发布前全数据 BO `co_guard_check`；常量仅创建时上传；C runtime 目标 chip/driver/ABI 自检；RK3588 真实驱动成功路径、三核、chain/separate 已验 | 真实设备失败类型/恢复策略仍需按规范补齐；不通过危险 timeout 注入来制造证据 |
+| P6 资源实例化/执行 | `in_progress` | 线性 action 调度；多 tile 输出拼装；有限值闸门；发布前全数据 BO `co_guard_check`；常量仅创建时上传；C runtime 目标 chip/driver/ABI 自检；workspace poison 原子化；**provider 共享 context 在 submit_lock 内故障隔离，共享 fd 排队/新 workspace/faulted close 均保留 task BO**；RK3588 成功路径、三核、chain/separate 已验 | 真实设备故障类型/驱动恢复未测；不通过危险 timeout 注入或宣称恢复成功 |
 | P7 CLI/Python run/示例 | `in_progress` | CLI 五条命令；`Workspace` caller-fd API；真实 TileLang matmul / matmul_silu / silu_proj / staged-FP16 FFN / 双输出 branch / ragged；**板端 `compile-rkir`→`validate`→`explain`→`run` 已在三 mask 通过**（成功发布、fd 平衡、bad-binding rc2 不发布）；`run --fd` 区分 caller-owned/自开 fd | FP32 residual 融合契约未定义；完整 release 文档仍随 P8 开放 |
-| P8 板端准入 | `in_progress` | **代表性小形状、三个单核串行准入通过**：RK3588 OPi 5 Plus / driver v0.9.8 / 1 GHz/ABI 1，**27 cases × 3 masks = 81/81 PASS**；新增真实多 block TileLang staged projection/FFN/branch、tiled RKIR 图、广播、双输出、ragged 尾块、K 奇偶分片与完整 CLI；raw outputs、双参考、guard、target/profile/ABI、源包哈希重算均归档。证据 `results/20261023T121507Z-rk3588/` | **剩余仅两项具体条件**：P0 源码构建外部 blocked；真实设备 submit/恢复未测（Host/mock 已验 pre-submit 安全、BUSY、unknown→poison/保留）。有限代表形状矩阵已完成，不要求穷举 1..4096；多板/并发/长压不是前置。 |
+| P8 板端准入 | `in_progress` | **代表性小形状、三个单核串行准入通过**：RK3588 OPi 5 Plus / driver v0.9.8 / 1 GHz/ABI 1，**27 cases × 3 masks = 81/81 PASS**；新增真实多 block TileLang staged projection/FFN/branch、tiled RKIR 图、广播、双输出、ragged 尾块、K 奇偶分片与完整 CLI；raw outputs、双参考、guard、target/profile/ABI、源包哈希重算均归档。证据 `results/20261023T131610Z-rk3588/` | **剩余仅两项具体条件**：P0 源码构建外部 blocked；真实设备 submit/恢复未测（Host/mock 已验 pre-submit 安全、BUSY、unknown→poison/保留）。有限代表形状矩阵已完成，不要求穷举 1..4096；多板/并发/长压不是前置。 |
 | P9 扩展 | `not_started` | 无 | 动态 Host 广播、状态、hybrid、逐组选核、参考库模板 |
 
 ## 3. 实际测试结果
@@ -397,7 +406,7 @@ P1 批次一（K 循环提取）与顺带发现的 C 校验缺陷：
 Host C（`research/custom-ops/build-host-mvp`）：
 
 ```text
-26/26 tests passed            (rk_plan_host 默认带 MALLOC_PERTURB_=128)
+27/27 tests passed            (rk_plan_host 默认带 MALLOC_PERTURB_=128)
 rk_plan_contract: 26 checks, 0 failures   (ABI 尺寸: publish=32, plan=168)
 rk_plan_host:     711 checks, 0 failures
 ```
@@ -405,12 +414,12 @@ rk_plan_host:     711 checks, 0 failures
 Python（`.pydeps` 中 pinned TileLang wheel）：
 
 ```text
-207 passed, 0 failed, 0 skipped, 38 subtests
+213 passed, 0 failed, 0 skipped, 40 subtests
                           (含 ABI 全量偏移、语义守卫、K 循环、M/N、SwiGLU、
                            显式 ragged、常量广播、多输出、campaign host preflight)
 ```
 
-RK3588 real device（`results/20261023T121507Z-rk3588/`，小形状/三单核串行）：
+RK3588 real device（`results/20261023T131610Z-rk3588/`，小形状/三单核串行）：
 
 ```text
 board: RK3588 OPi 5 Plus; kernel 6.1.43-rockchip-rk3588-rknpu098
@@ -428,8 +437,8 @@ broadcast scalar/channel Add/Mul, independent activation, 256x256 LUT split,
   dual output, M/N multi-tile and K=512/257 shard cases: all declared-pass
 CLI on all masks: compile/validate/explain rc0; 2 successful run rounds with
   stable fd count and published Y; missing constant rc2 with no publication
-CLI cleanup: destroy/close failures are reported, never masked as success;
-  caller-owned fd is never closed by CLI
+CLI cleanup: real void rocket_close ABI; destroy failures reported, never masked;
+  poisoned/BUSY destroy retains provider fd/task BO (no close); caller fd owned
 acceptance: np.allclose(abs(got-declared) <= 8e-3 + 8e-3*abs(declared))
 FP64 math reference: float64, unquantized, stored/read unchanged, context only
 chain/separate raw outputs: bit-equal for projection/FFN/ragged
@@ -688,7 +697,7 @@ SwiGLU 保留为后续组合验收。
 producer)` lowering、FFI mock 执行与独立 numpy 五收窄点参考、两轮输入变化、残差
 保活断言，以及分支接错/收窄缺失/未支持算子的负例。证据：
 `tests/test_frontend_silu_proj.py`、`tests/test_silu_proj_execution.py`、
-`results/20261023T121654Z-host/`：207 pytest / 26 ctest，evidence_complete=true。
+`results/20261023T131916Z-host/`：213 pytest / 27 ctest，evidence_complete=true。
 
 **已知待补的基础设施**：验证脚本的依赖短路（）与产物哈希；
  快照在  之后 —— 记录该限制，不另开整修阶段。

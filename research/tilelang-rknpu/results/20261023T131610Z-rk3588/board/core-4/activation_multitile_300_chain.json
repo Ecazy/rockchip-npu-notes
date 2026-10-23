@@ -1,0 +1,104 @@
+{
+  "bindings": [
+    {
+      "name": "X",
+      "role": "input",
+      "shape": [
+        300,
+        300
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        300,
+        300
+      ]
+    },
+    {
+      "name": "__identity_64",
+      "role": "constant",
+      "shape": [
+        64,
+        64
+      ]
+    },
+    {
+      "name": "__identity_256",
+      "role": "constant",
+      "shape": [
+        256,
+        256
+      ]
+    }
+  ],
+  "case": "activation_multitile_300_chain",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "activation_multitile",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.linear.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "bac3747e5b645ae015296040558fe07599bfce31d42f9a1753f87faf9853d218",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 4,
+  "raw_outputs": "activation_multitile_300_chain.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 90000,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 90000,
+          "max_abs": 0.0006963116353422283,
+          "max_rel": 0.02857035568894172,
+          "mismatch_elements": 90000
+        },
+        "max_abs": 0.0009765625,
+        "max_rel": 0.0018674136321195146,
+        "mismatch_elements": 7030
+      },
+      "download_bytes": 192000,
+      "download_calls": 4,
+      "emit_us": 135.62200927734375,
+      "output_sync_us": 48.125,
+      "pack_us": 489.99395751953125,
+      "round": 0,
+      "submit_count": 4,
+      "submit_wait_us": 1162.2760009765625,
+      "task_count": 9,
+      "upload_bytes": 192000,
+      "upload_calls": 4
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 4,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 3
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    }
+  ],
+  "task_count": 9,
+  "wall_seconds": 0.04880213737487793
+}

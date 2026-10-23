@@ -7,10 +7,10 @@ payloads needed for independent numerical replay.
 
 ## Workspace checkpoint cleanup (2026-10-23)
 
-- The current implementation checkpoint is board `20261023T121507Z-rk3588`
-  (27 cases × 3 serial masks) and Host `20261023T121654Z-host` (207 pytest,
-  26/26 ctest). The cleanup preflight is `20261023T122811Z-host`; the final cleanup
-  verification is `20261023T123836Z-host` (207 pytest, 26/26 ctest,
+- The current implementation checkpoint is board `20261023T131610Z-rk3588`
+  (27 cases × 3 serial masks) and Host `20261023T131916Z-host` (213 pytest,
+  27/27 ctest). The cleanup preflight is `20261023T122811Z-host`; the final cleanup
+  verification is `20261023T123836Z-host` (212 pytest, 26/26 ctest,
   C and Python sanitizer steps passed).
 - Twelve expanded checkpoints retain the dependency baseline, the known negative
   controls, the EW failure and the main hardware milestones. Their run contents
@@ -112,7 +112,7 @@ result tree):
   chain/separate bytes, target/profile/ABI, source-bundle hash recomputation,
   password scan).
 
-Latest campaign: `20261023T121507Z-rk3588/` on RK3588 OPi 5 Plus, driver v0.9.8,
+Latest campaign: `20261023T131610Z-rk3588/` on RK3588 OPi 5 Plus, driver v0.9.8,
 runtime ABI 1: **27 cases × 3 serial single-core masks = 81/81 PASS**.  Coverage
 includes MatMul, projection and staged-FP16 FFN chain/separate, one explicit
 guarded ragged tail, scalar/per-channel broadcast, independent activation, a
@@ -135,7 +135,7 @@ stress are extension validation, not P8 blockers.
 
 
 _The notes below are historical incident records.  The current Host verification
-run is green at `20261023T121654Z-host` (207 pytest, 26/26 ctest)._
+run is green at `20261023T131916Z-host` (213 pytest, 27/27 ctest)._
 
 **FFN 数值对照已通过**（20261022T130044Z-host）。根因：mock seam 把模板标签写进 `co_program.flags`，而该字段是生产语义（`co_schedule.c:38` 要求为 0，`custom_ops.c:344` 用 `ROCKET_JOB_PPU_DONE`），导致 LUT/EW/MM 误分派（511/512 元素错）。改为 mock 私有旁表（按程序地址记模板与 mul）后，剩余差异仅为参考实现的收窄顺序；按"先 sigmoid→收紧、再乘 gate→收紧 SiLU"修正参考后逐元素严格相等。
 
