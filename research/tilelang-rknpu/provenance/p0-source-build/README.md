@@ -60,8 +60,9 @@ libtvm_ffi.so
 tilelang_cython_wrapper.cpython-312-x86_64-linux-gnu.so
 ```
 
-The wheel's old native `.so` files are not first on `LD_LIBRARY_PATH` and were
-not used for the source-build validation.
+Putting the source build first on `LD_LIBRARY_PATH` alone was **not sufficient**
+for `tvm_ffi`: its wheel RECORD took precedence.  The corrected source environment
+below excludes the wheel package and its distribution metadata entirely.
 
 ## Validation
 
@@ -74,4 +75,46 @@ not used for the source-build validation.
   builds have identical bindings/constants/buffers/views/actions/submits/publish/
   accounting; only source-span/hash metadata differs.
 - `../p0-source-build.json` records the resulting same-board campaign
-  `results/20261023T141328Z-rk3588/` with **81/81 PASS** and three CLI PASSes.
+  `results/20261023T144054Z-rk3588/` with **81/81 PASS** and three CLI PASSes.
+
+## tvm_ffi load-path fix
+
+The first source-build validation was incomplete: the source `tvm_ffi` Python
+package was not used.  The wheel distribution's
+`apache_tvm_ffi-0.1.12.dist-info/RECORD` made
+`tvm_ffi.libinfo._find_library_by_basename()` return
+`.pydeps-p0/tvm_ffi/lib/libtvm_ffi.so` before consulting
+`LD_LIBRARY_PATH`.  The pre-fix evidence is retained as
+`import-paths-pre-fix-wheel-tvmffi.log`; it is not used as closure evidence.
+
+The corrected independent environment is created by
+`create-source-env.sh`:
+
+- link all locked dependencies from `.pydeps-p0` except `tvm_ffi` and
+  `apache_tvm_ffi-*.dist-info`;
+- copy the source `tvm-ffi/python/tvm_ffi` wrapper;
+- place the source-built `core.abi3.so` beside it;
+- use `libtvm_ffi.so` from `.src/p0-build-tilelang/lib` via the fallback path.
+
+The source tvm-ffi Cython core was built separately in
+`.src/p0-build-tvmffi-python` with `TVM_FFI_BUILD_PYTHON_MODULE=ON` and Cython
+3.3.0.  This only builds the Python binding; the loaded native FFI library is
+the existing `.src/p0-build-tilelang/lib/libtvm_ffi.so` (not the separate
+tvm-ffi-build copy, and not a wheel library).
+
+Actual evidence in `tvmffi-load-path.log`:
+
+```text
+tvm_ffi.__file__        .src/p0-source-env/tvm_ffi/__init__.py
+apache-tvm-ffi_RECORD  NOT_FOUND
+find_libtvm_ffi()       .src/p0-build-tilelang/lib/libtvm_ffi.so
+loaded LIB._name        .src/p0-build-tilelang/lib/libtvm_ffi.so
+loaded SHA-256          3136acaf...59242594
+/proc/self/maps         same source path and hash
+```
+
+Full pytest was rerun under this environment: **213 passed, 40 subtests**.
+The plan equivalence was regenerated against the corrected source campaign
+`results/20261023T144054Z-rk3588/`; all 27 plans remain semantically equal.
+The board campaign passed again: **81/81**, three CLI PASSes, source bundle hash
+verified.

@@ -129,7 +129,7 @@ Because this Host has no usable PTY, the SSH path uses
 `SSH_ASKPASS_REQUIRE=force` instead of `sshpass`, without changing the deployment
 shape.
 
-Evidence: `results/20261023T141328Z-rk3588/`
+Evidence: `results/20261023T144054Z-rk3588/`
 
 - Device: `RK3588 OPi 5 Plus`; kernel `6.1.43-rockchip-rk3588-rknpu098`
 - Driver: `RKNPU driver: v0.9.8`; NPU 1 GHz; runtime ABI 1
@@ -205,7 +205,7 @@ bundle SHA-256; the remote loaded-library SHA-256 is labelled **recorded-only**
 because the library bytes are not rehashed on the Host.
 
 Offline recomputation of the archived raw outputs is recorded at
-`results/20261023T141328Z-rk3588/recomputed/summary.md` (and for the prior archive
+`results/20261023T144054Z-rk3588/recomputed/summary.md` (and for the prior archive
 at `results/20261023T101551Z-rk3588/recomputed/summary.md`).  The recomputation
 uses unquantized float64 math references; the latest declared-path and math-path
 max errors match the campaign summary values above.
@@ -226,7 +226,10 @@ and long-duration stress are **extension validation**, not MVP/P8 blockers.
   pre-submit safety, unknown-state poisoning/retention, BUSY and CLI cleanup.
 - P0 source build: **COMPLETE** via resumable GitHub mirror archives and an
   independent CMake tree; see [provenance/p0-source-build.json](provenance/p0-source-build.json)
-  and `provenance/p0-source-build/`.  Earlier timeout retries remain as history.
+  and `provenance/p0-source-build/`.  The corrected source env excludes the wheel
+  `tvm_ffi` package/RECORD; `find_libtvm_ffi()` and `/proc/self/maps` bind the
+  source-built `libtvm_ffi.so` (SHA-256 `3136acaf...59242594`).  Earlier timeout
+  retries remain as history.
 
 ## Runtime contract closure (2026-10-23)
 

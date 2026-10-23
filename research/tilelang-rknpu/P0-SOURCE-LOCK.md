@@ -111,7 +111,7 @@ TILELANG_DEPS_DIR=$PWD/.pydeps-p0 scripts/run-verification.sh
 与 `.pydeps` wheel 基线的计数逐项一致，无回退、无跳过，因此本次不存在需要解释的
 AST/API 差异。
 
-## 5. 未闭合：源码构建与产物重验
+## 5. 当时的源码构建缺口（已由第 9 节闭合）
 
 以下**已尝试的获取路径**在本机失败，结论不外推到其他环境：
 
@@ -204,9 +204,18 @@ commit，下载后计算 SHA-256 并解压到独立目录：
 - 本次目标为 CPU/编译器/RKNPU 后端，显式关闭 CUDA、ROCm、Metal、LLVM、Ascend、
   OpenCL；因此未下载/编译 cutlass（wheel 内 cutlass 子集不参与本次 native 构建）。
 - 构建使用 source-built `libtilelang.so`、`libtvm_compiler.so`、`libtvm_runtime.so`、
-  `libtvm_ffi.so` 和 Cython wrapper；不加载 wheel 内旧 `.so`。
-- 仍来自预构建依赖的明确项：Z3 `.pydeps-p0/z3`、Python `tvm_ffi` wrapper、
-  Cython 3.0.8 wheel、Ubuntu 3.12.3 dev headers；均记录在
+  `libtvm_ffi.so` 和 Cython wrapper。
+- `tvm_ffi` Python wrapper 必须使用独立 source env：排除 wheel 的 `tvm_ffi` 包和
+  `apache_tvm_ffi-*.dist-info`，使用源 `tvm-ffi/python/tvm_ffi` wrapper 与独立构建的
+  `core.abi3.so`。`find_libtvm_ffi()` 和 `/proc/self/maps` 均指向
+  `.src/p0-build-tilelang/lib/libtvm_ffi.so`，SHA-256
+  `3136acafd189050bf37338c78243a148ddc63e67352bdc550a7be25759242594`；
+  见 `provenance/p0-source-build/tvmffi-load-path.log`。
+- 第一次验证曾因 wheel RECORD 加载 `.pydeps-p0/tvm_ffi/lib/libtvm_ffi.so`，该证据
+  保留为 `import-paths-pre-fix-wheel-tvmffi.log`，不再作为 P0 关闭依据。
+- 仍来自预构建依赖的明确项：Z3 `.pydeps-p0/z3`、Cython 3.0.8（TileLang wrapper）/
+  3.3.0（tvm-ffi core）、Ubuntu 3.12.3 dev headers；Python `tvm_ffi` wrapper 已改为
+  源包，native `libtvm_ffi.so` 为源码构建。均记录在
   `provenance/p0-source-build.json`。
 
 实际加载路径：
@@ -218,14 +227,17 @@ commit，下载后计算 SHA-256 并解压到独立目录：
 
 验证结果：
 
-- source-built import + full pytest：`213 passed, 40 subtests`
+- source-built import + full pytest（修正 tvm_ffi 加载路径后重跑）：
+  `213 passed, 40 subtests`
 - CTest（同一 Host native build）：`27/27`
 - 27 个 campaign plan 中，wheel 与 source-built 的
   `bindings/constants/buffers/views/actions/submits/publish/accounting` 全部逐项相同；
   只有 source span/hash 元数据差异（`plan-equivalence.json` 全部 `semantic_equal=true`）。
-- 用 source-built TileLang/TVM 重新生成同一 27-case campaign，并在同一 RK3588 上执行：
-  `results/20261023T141328Z-rk3588/`，**81/81 PASS**，三核 CLI PASS，source bundle hash
-  独立重算通过。
+- `find_libtvm_ffi()`、`tvm_ffi.LIB._name` 和 `/proc/self/maps` 的实际 native 路径
+  与哈希见 `tvmffi-load-path.log`；wheel tvm_ffi 包/其 RECORD 不在 source env 中。
+- 用修正后的 source-built TileLang/TVM + source tvm_ffi 重新生成同一 27-case campaign，
+  并在同一 RK3588 上执行：`results/20261023T144054Z-rk3588/`，**81/81 PASS**，
+  三核 CLI PASS，source bundle hash 独立重算通过。
 
 构建系统的一条诊断信息 `Found TVM_GIT_COMMIT_HASH=9baf...` 来自 TVM 源树位于
 外层 git checkout 内这一事实；实际 TVM 版本以 archive commit `4211874e...` 和

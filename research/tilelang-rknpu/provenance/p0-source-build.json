@@ -2,12 +2,13 @@
   "board_validation": {
     "cases": "27 x 3 serial single-core masks = 81/81 PASS",
     "note": "campaign plans were generated with the source-built TileLang/TVM import path; board runs use the production runtime build",
-    "result": "results/20261023T141328Z-rk3588/",
-    "source_generation_log": "results/20261023T141328Z-rk3588/make-campaign.log"
+    "result": "results/20261023T144054Z-rk3588/",
+    "source_generation_log": "results/20261023T144054Z-rk3588/make-campaign.log"
   },
   "build_configuration": {
     "CMAKE_BUILD_TYPE": "Release",
     "HIDE_PRIVATE_SYMBOLS": "OFF",
+    "TVM_FFI_BUILD_PYTHON_MODULE": "ON (separate source tvm-ffi build)",
     "TVM_FFI_USE_LIBBACKTRACE": "ON from locked TVM config, source supplied",
     "TVM_ROOT": ".src/p0-build-src/tvm",
     "USE_ASCEND": "OFF",
@@ -19,33 +20,48 @@
     "USE_ROCM": "OFF",
     "build_dir": ".src/p0-build-tilelang",
     "cutlass": "not required because CUDA/backend codegen disabled",
-    "source_dir": ".src/p0-build-src/tilelang"
+    "source_dir": ".src/p0-build-src/tilelang",
+    "tilelang_python_module": "built from the same source tree with Cython 3.0.8",
+    "tvmffi_cython": "3.3.0",
+    "tvmffi_python_build_dir": ".src/p0-build-tvmffi-python"
   },
   "built_at_utc": "2026-10-23T14:16:29Z",
   "libraries": {
+    "core.abi3.so": "cb9361d37f0ea3ff704e9e819363dd44a440b616aa7f193b811a62403df3f4f6",
     "libtilelang.so": "6146101089cd8c4fa6e621b52b07f1a155b88e24a1d4571343ecec0c95a0bf75",
     "libtvm_compiler.so": "654fdaaca27af59f337a28f0824a52f2f146cc28920c7b23eaa274f3c1f643ba",
-    "libtvm_ffi.so": "3136acafd189050bf37338c78243a148ddc63e67352bdc550a7be25759242594",
+    "libtvm_ffi.so (loaded)": "3136acafd189050bf37338c78243a148ddc63e67352bdc550a7be25759242594",
+    "libtvm_ffi.so (separate tvm-ffi build, not loaded)": "16538151853ec2554c05fb41a39a6ddc8c8dc60def9323db9c7785e64a5dd263",
+    "libtvm_ffi_testing.so (loaded by core)": "7c5a92043e307a03e138237d453223bfac4cf21f0f0e8166b5d8fa786d6e93a6",
     "libtvm_runtime.so": "ef825574b2337456074bbd91eff73b9fd13c72c0e97afaf415e89b7e1a0855fd",
+    "libz3.so (prebuilt dependency, not rebuilt)": "from .pydeps-p0/z3/lib/libz3.so",
     "tilelang_cython_wrapper.cpython-312-x86_64-linux-gnu.so": "e990d7b18fe4982055c8407173cec9a149b30512042189bd2cf6f48a514eaac6"
   },
-  "loaded_paths_log": "provenance/p0-source-build/import-paths.log",
+  "loaded_paths_log": "provenance/p0-source-build/tvmffi-load-path.log",
   "logs": {
+    "board_generation_import": "provenance/p0-source-build/board-campaign-import.log",
     "cmake_cache": "provenance/p0-source-build/CMakeCache.txt",
     "compile_commands": "provenance/p0-source-build/compile_commands.json",
     "configure": "provenance/p0-source-build/configure.log",
+    "configure_with_tvmffi_python_option": "provenance/p0-source-build/configure-with-tvmffi-python.log",
     "cython_build": "provenance/p0-source-build/tilelang-cython-build.log",
+    "source_environment_script": "provenance/p0-source-build/create-source-env.sh",
     "source_inventory": "provenance/p0-source-build/source-tree-inventory.sha256",
     "tilelang_build_attempt1": "provenance/p0-source-build/tilelang-build-attempt1.log",
     "tilelang_build_final": "provenance/p0-source-build/tilelang-build-final.log",
-    "tvm_build_options": "provenance/p0-source-build/TVMBuildOptions.txt"
+    "tvm_build_options": "provenance/p0-source-build/TVMBuildOptions.txt",
+    "tvmffi_cython_attempt_tilelang_tree": "provenance/p0-source-build/tvmffi-cython-build.log",
+    "tvmffi_python_build": "provenance/p0-source-build/tvmffi-python-build.log",
+    "tvmffi_python_configure": "provenance/p0-source-build/tvmffi-python-configure.log"
   },
   "notes": [
     "No source patches were applied to TileLang/TVM/tvm-ffi/dlpack/libbacktrace.",
-    "The source-built libraries are not required to be byte-identical to official wheel binaries.",
     "Backend behavior was validated through the full test suite and semantically identical plans.",
     "TVM CMake detected the enclosing worktree hash 9baf... because the extracted source is nested under the project; the actual TVM source is archive commit 4211874e... and the source-tree inventory is authoritative for that component.",
-    "The source build is not required to be byte-identical to the official wheel; compatibility is measured by import paths, full tests, semantic plan equality and the source-built-plan board campaign."
+    "The source build is not required to be byte-identical to the official wheel; compatibility is measured by import paths, full tests, semantic plan equality and the source-built-plan board campaign.",
+    "The source-built tvm_ffi Python package is used from .src/p0-source-env; the wheel tvm_ffi package and apache_tvm_ffi RECORD metadata are deliberately absent from that environment.",
+    "The actual loaded libtvm_ffi.so was verified from tvm_ffi.LIB._name and /proc/self/maps; it is .src/p0-build-tilelang/lib/libtvm_ffi.so with SHA-256 3136acaf...59242594.",
+    "The pre-fix wheel-mixup log is retained at provenance/p0-source-build/import-paths-pre-fix-wheel-tvmffi.log; it is superseded by tvmffi-load-path.log."
   ],
   "plan_equivalence": {
     "cases": 27,
@@ -61,7 +77,9 @@
       "publish",
       "accounting"
     ],
-    "status": "PASS"
+    "source_campaign": "results/20261023T144054Z-rk3588/campaign",
+    "status": "PASS",
+    "wheel_campaign": "results/20261023T131610Z-rk3588/campaign"
   },
   "prebuilt_components": [
     {
@@ -76,16 +94,24 @@
       "source": ".pydeps-p0/tvm_ffi"
     },
     {
-      "artifact": ".src/p0-wheel-cache/Cython-3.0.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
-      "name": "Cython",
-      "sha256": "2f020fa1c0552052e0660790b8153b79e3fc9a15dbd8f1d0b841fe5d204a6ae6",
-      "version": "3.0.8"
-    },
-    {
       "artifact": ".src/p0-apt-cache/libpython3.12-dev_3.12.3-1ubuntu0.17_amd64.deb",
       "name": "libpython3.12-dev",
       "sha256": "c123ddab7763e45199e21b4ac8545e705f20a0315b9ada4c236b52fb088c4e16",
       "version": "3.12.3-1ubuntu0.17"
+    },
+    {
+      "artifact": ".src/p0-wheel-cache/Cython-3.0.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "name": "Cython",
+      "note": "build-only dependency for the TileLang Cython wrapper",
+      "sha256": "2f020fa1c0552052e0660790b8153b79e3fc9a15dbd8f1d0b841fe5d204a6ae6",
+      "version": "3.0.8"
+    },
+    {
+      "artifact": ".src/p0-wheel-cache/cython-3.3.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "Cython",
+      "note": "build-only dependency for the source tvm_ffi Cython core extension",
+      "sha256": "428fafed98ea26927000a287b4dfc9ef07339f56656a5329a34eaa593f79a4f8",
+      "version": "3.3.0"
     }
   ],
   "schema_version": 1,
@@ -138,6 +164,19 @@
     "tvm_3rdparty_dlpack": "copy of same dlpack checkout",
     "tvm_3rdparty_tvm_ffi": "tvm-ffi checkout",
     "tvm_3rdparty_tvm_ffi_3rdparty_dlpack": "dlpack checkout"
+  },
+  "source_environment": {
+    "apache_tvm_ffi_record": "NOT_FOUND (PackageNotFoundError)",
+    "cython_core": "source-built .src/p0-build-tvmffi-python/core.abi3.so",
+    "find_libtvm_ffi_log": "provenance/p0-source-build/tvmffi-load-path.log",
+    "native_libtvm_ffi_loaded": ".src/p0-build-tilelang/lib/libtvm_ffi.so",
+    "native_libtvm_ffi_sha256": "3136acafd189050bf37338c78243a148ddc63e67352bdc550a7be25759242594",
+    "pre_fix_mixup_log": "provenance/p0-source-build/import-paths-pre-fix-wheel-tvmffi.log",
+    "pre_fix_pytest": "provenance/p0-source-build/pytest-before-tvmffi-fix.log",
+    "proc_self_maps_log": "provenance/p0-source-build/tvmffi-load-path.log",
+    "python_wrapper": "source tvm-ffi/python/tvm_ffi copied into .src/p0-source-env/tvm_ffi",
+    "recreate_script": "provenance/p0-source-build/create-source-env.sh",
+    "wheel_tvm_ffi_package": "excluded"
   },
   "status": "COMPLETE",
   "tests": {

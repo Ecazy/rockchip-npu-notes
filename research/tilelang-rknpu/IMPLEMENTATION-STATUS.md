@@ -13,7 +13,7 @@
 - RK3588 真机：使用 source-built TileLang/TVM 重新生成的同一 27-case campaign 在 3 个
   单核串行 mask 上 81/81 PASS，包含真实多 block staged projection/FFN/branch、多 tile
   RKIR、广播、双输出、K 奇偶分片、ragged 尾块和完整 CLI；证据
-  `results/20261023T141328Z-rk3588/`。
+  `results/20261023T144054Z-rk3588/`。
 
 四项证据语义复核项已关闭并留有回归：FP64 数学参考保持 float64、BO guard 位于最终
 发布门禁、verifier 的 pair/字节/源包哈希语义收紧、target 使用完整 NUL 兼容项和精确
@@ -401,7 +401,7 @@ P1 批次一（K 循环提取）与顺带发现的 C 校验缺陷：
 | P5 C descriptor 校验/FFI | `in_progress` | 深拷贝；上传边界、单写者、发射顺序、slot 复用、publish 覆盖、ABI 版本、预算均独立校验；ctypes 尺寸对照；ASan/UBSan 通过 | 未覆盖全部旧 custom-ops 回归的 sanitizer |
 | P6 资源实例化/执行 | `in_progress` | 线性 action 调度；多 tile 输出拼装；有限值闸门；发布前全数据 BO `co_guard_check`；常量仅创建时上传；C runtime 目标 chip/driver/ABI 自检；workspace poison 原子化；**provider 共享 context 在 submit_lock 内故障隔离，共享 fd 排队/新 workspace/faulted close 均保留 task BO**；RK3588 成功路径、三核、chain/separate 已验 | 真实设备故障类型/驱动恢复未测；不通过危险 timeout 注入或宣称恢复成功 |
 | P7 CLI/Python run/示例 | `in_progress` | CLI 五条命令；`Workspace` caller-fd API；真实 TileLang matmul / matmul_silu / silu_proj / staged-FP16 FFN / 双输出 branch / ragged；**板端 `compile-rkir`→`validate`→`explain`→`run` 已在三 mask 通过**（成功发布、fd 平衡、bad-binding rc2 不发布）；`run --fd` 区分 caller-owned/自开 fd | FP32 residual 融合契约未定义；完整 release 文档仍随 P8 开放 |
-| P8 板端准入 | `in_progress` | **代表性小形状、三个单核串行准入通过**：RK3588 OPi 5 Plus / driver v0.9.8 / 1 GHz/ABI 1，**27 cases × 3 masks = 81/81 PASS**；source-built TileLang/TVM 重新生成计划；真实多 block staged projection/FFN/branch、tiled RKIR、广播、双输出、ragged 尾块、K 奇偶分片、完整 CLI、源包/库哈希和凭据扫描均归档。证据 `results/20261023T141328Z-rk3588/` | **剩余一个具体条件**：真实设备 submit/恢复未测（Host/mock 已验 pre-submit 安全、BUSY、unknown→poison、shared-context quarantine、资源保留；真实驱动恢复不承诺）。P0 源码重建已完成。 |
+| P8 板端准入 | `in_progress` | **代表性小形状、三个单核串行准入通过**：RK3588 OPi 5 Plus / driver v0.9.8 / 1 GHz/ABI 1，**27 cases × 3 masks = 81/81 PASS**；source-built TileLang/TVM 重新生成计划；真实多 block staged projection/FFN/branch、tiled RKIR、广播、双输出、ragged 尾块、K 奇偶分片、完整 CLI、源包/库哈希和凭据扫描均归档。证据 `results/20261023T144054Z-rk3588/` | **剩余一个具体条件**：真实设备 submit/恢复未测（Host/mock 已验 pre-submit 安全、BUSY、unknown→poison、shared-context quarantine、资源保留；真实驱动恢复不承诺）。P0 源码重建已完成。 |
 | P9 扩展 | `not_started` | 无 | 动态 Host 广播、状态、hybrid、逐组选核、参考库模板 |
 
 ## 3. 实际测试结果
@@ -422,7 +422,7 @@ Python（`.pydeps` 中 pinned TileLang wheel）：
                            显式 ragged、常量广播、多输出、campaign host preflight)
 ```
 
-RK3588 real device（`results/20261023T141328Z-rk3588/`，小形状/三单核串行）：
+RK3588 real device（`results/20261023T144054Z-rk3588/`，小形状/三单核串行）：
 
 ```text
 board: RK3588 OPi 5 Plus; kernel 6.1.43-rockchip-rk3588-rknpu098
