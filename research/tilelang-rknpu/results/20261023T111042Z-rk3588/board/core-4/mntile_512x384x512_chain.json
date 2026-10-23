@@ -1,0 +1,95 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        512,
+        512
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        512,
+        384
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        512,
+        384
+      ]
+    }
+  ],
+  "case": "mntile_512x384x512_chain",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "mntile",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "3e6463f7c36690ebca05cd19c6433c0348f7ddcee62e9754dff3573c0d81b566",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 4,
+  "raw_outputs": "mntile_512x384x512_chain.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 196608,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 196608,
+          "max_abs": 0.0005963100247754483,
+          "max_rel": 4.777200534787426,
+          "mismatch_elements": 196608
+        },
+        "max_abs": 0.00048828125,
+        "max_rel": 0.0032232070910556,
+        "mismatch_elements": 94
+      },
+      "download_bytes": 393216,
+      "download_calls": 4,
+      "emit_us": 43.74993896484375,
+      "output_sync_us": 65.33203125,
+      "pack_us": 2685.3389587402344,
+      "round": 0,
+      "submit_count": 4,
+      "submit_wait_us": 2956.002960205078,
+      "task_count": 8,
+      "upload_bytes": 1048576,
+      "upload_calls": 8
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 4,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    }
+  ],
+  "task_count": 8,
+  "wall_seconds": 0.11364889144897461
+}

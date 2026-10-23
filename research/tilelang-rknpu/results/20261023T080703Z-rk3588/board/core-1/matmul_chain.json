@@ -1,0 +1,92 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        32,
+        64
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        64,
+        48
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        32,
+        48
+      ]
+    }
+  ],
+  "case": "matmul_chain",
+  "core_mask_env": "1",
+  "guard": null,
+  "kind": "matmul",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "ffe7f40963cfa05c275666ff39bff561415a197e01e4bb246283ca1e5d650b31",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 1536,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 4096,
+      "download_calls": 1,
+      "emit_us": 16.625,
+      "output_sync_us": 4.666015625,
+      "pack_us": 18.0830078125,
+      "round": 0,
+      "submit_count": 1,
+      "submit_wait_us": 152.54000854492188,
+      "task_count": 1,
+      "upload_bytes": 4096,
+      "upload_calls": 1
+    },
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 1536,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 4096,
+      "download_calls": 1,
+      "emit_us": 6.7080078125,
+      "output_sync_us": 3.498992919921875,
+      "pack_us": 16.625,
+      "round": 1,
+      "submit_count": 1,
+      "submit_wait_us": 87.49899291992188,
+      "task_count": 1,
+      "upload_bytes": 4096,
+      "upload_calls": 1
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 1,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 1,
+  "wall_seconds": 0.01559591293334961
+}

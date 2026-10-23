@@ -5,22 +5,351 @@
   "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
   "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
   "tilelang": {
-    "install": "wheel == 0.1.15 (pinned); source commit is not exposed by the wheel",
+    "install": "pinned wheel, hash-locked in requirements.lock",
     "package_version": "0.1.15",
     "bundled_tvm_version": "0.25.dev0",
     "apache_tvm_ffi": "0.1.12",
     "torch": "2.9.0+cpu",
-    "note": "The wheel is immutable, but this is not a git-commit lock. A source checkout must be pinned before P8."
+    "source_lock": {
+      "repository": "https://github.com/tile-ai/tilelang",
+      "tag": "v0.1.15",
+      "commit": "a35f8ddf45eba16c21211ec8822d56ce5363036f",
+      "resolved_by": "api:git/ref/tags",
+      "submodules": {
+        "3rdparty/cutlass": "b2dd65dc864e09688245b316ac46c4a6cd07e15c",
+        "3rdparty/tvm": "4211874e9e4b8770fd20ad0d98ab80afd1df5028"
+      },
+      "tvm_commit": "4211874e9e4b8770fd20ad0d98ab80afd1df5028",
+      "patches": [],
+      "python_files_byte_identical": 1143,
+      "python_files_mismatched": [],
+      "evidence": [
+        "research/tilelang-rknpu/provenance/source-lock.json",
+        "research/tilelang-rknpu/provenance/wheel-vs-source.json",
+        "research/tilelang-rknpu/provenance/upstream-trees/tilelang-tree.json",
+        "research/tilelang-rknpu/provenance/upstream-trees/tvm-tree.json"
+      ],
+      "files_compared": 3644,
+      "files_matched": 3644,
+      "files_mismatched": 0,
+      "installed_python_full_scopes": 1135,
+      "upstream_python_full_scopes": 1135,
+      "missing_upstream_python": 0,
+      "unexplained_extra_python": 0,
+      "unexplained_unscoped": 0,
+      "binary_artifacts_not_source_comparable": 12,
+      "claim": "all files in the six declared scopes (including all 1135 python files of the full scopes) are byte-identical to the pinned trees; compiled libtilelang/libtvm .so artifacts are hash-recorded and excluded from the source-match claim"
+    },
+    "source_rebuild": "BLOCKED in this sandbox; see research/tilelang-rknpu/P0-SOURCE-LOCK.md section 4"
   },
   "source_hashes": {
-    "research/custom-ops/src/custom_ops.c": "68e1d33b9c494a8e0195399c9134244bdb0c117e941ca4e5f0eb04ab8e5cf090",
-    "research/custom-ops/src/rk_plan_validate.c": "d5804748f43af8e60d70fdbd5200b4019aaded7f9dd26c299e9b2ecb7952d9dc",
-    "research/custom-ops/src/rk_plan_runtime.c": "8c720cd8bc69f9bb98cbd4e68d654e061c9d9218b6e751ffa5b9c7e84c888916",
-    "research/upstream-components/rocket-userspace/src/npu_regcmd.c": "752eba092073c2eb258739491901d773e734a6cf645c47022008429f3c917c91"
+    "research/custom-ops/include/rk_plan.h": "b01b032d2c84181aa1194bf77f82371134ba3f37554d0a63d551bb7a3d43569b",
+    "research/custom-ops/src/rk_plan_internal.h": "24e8091618a59cd232d1b6529503ff94bce88d2cf9065964a979b92a0b1e0860",
+    "research/custom-ops/src/rk_plan_validate.c": "e98929dfccc82d30c0caf38c000e9f495483e514b6820e2ca77bb56cb74d86e7",
+    "research/custom-ops/src/rk_plan_runtime.c": "eb23aa4592d3631b51b6f76d90e3b0266d3d6fc6d81e884afa332f463b7a2467",
+    "research/custom-ops/src/rk_plan_emit.c": "97356d6b74bdf083658e7e899bf250a64dc86a5057f2fc40619c14ee279d3aed",
+    "research/custom-ops/tests/c/rk_plan_contract_test.c": "7aa5ad6c3dfd6ffe1166466a2d4ac46371a09baebfbe305ea6a3e2edc7c96e3a",
+    "research/custom-ops/tests/c/rk_plan_host_test.c": "050a95e39c803f8d25a308f97b694953f68d948b5693bf3fd447e63259bfe84a",
+    "research/custom-ops/CMakeLists.txt": "fdf8b12c8aabb7ad79cd54712143bdc52b399817ad892ba41ba9e85d8588a318",
+    "research/tilelang-rknpu/python/rknpu_backend/frontend/tilelang_adapter.py": "41708d91eea0ac839ab3ae99a1abaa2a14f4403a3a68075a11299381c4ba75dc",
+    "research/tilelang-rknpu/python/rknpu_backend/passes/dag.py": "4cd972e83d85fe649a9cd3f24b4099d3de43c9dadf961ad6cb8d4f8ed5b70251",
+    "research/tilelang-rknpu/python/rknpu_backend/passes/legalize.py": "d0e3d19007e9311a5d321d0a62c1809ce1a34220ce2325f5a3bcc4559746573d",
+    "research/tilelang-rknpu/python/rknpu_backend/plan.py": "6e468fa8bb08eb75dc4ba1428961c9c7ee5ba2e184a190159b331c0b96c25551",
+    "research/tilelang-rknpu/python/rknpu_backend/runtime/ffi.py": "a0d5fe5da4781a3659f1457b995e5d0a406a267a8781b1a8c52a6844603ac68c",
+    "research/tilelang-rknpu/tests/fixtures/tilelang_negative.py": "6f5ca6c67b7ef91d55212df8e61bd5b0145500c60a46b0f5b1b7264b61c75ea8",
+    "research/tilelang-rknpu/scripts/run-verification.sh": "a08f860292032b0f1be4256375c80ec3952a8ede93cd07a589416506494599d1"
   },
   "reference_library": {
     "path": "../rknpu2_matmul_open",
     "head": "192f6ca25407fac7c0880123c0c394bd3e2f74f7",
     "linked": "no"
+  },
+  "abi": {
+    "rk_plan.h RK_ABI_VERSION": 1,
+    "RK_SCHEMA_VERSION": 2,
+    "struct_sizes": {
+      "rk_value_desc": 56,
+      "rk_tensor_desc": 48,
+      "rk_buffer_desc": 56,
+      "rk_view_desc": 88,
+      "rk_action_desc": 144,
+      "rk_submit_desc": 48,
+      "rk_publish_desc": 32,
+      "rk_plan_desc": 168,
+      "rk_binding": 48,
+      "rk_run_report": 88,
+      "rk_diag": 760
+    }
+  },
+  "host_test_environment": {
+    "ROCKET_CHIP": "rk3588",
+    "MALLOC_PERTURB_": "128"
+  },
+  "review_rounds": {
+    "round1": "blockers 1-4 of REVIEW-2026-10-20.md",
+    "round2": "uninitialised staging scan, loop-dropping frontend, constant BO lifetime, read coverage",
+    "round3": "origin NUL termination overflow, SBlockRealize predicate, activation loop lower bound",
+    "round3_evidence": "exact ABI error codes + 63-char boundary accept, predicate (false/variable/compound/nested), loop lower bounds (outer/inner/negative), scanner-ignored node audit, reproducible run records",
+    "round3_closeout": "two original defects closed by reviewer; verification-script reproducibility gaps fixed: explicit sanitizer configure + archived compile/link flags, environment exported before capture, evidence generation fault-checked, .pydeps duplicate metadata removed"
+  },
+  "scope": {
+    "p0_p8": "compile-time constant broadcast, single-core policy, three-core acceptance",
+    "p9": "runtime dynamic host broadcast, per-group core scheduling, state, hybrid"
+  },
+  "dependencies": {
+    "lock_file": "requirements.lock",
+    "lock_file_sha256": "4fe28da6b410f137a0af35fc7408dc5ff88c9e6967f22c75c00fe15a0b1e8357",
+    "artifacts": 28,
+    "install_mode": "pip --no-deps --require-hashes --target",
+    "clean_env": ".pydeps-p0",
+    "runtime_interpreter": ".venv-p0/bin/python (venv without system site-packages)",
+    "isolation_check": "scripts/check_isolation.py asserts every third-party module and distribution resolves inside .pydeps-p0 and matches the lock",
+    "note": "baseline .pydeps kept; stale duplicate metadata removed"
+  },
+  "verification_records": {
+    "fresh_build_pass": "research/tilelang-rknpu/results/20261023T025322Z-host",
+    "keep_build_pass": "research/tilelang-rknpu/results/20261023T025400Z-host",
+    "negative_controls": {
+      "failure_propagation": "research/tilelang-rknpu/results/20261020T085356Z-host",
+      "keep_build_before_fix": "research/tilelang-rknpu/results/20261021T114712Z-host",
+      "keep_build_without_sanitizer_flags": "research/tilelang-rknpu/results/20261021T115302Z-host"
+    },
+    "pytest": "130 passed, 0 failed, 0 skipped",
+    "entry_point": "scripts/run-verification.sh with no caller env (defaults to .pydeps-p0, exports TILELANG_DEPS_DIR/LOCK_FILE)",
+    "last_run": {
+      "record": "research/tilelang-rknpu/results/20261022T085839Z-host",
+      "overall_exit": 1,
+      "reason": "FFN execution harness: 3 numeric-mismatch failures (real, not environmental)",
+      "pytest": "127 passed, 3 failed",
+      "c_checks": "rk_plan_host 138, graph_host 2400033"
+    }
+  },
+  "p0": {
+    "status": "in_progress",
+    "source_commit_and_artifact_hashes": "done",
+    "wheel_host_regression": "passed",
+    "isolated_environment_reverification": "done",
+    "full_python_file_set_check": "done",
+    "source_build_and_product_reverification": "blocked (see P0-SOURCE-LOCK.md section 5)"
+  },
+  "round4": {
+    "dataflow_validation": "legalize + dag verify the full chain by Value ID; operand resolved from graph edges, output root checked",
+    "keep_build_mode": "validates the kept cache (source root + sanitizer flags) instead of requiring freshness"
+  },
+  "p1": {
+    "batch0_single_tile": "complete",
+    "batch1_k_loop": "complete (K block fixed at 256, clear_accum rejected)",
+    "batch2_mn_tiling": "complete (1-D/2-D grid, exact coverage, inferred axis)",
+    "semantics": "clear_accum, access masks, grid min/step, RKIR stride, submit recipe",
+    "remaining": "SwiGLU two-GEMM dataflow, compile-time constant broadcast, ragged K/M/N",
+    "swiglu": "plan-level lowering + C validator acceptance; composed numeric execution test pending"
+  },
+  "p5_abi": {
+    "fields_compared": 138,
+    "structs": 11,
+    "mode": "offsetof/sizeof vs ctypes, exact field-set equality"
+  },
+  "c_independent_checks": [
+    "host staging budget recomputed from bindings + sum of output staging",
+    "device/host claims must be stated (0 is not a bypass)",
+    "submit task-id range/type validated before any template read",
+    "submit task-sequence whitelist (post range validation)",
+    "template arity validated before indexing action arrays (ASan-verified)",
+    "multi-output host staging boundary (exact accept, minus-one-byte reject)",
+    "device bytes recomputed per slot (short claim rejected)"
+  ],
+  "p7_ffn_primitive_level": {
+    "evidence": "graph_host_test execution_case",
+    "covers": [
+      "non-square weights (13,257,289) and (257,17,33)",
+      "residual add",
+      "failure does not publish (output bytes untouched)",
+      "re-run with changed inputs produces a new correct result"
+    ],
+    "not_covered": "same evidence through rk_plan runtime; TileLang FFN extraction"
+  },
+  "p7_b": {
+    "state": "boundary pinned",
+    "fixture": "tests/fixtures/tilelang_ffn.py (real 3-GEMM SwiGLU FFN kernel)",
+    "current_rejection": "RK_E_UNSUPPORTED: minimal TileLang subset requires exactly three parameter buffers",
+    "next_blockers": [
+      "5-parameter arity",
+      "two-branch GEMM dataflow",
+      "accumulator lifetime across stages"
+    ]
+  },
+  "mock_library": {
+    "target": "rknpu_plan_mock",
+    "source": "tests/mock/npu_mock.c",
+    "shares": "rk_plan_runtime_obj (same runtime objects and C ABI)",
+    "seam": "link-time --wrap of rocket_bo_*/co_execute_profiled/co_emit_*",
+    "production_untouched": "rknpu_plan never links the mock; no automatic fallback",
+    "counters": "rk_mock_execs/live_bos/resident/fail_at/inject_nan exported for ctypes",
+    "pending": "python ffi workspace bindings done; FFN execution harness WIP (constant binding construction)"
+  },
+  "ffn_execution": {
+    "root_cause": "mock tagged co_program.flags (production field) -> wrong LUT/EW/MM dispatch",
+    "fix": "private side table keyed by program address",
+    "reference": "7 declared FP16 narrowing points",
+    "result": "exact element-wise equality; non-square, 2 input passes, chain/separate, failure-not-publish, BO/resident back to baseline"
+  },
+  "mock_merge": {
+    "state": "shared seam",
+    "detail": "tests/mock/npu_mock.c linked into BOTH rk_plan_host_test and librknpu_plan_mock.so; C test own mock removed; alloc-failure injection kept via rk_mock_fail_alloc"
+  },
+  "mock_seam": {
+    "untracked": "hard fail (ROCKET_E_SHAPE) + counter",
+    "measured": "FFN run: untracked=0, tags=2, overflow=0, bos 13->0, resident 503296->0",
+    "note": "earlier \"untracked\" failures were caused by a deleted EW branch, not by program copies"
+  },
+  "ew_nondiag_probe": {
+    "host_perturbation": "identity[0*cols+1]=3 (logical W[0][1])",
+    "observed": "out[0][0] == unperturbed reference (-0.132080); expected with perturbation ~+0.332",
+    "inputs": "acc[0][0..3] = -0.3125, -0.25, -0.1875, -0.125",
+    "conclusion": "identity constant content does not reach the EW program; cause not yet identified",
+    "state": "probe reverted; symmetric perturbation keeps the suite green"
+  },
+  "ew_orientation_probe": {
+    "status": "passing regression",
+    "contract": "TRANSPOSE_SOURCE: device W[c][q] = host[q][c]",
+    "perturbation": "host[0][1]=3 only (diagonal doubling removed)",
+    "upload_evidence": "rk_mock_find_half(3.0) -> identity BO flat_half == cols (packed row=1,col=0)",
+    "output_evidence": "column 1 = f16((acc[r,1]+3*acc[r,0]) * gate[r,1]); all other columns == unperturbed ref",
+    "retracted": [
+      "constant content never reached EW",
+      "upload packing conflicts with read order"
+    ],
+    "record_delta": "29 failures = diagonal doubling + non-diagonal; 14 = same after fixing the EW operand expectation; 0 after removing the diagonal doubling"
+  },
+  "index_reversal_check": {
+    "method": "temporarily change the mock EW weight read to (q,c), rebuild, run",
+    "result_with_reversed_index": "690 checks, 30 failures (regression is sensitive to orientation)",
+    "result_after_restore": "690 checks, 0 failures",
+    "note": "the file was restored from a copy; git diff shows the correct (c,q) form"
+  },
+  "source_hash_roots_added": "research/custom-ops/tests/mock (mock seam compiled into the test + mock library)",
+  "open_bug_zeroed_program": {
+    "state": "fixed",
+    "fix": "validation order in __wrap_co_execute_profiled: call -> tag -> views -> data",
+    "regressions": [
+      "mock_zero_program_case",
+      "mock_untracked_program_case"
+    ],
+    "doc": "research/custom-ops/tests/mock/MINIMAL-REPRO-crash-zeroed-program.md"
+  },
+  "mock_tag_capacity": {
+    "guard_tested": "rk_mock_force_tag_overflow + executor refusal",
+    "not_tested": "filling the 256-entry table with real emissions"
+  },
+  "mock_api": {
+    "header": "research/custom-ops/tests/mock/mock_npu.h (test-only)",
+    "compile_probe": "tests/mock/mock_signature_probe.c -> target mock_signature_probe",
+    "python": "explicit ctypes table + mock_exports(); no runtime C parsing",
+    "pending": [
+      "real-emitter untracked case",
+      "capacity fill to limit",
+      "same-address template change",
+      "program copy"
+    ],
+    "parity": "green: name->ctypes mapping, type-object comparison, 18 exports, negative controls"
+  },
+  "mock_scenarios": {
+    "target": "rk_mock_scenarios",
+    "checks": 60,
+    "failures": 0,
+    "passing": [
+      "independent mul/add through co_emit_ew",
+      "cleanup baseline",
+      "capacity 3-phase: fill, overflow rejects old+new, reset restores",
+      "capacity 3-phase: fill, overflow rejects old+new, reset restores"
+    ],
+    "pending": [
+      "real-emitter untracked",
+      "capacity to limit",
+      "same-address template change",
+      "program copy",
+      "bounded ops",
+      "submit fault"
+    ],
+    "helper": "co_buffer_alloc -> co_view_init -> co_buffer_free; payload = 32 + tensor.bytes"
+  },
+  "tag_lifecycle": {
+    "refresh": "same address refreshes the slot, no growth, EW->MM allowed",
+    "identity": "execution compares the full co_program snapshot (memcmp), not just the address",
+    "removed": "incomplete structural-key fallback and the runtime-copy comment",
+    "pending": [],
+    "verified": [
+      "same-address EW->MM refresh (no growth)",
+      "copy rejected",
+      "snapshot integrity"
+    ]
+  },
+  "poison_contract": {
+    "verified": [
+      "RK_E_DEVICE on first failure",
+      "no publish",
+      "RK_E_POISONED on rerun",
+      "no extra submit",
+      "destroy RK_E_POISONED keeps handle and BOs"
+    ],
+    "pending": [
+      "subprocess isolation of retained resources",
+      "classified safe-failure rebuild"
+    ],
+    "subprocess": "worker child, single POISON-RESULT, parent checks exit/fields/timeout + no parent-side growth",
+    "asan_attempt": {
+      "library": "custom-ops/build-sanitize-rk/librknpu_plan_mock.so (fully instrumented)",
+      "sha256": "3aa783cf6953aa582f3359d22f0d2f47d2c2e7af95deac47f33ebb32119d25f2",
+      "poison_worker": "exit 0, no ASan/UBSan report",
+      "ffn_cases": "4 passed under the same instrumented library",
+      "retracted": "earlier claim based on rknpu_plan_mock_asan (mock-only instrumentation)"
+    },
+    "binding_error_path": "wrong input shape -> no submit (execs unchanged), output unchanged, same workspace runs and destroys, rebuild works"
+  },
+  "current_state": {
+    "verification": "green with sanitizer steps in the pipeline",
+    "env_isolation": "whitelist snapshotted before any external process; sanitizer vars unset for normal steps; per-command sanitizer env",
+    "sanitizer_steps": [
+      "sanitize-mock-build",
+      "sanitize-poison-worker",
+      "sanitize-ffn-worker"
+    ],
+    "pending": [
+      "passed/failed/blocked step model with blocked_by",
+      "commands.txt replayable + exit codes",
+      "manifest: worker exit codes, loaded lib path+hash",
+      "dependency-failed short-circuit"
+    ]
+  },
+  "mainline": {
+    "kernel": "tests/fixtures/tilelang_silu_proj.py (M=13,D=64,H=32)",
+    "narrowing_points": [
+      "gemm1 acc->z16",
+      "sigmoid->g16",
+      "z16*g16->s16",
+      "gemm2 acc->p16",
+      "p16+X->p16"
+    ],
+    "state": "fixture + boundary test landed; two-GEMM extraction not implemented",
+    "pending": [
+      "buffer-identity dataflow for 2 GEMMs",
+      "RKIR/planner composite",
+      "FFI mock execution + reference",
+      "two input rounds",
+      "residual liveness",
+      "negative cases"
+    ],
+    "plan": {
+      "boundary": "no K loop + one primitive tile per node; out-of-range rejected explicitly",
+      "roles": "keep static type/layout checks, drop fixed arity, derive roles from actual reads/writes",
+      "nodes": [
+        "matmul",
+        "sigmoid/silu",
+        "same-shape mul/add"
+      ],
+      "lowering": "value_id -> (device view, producer action); intermediates stay on device",
+      "unchanged": "_detect_k_block and the single-GEMM multi-tile path (K-loop regressions must stay green)",
+      "state": "plan agreed; per-node lowering not implemented"
+    }
   }
 }

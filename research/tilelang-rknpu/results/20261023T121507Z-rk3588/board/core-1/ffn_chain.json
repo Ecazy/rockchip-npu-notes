@@ -1,0 +1,165 @@
+{
+  "bindings": [
+    {
+      "name": "X",
+      "role": "input",
+      "shape": [
+        8,
+        64
+      ]
+    },
+    {
+      "name": "Wg",
+      "role": "constant",
+      "shape": [
+        64,
+        32
+      ]
+    },
+    {
+      "name": "Wu",
+      "role": "constant",
+      "shape": [
+        64,
+        32
+      ]
+    },
+    {
+      "name": "Wd",
+      "role": "constant",
+      "shape": [
+        32,
+        64
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        8,
+        64
+      ]
+    },
+    {
+      "name": "__identity_32",
+      "role": "constant",
+      "shape": [
+        32,
+        32
+      ]
+    },
+    {
+      "name": "__identity_64",
+      "role": "constant",
+      "shape": [
+        64,
+        64
+      ]
+    }
+  ],
+  "case": "ffn_chain",
+  "core_mask_env": "1",
+  "guard": null,
+  "kind": "ffn",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.linear.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "76e330b07b0a8399ad169fff3a6fad8127ec0f5e08ebb21c65fa21081e470f6b",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "raw_outputs": "ffn_chain.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 512,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 512,
+          "max_abs": 0.00020260402273220013,
+          "max_rel": 0.030934011227434065,
+          "mismatch_elements": 512
+        },
+        "max_abs": 0.0001220703125,
+        "max_rel": 0.0010851871947911015,
+        "mismatch_elements": 8
+      },
+      "download_bytes": 1536,
+      "download_calls": 1,
+      "emit_us": 45.49798583984375,
+      "output_sync_us": 22.458038330078125,
+      "pack_us": 8.165985107421875,
+      "round": 0,
+      "submit_count": 6,
+      "submit_wait_us": 458.4939880371094,
+      "task_count": 7,
+      "upload_bytes": 1536,
+      "upload_calls": 1
+    },
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 512,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 512,
+          "max_abs": 0.00023776873110370467,
+          "max_rel": 0.005441529153727188,
+          "mismatch_elements": 512
+        },
+        "max_abs": 0.000244140625,
+        "max_rel": 0.005494505494505495,
+        "mismatch_elements": 19
+      },
+      "download_bytes": 1536,
+      "download_calls": 1,
+      "emit_us": 39.95599365234375,
+      "output_sync_us": 18.08294677734375,
+      "pack_us": 8.1669921875,
+      "round": 1,
+      "submit_count": 6,
+      "submit_wait_us": 386.1619873046875,
+      "task_count": 7,
+      "upload_bytes": 1536,
+      "upload_calls": 1
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 6,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 7,
+  "wall_seconds": 0.015614986419677734
+}

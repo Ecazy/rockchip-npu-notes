@@ -1,0 +1,4032 @@
+{
+  "artifact_verification": {
+    "loaded_library_sha256": {
+      "note": "recorded from the remote board; the library bytes were not independently rehashed on the Host",
+      "per_core_records": [
+        "f3eb16cc70f46b3f77289e023bf02e67dabdb7cedcce09eb2fd93c37dba2c51e",
+        "f3eb16cc70f46b3f77289e023bf02e67dabdb7cedcce09eb2fd93c37dba2c51e",
+        "f3eb16cc70f46b3f77289e023bf02e67dabdb7cedcce09eb2fd93c37dba2c51e"
+      ],
+      "recorded": "f3eb16cc70f46b3f77289e023bf02e67dabdb7cedcce09eb2fd93c37dba2c51e",
+      "verified": false
+    },
+    "source_bundle_sha256": {
+      "recomputed": "5e3cc34faf8dd10f5fe4a4dc13d04776fd989a170ac87a2c40cae0b6e80ffad6",
+      "recorded": "5e3cc34faf8dd10f5fe4a4dc13d04776fd989a170ac87a2c40cae0b6e80ffad6",
+      "verified": true
+    }
+  },
+  "cases_expected": [
+    "matmul_chain",
+    "projection_chain",
+    "projection_separate",
+    "matmul_guard_nonfinite_output",
+    "projection_guard_nan_input",
+    "projection_guard_nan_constant",
+    "ffn_chain",
+    "ffn_separate",
+    "ragged_chain",
+    "ragged_separate"
+  ],
+  "core_reports": {
+    "1": {
+      "cases": {
+        "ffn_chain": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "Wg",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wu",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wd",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "ffn_chain",
+          "core_mask_env": "1",
+          "guard": null,
+          "kind": "ffn",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "55ea69da2f965aa52a18868db3156ca48039851919d8b67d9014e399d189060f",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ffn_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00020260402273220013,
+                  "max_rel": 0.030934011227434065,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.0001220703125,
+                "max_rel": 0.0010851871947911015,
+                "mismatch_elements": 8
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 45.791015625,
+              "output_sync_us": 24.2080078125,
+              "pack_us": 8.75,
+              "round": 0,
+              "submit_count": 6,
+              "submit_wait_us": 457.3260192871094,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00023776873110370467,
+                  "max_rel": 0.005441529153727188,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.000244140625,
+                "max_rel": 0.005494505494505495,
+                "mismatch_elements": 19
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 39.37493896484375,
+              "output_sync_us": 19.83203125,
+              "pack_us": 7.583984375,
+              "round": 1,
+              "submit_count": 6,
+              "submit_wait_us": 385.5789489746094,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 6,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 7,
+          "wall_seconds": 0.015361309051513672
+        },
+        "ffn_separate": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "Wg",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wu",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wd",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "ffn_separate",
+          "core_mask_env": "1",
+          "guard": null,
+          "kind": "ffn",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "af9e03b1e007e55fdb8b76819f99bf86753aa21ba448bd8eaf2dd67db9bde472",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ffn_separate.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00020260402273220013,
+                  "max_rel": 0.030934011227434065,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.0001220703125,
+                "max_rel": 0.0010851871947911015,
+                "mismatch_elements": 8
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 45.208953857421875,
+              "output_sync_us": 23.042022705078125,
+              "pack_us": 8.75,
+              "round": 0,
+              "submit_count": 7,
+              "submit_wait_us": 505.15899658203125,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00023776873110370467,
+                  "max_rel": 0.005441529153727188,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.000244140625,
+                "max_rel": 0.005494505494505495,
+                "mismatch_elements": 19
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 48.125030517578125,
+              "output_sync_us": 19.24700927734375,
+              "pack_us": 8.459014892578125,
+              "round": 1,
+              "submit_count": 7,
+              "submit_wait_us": 440.9960021972656,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 7,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 7,
+          "wall_seconds": 0.01659393310546875
+        },
+        "matmul_chain": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                64,
+                48
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                32,
+                48
+              ]
+            }
+          ],
+          "case": "matmul_chain",
+          "core_mask_env": "1",
+          "guard": null,
+          "kind": "matmul",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8ef29188d029939395653a3570590c6c9447f1f4e9db52e467c03cba4ab76d4a",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "matmul_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 1536,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 1536,
+                  "max_abs": 0.00048172054812312126,
+                  "max_rel": 0.0004788054764975207,
+                  "mismatch_elements": 1536
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 4096,
+              "download_calls": 1,
+              "emit_us": 20.125,
+              "output_sync_us": 3.792022705078125,
+              "pack_us": 21.0,
+              "round": 0,
+              "submit_count": 1,
+              "submit_wait_us": 174.12197875976562,
+              "task_count": 1,
+              "upload_bytes": 4096,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 1536,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 1536,
+                  "max_abs": 0.00047551069292239845,
+                  "max_rel": 0.0004803616245628966,
+                  "mismatch_elements": 1536
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 4096,
+              "download_calls": 1,
+              "emit_us": 7.0,
+              "output_sync_us": 3.2080078125,
+              "pack_us": 19.8330078125,
+              "round": 1,
+              "submit_count": 1,
+              "submit_wait_us": 106.16497802734375,
+              "task_count": 1,
+              "upload_bytes": 4096,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 1,
+          "wall_seconds": 0.017780065536499023
+        },
+        "matmul_guard_nonfinite_output": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                64,
+                48
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                32,
+                48
+              ]
+            }
+          ],
+          "case": "matmul_guard_nonfinite_output",
+          "core_mask_env": "1",
+          "guard": "nonfinite_output",
+          "guard_code": -4,
+          "guard_message": "downloaded output tile is not finite; refusing to publish",
+          "guard_output_unchanged": true,
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8ef29188d029939395653a3570590c6c9447f1f4e9db52e467c03cba4ab76d4a",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "matmul_guard_nonfinite_output.npz",
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 1,
+          "wall_seconds": 0.0064525604248046875
+        },
+        "projection_chain": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_chain",
+          "core_mask_env": "1",
+          "guard": null,
+          "kind": "projection",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00035539478118218337,
+                  "max_rel": 13.09929088792064,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.5,
+                "mismatch_elements": 99
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 47.25,
+              "output_sync_us": 17.79296875,
+              "pack_us": 13.125,
+              "round": 0,
+              "submit_count": 4,
+              "submit_wait_us": 380.9100036621094,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00034130190080861045,
+                  "max_rel": 5.020704210675087,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.3333333333333333,
+                "mismatch_elements": 151
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 38.209014892578125,
+              "output_sync_us": 15.75,
+              "pack_us": 11.0830078125,
+              "round": 1,
+              "submit_count": 4,
+              "submit_wait_us": 268.3299865722656,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.014487028121948242
+        },
+        "projection_guard_nan_constant": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_guard_nan_constant",
+          "core_mask_env": "1",
+          "guard": "nan_constant",
+          "guard_code": -4,
+          "guard_message": "non-finite FP16 input/constant is rejected before upload",
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.006449460983276367
+        },
+        "projection_guard_nan_input": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_guard_nan_input",
+          "core_mask_env": "1",
+          "guard": "nan_input",
+          "guard_code": -4,
+          "guard_message": "non-finite FP16 input/constant is rejected before upload",
+          "guard_output_unchanged": true,
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_guard_nan_input.npz",
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.010324239730834961
+        },
+        "projection_separate": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_separate",
+          "core_mask_env": "1",
+          "guard": null,
+          "kind": "projection",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "2245b2404ba78623860c7c9d1bceacd274bd839b841d0dd062d7ba3b277fe593",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_separate.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00035539478118218337,
+                  "max_rel": 13.09929088792064,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.5,
+                "mismatch_elements": 99
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 42.2919921875,
+              "output_sync_us": 19.832977294921875,
+              "pack_us": 9.625,
+              "round": 0,
+              "submit_count": 5,
+              "submit_wait_us": 393.7460021972656,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00034130190080861045,
+                  "max_rel": 5.020704210675087,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.3333333333333333,
+                "mismatch_elements": 151
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 32.373992919921875,
+              "output_sync_us": 16.0419921875,
+              "pack_us": 8.75,
+              "round": 1,
+              "submit_count": 5,
+              "submit_wait_us": 330.7440185546875,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 5,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.01446533203125
+        },
+        "ragged_chain": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                13,
+                257
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                257,
+                33
+              ]
+            },
+            {
+              "name": "C",
+              "role": "output",
+              "shape": [
+                13,
+                33
+              ]
+            }
+          ],
+          "case": "ragged_chain",
+          "core_mask_env": "1",
+          "guard": null,
+          "kind": "ragged",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8893939430f5477ad7534c6f6a70f56128445204fcf007e739e0813749e3309b",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ragged_chain.npz",
+          "rounds": [
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004865511364187114,
+                  "max_rel": 0.008958475214348028,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 9.041015625,
+              "output_sync_us": 5.832977294921875,
+              "pack_us": 26.25,
+              "round": 0,
+              "submit_count": 1,
+              "submit_wait_us": 152.24801635742188,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            },
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004164222191320732,
+                  "max_rel": 0.002292938500391153,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 6.709014892578125,
+              "output_sync_us": 5.540985107421875,
+              "pack_us": 25.9580078125,
+              "round": 1,
+              "submit_count": 1,
+              "submit_wait_us": 88.95700073242188,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 2
+            }
+          ],
+          "task_count": 2,
+          "wall_seconds": 0.011428594589233398
+        },
+        "ragged_separate": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                13,
+                257
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                257,
+                33
+              ]
+            },
+            {
+              "name": "C",
+              "role": "output",
+              "shape": [
+                13,
+                33
+              ]
+            }
+          ],
+          "case": "ragged_separate",
+          "core_mask_env": "1",
+          "guard": null,
+          "kind": "ragged",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "71c5704fb0b72079134b7f86506f85f9ec2c8648fd47b0ec50c1d9114254e6a1",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ragged_separate.npz",
+          "rounds": [
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004865511364187114,
+                  "max_rel": 0.008958475214348028,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 19.541015625,
+              "output_sync_us": 7.2919921875,
+              "pack_us": 30.625,
+              "round": 0,
+              "submit_count": 2,
+              "submit_wait_us": 246.16299438476562,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            },
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004164222191320732,
+                  "max_rel": 0.002292938500391153,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 7.875,
+              "output_sync_us": 6.4169921875,
+              "pack_us": 27.9990234375,
+              "round": 1,
+              "submit_count": 2,
+              "submit_wait_us": 143.78997802734375,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 2,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 2,
+          "wall_seconds": 0.012875080108642578
+        }
+      },
+      "chain_separate": {
+        "ffn_chain/ffn_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        },
+        "projection_chain/projection_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        },
+        "ragged_chain/ragged_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        }
+      },
+      "environment": {
+        "board_model": "RK3588 OPi 5 Plus",
+        "chip": "rk3588",
+        "core_mask_env": "1",
+        "driver_version": "RKNPU driver: v0.9.8",
+        "expected_profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+        "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+        "machine": "aarch64",
+        "npu_freq_hz": "1000000000",
+        "npu_load_after": "NPU load:  Core0:  0%, Core1:  0%, Core2:  0%,",
+        "npu_load_before": "NPU load:  Core0:  0%, Core1:  0%, Core2:  0%,",
+        "plan_lib_basename": "librknpu_plan.so",
+        "plan_lib_sha256": "f3eb16cc70f46b3f77289e023bf02e67dabdb7cedcce09eb2fd93c37dba2c51e",
+        "runtime_abi_version": 1,
+        "target_check_message": "",
+        "target_check_rc": 0
+      },
+      "guard_detail": {
+        "matmul_guard_nonfinite_output": {
+          "guard_code": -4,
+          "kind": "nonfinite_output",
+          "output_unchanged": true
+        },
+        "projection_guard_nan_constant": {
+          "guard_code": -4,
+          "kind": "nan_constant",
+          "output_unchanged": false
+        },
+        "projection_guard_nan_input": {
+          "guard_code": -4,
+          "kind": "nan_input",
+          "output_unchanged": true
+        }
+      },
+      "numeric_detail": {
+        "ffn_chain": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.000244140625,
+          "element_count": 1024,
+          "fp64_math_max_abs": 0.00023776873110370467,
+          "mismatched_elements": 27,
+          "rounds": 2,
+          "submits_per_round": 6,
+          "tasks_per_round": 7
+        },
+        "ffn_separate": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.000244140625,
+          "element_count": 1024,
+          "fp64_math_max_abs": 0.00023776873110370467,
+          "mismatched_elements": 27,
+          "rounds": 2,
+          "submits_per_round": 7,
+          "tasks_per_round": 7
+        },
+        "matmul_chain": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 3072,
+          "fp64_math_max_abs": 0.00048172054812312126,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 1,
+          "tasks_per_round": 1
+        },
+        "projection_chain": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.00048828125,
+          "element_count": 1664,
+          "fp64_math_max_abs": 0.00035539478118218337,
+          "mismatched_elements": 250,
+          "rounds": 2,
+          "submits_per_round": 4,
+          "tasks_per_round": 5
+        },
+        "projection_separate": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.00048828125,
+          "element_count": 1664,
+          "fp64_math_max_abs": 0.00035539478118218337,
+          "mismatched_elements": 250,
+          "rounds": 2,
+          "submits_per_round": 5,
+          "tasks_per_round": 5
+        },
+        "ragged_chain": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 858,
+          "fp64_math_max_abs": 0.0004865511364187114,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 1,
+          "tasks_per_round": 2
+        },
+        "ragged_separate": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 858,
+          "fp64_math_max_abs": 0.0004865511364187114,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 2,
+          "tasks_per_round": 2
+        }
+      }
+    },
+    "2": {
+      "cases": {
+        "ffn_chain": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "Wg",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wu",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wd",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "ffn_chain",
+          "core_mask_env": "2",
+          "guard": null,
+          "kind": "ffn",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "55ea69da2f965aa52a18868db3156ca48039851919d8b67d9014e399d189060f",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ffn_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00020260402273220013,
+                  "max_rel": 0.030934011227434065,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.0001220703125,
+                "max_rel": 0.0010851871947911015,
+                "mismatch_elements": 8
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 43.748992919921875,
+              "output_sync_us": 18.082000732421875,
+              "pack_us": 8.748992919921875,
+              "round": 0,
+              "submit_count": 6,
+              "submit_wait_us": 222.24502563476562,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00023776873110370467,
+                  "max_rel": 0.005441529153727188,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.000244140625,
+                "max_rel": 0.005494505494505495,
+                "mismatch_elements": 19
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 36.45904541015625,
+              "output_sync_us": 17.792999267578125,
+              "pack_us": 7.5830078125,
+              "round": 1,
+              "submit_count": 6,
+              "submit_wait_us": 105.58197021484375,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 6,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 7,
+          "wall_seconds": 0.015007495880126953
+        },
+        "ffn_separate": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "Wg",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wu",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wd",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "ffn_separate",
+          "core_mask_env": "2",
+          "guard": null,
+          "kind": "ffn",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "af9e03b1e007e55fdb8b76819f99bf86753aa21ba448bd8eaf2dd67db9bde472",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ffn_separate.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00020260402273220013,
+                  "max_rel": 0.030934011227434065,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.0001220703125,
+                "max_rel": 0.0010851871947911015,
+                "mismatch_elements": 8
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 41.706024169921875,
+              "output_sync_us": 19.2490234375,
+              "pack_us": 8.75,
+              "round": 0,
+              "submit_count": 7,
+              "submit_wait_us": 515.6600036621094,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00023776873110370467,
+                  "max_rel": 0.005441529153727188,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.000244140625,
+                "max_rel": 0.005494505494505495,
+                "mismatch_elements": 19
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 38.792999267578125,
+              "output_sync_us": 18.958038330078125,
+              "pack_us": 8.1669921875,
+              "round": 1,
+              "submit_count": 7,
+              "submit_wait_us": 447.9939880371094,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 7,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 7,
+          "wall_seconds": 0.01584148406982422
+        },
+        "matmul_chain": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                64,
+                48
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                32,
+                48
+              ]
+            }
+          ],
+          "case": "matmul_chain",
+          "core_mask_env": "2",
+          "guard": null,
+          "kind": "matmul",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8ef29188d029939395653a3570590c6c9447f1f4e9db52e467c03cba4ab76d4a",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "matmul_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 1536,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 1536,
+                  "max_abs": 0.00048172054812312126,
+                  "max_rel": 0.0004788054764975207,
+                  "mismatch_elements": 1536
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 4096,
+              "download_calls": 1,
+              "emit_us": 16.332977294921875,
+              "output_sync_us": 3.207977294921875,
+              "pack_us": 19.25,
+              "round": 0,
+              "submit_count": 1,
+              "submit_wait_us": 156.62301635742188,
+              "task_count": 1,
+              "upload_bytes": 4096,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 1536,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 1536,
+                  "max_abs": 0.00047551069292239845,
+                  "max_rel": 0.0004803616245628966,
+                  "mismatch_elements": 1536
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 4096,
+              "download_calls": 1,
+              "emit_us": 6.707977294921875,
+              "output_sync_us": 2.915985107421875,
+              "pack_us": 17.5,
+              "round": 1,
+              "submit_count": 1,
+              "submit_wait_us": 88.666015625,
+              "task_count": 1,
+              "upload_bytes": 4096,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 1,
+          "wall_seconds": 0.017211198806762695
+        },
+        "matmul_guard_nonfinite_output": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                64,
+                48
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                32,
+                48
+              ]
+            }
+          ],
+          "case": "matmul_guard_nonfinite_output",
+          "core_mask_env": "2",
+          "guard": "nonfinite_output",
+          "guard_code": -4,
+          "guard_message": "downloaded output tile is not finite; refusing to publish",
+          "guard_output_unchanged": true,
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8ef29188d029939395653a3570590c6c9447f1f4e9db52e467c03cba4ab76d4a",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "matmul_guard_nonfinite_output.npz",
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 1,
+          "wall_seconds": 0.006119966506958008
+        },
+        "projection_chain": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_chain",
+          "core_mask_env": "2",
+          "guard": null,
+          "kind": "projection",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00035539478118218337,
+                  "max_rel": 13.09929088792064,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.5,
+                "mismatch_elements": 99
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 45.791015625,
+              "output_sync_us": 17.78997802734375,
+              "pack_us": 13.125,
+              "round": 0,
+              "submit_count": 4,
+              "submit_wait_us": 367.7879943847656,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00034130190080861045,
+                  "max_rel": 5.020704210675087,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.3333333333333333,
+                "mismatch_elements": 151
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 38.4990234375,
+              "output_sync_us": 14.000030517578125,
+              "pack_us": 9.916015625,
+              "round": 1,
+              "submit_count": 4,
+              "submit_wait_us": 280.5799560546875,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.014444112777709961
+        },
+        "projection_guard_nan_constant": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_guard_nan_constant",
+          "core_mask_env": "2",
+          "guard": "nan_constant",
+          "guard_code": -4,
+          "guard_message": "non-finite FP16 input/constant is rejected before upload",
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.006311655044555664
+        },
+        "projection_guard_nan_input": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_guard_nan_input",
+          "core_mask_env": "2",
+          "guard": "nan_input",
+          "guard_code": -4,
+          "guard_message": "non-finite FP16 input/constant is rejected before upload",
+          "guard_output_unchanged": true,
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_guard_nan_input.npz",
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.00916910171508789
+        },
+        "projection_separate": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_separate",
+          "core_mask_env": "2",
+          "guard": null,
+          "kind": "projection",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "2245b2404ba78623860c7c9d1bceacd274bd839b841d0dd062d7ba3b277fe593",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_separate.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00035539478118218337,
+                  "max_rel": 13.09929088792064,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.5,
+                "mismatch_elements": 99
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 39.667022705078125,
+              "output_sync_us": 13.125,
+              "pack_us": 10.5,
+              "round": 0,
+              "submit_count": 5,
+              "submit_wait_us": 388.4939880371094,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00034130190080861045,
+                  "max_rel": 5.020704210675087,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.3333333333333333,
+                "mismatch_elements": 151
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 35.292999267578125,
+              "output_sync_us": 12.5419921875,
+              "pack_us": 9.625,
+              "round": 1,
+              "submit_count": 5,
+              "submit_wait_us": 330.1619873046875,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 5,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.013925313949584961
+        },
+        "ragged_chain": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                13,
+                257
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                257,
+                33
+              ]
+            },
+            {
+              "name": "C",
+              "role": "output",
+              "shape": [
+                13,
+                33
+              ]
+            }
+          ],
+          "case": "ragged_chain",
+          "core_mask_env": "2",
+          "guard": null,
+          "kind": "ragged",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8893939430f5477ad7534c6f6a70f56128445204fcf007e739e0813749e3309b",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ragged_chain.npz",
+          "rounds": [
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004865511364187114,
+                  "max_rel": 0.008958475214348028,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 9.040985107421875,
+              "output_sync_us": 5.833984375,
+              "pack_us": 27.7080078125,
+              "round": 0,
+              "submit_count": 1,
+              "submit_wait_us": 144.08099365234375,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            },
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004164222191320732,
+                  "max_rel": 0.002292938500391153,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 8.166015625,
+              "output_sync_us": 5.5419921875,
+              "pack_us": 39.666015625,
+              "round": 1,
+              "submit_count": 1,
+              "submit_wait_us": 87.20700073242188,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 2
+            }
+          ],
+          "task_count": 2,
+          "wall_seconds": 0.011539220809936523
+        },
+        "ragged_separate": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                13,
+                257
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                257,
+                33
+              ]
+            },
+            {
+              "name": "C",
+              "role": "output",
+              "shape": [
+                13,
+                33
+              ]
+            }
+          ],
+          "case": "ragged_separate",
+          "core_mask_env": "2",
+          "guard": null,
+          "kind": "ragged",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "71c5704fb0b72079134b7f86506f85f9ec2c8648fd47b0ec50c1d9114254e6a1",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ragged_separate.npz",
+          "rounds": [
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004865511364187114,
+                  "max_rel": 0.008958475214348028,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 9.916015625,
+              "output_sync_us": 7.292022705078125,
+              "pack_us": 30.6240234375,
+              "round": 0,
+              "submit_count": 2,
+              "submit_wait_us": 236.53799438476562,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            },
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004164222191320732,
+                  "max_rel": 0.002292938500391153,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 7.5830078125,
+              "output_sync_us": 6.416015625,
+              "pack_us": 27.415985107421875,
+              "round": 1,
+              "submit_count": 2,
+              "submit_wait_us": 145.24899291992188,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 2,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 2,
+          "wall_seconds": 0.012845039367675781
+        }
+      },
+      "chain_separate": {
+        "ffn_chain/ffn_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        },
+        "projection_chain/projection_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        },
+        "ragged_chain/ragged_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        }
+      },
+      "environment": {
+        "board_model": "RK3588 OPi 5 Plus",
+        "chip": "rk3588",
+        "core_mask_env": "2",
+        "driver_version": "RKNPU driver: v0.9.8",
+        "expected_profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+        "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+        "machine": "aarch64",
+        "npu_freq_hz": "1000000000",
+        "npu_load_after": "NPU load:  Core0:  0%, Core1:  0%, Core2:  0%,",
+        "npu_load_before": "NPU load:  Core0:  0%, Core1:  0%, Core2:  0%,",
+        "plan_lib_basename": "librknpu_plan.so",
+        "plan_lib_sha256": "f3eb16cc70f46b3f77289e023bf02e67dabdb7cedcce09eb2fd93c37dba2c51e",
+        "runtime_abi_version": 1,
+        "target_check_message": "",
+        "target_check_rc": 0
+      },
+      "guard_detail": {
+        "matmul_guard_nonfinite_output": {
+          "guard_code": -4,
+          "kind": "nonfinite_output",
+          "output_unchanged": true
+        },
+        "projection_guard_nan_constant": {
+          "guard_code": -4,
+          "kind": "nan_constant",
+          "output_unchanged": false
+        },
+        "projection_guard_nan_input": {
+          "guard_code": -4,
+          "kind": "nan_input",
+          "output_unchanged": true
+        }
+      },
+      "numeric_detail": {
+        "ffn_chain": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.000244140625,
+          "element_count": 1024,
+          "fp64_math_max_abs": 0.00023776873110370467,
+          "mismatched_elements": 27,
+          "rounds": 2,
+          "submits_per_round": 6,
+          "tasks_per_round": 7
+        },
+        "ffn_separate": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.000244140625,
+          "element_count": 1024,
+          "fp64_math_max_abs": 0.00023776873110370467,
+          "mismatched_elements": 27,
+          "rounds": 2,
+          "submits_per_round": 7,
+          "tasks_per_round": 7
+        },
+        "matmul_chain": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 3072,
+          "fp64_math_max_abs": 0.00048172054812312126,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 1,
+          "tasks_per_round": 1
+        },
+        "projection_chain": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.00048828125,
+          "element_count": 1664,
+          "fp64_math_max_abs": 0.00035539478118218337,
+          "mismatched_elements": 250,
+          "rounds": 2,
+          "submits_per_round": 4,
+          "tasks_per_round": 5
+        },
+        "projection_separate": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.00048828125,
+          "element_count": 1664,
+          "fp64_math_max_abs": 0.00035539478118218337,
+          "mismatched_elements": 250,
+          "rounds": 2,
+          "submits_per_round": 5,
+          "tasks_per_round": 5
+        },
+        "ragged_chain": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 858,
+          "fp64_math_max_abs": 0.0004865511364187114,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 1,
+          "tasks_per_round": 2
+        },
+        "ragged_separate": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 858,
+          "fp64_math_max_abs": 0.0004865511364187114,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 2,
+          "tasks_per_round": 2
+        }
+      }
+    },
+    "4": {
+      "cases": {
+        "ffn_chain": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "Wg",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wu",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wd",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "ffn_chain",
+          "core_mask_env": "4",
+          "guard": null,
+          "kind": "ffn",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "55ea69da2f965aa52a18868db3156ca48039851919d8b67d9014e399d189060f",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ffn_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00020260402273220013,
+                  "max_rel": 0.030934011227434065,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.0001220703125,
+                "max_rel": 0.0010851871947911015,
+                "mismatch_elements": 8
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 47.24896240234375,
+              "output_sync_us": 22.457000732421875,
+              "pack_us": 8.457977294921875,
+              "round": 0,
+              "submit_count": 6,
+              "submit_wait_us": 469.2859802246094,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00023776873110370467,
+                  "max_rel": 0.005441529153727188,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.000244140625,
+                "max_rel": 0.005494505494505495,
+                "mismatch_elements": 19
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 40.540985107421875,
+              "output_sync_us": 20.125,
+              "pack_us": 7.875,
+              "round": 1,
+              "submit_count": 6,
+              "submit_wait_us": 392.5799560546875,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 6,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 7,
+          "wall_seconds": 0.015430688858032227
+        },
+        "ffn_separate": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "Wg",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wu",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "Wd",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                8,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "ffn_separate",
+          "core_mask_env": "4",
+          "guard": null,
+          "kind": "ffn",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "af9e03b1e007e55fdb8b76819f99bf86753aa21ba448bd8eaf2dd67db9bde472",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ffn_separate.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00020260402273220013,
+                  "max_rel": 0.030934011227434065,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.0001220703125,
+                "max_rel": 0.0010851871947911015,
+                "mismatch_elements": 8
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 43.75,
+              "output_sync_us": 24.790985107421875,
+              "pack_us": 8.75,
+              "round": 0,
+              "submit_count": 7,
+              "submit_wait_us": 510.70098876953125,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 512,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 512,
+                  "max_abs": 0.00023776873110370467,
+                  "max_rel": 0.005441529153727188,
+                  "mismatch_elements": 512
+                },
+                "max_abs": 0.000244140625,
+                "max_rel": 0.005494505494505495,
+                "mismatch_elements": 19
+              },
+              "download_bytes": 1536,
+              "download_calls": 1,
+              "emit_us": 42.0,
+              "output_sync_us": 22.1669921875,
+              "pack_us": 8.458984375,
+              "round": 1,
+              "submit_count": 7,
+              "submit_wait_us": 419.1189880371094,
+              "task_count": 7,
+              "upload_bytes": 1536,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 7,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 7,
+          "wall_seconds": 0.01618170738220215
+        },
+        "matmul_chain": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                64,
+                48
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                32,
+                48
+              ]
+            }
+          ],
+          "case": "matmul_chain",
+          "core_mask_env": "4",
+          "guard": null,
+          "kind": "matmul",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8ef29188d029939395653a3570590c6c9447f1f4e9db52e467c03cba4ab76d4a",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "matmul_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 1536,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 1536,
+                  "max_abs": 0.00048172054812312126,
+                  "max_rel": 0.0004788054764975207,
+                  "mismatch_elements": 1536
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 4096,
+              "download_calls": 1,
+              "emit_us": 14.875,
+              "output_sync_us": 2.625,
+              "pack_us": 16.6240234375,
+              "round": 0,
+              "submit_count": 1,
+              "submit_wait_us": 142.62298583984375,
+              "task_count": 1,
+              "upload_bytes": 4096,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 1536,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 1536,
+                  "max_abs": 0.00047551069292239845,
+                  "max_rel": 0.0004803616245628966,
+                  "mismatch_elements": 1536
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 4096,
+              "download_calls": 1,
+              "emit_us": 4.9580078125,
+              "output_sync_us": 2.625,
+              "pack_us": 15.4580078125,
+              "round": 1,
+              "submit_count": 1,
+              "submit_wait_us": 91.291015625,
+              "task_count": 1,
+              "upload_bytes": 4096,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 1,
+          "wall_seconds": 0.016364574432373047
+        },
+        "matmul_guard_nonfinite_output": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                64,
+                48
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                32,
+                48
+              ]
+            }
+          ],
+          "case": "matmul_guard_nonfinite_output",
+          "core_mask_env": "4",
+          "guard": "nonfinite_output",
+          "guard_code": -4,
+          "guard_message": "downloaded output tile is not finite; refusing to publish",
+          "guard_output_unchanged": true,
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8ef29188d029939395653a3570590c6c9447f1f4e9db52e467c03cba4ab76d4a",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "matmul_guard_nonfinite_output.npz",
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 1,
+          "wall_seconds": 0.005866289138793945
+        },
+        "projection_chain": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_chain",
+          "core_mask_env": "4",
+          "guard": null,
+          "kind": "projection",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_chain.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00035539478118218337,
+                  "max_rel": 13.09929088792064,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.5,
+                "mismatch_elements": 99
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 44.623992919921875,
+              "output_sync_us": 16.333984375,
+              "pack_us": 9.6240234375,
+              "round": 0,
+              "submit_count": 4,
+              "submit_wait_us": 373.9110412597656,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00034130190080861045,
+                  "max_rel": 5.020704210675087,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.3333333333333333,
+                "mismatch_elements": 151
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 32.665985107421875,
+              "output_sync_us": 13.707000732421875,
+              "pack_us": 8.4580078125,
+              "round": 1,
+              "submit_count": 4,
+              "submit_wait_us": 269.4980163574219,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.014304876327514648
+        },
+        "projection_guard_nan_constant": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_guard_nan_constant",
+          "core_mask_env": "4",
+          "guard": "nan_constant",
+          "guard_code": -4,
+          "guard_message": "non-finite FP16 input/constant is rejected before upload",
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.00667262077331543
+        },
+        "projection_guard_nan_input": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_guard_nan_input",
+          "core_mask_env": "4",
+          "guard": "nan_input",
+          "guard_code": -4,
+          "guard_message": "non-finite FP16 input/constant is rejected before upload",
+          "guard_output_unchanged": true,
+          "kind": "guard",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "5f11223cc05afc7c85272487a4994aa37f26adcd53ab42d7b3d2ac8375acea34",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_guard_nan_input.npz",
+          "rounds": [],
+          "status": "PASS",
+          "submit_count": 4,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 2
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "chain",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.009102582931518555
+        },
+        "projection_separate": {
+          "bindings": [
+            {
+              "name": "X",
+              "role": "input",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "W1",
+              "role": "constant",
+              "shape": [
+                64,
+                32
+              ]
+            },
+            {
+              "name": "W2",
+              "role": "constant",
+              "shape": [
+                32,
+                64
+              ]
+            },
+            {
+              "name": "Y",
+              "role": "output",
+              "shape": [
+                13,
+                64
+              ]
+            },
+            {
+              "name": "__identity_32",
+              "role": "constant",
+              "shape": [
+                32,
+                32
+              ]
+            },
+            {
+              "name": "__identity_64",
+              "role": "constant",
+              "shape": [
+                64,
+                64
+              ]
+            }
+          ],
+          "case": "projection_separate",
+          "core_mask_env": "4",
+          "guard": null,
+          "kind": "projection",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.linear.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "2245b2404ba78623860c7c9d1bceacd274bd839b841d0dd062d7ba3b277fe593",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "projection_separate.npz",
+          "rounds": [
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00035539478118218337,
+                  "max_rel": 13.09929088792064,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.5,
+                "mismatch_elements": 99
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 39.0830078125,
+              "output_sync_us": 14.875,
+              "pack_us": 9.0419921875,
+              "round": 0,
+              "submit_count": 5,
+              "submit_wait_us": 436.0360107421875,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            },
+            {
+              "Y": {
+                "allclose": true,
+                "element_count": 832,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 832,
+                  "max_abs": 0.00034130190080861045,
+                  "max_rel": 5.020704210675087,
+                  "mismatch_elements": 832
+                },
+                "max_abs": 0.00048828125,
+                "max_rel": 0.3333333333333333,
+                "mismatch_elements": 151
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 34.415008544921875,
+              "output_sync_us": 12.248992919921875,
+              "pack_us": 8.75,
+              "round": 1,
+              "submit_count": 5,
+              "submit_wait_us": 327.24700927734375,
+              "task_count": 5,
+              "upload_bytes": 2048,
+              "upload_calls": 1
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 5,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "gate_ew_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 5,
+          "wall_seconds": 0.013650894165039062
+        },
+        "ragged_chain": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                13,
+                257
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                257,
+                33
+              ]
+            },
+            {
+              "name": "C",
+              "role": "output",
+              "shape": [
+                13,
+                33
+              ]
+            }
+          ],
+          "case": "ragged_chain",
+          "core_mask_env": "4",
+          "guard": null,
+          "kind": "ragged",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "8893939430f5477ad7534c6f6a70f56128445204fcf007e739e0813749e3309b",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ragged_chain.npz",
+          "rounds": [
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004865511364187114,
+                  "max_rel": 0.008958475214348028,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 5.25,
+              "output_sync_us": 6.709014892578125,
+              "pack_us": 26.5419921875,
+              "round": 0,
+              "submit_count": 1,
+              "submit_wait_us": 142.91400146484375,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            },
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004164222191320732,
+                  "max_rel": 0.002292938500391153,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 5.25,
+              "output_sync_us": 5.832977294921875,
+              "pack_us": 25.665985107421875,
+              "round": 1,
+              "submit_count": 1,
+              "submit_wait_us": 87.49899291992188,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 1,
+          "submits": [
+            {
+              "mode": "chain",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 2
+            }
+          ],
+          "task_count": 2,
+          "wall_seconds": 0.01123952865600586
+        },
+        "ragged_separate": {
+          "bindings": [
+            {
+              "name": "A",
+              "role": "input",
+              "shape": [
+                13,
+                257
+              ]
+            },
+            {
+              "name": "B",
+              "role": "constant",
+              "shape": [
+                257,
+                33
+              ]
+            },
+            {
+              "name": "C",
+              "role": "output",
+              "shape": [
+                13,
+                33
+              ]
+            }
+          ],
+          "case": "ragged_separate",
+          "core_mask_env": "4",
+          "guard": null,
+          "kind": "ragged",
+          "layout_ids": [
+            "co.cube.f16.v1",
+            "co.weight.f16.v1"
+          ],
+          "plan_hash": "71c5704fb0b72079134b7f86506f85f9ec2c8648fd47b0ec50c1d9114254e6a1",
+          "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+          "publish_count": 1,
+          "raw_outputs": "ragged_separate.npz",
+          "rounds": [
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004865511364187114,
+                  "max_rel": 0.008958475214348028,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 7.5830078125,
+              "output_sync_us": 8.1669921875,
+              "pack_us": 31.207977294921875,
+              "round": 0,
+              "submit_count": 2,
+              "submit_wait_us": 229.24700927734375,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            },
+            {
+              "C": {
+                "allclose": true,
+                "element_count": 429,
+                "fp64_math": {
+                  "allclose": true,
+                  "element_count": 429,
+                  "max_abs": 0.0004164222191320732,
+                  "max_rel": 0.002292938500391153,
+                  "mismatch_elements": 429
+                },
+                "max_abs": 0.0,
+                "max_rel": 0.0,
+                "mismatch_elements": 0
+              },
+              "download_bytes": 2048,
+              "download_calls": 1,
+              "emit_us": 5.5419921875,
+              "output_sync_us": 6.416015625,
+              "pack_us": 27.1240234375,
+              "round": 1,
+              "submit_count": 2,
+              "submit_wait_us": 144.95599365234375,
+              "task_count": 2,
+              "upload_bytes": 9216,
+              "upload_calls": 2
+            }
+          ],
+          "status": "PASS",
+          "submit_count": 2,
+          "submits": [
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            },
+            {
+              "mode": "separate",
+              "recipe_id": "linear_k_acc_v1",
+              "tasks": 1
+            }
+          ],
+          "task_count": 2,
+          "wall_seconds": 0.012726783752441406
+        }
+      },
+      "chain_separate": {
+        "ffn_chain/ffn_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        },
+        "projection_chain/projection_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        },
+        "ragged_chain/ragged_separate": {
+          "bit_equal": true,
+          "max_abs": 0.0
+        }
+      },
+      "environment": {
+        "board_model": "RK3588 OPi 5 Plus",
+        "chip": "rk3588",
+        "core_mask_env": "4",
+        "driver_version": "RKNPU driver: v0.9.8",
+        "expected_profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+        "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+        "machine": "aarch64",
+        "npu_freq_hz": "1000000000",
+        "npu_load_after": "NPU load:  Core0:  0%, Core1:  0%, Core2:  0%,",
+        "npu_load_before": "NPU load:  Core0:  0%, Core1:  0%, Core2:  0%,",
+        "plan_lib_basename": "librknpu_plan.so",
+        "plan_lib_sha256": "f3eb16cc70f46b3f77289e023bf02e67dabdb7cedcce09eb2fd93c37dba2c51e",
+        "runtime_abi_version": 1,
+        "target_check_message": "",
+        "target_check_rc": 0
+      },
+      "guard_detail": {
+        "matmul_guard_nonfinite_output": {
+          "guard_code": -4,
+          "kind": "nonfinite_output",
+          "output_unchanged": true
+        },
+        "projection_guard_nan_constant": {
+          "guard_code": -4,
+          "kind": "nan_constant",
+          "output_unchanged": false
+        },
+        "projection_guard_nan_input": {
+          "guard_code": -4,
+          "kind": "nan_input",
+          "output_unchanged": true
+        }
+      },
+      "numeric_detail": {
+        "ffn_chain": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.000244140625,
+          "element_count": 1024,
+          "fp64_math_max_abs": 0.00023776873110370467,
+          "mismatched_elements": 27,
+          "rounds": 2,
+          "submits_per_round": 6,
+          "tasks_per_round": 7
+        },
+        "ffn_separate": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.000244140625,
+          "element_count": 1024,
+          "fp64_math_max_abs": 0.00023776873110370467,
+          "mismatched_elements": 27,
+          "rounds": 2,
+          "submits_per_round": 7,
+          "tasks_per_round": 7
+        },
+        "matmul_chain": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 3072,
+          "fp64_math_max_abs": 0.00048172054812312126,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 1,
+          "tasks_per_round": 1
+        },
+        "projection_chain": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.00048828125,
+          "element_count": 1664,
+          "fp64_math_max_abs": 0.00035539478118218337,
+          "mismatched_elements": 250,
+          "rounds": 2,
+          "submits_per_round": 4,
+          "tasks_per_round": 5
+        },
+        "projection_separate": {
+          "bit_exact_declared": false,
+          "declared_max_abs": 0.00048828125,
+          "element_count": 1664,
+          "fp64_math_max_abs": 0.00035539478118218337,
+          "mismatched_elements": 250,
+          "rounds": 2,
+          "submits_per_round": 5,
+          "tasks_per_round": 5
+        },
+        "ragged_chain": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 858,
+          "fp64_math_max_abs": 0.0004865511364187114,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 1,
+          "tasks_per_round": 2
+        },
+        "ragged_separate": {
+          "bit_exact_declared": true,
+          "declared_max_abs": 0.0,
+          "element_count": 858,
+          "fp64_math_max_abs": 0.0004865511364187114,
+          "mismatched_elements": 0,
+          "rounds": 2,
+          "submits_per_round": 2,
+          "tasks_per_round": 2
+        }
+      }
+    }
+  },
+  "cores": [
+    "1",
+    "2",
+    "4"
+  ],
+  "driver_expected": "RKNPU driver: v0.9.8",
+  "kind": "rk3588-board-admission-summary",
+  "overall_exit": 0,
+  "problems": [],
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "runtime_abi_version": 1,
+  "tolerance_contract": {
+    "atol": 0.008,
+    "formula": "numpy.allclose: abs(got-declared) <= atol + rtol*abs(declared)",
+    "rtol": 0.008,
+    "scope": "declared staged-FP16 path and listed small shapes; not a mathematical-FP64 precision claim",
+    "source": "rk_f16_tiled NumericContract.tolerance in each generated plan"
+  }
+}

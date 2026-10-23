@@ -1,0 +1,1 @@
+/usr/bin/cc -fPIC -fsanitize=address,undefined -fno-omit-frame-pointer -fsanitize=address,undefined -shared -Wl,-soname,librknpu_plan.so -o librknpu_plan.so CMakeFiles/rk_plan_runtime_obj.dir/src/rk_plan_runtime.c.o CMakeFiles/rk_plan_runtime_obj.dir/src/rk_plan_emit.c.o  librk_plan_core.a libcustom_ops.a provider/librknpu-submit.a -lm 

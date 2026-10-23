@@ -1,0 +1,160 @@
+[   16.493852] rd 0-7: Disabling EAS, schedutil is mandatory
+[   16.594209] xhci-hcd xhci-hcd.15.auto: xHCI Host Controller
+[   16.594336] xhci-hcd xhci-hcd.15.auto: new USB bus registered, assigned bus number 7
+[   16.594434] xhci-hcd xhci-hcd.15.auto: hcc params 0x0220fe64 hci version 0x110 quirks 0x0000800002010010
+[   16.594460] xhci-hcd xhci-hcd.15.auto: irq 82, io mem 0xfc000000
+[   16.594538] xhci-hcd xhci-hcd.15.auto: xHCI Host Controller
+[   16.594690] xhci-hcd xhci-hcd.15.auto: new USB bus registered, assigned bus number 8
+[   16.594699] xhci-hcd xhci-hcd.15.auto: Host supports USB 3.0 SuperSpeed
+[   16.594766] usb usb7: New USB device found, idVendor=1d6b, idProduct=0002, bcdDevice= 6.01
+[   16.594771] usb usb7: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+[   16.594774] usb usb7: Product: xHCI Host Controller
+[   16.594777] usb usb7: Manufacturer: Linux 6.1.43-rockchip-rk3588-rknpu098 xhci-hcd
+[   16.594780] usb usb7: SerialNumber: xhci-hcd.15.auto
+[   16.595052] hub 7-0:1.0: USB hub found
+[   16.595068] hub 7-0:1.0: 1 port detected
+[   16.595208] usb usb8: We don't know the algorithms for LPM for this host, disabling LPM.
+[   16.595236] usb usb8: New USB device found, idVendor=1d6b, idProduct=0003, bcdDevice= 6.01
+[   16.595240] usb usb8: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+[   16.595244] usb usb8: Product: xHCI Host Controller
+[   16.595246] usb usb8: Manufacturer: Linux 6.1.43-rockchip-rk3588-rknpu098 xhci-hcd
+[   16.595249] usb usb8: SerialNumber: xhci-hcd.15.auto
+[   16.595468] hub 8-0:1.0: USB hub found
+[   16.595479] hub 8-0:1.0: 1 port detected
+[   18.227194] RTL8226B_RTL8221B 2.5Gbps PHY r8169-3-3100:00: attached PHY driver (mii_bus:phy_addr=r8169-3-3100:00, irq=MAC)
+[   18.410667] r8169 0003:31:00.0 enP3p49s0: Link is Down
+[   18.443898] RTL8226B_RTL8221B 2.5Gbps PHY r8169-4-4100:00: attached PHY driver (mii_bus:phy_addr=r8169-4-4100:00, irq=MAC)
+[   18.713999] r8169 0004:41:00.0 enP4p65s0: Link is Down
+[   21.225000] r8169 0003:31:00.0 enP3p49s0: Link is Up - 1Gbps/Full - flow control rx/tx
+[   21.225031] IPv6: ADDRCONF(NETDEV_CHANGE): enP3p49s0: link becomes ready
+[   21.334547] ttyFIQ ttyFIQ0: tty_port_close_start: tty->count = 1 port count = 2
+[   23.757995] platform mtd_vendor_storage: deferred probe pending
+[   32.540120] EXT4-fs (nvme0n1p1): mounted filesystem with ordered data mode. Quota mode: none.
+[   34.353503] ttyFIQ ttyFIQ0: tty_port_close_start: tty->count = 1 port count = 2
+[   35.872575] wireguard: WireGuard 1.0.0 loaded. See www.wireguard.com for information.
+[   35.872585] wireguard: Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+[   38.580414] RKNPU: job: 00000000e890931f, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6014424us, wait time: 6014429us, timeout: 6000000us
+[   38.580447] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 6014464us
+[   38.687076] RKNPU: job timeout, flags: 0x0:
+[   38.687101] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010000, require mask: 0x300, task counter: 0x0, elapsed time: 6121116us
+[   38.793693] RKNPU: soft reset, num: 6
+[   44.980529] RKNPU: job: 000000006083ff11, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6165280us, wait time: 6165282us, timeout: 6000000us
+[   44.980565] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 6165319us
+[   45.087021] RKNPU: job timeout, flags: 0x0:
+[   45.087030] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0x0, elapsed time: 6271783us
+[   45.193864] RKNPU: soft reset, num: 6
+[   51.380609] RKNPU: job: 00000000c7c80944, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6164259us, wait time: 6164262us, timeout: 6000000us
+[   51.380646] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 6164299us
+[   51.487354] RKNPU: job timeout, flags: 0x0:
+[   51.487372] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010000, require mask: 0x300, task counter: 0x0, elapsed time: 6271025us
+[   51.593943] RKNPU: soft reset, num: 6
+[   57.780521] RKNPU: job: 000000006083ff11, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6165181us, wait time: 6165183us, timeout: 6000000us
+[   57.780538] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 6165202us
+[   57.887184] RKNPU: job timeout, flags: 0x0:
+[   57.887188] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0x0, elapsed time: 6271850us
+[   57.993850] RKNPU: soft reset, num: 6
+[   64.180790] RKNPU: job: 00000000cc5eebba, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6163475us, wait time: 6163481us, timeout: 6000000us
+[   64.180856] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 6163549us
+[   64.287448] RKNPU: job timeout, flags: 0x0:
+[   64.287479] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010000, require mask: 0x300, task counter: 0x0, elapsed time: 6270171us
+[   64.394112] RKNPU: soft reset, num: 6
+[   76.767638] RKNPU: job: 00000000e2c84e67, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6028889us, wait time: 6028892us, timeout: 6000000us
+[   76.767675] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 6028930us
+[   76.874298] RKNPU: job timeout, flags: 0x0:
+[   76.874319] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010000, require mask: 0x300, task counter: 0x0, elapsed time: 6135572us
+[   76.980967] RKNPU: soft reset, num: 6
+[  743.282482] RKNPU: job: 000000001847ee8c, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 510335us, wait time: 510337us, timeout: 500000us
+[  743.282553] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 510411us
+[  743.389130] RKNPU: job timeout, flags: 0x0:
+[  743.389158] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010000, require mask: 0x300, task counter: 0x0, elapsed time: 617014us
+[  743.495798] RKNPU: soft reset, num: 6
+[  753.072459] RKNPU: job: 0000000071202a6d, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 529799us, wait time: 529801us, timeout: 500000us
+[  753.072486] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 529829us
+[  753.179127] RKNPU: job timeout, flags: 0x0:
+[  753.179136] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010000, require mask: 0x300, task counter: 0x0, elapsed time: 636477us
+[  753.285795] RKNPU: soft reset, num: 6
+[  763.736052] RKNPU: job: 00000000f69dbf6f, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 520503us, wait time: 520505us, timeout: 500000us
+[  763.736122] RKNPU: failed to wait job, task counter: 0, flags: 0x5, ret = 0, elapsed time: 520579us
+[  763.842716] RKNPU: job timeout, flags: 0x0:
+[  763.842742] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010000, require mask: 0x300, task counter: 0x0, elapsed time: 627197us
+[  763.949386] RKNPU: soft reset, num: 6
+[ 1135.767308] RKNPU: job: 0000000015c7dbff, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 509706us, wait time: 509709us, timeout: 500000us
+[ 1135.767380] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 509783us
+[ 1135.873961] RKNPU: job timeout, flags: 0x0:
+[ 1135.873990] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 616390us
+[ 1135.980636] RKNPU: soft reset, num: 6
+[ 1136.513975] RKNPU: job: 000000009b6f6055, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 509432us, wait time: 509434us, timeout: 500000us
+[ 1136.514009] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 509469us
+[ 1136.620638] RKNPU: job timeout, flags: 0x0:
+[ 1136.620652] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 616111us
+[ 1136.727317] RKNPU: soft reset, num: 6
+[ 1137.260764] RKNPU: job: 0000000004b1b038, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 509166us, wait time: 509169us, timeout: 500000us
+[ 1137.260800] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 509206us
+[ 1137.367315] RKNPU: job timeout, flags: 0x0:
+[ 1137.367330] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 615735us
+[ 1137.473984] RKNPU: soft reset, num: 6
+[ 1138.007462] RKNPU: job: 000000003a82af46, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 508100us, wait time: 508103us, timeout: 500000us
+[ 1138.007525] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 508185us
+[ 1138.113817] RKNPU: job timeout, flags: 0x0:
+[ 1138.113839] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 614497us
+[ 1138.220668] RKNPU: soft reset, num: 6
+[ 1138.754127] RKNPU: job: 000000003a82af46, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 508910us, wait time: 508913us, timeout: 500000us
+[ 1138.754161] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 508948us
+[ 1138.860653] RKNPU: job timeout, flags: 0x0:
+[ 1138.860671] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 615457us
+[ 1138.967339] RKNPU: soft reset, num: 6
+[ 1139.527360] RKNPU: job: 0000000020212d05, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 503679us, wait time: 503685us, timeout: 500000us
+[ 1139.527428] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 503755us
+[ 1139.634014] RKNPU: job timeout, flags: 0x0:
+[ 1139.634041] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 610366us
+[ 1139.740813] RKNPU: soft reset, num: 6
+[ 1140.274055] RKNPU: job: 0000000020212d05, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 503018us, wait time: 503022us, timeout: 500000us
+[ 1140.274117] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 503086us
+[ 1140.380682] RKNPU: job timeout, flags: 0x0:
+[ 1140.380709] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 609677us
+[ 1140.487471] RKNPU: soft reset, num: 6
+[ 1141.020780] RKNPU: job: 000000003e328bff, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 504446us, wait time: 504449us, timeout: 500000us
+[ 1141.020837] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 504508us
+[ 1141.130729] RKNPU: job timeout, flags: 0x0:
+[ 1141.130764] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 614434us
+[ 1141.237390] RKNPU: soft reset, num: 6
+[ 3584.250581] RKNPU: job: 00000000c77edf82, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 526083us, wait time: 526085us, timeout: 500000us
+[ 3584.250618] RKNPU: failed to wait job, task counter: 1, flags: 0x5, ret = 0, elapsed time: 526123us
+[ 3584.357222] RKNPU: job timeout, flags: 0x0:
+[ 3584.357240] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0010015, require mask: 0x300, task counter: 0x1, elapsed time: 632745us
+[ 3584.463886] RKNPU: soft reset, num: 6
+[112852.791553] RKNPU: job: 0000000049368916, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6065088us, wait time: 6065090us, timeout: 6000000us
+[112852.791572] RKNPU: failed to wait job, task counter: 74, flags: 0x5, ret = 0, elapsed time: 6065110us
+[112852.898220] RKNPU: job timeout, flags: 0x0:
+[112852.898232] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0x4a, elapsed time: 6171769us
+[112853.008221] RKNPU: soft reset, num: 6
+[112917.219190] RKNPU: job: 000000005743c100, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6058882us, wait time: 6058885us, timeout: 6000000us
+[112917.219225] RKNPU: failed to wait job, task counter: 4, flags: 0x5, ret = 0, elapsed time: 6058921us
+[112917.325705] RKNPU: job timeout, flags: 0x0:
+[112917.325724] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0x4, elapsed time: 6165419us
+[112917.435690] RKNPU: soft reset, num: 6
+[113083.834426] RKNPU: job: 00000000ef2bd290, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 162465938us, wait time: 162465940us, timeout: 154410000us
+[113083.834460] RKNPU: failed to wait job, task counter: 191, flags: 0x5, ret = 0, elapsed time: 162465977us
+[113083.941090] RKNPU: job timeout, flags: 0x0:
+[113083.941104] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0xbf, elapsed time: 162572619us
+[113084.047747] RKNPU: soft reset, num: 6
+[113711.894991] RKNPU: job: 00000000e5cbb09e, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 620975401us, wait time: 620975402us, timeout: 616830000us
+[113711.895027] RKNPU: failed to wait job, task counter: 1220, flags: 0x5, ret = 0, elapsed time: 620975440us
+[113712.001608] RKNPU: job timeout, flags: 0x0:
+[113712.001623] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0x4c4, elapsed time: 621082034us
+[113712.108295] RKNPU: soft reset, num: 6
+[147518.178871] RKNPU: job: 00000000881eb241, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 6148932us, wait time: 6148934us, timeout: 6000000us
+[147518.178899] RKNPU: failed to wait job, task counter: 42, flags: 0x5, ret = 0, elapsed time: 6148963us
+[147518.285547] RKNPU: job timeout, flags: 0x0:
+[147518.285562] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0x2a, elapsed time: 6255624us
+[147518.392179] RKNPU: soft reset, num: 6
+[147570.876018] RKNPU: job: 00000000bb7ad55f, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 51743113us, wait time: 51743115us, timeout: 50190000us
+[147570.876034] RKNPU: failed to wait job, task counter: 8, flags: 0x5, ret = 0, elapsed time: 51743131us
+[147570.982681] RKNPU: job timeout, flags: 0x0:
+[147570.982684] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0x8, elapsed time: 51849780us
+[147571.089348] RKNPU: soft reset, num: 6
+[147659.620458] RKNPU: job: 00000000ad5e1fe3, mask: 0x1, job iommu domain id: 0, dev iommu domain id: 0, wait_count: 1, continue wait: 0, commit elapse time: 50981539us, wait time: 50981541us, timeout: 50190000us
+[147659.620475] RKNPU: failed to wait job, task counter: 319, flags: 0x5, ret = 0, elapsed time: 50981560us
+[147659.727120] RKNPU: job timeout, flags: 0x0:
+[147659.727123] RKNPU: 	core 0 irq status: 0x0, raw status: 0xc0000000, require mask: 0x300, task counter: 0x13f, elapsed time: 51088206us
+[147659.833783] RKNPU: soft reset, num: 6

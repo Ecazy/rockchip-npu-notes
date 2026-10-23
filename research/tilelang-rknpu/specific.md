@@ -1,8 +1,15 @@
 # TileLang → RKNPU：Coding Agent 开发细则
 
-日期：2026-10-20。状态：待实施开发规范。本文是 coding agent 的任务输入：第1–9节规定必须实现的行为，第10–16节规定文件落点、接口、工作包、测试命令和完成证据。文中的新增 API 和文件尚不存在，不能将其描述成已实现。现存 `co_*` 接口保持原有含义。架构背景见 [overview](overview.md)；开发决策以本文的明确契约为准。
+初版日期：2026-10-20；范围修订：2026-10-23。本文是 coding agent 的目标规范：第1–9节规定行为，第10–16节规定文件落点、接口、工作包、测试命令和完成证据。当前已有部分实现；本文不逐项证明其已完成，实际状态以 `IMPLEMENTATION-STATUS.md`、代码及运行日志核对。现存 `co_*` 接口保持原有含义。架构背景见 [overview](overview.md)；开发决策以本文的明确契约为准。
 
 执行范围：完成 P0–P8 的静态 FP16 MVP；P9 为后续扩展，不是 MVP 的完成条件。没有真实 TileLang 输入、只有手写 RKIR 的演示不算完成；只有 Host mock、没有真机证据时必须标记“主机阶段完成，板端未验收”。实现 agent 可以自行决定内部局部函数和数据结构优化，但不得放宽支持范围、数值语义、错误处理或验收条件。
+
+### 任务边界与执行优先级
+
+- 交付物是 TileLang 面向 RKNPU 的 IR 与后端。复用 TileLang 前端和 TVM PrimFunc/TileOp，不实现替代语言、源码解析器或通用前端。下文的 `frontend/tilelang_adapter.py` 与“提取”均指后端入口适配。
+- 接入以已支持 primitive 的语义和静态数据依赖为单位，优先复用锁定版本的 visitor、分析与规范化 pass。函数参数个数、GEMM/copy 个数、变量名及某个 FFN 的固定写法不是能力契约；固定外形原型须如实列缺口，逐步用语义接入替代。
+- 优先推进真实 TileLang → RKIR → RKPlan → custom-ops/runtime 的端到端闭环，再扩展范围。正确性、数值与资源安全要求保持；测试工具只围绕这些要求提供必要证据，不以无限补完 mock 框架替代后端交付。
+- 已授权范围内的 helper、文件拆分、CMake 目标、诊断、测试组织和脚本依赖处理由执行 agent 自行决定，失败时保留最小复现并继续修复。只有需求或公共契约确需变更、破坏性操作或缺少必要外部信息时才请求用户决策，不为已确定路线重复请求确认。
 
 ## 1. 第一版范围与 TargetProfile
 
@@ -392,7 +399,7 @@ No enabled lowering satisfies the requested contract.
 
 硬件内部累加未建模时，分片参考只是声明写回路径的近似参考，不承诺逐位一致。阈值按模板和测试域登记，不能用一个全局 atol 覆盖全部形状。数值合法性和性能优势分别验收。
 
-每轮保存源码/依赖哈希、profile/plan、输入种子、编译选项、实际核、频率、task/Submit 数、上传下载字节、误差及原始日志。首版以 MatMul → SiLU 和已有 SwiGLU FFN 闭环作为准入，状态与 hybrid 在后续阶段单独准入。本次仅交付设计文档，未执行新后端的编译或真机验收。
+每轮验收保存实际参与构建的源码/依赖哈希、profile/plan、输入种子、编译选项、task/Submit 数、传输、误差与原始日志；实际核和频率在板端记录，无设备时标明未测。首版以 MatMul → SiLU 和 SwiGLU FFN 闭环作为准入，状态与 hybrid 在后续阶段单独准入。文档要求不构成已完成验收的证明。
 
 ## 12. 必须实现的接口与格式
 
@@ -481,9 +488,11 @@ uint32_t rk_abi_version(void);
 
 错误码统一定义负值：`RK_E_INVALID=-1`、`RK_E_UNSUPPORTED=-2`、`RK_E_SHAPE=-3`、`RK_E_NUMERIC_CONTRACT=-4`、`RK_E_BUDGET=-5`、`RK_E_TARGET_MISMATCH=-6`、`RK_E_ALIAS=-7`、`RK_E_NOMEM=-8`、`RK_E_DEVICE=-9`、`RK_E_BUSY=-10`、`RK_E_POISONED=-11`、`RK_E_SCHEMA=-12`、`RK_E_DOMAIN=-13`。底层 co_/rocket 错误单独保留为 `diag.native_status`，不得直接混用同值错误码。Diagnostic 同时含阶段、op/action ID、源位置、违反条件与 profile。
 
-### 12.4 TileLang 适配的最小语法
+### 12.4 TileLang/TVM IR 的后端接入契约
 
 P1 锁定 upstream commit 后，从该版本的实际 PrimFunc/TileOp 节点提取，禁止解析 `str(prim_func)`、按变量名猜算子或仅运行独立 Python 示例而绕过 TileLang。
+
+沿用上游的 AST、类型与遍历机制，选择保留 tile 语义的接入位置，并记录所复用的分析/pass 及必须新增的目标专用逻辑。无需重新实现 TileLang 语法。上游没有提供的访问/依赖证明可做受限实现，证明不了时精确拒绝，不以支持任意标量程序为目标。
 
 必须识别以下语义模式，具体 AST 类名以锁定版本为准：
 
@@ -493,15 +502,19 @@ P1 锁定 upstream commit 后，从该版本的实际 PrimFunc/TileOp 节点提�
 4. 无跨元素依赖的同形状加乘；注册激活的明确表达式或后端 intrinsic。
 5. 多个 primitive 组合成的静态数据流，保留输入/输出/残差；出现未注册的指令立即报错。
 
-MVP GEMM 的语义 K 分块为256（最后一片可不足）；其他 K 分块或要求特定归约顺序的循环先拒绝，不能在提取阶段随意合并。M/N 的前端 tiling 仅在证明同一输出覆盖一次且无通信时允许重排。前端 buffer scope 可以作临时值的逻辑分类，不能当成 GPU shared memory 已被映射。
+参数角色由 buffer 的读写和数据流确定，不固定输入参数顺序或总数。每个受支持 GEMM、copy、cast、逐元素节点独立提取并构造 RKIR 的值与依赖；同一 buffer 跨阶段使用时保留版本和最后消费者。组合不要求整个函数命中单个 SwiGLU/FFN 模式。整图匹配只用于有独立数值依据的可选优化，不能绕过基础节点接入。未支持语义不得遗漏后生成部分计划。
+
+MVP 后端采用256的 K 分片（最后一片可不足），这是当前配方与数值政策，不是 TileLang 的语法要求。接入保留源循环的归约顺序、累加类型和收窄点，再由合法化判断能否采用该分片；源 K 分块不兼容且没有明确许可时拒绝，不能在提取阶段随意合并。M/N 的前端 tiling 仅在证明同一输出覆盖一次且无通信时允许重排。前端 buffer scope 可以作临时值的逻辑分类，不能当成 GPU shared memory 已被映射。
 
 若 TileLang 中 SiLU 写成 `x/(1+exp(-x))`，只能把整个已证明同形状的模式识别成 SiLU；单独出现的 exp 仍不支持。不能因字符串出现“silu”就匹配。通用 softmax 示例应明确失败。
 
+激活表达式识别必须检查实际 dtype、cast 和写回位置。LUT gate 的 FP16 写回、SiLU/Mul 的写回、投影 MatMul 与 residual Add 之间的写回均属于数值契约；`allow_approx_lut` 只许可声明的 LUT 近似，不自动许可其他收窄变化。正例须与声明路径相容，缺失关键收窄的相邻程序须拒绝或经另有定义的显式许可处理。
+
 每个允许模式提供一个真实 TileLang fixture，每个被拒绝模式提供相邻负例。未使用 RKNPU 时不改上游 GPU pipeline；对接优先用独立 adapter，确有上游修改则保存最小 patch、commit 和应用说明。
 
-## 13. 按顺序执行的工作包
+## 13. 工作包与闭环交付顺序
 
-依赖关系：`P0 → P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8`。每个工作包完成后更新状态文件，列改动文件、实际命令、结果和剩余问题。不要只交接口空壳就把阶段标完成。
+P0–P8 是交付清单，不是每包完全关闭后才允许进入下一包的串行关卡。实际依赖为：可用且可追溯的 TileLang/TVM 环境与 RKIR 契约支撑接入，RKIR/能力契约支撑 planner，RKPlan/C ABI 支撑 runtime，真实输入闭环支撑最终验收。先完成 MatMul 的最小纵向路径，再将同一套节点 lowering 扩展到激活、分支和残差；所需验证随实现补齐。P0 的额外源码构建复验或测试工具增强不阻塞已有可追溯环境上的独立开发，但其未完成状态必须保留，不能据此关闭相应验收。每包更新改动、实际命令、结果与剩余问题，不以接口空壳或 mock 全绿代替闭环。
 
 ### P0：基线与依赖锁
 
@@ -511,14 +524,16 @@ MVP GEMM 的语义 K 分块为256（最后一片可不足）；其他 K 分块�
 - 产物：基线记录、provenance、独立虚拟环境与可安装的空包。
 - 验收：`import rknpu_backend` 无 GPU/设备依赖；已有测试结果可审计。
 
-### P1：先打通真实前端提取
+### P1：TileLang/TVM 到 RKIR 的接入
 
 - 在锁定 TileLang 上建立最小 MatMul PrimFunc，保存未经 GPU lowering 的 IR dump。
-- 实现第12.4节 GEMM/copy/fill/循环匹配和源位置映射；未支持节点默认失败。
+- 复用上游 IR 与分析，按第12.4节提取 GEMM/copy/fill/循环和数值语义，保留源位置；未支持节点默认失败。不为参数 arity、固定 copy 次数或整个示例形状新增特判。
 - 写三个正例：单 tile、K=257、带尾块 M=13/N=33；负例含非零初值、动态 K、atomic/barrier 和未注册 exp。
 - 定义并测试数值模式入口；不允许 FP32 accumulator 在 strict 模式被自动改为 FP16。
-- 产物：adapter、fixtures、frontend 测试及受支持子集清单。
+- 产物：接入位置/上游复用说明、薄适配器、fixtures、接入测试及受支持语义清单；该工作包不交付独立语言前端。
 - 验收：真实 TileLang 对象生成 RKIR；修改一个索引或同步操作能触发预期拒绝。此阶段不要求访问 NPU。
+
+实现补充（2026-10-23）：在原有单 tile/单 K-loop 正例之外，已接受“多个独立 `T.Kernel` 启动阶段 + 全局中间参数”的真实多 block projection/FFN/branch 源形式。每个阶段只写一个全局参数，后续阶段才可读取；同一并行 grid 内读取本阶段写出的全局参数会被拒绝，不做隐式同步假设。K-loop 必须每 256-wide K tile 显式写回 FP16 accumulator；FP32 跨 tile 累加后只收窄一次的源形式被拒绝。支持域和负例见 [SUPPORT-DOMAIN.md](SUPPORT-DOMAIN.md)、`tests/test_staged_tilelang.py`。
 
 ### P2：RKIR/RKPlan/schema 与能力注册表
 
@@ -556,17 +571,19 @@ MVP GEMM 的语义 K 分块为256（最后一片可不足）；其他 K 分块�
 
 - 实现公共 ABI、常量打包、workspace创建与反向失败清理、emitter switch 和报告。
 - 使用 `co_execute_profiled` 与预分配 workspace。实际 program 的读写 view、count、flags 与计划逐项核对。
-- Host mock 只 wrap BO/submit seam，生产 emitter 照常运行；根据调用记录检查分组、参数、地址域、缓存更新和生存期。
+- Host mock 以 BO/submit seam 为主要替换边界，生产 emitter 照常运行；必要的测试元数据不得污染生产 flags。根据调用记录检查分组、参数、地址域、缓存更新和生存期。mock 是有限的编排验证工具，不承诺硬件模拟精度或通用 program 支持；仅模拟本轮闭环所需模板，其余明确拒绝。
 - 每个分配点注入失败，断言无泄漏；每组提交注入失败，断言不 publish。重复 run 输入变化应刷新，常量不应重复上传。
 - 审查 submit 层每一种失败是否已保证设备停止。现有 `execute_impl` 的错误清理不是自动安全证明：必须追踪驱动返回及 command BO 生命周期。若不能保证，给已有 executor 增加最小、兼容的保留资源/错误分类接口，或把设备错误标记为需进程级恢复；禁止仅设置上层 poisoned 后仍提前释放命令 BO。
 - 验收：mock 的成功/失败/重试契约成立；不确定设备错误不允许重试；原 co_graph/linear 回归保持通过。
+
+mock 的签名表、标签追踪、容量和脚手架只需足以使所用测试可信。影响当前结论的缺陷须修复；不将通用复制支持、完整模拟器或独立测试框架完备性列为 P7 开工条件。bounded exp/rsqrt 等可选扩展未接入时可在能力匹配和 mock 中明确拒绝，无需为 MVP 另建模拟实现。已有工具与回归可继续复用，未完成增强单列，不删除失败证据或放宽生产契约换取绿灯。
 
 ### P7：CLI、Python run 与闭环示例
 
 - 完成以下命令和 Python binding，添加 help/非法参数测试。
 - `compile-tilelang` 使用显式 `--file/--symbol` 导入用户提供的模块；这是执行 Python 源文件的开发入口，`validate/explain` 不得导入模块。
 - 示例全部经 TileLang→RKIR→RKPlan，不以内置 plan JSON 代替前端。同时提供 compile-rkir 作为调试入口。
-- SwiGLU 必须表达两个 Linear 分支、SiLU、Mul、投影和 residual；以已有 co_graph 对照，多个 output 的单独 fixture 检查生命周期。
+- SwiGLU 示例表达两个 Linear 分支、SiLU、Mul、投影和 residual，经通用的受支持节点与数据流接入，不以单个整图特判替代该能力；可选融合另作验证。以已有 co_graph 对照，多个 output 的单独 fixture 检查生命周期。
 - 验收：无设备 compile/validate/explain 可用；FFI mock 下绑定和发布正确；未编译 shared library 时 run 给出明确安装错误。
 
 ### P8：板端准入与最终交付
@@ -612,9 +629,11 @@ MVP GEMM 的语义 K 分块为256（最后一片可不足）；其他 K 分块�
 
 Host mock 不证明硬件数值、实际 IRQ、同核时序或真实 timeout 行为。硬件测试里不主动提交未经验证的危险配置来制造挂起；失败注入优先在 mock seam 完成。
 
+按具名语义/故障场景报告覆盖，断言数量只作执行统计，不是完成度。测试基础设施的新增要求应对应具体后端风险；完成表内必要检查后继续实际闭环，不持续新增工具关卡。板端缺失、可选扩展和工具限制分别记录，不能相互冒充验收。
+
 ## 15. 构建、命令与结果目录
 
-以下是实现必须提供并通过的命令接口；新增命令在当前文档交付时尚不可运行。
+以下是实现必须提供并通过的命令接口；是否已可运行以对应版本的代码与实际日志为准。
 
 ### 15.1 Host 构建
 
@@ -632,7 +651,9 @@ research/tilelang-rknpu/.venv/bin/python -m pytest research/tilelang-rknpu/tests
 
 锁定 TileLang 安装方式写入 provenance 和模块 README，包含源码/TVM commit、实际安装命令，不提供一个会自动取最新版的隐藏安装脚本。pytest 中不依赖 TileLang 的测试始终执行；缺依赖时 frontend 测试可以标明 skip，但 P1/P7 不能据此标完成。
 
-ASan/UBSan 使用独立 build 目录，测试包含 C descriptor 与失败清理；运行现有回归并记录基线差异，不把 sanitizer 参数永久加到发布库。
+ASan/UBSan 使用独立 build 目录，测试包含 C descriptor 与失败清理；运行现有回归并记录基线差异，不把 sanitizer 参数永久加到发布库。涉及 FFI 内存风险时可用同一批插桩对象运行 Python 子进程；preload 与 worker 环境仅作用于该子进程。Python 兼容性排查有界，失败须记录未覆盖范围并继续独立开发，不能无限阻塞后端接入；真实内存错误仍须修复。poisoned 资源按契约保留的场景独立进程验证，不以此关闭其他 C 用例的泄漏检查。
+
+验证脚本保存完整命令、实际参与构建文件的哈希和真实退出状态。环境白名单在覆盖/清理前记录继承值，构建与普通测试不继承 sanitizer worker 的设置。前置构建失败时，下游标记依赖失败并停止执行；独立分支与汇总继续，不把零测试或未运行写成通过。已有可靠手动证据可明确记为手动验收，自动化改进不应取代尚未交付的后端能力。
 
 ### 15.2 新 CLI 合同
 
@@ -652,9 +673,13 @@ python -m rknpu_backend.cli run /tmp/mm_silu.rkplan.json \
 
 退出码：成功0，用户输入/编译拒绝2，资源或设备执行失败3。诊断写stderr；`explain --format json` stdout只能是单个JSON对象。CLI失败不留下看似有效的输出plan/结果文件。
 
+实现补充（2026-10-23）：`run` 增加可选 `--fd N`。不提供时 CLI 自行 `rocket_open` 并在返回前关闭；提供时使用调用者拥有的 fd 且不关闭。板端 bundle 不携带 pinned TileLang，因此板端路径使用 `compile-rkir`，`compile-tilelang` 只在 Host 执行。RK3588 三个单核 mask 已逐例验证 compile/validate/explain/两次成功 run/缺少常量 binding 的 rc2 不发布路径（`board/core-*/cli/cli-report.json`）。
+
 ### 15.3 板端入口与证据
 
 `scripts/run-board.sh` 以参数指定 `--host`、`--remote-dir`、`--results-dir`、`--core-mask`（1/2/4）、`--mode`（chain/separate），参考当前 run-graph-board.sh 的部署方式；不得硬编码个人SSH地址。每个核单独进程运行，环境设置在启动时完成，不在多线程中 setenv。
+
+实现补充（2026-10-23）：实际准入入口为 `scripts/run-board-admission.sh` + `scripts/run-board-admission-native.sh`。连接信息只读仓库 `.env`；上传隔离源码/campaign bundle，远端重建 production `rknpu_plan` 后三个单核 mask 串行执行，并归档 source-bundle/library 哈希、per-round raw outputs、双参考、CLI report 和 fail-closed summary。
 
 每轮结果目录至少包含：
 

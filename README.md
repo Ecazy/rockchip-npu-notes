@@ -10,6 +10,7 @@
 | 了解现在能做什么、哪些尚未验证 | [能力总览](docs/CAPABILITIES.md) |
 | 理解目录、依赖、扩展与证据约定 | [项目结构](docs/PROJECT-STRUCTURE.md) |
 | 开发组合算子或运行文件 CLI | [自写算子框架](research/custom-ops/README.md) |
+| 将 TileLang 静态计算编译到 RK3588 | [TileLang RKNPU 后端](research/tilelang-rknpu/README.md) |
 | 显式分配核、分离排队与服务时间 | [调度 Profiling](research/scheduling/MULTICORE-SCHEDULING-PROFILING.md) |
 | 理解 K 分片与设备累计 | [FP16 K 分片](research/kernels/FP16-K-TILING.md) |
 | 核对 task 链与寄存器组交接 | [Two-Task Chaining](research/scheduling/TWO-TASK-CHAINING.md) |

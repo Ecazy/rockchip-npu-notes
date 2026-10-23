@@ -1,0 +1,92 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        13,
+        257
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        257,
+        33
+      ]
+    },
+    {
+      "name": "C",
+      "role": "output",
+      "shape": [
+        13,
+        33
+      ]
+    }
+  ],
+  "case": "ragged_chain",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "ragged",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "486cbf9ce2c96370263dae437961d1789becec6f5eebe6dbe8c5dd9c3d96a177",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "rounds": [
+    {
+      "C": {
+        "allclose": true,
+        "element_count": 429,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 6.125,
+      "output_sync_us": 6.417022705078125,
+      "pack_us": 27.4169921875,
+      "round": 0,
+      "submit_count": 1,
+      "submit_wait_us": 130.95599365234375,
+      "task_count": 2,
+      "upload_bytes": 9216,
+      "upload_calls": 2
+    },
+    {
+      "C": {
+        "allclose": true,
+        "element_count": 429,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 4.959014892578125,
+      "output_sync_us": 15.1669921875,
+      "pack_us": 26.5419921875,
+      "round": 1,
+      "submit_count": 1,
+      "submit_wait_us": 74.95700073242188,
+      "task_count": 2,
+      "upload_bytes": 9216,
+      "upload_calls": 2
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 1,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    }
+  ],
+  "task_count": 2,
+  "wall_seconds": 0.009122371673583984
+}

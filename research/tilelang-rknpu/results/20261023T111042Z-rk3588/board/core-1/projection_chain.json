@@ -1,0 +1,147 @@
+{
+  "bindings": [
+    {
+      "name": "X",
+      "role": "input",
+      "shape": [
+        13,
+        64
+      ]
+    },
+    {
+      "name": "W1",
+      "role": "constant",
+      "shape": [
+        64,
+        32
+      ]
+    },
+    {
+      "name": "W2",
+      "role": "constant",
+      "shape": [
+        32,
+        64
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        13,
+        64
+      ]
+    },
+    {
+      "name": "__identity_32",
+      "role": "constant",
+      "shape": [
+        32,
+        32
+      ]
+    },
+    {
+      "name": "__identity_64",
+      "role": "constant",
+      "shape": [
+        64,
+        64
+      ]
+    }
+  ],
+  "case": "projection_chain",
+  "core_mask_env": "1",
+  "guard": null,
+  "kind": "projection",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.linear.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "79270e27410cc08206fb4a2969b756ca8b37664f3356c8ad7e282d1fb9b95d0d",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "raw_outputs": "projection_chain.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 832,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 832,
+          "max_abs": 0.00035539478118218337,
+          "max_rel": 13.09929088792064,
+          "mismatch_elements": 832
+        },
+        "max_abs": 0.00048828125,
+        "max_rel": 0.5,
+        "mismatch_elements": 99
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 45.208984375,
+      "output_sync_us": 16.0419921875,
+      "pack_us": 12.541015625,
+      "round": 0,
+      "submit_count": 4,
+      "submit_wait_us": 358.7469787597656,
+      "task_count": 5,
+      "upload_bytes": 2048,
+      "upload_calls": 1
+    },
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 832,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 832,
+          "max_abs": 0.00034130190080861045,
+          "max_rel": 5.020704210675087,
+          "mismatch_elements": 832
+        },
+        "max_abs": 0.00048828125,
+        "max_rel": 0.3333333333333333,
+        "mismatch_elements": 151
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 34.7080078125,
+      "output_sync_us": 13.7080078125,
+      "pack_us": 10.209014892578125,
+      "round": 1,
+      "submit_count": 4,
+      "submit_wait_us": 124.54098510742188,
+      "task_count": 5,
+      "upload_bytes": 2048,
+      "upload_calls": 1
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 4,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 5,
+  "wall_seconds": 0.014487981796264648
+}

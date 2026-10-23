@@ -1,0 +1,107 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        13,
+        257
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        257,
+        33
+      ]
+    },
+    {
+      "name": "C",
+      "role": "output",
+      "shape": [
+        13,
+        33
+      ]
+    }
+  ],
+  "case": "ragged_chain",
+  "core_mask_env": "1",
+  "guard": null,
+  "kind": "ragged",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "d4463053449dbc04ff6af942ae86f24d060dc56d58ff9b4c4a6e5170664f6314",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "raw_outputs": "ragged_chain.npz",
+  "rounds": [
+    {
+      "C": {
+        "allclose": true,
+        "element_count": 429,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 429,
+          "max_abs": 0.0004865511364187114,
+          "max_rel": 0.008958475214348028,
+          "mismatch_elements": 429
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 7.875,
+      "output_sync_us": 6.4169921875,
+      "pack_us": 27.998992919921875,
+      "round": 0,
+      "submit_count": 1,
+      "submit_wait_us": 148.74798583984375,
+      "task_count": 2,
+      "upload_bytes": 9216,
+      "upload_calls": 2
+    },
+    {
+      "C": {
+        "allclose": true,
+        "element_count": 429,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 429,
+          "max_abs": 0.0004164222191320732,
+          "max_rel": 0.002292938500391153,
+          "mismatch_elements": 429
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 7.0,
+      "output_sync_us": 6.125,
+      "pack_us": 28.0,
+      "round": 1,
+      "submit_count": 1,
+      "submit_wait_us": 84.29000854492188,
+      "task_count": 2,
+      "upload_bytes": 9216,
+      "upload_calls": 2
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 1,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    }
+  ],
+  "task_count": 2,
+  "wall_seconds": 0.011667728424072266
+}

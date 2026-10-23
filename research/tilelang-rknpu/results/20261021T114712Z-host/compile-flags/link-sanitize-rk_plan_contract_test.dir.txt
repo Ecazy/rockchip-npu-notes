@@ -1,0 +1,1 @@
+/usr/bin/cc -fsanitize=address,undefined -fno-omit-frame-pointer -fsanitize=address,undefined CMakeFiles/rk_plan_contract_test.dir/tests/c/rk_plan_contract_test.c.o -o rk_plan_contract_test  librk_plan_core.a libcustom_ops.a provider/librknpu-submit.a -lm 

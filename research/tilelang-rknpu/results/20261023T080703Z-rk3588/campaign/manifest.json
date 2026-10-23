@@ -1,0 +1,527 @@
+{
+  "cases": [
+    {
+      "constant_names": [
+        "B"
+      ],
+      "data": "cases/matmul_chain.npz",
+      "download_count": 1,
+      "guard": null,
+      "input_names": [
+        "A"
+      ],
+      "kind": "matmul",
+      "name": "matmul_chain",
+      "output_names": [
+        "Y"
+      ],
+      "plan": "plans/matmul_chain.rkplan.json",
+      "plan_hash": "ffe7f40963cfa05c275666ff39bff561415a197e01e4bb246283ca1e5d650b31",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 48,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 32
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 2,
+      "source_tail_contract": null,
+      "submit_count": 1,
+      "submit_mode": "chain",
+      "task_count": 1,
+      "templates": [
+        "co.mm.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 2
+    },
+    {
+      "constant_names": [
+        "W1",
+        "W2"
+      ],
+      "data": "cases/projection_chain.npz",
+      "download_count": 1,
+      "guard": null,
+      "input_names": [
+        "X"
+      ],
+      "kind": "projection",
+      "name": "projection_chain",
+      "output_names": [
+        "Y"
+      ],
+      "plan": "plans/projection_chain.rkplan.json",
+      "plan_hash": "90e5089dc6d6c302e07daab598b67ca7250403db1d0a63bfd6989b78fab895ec",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 64,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 13
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 2,
+      "source_tail_contract": null,
+      "submit_count": 4,
+      "submit_mode": "chain",
+      "task_count": 5,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 5
+    },
+    {
+      "constant_names": [
+        "W1",
+        "W2"
+      ],
+      "data": "cases/projection_separate.npz",
+      "download_count": 1,
+      "guard": null,
+      "input_names": [
+        "X"
+      ],
+      "kind": "projection",
+      "name": "projection_separate",
+      "output_names": [
+        "Y"
+      ],
+      "plan": "plans/projection_separate.rkplan.json",
+      "plan_hash": "3415af66e2c0dfd70b54f1c7f50de47ffc5ebf133e5aa773485ec76f93da6520",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 64,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 13
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 2,
+      "source_tail_contract": null,
+      "submit_count": 5,
+      "submit_mode": "separate",
+      "task_count": 5,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 5
+    },
+    {
+      "constant_names": [
+        "B"
+      ],
+      "data": "cases/matmul_guard_nonfinite_output.npz",
+      "download_count": 1,
+      "guard": "nonfinite_output",
+      "input_names": [
+        "A"
+      ],
+      "kind": "guard",
+      "name": "matmul_guard_nonfinite_output",
+      "output_names": [
+        "Y"
+      ],
+      "plan": "plans/matmul_guard_nonfinite_output.rkplan.json",
+      "plan_hash": "ffe7f40963cfa05c275666ff39bff561415a197e01e4bb246283ca1e5d650b31",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 48,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 32
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 1,
+      "source_tail_contract": null,
+      "submit_count": 1,
+      "submit_mode": "chain",
+      "task_count": 1,
+      "templates": [
+        "co.mm.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 2
+    },
+    {
+      "constant_names": [
+        "W1",
+        "W2"
+      ],
+      "data": "cases/projection_guard_nan_input.npz",
+      "download_count": 1,
+      "guard": "nan_input",
+      "input_names": [
+        "X"
+      ],
+      "kind": "guard",
+      "name": "projection_guard_nan_input",
+      "output_names": [
+        "Y"
+      ],
+      "plan": "plans/projection_guard_nan_input.rkplan.json",
+      "plan_hash": "90e5089dc6d6c302e07daab598b67ca7250403db1d0a63bfd6989b78fab895ec",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 64,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 13
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 1,
+      "source_tail_contract": null,
+      "submit_count": 4,
+      "submit_mode": "chain",
+      "task_count": 5,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 5
+    },
+    {
+      "constant_names": [
+        "W1",
+        "W2"
+      ],
+      "data": "cases/projection_guard_nan_constant.npz",
+      "download_count": 1,
+      "guard": "nan_constant",
+      "input_names": [],
+      "kind": "guard",
+      "name": "projection_guard_nan_constant",
+      "output_names": [
+        "Y"
+      ],
+      "plan": "plans/projection_guard_nan_constant.rkplan.json",
+      "plan_hash": "90e5089dc6d6c302e07daab598b67ca7250403db1d0a63bfd6989b78fab895ec",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 64,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 13
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 1,
+      "source_tail_contract": null,
+      "submit_count": 4,
+      "submit_mode": "chain",
+      "task_count": 5,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 5
+    },
+    {
+      "constant_names": [
+        "Wd",
+        "Wg",
+        "Wu"
+      ],
+      "data": "cases/ffn_chain.npz",
+      "download_count": 1,
+      "guard": null,
+      "input_names": [
+        "X"
+      ],
+      "kind": "ffn",
+      "name": "ffn_chain",
+      "output_names": [
+        "Y"
+      ],
+      "plan": "plans/ffn_chain.rkplan.json",
+      "plan_hash": "261b9d353ddf9daa8a0e010c56894c93d6cbda6c9c7a8a21c34d5e3b5f116948",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 64,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 8
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 2,
+      "source_tail_contract": null,
+      "submit_count": 6,
+      "submit_mode": "chain",
+      "task_count": 7,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 6
+    },
+    {
+      "constant_names": [
+        "Wd",
+        "Wg",
+        "Wu"
+      ],
+      "data": "cases/ffn_separate.npz",
+      "download_count": 1,
+      "guard": null,
+      "input_names": [
+        "X"
+      ],
+      "kind": "ffn",
+      "name": "ffn_separate",
+      "output_names": [
+        "Y"
+      ],
+      "plan": "plans/ffn_separate.rkplan.json",
+      "plan_hash": "f48f8a689bc6f08302ec754eb7f1fa511706e9de2c912690f650d647049ae56a",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 64,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 8
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 2,
+      "source_tail_contract": null,
+      "submit_count": 7,
+      "submit_mode": "separate",
+      "task_count": 7,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 6
+    },
+    {
+      "constant_names": [
+        "B"
+      ],
+      "data": "cases/ragged_chain.npz",
+      "download_count": 1,
+      "guard": null,
+      "input_names": [
+        "A"
+      ],
+      "kind": "ragged",
+      "name": "ragged_chain",
+      "output_names": [
+        "C"
+      ],
+      "plan": "plans/ragged_chain.rkplan.json",
+      "plan_hash": "486cbf9ce2c96370263dae437961d1789becec6f5eebe6dbe8c5dd9c3d96a177",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 33,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 13
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 2,
+      "source_tail_contract": {
+        "form": "guarded_rect_tail_v1",
+        "grid": {
+          "x": 1,
+          "y": 1
+        },
+        "guarded_reads": {
+          "A": [
+            13,
+            257
+          ],
+          "B": [
+            257,
+            33
+          ]
+        },
+        "guarded_write": [
+          13,
+          33
+        ],
+        "k_trips": 2,
+        "tails": {
+          "K": 1,
+          "M": 13,
+          "N": 33
+        },
+        "tiles": {
+          "K": 256,
+          "M": 16,
+          "N": 64
+        },
+        "zero_fill": [
+          "A_tile_each_k_iteration",
+          "B_tile_each_k_iteration"
+        ]
+      },
+      "submit_count": 1,
+      "submit_mode": "chain",
+      "task_count": 2,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 4
+    },
+    {
+      "constant_names": [
+        "B"
+      ],
+      "data": "cases/ragged_separate.npz",
+      "download_count": 1,
+      "guard": null,
+      "input_names": [
+        "A"
+      ],
+      "kind": "ragged",
+      "name": "ragged_separate",
+      "output_names": [
+        "C"
+      ],
+      "plan": "plans/ragged_separate.rkplan.json",
+      "plan_hash": "285112fe32f3b6b5ed101ca10bb965a634d63e1a6ae5e4a42cb046dd323fd6fd",
+      "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+      "publish": [
+        {
+          "cols": 33,
+          "dst_col": 0,
+          "dst_row": 0,
+          "rows": 13
+        }
+      ],
+      "publish_count": 1,
+      "rounds": 2,
+      "source_tail_contract": {
+        "form": "guarded_rect_tail_v1",
+        "grid": {
+          "x": 1,
+          "y": 1
+        },
+        "guarded_reads": {
+          "A": [
+            13,
+            257
+          ],
+          "B": [
+            257,
+            33
+          ]
+        },
+        "guarded_write": [
+          13,
+          33
+        ],
+        "k_trips": 2,
+        "tails": {
+          "K": 1,
+          "M": 13,
+          "N": 33
+        },
+        "tiles": {
+          "K": 256,
+          "M": 16,
+          "N": 64
+        },
+        "zero_fill": [
+          "A_tile_each_k_iteration",
+          "B_tile_each_k_iteration"
+        ]
+      },
+      "submit_count": 2,
+      "submit_mode": "separate",
+      "task_count": 2,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1"
+      ],
+      "tolerance": {
+        "atol": 0.008,
+        "rtol": 0.008
+      },
+      "upload_count": 4
+    }
+  ],
+  "chip": "rk3588",
+  "expected_driver": "RKNPU driver: v0.9.8",
+  "expected_runtime_abi_version": 1,
+  "kind": "rk3588-board-admission",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "profile_id": "rk3588_vendor_co_v1",
+  "schema": 1
+}

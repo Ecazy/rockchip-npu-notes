@@ -1,0 +1,97 @@
+{
+  "bindings": [
+    {
+      "name": "A",
+      "role": "input",
+      "shape": [
+        13,
+        257
+      ]
+    },
+    {
+      "name": "B",
+      "role": "constant",
+      "shape": [
+        257,
+        33
+      ]
+    },
+    {
+      "name": "C",
+      "role": "output",
+      "shape": [
+        13,
+        33
+      ]
+    }
+  ],
+  "case": "ragged_separate",
+  "core_mask_env": "2",
+  "guard": null,
+  "kind": "ragged",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "285112fe32f3b6b5ed101ca10bb965a634d63e1a6ae5e4a42cb046dd323fd6fd",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "rounds": [
+    {
+      "C": {
+        "allclose": true,
+        "element_count": 429,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 9.334014892578125,
+      "output_sync_us": 6.125,
+      "pack_us": 26.83197021484375,
+      "round": 0,
+      "submit_count": 2,
+      "submit_wait_us": 193.95599365234375,
+      "task_count": 2,
+      "upload_bytes": 9216,
+      "upload_calls": 2
+    },
+    {
+      "C": {
+        "allclose": true,
+        "element_count": 429,
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "emit_us": 9.041015625,
+      "output_sync_us": 5.541015625,
+      "pack_us": 31.2080078125,
+      "round": 1,
+      "submit_count": 2,
+      "submit_wait_us": 149.33099365234375,
+      "task_count": 2,
+      "upload_bytes": 9216,
+      "upload_calls": 2
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 2,
+  "submits": [
+    {
+      "mode": "separate",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "separate",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 2,
+  "wall_seconds": 0.010584354400634766
+}

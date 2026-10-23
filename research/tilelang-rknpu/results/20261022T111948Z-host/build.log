@@ -1,0 +1,105 @@
+[  1%] Building C object CMakeFiles/interference_load.dir/tools/c/interference_load.c.o
+[  2%] Building C object CMakeFiles/two_task_trace.dir/tools/c/two_task_trace.c.o
+[  4%] Building C object provider/CMakeFiles/rknpu-submit.dir/src/rknpu_provider.c.o
+[  5%] Linking C executable interference_load
+[  6%] Linking C shared library libtwo_task_trace.so
+[  6%] Built target interference_load
+[  6%] Built target two_task_trace
+[  8%] Linking C static library librknpu-submit.a
+[  8%] Built target rknpu-submit
+[ 12%] Building C object CMakeFiles/custom_ops.dir/src/custom_ops.c.o
+[ 12%] Building C object CMakeFiles/custom_ops.dir/src/linear_hardsigmoid.c.o
+[ 12%] Building C object CMakeFiles/custom_ops.dir/src/linear_plan.c.o
+[ 13%] Building C object CMakeFiles/custom_ops.dir/src/co_graph.c.o
+[ 14%] Building C object CMakeFiles/custom_ops.dir/src/co_row_ops.c.o
+[ 16%] Building C object CMakeFiles/custom_ops.dir/src/co_rope.c.o
+[ 18%] Building C object CMakeFiles/custom_ops.dir/src/co_decoder.c.o
+[ 18%] Building C object CMakeFiles/custom_ops.dir/src/co_attention.c.o
+[ 20%] Building C object CMakeFiles/custom_ops.dir/src/co_gdn.c.o
+[ 21%] Building C object CMakeFiles/custom_ops.dir/src/co_gdn_cpu.c.o
+[ 22%] Building C object CMakeFiles/custom_ops.dir/home/maoyu/Documents/code/rockchip-npu-notes/research/upstream-components/rocket-userspace/src/npu_regcmd.c.o
+[ 24%] Building C object CMakeFiles/custom_ops.dir/home/maoyu/Documents/code/rockchip-npu-notes/research/upstream-components/rocket-userspace/src/rocket_hw_profile.c.o
+[ 25%] Building C object CMakeFiles/custom_ops.dir/home/maoyu/Documents/code/rockchip-npu-notes/research/upstream-components/rocket-userspace/src/rocket_sysfs.c.o
+[ 26%] Building C object CMakeFiles/custom_ops.dir/home/maoyu/Documents/code/rockchip-npu-notes/research/upstream-components/rocket-userspace/src/rocket_log.c.o
+[ 28%] Building C object CMakeFiles/custom_ops.dir/home/maoyu/Documents/code/rockchip-npu-notes/research/upstream-components/rocket-userspace/src/rocket_chain.c.o
+[ 29%] Building C object CMakeFiles/custom_ops.dir/home/maoyu/Documents/code/rockchip-npu-notes/research/upstream-components/rocket-userspace/src/rocket_op.c.o
+[ 30%] Linking C static library libcustom_ops.a
+[ 30%] Built target custom_ops
+[ 32%] Building C object CMakeFiles/two_task_probe.dir/tools/c/two_task_probe.c.o
+[ 34%] Building C object CMakeFiles/ktiling_host_test.dir/tests/c/ktiling_host_test.c.o
+[ 36%] Building C object CMakeFiles/linear_hardsigmoid.dir/tools/c/operator_cli.c.o
+[ 36%] Building C object CMakeFiles/custom_ops_probe.dir/tools/c/probe.c.o
+[ 37%] Linking C executable linear_hardsigmoid
+[ 38%] Linking C executable ktiling_host_test
+[ 38%] Built target linear_hardsigmoid
+[ 38%] Built target ktiling_host_test
+[ 40%] Building C object CMakeFiles/ktiling_probe.dir/tools/c/ktiling_probe.c.o
+[ 41%] Building C object CMakeFiles/co_schedule.dir/src/co_schedule.c.o
+[ 42%] Linking C executable two_task_probe
+[ 44%] Linking C executable custom_ops_probe
+[ 44%] Built target two_task_probe
+[ 45%] Building C object CMakeFiles/multitile_host_test.dir/tests/c/multitile_host_test.c.o
+[ 46%] Linking C static library libco_schedule.a
+[ 46%] Built target custom_ops_probe
+[ 48%] Building C object CMakeFiles/multitile_probe.dir/tools/c/multitile_probe.c.o
+[ 48%] Built target co_schedule
+[ 49%] Linking C executable multitile_host_test
+[ 50%] Building C object CMakeFiles/graph_host_test.dir/tests/c/graph_host_test.c.o
+[ 52%] Linking C executable multitile_probe
+[ 52%] Built target multitile_host_test
+[ 52%] Built target multitile_probe
+[ 53%] Linking C executable ktiling_probe
+[ 54%] Building C object CMakeFiles/graph_ffn.dir/tools/c/graph_cli.c.o
+[ 56%] Building C object CMakeFiles/row_graph.dir/tools/c/row_cli.c.o
+[ 56%] Built target ktiling_probe
+[ 57%] Building C object CMakeFiles/attention_probe.dir/tools/c/attention_probe.c.o
+[ 58%] Linking C executable row_graph
+[ 60%] Linking C executable graph_host_test
+[ 61%] Linking C executable graph_ffn
+[ 61%] Built target row_graph
+[ 62%] Building C object CMakeFiles/decoder_probe.dir/tools/c/decoder_probe.c.o
+[ 64%] Linking C executable attention_probe
+[ 64%] Built target graph_ffn
+[ 64%] Built target graph_host_test
+[ 65%] Building C object CMakeFiles/regcmd_overlap_probe.dir/tools/c/regcmd_overlap_probe.c.o
+[ 66%] Building C object CMakeFiles/gdn_probe.dir/tools/c/gdn_probe.c.o
+[ 66%] Built target attention_probe
+[ 68%] Building C object CMakeFiles/gdn_experiments.dir/tools/c/gdn_experiments.c.o
+[ 69%] Linking C executable decoder_probe
+[ 69%] Built target decoder_probe
+[ 70%] Linking C executable gdn_probe
+[ 72%] Linking C executable regcmd_overlap_probe
+[ 73%] Building C object CMakeFiles/gdn_cpu_test.dir/tests/c/gdn_cpu_test.c.o
+[ 74%] Linking C executable gdn_experiments
+[ 74%] Built target gdn_probe
+[ 74%] Built target regcmd_overlap_probe
+[ 74%] Built target gdn_experiments
+[ 76%] Building C object CMakeFiles/rk_plan_core.dir/src/rk_plan_validate.c.o
+[ 77%] Building C object CMakeFiles/rk_plan_runtime_obj.dir/src/rk_plan_runtime.c.o
+[ 78%] Building C object CMakeFiles/schedule_probe.dir/tools/c/schedule_probe.c.o
+[ 80%] Linking C executable gdn_cpu_test
+[ 80%] Built target gdn_cpu_test
+[ 81%] Building C object CMakeFiles/rk_plan_runtime_obj.dir/src/rk_plan_emit.c.o
+[ 82%] Building C object CMakeFiles/overlap_probe.dir/tools/c/overlap_probe.c.o
+[ 84%] Linking C executable schedule_probe
+[ 84%] Built target rk_plan_runtime_obj
+[ 85%] Linking C static library librk_plan_core.a
+[ 85%] Built target schedule_probe
+[ 86%] Building C object CMakeFiles/cost_probe.dir/tools/c/cost_probe.c.o
+[ 88%] Linking C executable overlap_probe
+[ 88%] Built target rk_plan_core
+[ 89%] Linking C shared library librknpu_plan.so
+[ 90%] Building C object CMakeFiles/rknpu_plan_mock.dir/tests/mock/npu_mock.c.o
+[ 90%] Built target overlap_probe
+[ 92%] Building C object CMakeFiles/rk_plan_contract_test.dir/tests/c/rk_plan_contract_test.c.o
+[ 93%] Linking C executable cost_probe
+[ 93%] Built target rknpu_plan
+[ 94%] Building C object CMakeFiles/rk_plan_host_test.dir/tests/c/rk_plan_host_test.c.o
+[ 94%] Built target cost_probe
+[ 96%] Building C object CMakeFiles/rk_plan_host_test.dir/tests/mock/npu_mock.c.o
+[ 97%] Linking C executable rk_plan_contract_test
+[ 98%] Linking C shared library librknpu_plan_mock.so
+[ 98%] Built target rknpu_plan_mock
+[ 98%] Built target rk_plan_contract_test
+[100%] Linking C executable rk_plan_host_test
+[100%] Built target rk_plan_host_test

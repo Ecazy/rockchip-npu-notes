@@ -1,0 +1,155 @@
+=== [environment] shell function capture_environment
+--- started: 2026-10-22T11:19:48Z
+--- exit: 0
+=== [isolation] shell function check_isolation
+--- started: 2026-10-22T11:19:49Z
+--- exit: 0
+=== [source-hashes] shell function capture_hashes
+--- started: 2026-10-22T11:19:50Z
+--- exit: 0
+=== [prepare-build] shell function prepare_build_dirs
+--- started: 2026-10-22T11:19:50Z
+--- exit: 0
+=== [configure] cmake -S /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops -B /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPython3_EXECUTABLE=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python
+--- started: 2026-10-22T11:19:51Z
+--- exit: 0
+=== [build] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp -j4
+--- started: 2026-10-22T11:19:51Z
+--- exit: 0
+=== [ctest] ctest --test-dir /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp --output-on-failure
+--- started: 2026-10-22T11:19:52Z
+--- exit: 8
+--- FAILED, tail follows
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+EW-ORIENT first mismatch r=0 c=1 out=-0.109436 expected_perturbed=-0.109436 ref_unperturbed=-0.109436 acc01=-0.312500
+RK_PLAN host checks=688 failures=29
+
+      Start 26: provider_seam
+26/26 Test #26: provider_seam ....................   Passed    0.03 sec
+
+96% tests passed, 1 tests failed out of 26
+
+Total Test time (real) =  10.64 sec
+
+The following tests FAILED:
+	 25 - rk_plan_host (Failed)
+Errors while running CTest
+=== [rk_plan_contract] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_contract_test
+--- started: 2026-10-22T11:20:03Z
+--- exit: 0
+=== [rk_plan_host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_host_test
+--- started: 2026-10-22T11:20:03Z
+--- exit: 1
+--- FAILED, tail follows
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+EW-ORIENT first mismatch r=0 c=1 out=-0.109436 expected_perturbed=-0.109436 ref_unperturbed=-0.109436 acc01=-0.312500
+RK_PLAN host checks=688 failures=29
+=== [graph_host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/graph_host_test
+--- started: 2026-10-22T11:20:03Z
+--- exit: 0
+=== [configure-sanitize] shell function configure_sanitize
+--- started: 2026-10-22T11:20:08Z
+--- exit: 0
+=== [build-sanitize] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk --target rk_plan_contract_test rk_plan_host_test -j4
+--- started: 2026-10-22T11:20:09Z
+--- exit: 0
+=== [sanitize-contract] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_contract_test
+--- started: 2026-10-22T11:20:11Z
+--- exit: 0
+=== [sanitize-host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_host_test
+--- started: 2026-10-22T11:20:11Z
+--- exit: 1
+--- FAILED, tail follows
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+FAIL line 845: (double)out[(size_t)r * cols + c] == (double)ref[(size_t)r * cols + c]
+FAIL line 839: (double)out[(size_t)r * cols + 1] == (_Float16)expect1
+EW-ORIENT first mismatch r=0 c=1 out=-0.109436 expected_perturbed=-0.109436 ref_unperturbed=-0.109436 acc01=-0.312500
+RK_PLAN host checks=688 failures=29
+=== [archive-flags] shell function archive_flags
+--- started: 2026-10-22T11:20:11Z
+--- exit: 0
+=== [pytest] /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python -m pytest /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tests -o addopts= -q -rs --tb=short
+--- started: 2026-10-22T11:20:11Z
+--- exit: 0
+=== [summary] shell function build_summary
+--- started: 2026-10-22T11:20:13Z
+--- exit: 1
+--- FAILED, tail follows
+    },
+    "rk_plan_host": {
+      "checks": 688,
+      "failures": 29
+    },
+    "graph_host": {
+      "checks": 2400033,
+      "failures": 0
+    }
+  },
+  "pytest": {
+    "passed": 130,
+    "failed": 0,
+    "skipped": 0,
+    "skip_reasons": []
+  },
+  "deps_dir": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0",
+  "sanitizer": {
+    "enabled_explicitly": true,
+    "flags": "-fsanitize=address,undefined"
+  },
+  "device_access": "none",
+  "board_acceptance": "not_run"
+}
+evidence incomplete: ['rk_plan_host.log reported 29 failures']

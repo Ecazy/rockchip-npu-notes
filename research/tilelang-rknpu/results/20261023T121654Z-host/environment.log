@@ -1,0 +1,279 @@
+# environment (captured after this script exported its own paths)
+collected_utc=2026-10-23T12:16:54Z
+repo=/home/maoyu/Documents/code/rockchip-npu-notes
+host=Linux maoyu-workstation 7.0.0-38-generic #38~24.04.4-Ubuntu SMP PREEMPT_DYNAMIC Mon Sep 14 16:37:11 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+git_head=833dc51c32acab0906ea6c7b5c846979ee7cb6c3
+PYTHONPATH=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0
+LD_LIBRARY_PATH=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/z3/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tilelang/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tvm_ffi/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/z3/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tilelang/lib:/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tvm_ffi/lib
+TILELANG_CACHE_DIR=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.cache
+RKNPU_PLAN_LIB=/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/librknpu_plan.so
+TILELANG_DEPS_DIR=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0
+TILELANG_LOCK_FILE=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/requirements.lock
+TEST_INTERPRETER=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python
+interpreter={"executable": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python", "prefix": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0", "base_prefix": "/usr", "no_site": false, "isolated_venv": true}
+ASAN_OPTIONS=<unset>
+UBSAN_OPTIONS=<unset>
+MALLOC_PERTURB_=128
+
+# git status (scoped)
+ M research/custom-ops/CMakeLists.txt
+ M research/custom-ops/README.md
+ M research/custom-ops/implementation-notes.md
+ M research/custom-ops/include/custom_ops.h
+ M research/custom-ops/include/rk_plan.h
+ M research/custom-ops/src/custom_ops.c
+ M research/custom-ops/src/rk_plan_internal.h
+ M research/custom-ops/src/rk_plan_runtime.c
+ M research/custom-ops/src/rk_plan_validate.c
+ M research/custom-ops/tests/c/graph_host_test.c
+ M research/custom-ops/tests/c/rk_plan_contract_test.c
+ M research/custom-ops/tests/c/rk_plan_host_test.c
+ M research/tilelang-rknpu/.gitignore
+ M research/tilelang-rknpu/IMPLEMENTATION-STATUS.md
+ M research/tilelang-rknpu/README.md
+ M research/tilelang-rknpu/capabilities/rk3588_vendor_co_v1.json
+ M research/tilelang-rknpu/overview.md
+ M research/tilelang-rknpu/provenance.json
+ M research/tilelang-rknpu/python/rknpu_backend/__init__.py
+ M research/tilelang-rknpu/python/rknpu_backend/api.py
+ M research/tilelang-rknpu/python/rknpu_backend/capabilities.py
+ M research/tilelang-rknpu/python/rknpu_backend/cli.py
+ M research/tilelang-rknpu/python/rknpu_backend/frontend/tilelang_adapter.py
+ M research/tilelang-rknpu/python/rknpu_backend/ir.py
+ M research/tilelang-rknpu/python/rknpu_backend/options.py
+ M research/tilelang-rknpu/python/rknpu_backend/passes/dag.py
+ M research/tilelang-rknpu/python/rknpu_backend/passes/infer.py
+ M research/tilelang-rknpu/python/rknpu_backend/passes/legalize.py
+ M research/tilelang-rknpu/python/rknpu_backend/passes/schedule.py
+ M research/tilelang-rknpu/python/rknpu_backend/passes/storage.py
+ M research/tilelang-rknpu/python/rknpu_backend/plan.py
+ M research/tilelang-rknpu/python/rknpu_backend/runtime/ffi.py
+ M research/tilelang-rknpu/results/README.md
+ M research/tilelang-rknpu/schema/rkir.v1.json
+ M research/tilelang-rknpu/scripts/setup-tilelang-env.sh
+ M research/tilelang-rknpu/specific.md
+ M research/tilelang-rknpu/tests/test_cli.py
+ M research/tilelang-rknpu/tests/test_ffi.py
+ M research/tilelang-rknpu/tests/test_frontend.py
+ M research/tilelang-rknpu/tests/test_ir.py
+ M research/tilelang-rknpu/tests/test_lowering.py
+ M research/tilelang-rknpu/tests/test_plan_verify.py
+ M research/tilelang-rknpu/tests/test_storage.py
+?? research/custom-ops/include/co_gdn.h
+?? research/custom-ops/include/co_gdn_cpu.h
+?? research/custom-ops/scripts/run-gdn-board.sh
+?? research/custom-ops/scripts/run-gdn-experiments-board.sh
+?? research/custom-ops/scripts/run-gdn-experiments-native.sh
+?? research/custom-ops/scripts/run-gdn-native.sh
+?? research/custom-ops/src/co_gdn.c
+?? research/custom-ops/src/co_gdn_cpu.c
+?? research/custom-ops/src/rk_plan_target.c
+?? research/custom-ops/tests/c/gdn_cpu_test.c
+?? research/custom-ops/tests/c/mock_scenarios.c
+?? research/custom-ops/tests/mock/
+?? research/custom-ops/tests/python/gdn_experiments_test.py
+?? research/custom-ops/tests/python/gdn_gate_test.py
+?? research/custom-ops/tools/c/gdn_experiments.c
+?? research/custom-ops/tools/c/gdn_probe.c
+?? research/custom-ops/tools/python/gdn_campaign.py
+?? research/custom-ops/tools/python/gdn_experiment_report.py
+?? research/custom-ops/tools/python/gdn_experiments_gate.py
+?? research/custom-ops/tools/python/gdn_gate.py
+?? research/tilelang-rknpu/ACCEPTANCE-MATRIX.md
+?? research/tilelang-rknpu/HANDOFF.md
+?? research/tilelang-rknpu/P0-SOURCE-LOCK.md
+?? research/tilelang-rknpu/REPLAY.md
+?? research/tilelang-rknpu/REVIEW-CLOSURE.md
+?? research/tilelang-rknpu/RK1228-TARGET.md
+?? research/tilelang-rknpu/RUNTIME-LIFECYCLE.md
+?? research/tilelang-rknpu/SUPPORT-DOMAIN.md
+?? research/tilelang-rknpu/examples/silu_proj.py
+?? research/tilelang-rknpu/provenance/
+?? research/tilelang-rknpu/requirements.lock
+?? research/tilelang-rknpu/results/20261020T085356Z-host/
+?? research/tilelang-rknpu/results/20261021T114612Z-host/
+?? research/tilelang-rknpu/results/20261021T114712Z-host/
+?? research/tilelang-rknpu/results/20261021T115302Z-host/
+?? research/tilelang-rknpu/results/20261021T121554Z-host/
+?? research/tilelang-rknpu/results/20261022T111948Z-host/
+?? research/tilelang-rknpu/results/20261022T113603Z-host/
+?? research/tilelang-rknpu/results/20261022T114651Z-host/
+?? research/tilelang-rknpu/results/20261022T115028Z-host/
+?? research/tilelang-rknpu/results/20261022T115659Z-host/
+?? research/tilelang-rknpu/results/20261022T122013Z-host/
+?? research/tilelang-rknpu/results/20261022T122652Z-host/
+?? research/tilelang-rknpu/results/20261022T123812Z-host/
+?? research/tilelang-rknpu/results/20261022T125641Z-host/
+?? research/tilelang-rknpu/results/20261023T025322Z-host/
+?? research/tilelang-rknpu/results/20261023T025400Z-host/
+?? research/tilelang-rknpu/results/20261023T033144Z-host/
+?? research/tilelang-rknpu/results/20261023T033342Z-host/
+?? research/tilelang-rknpu/results/20261023T034458Z-host/
+?? research/tilelang-rknpu/results/20261023T055005Z-host/
+?? research/tilelang-rknpu/results/20261023T060339Z-host/
+?? research/tilelang-rknpu/results/20261023T060929Z-host/
+?? research/tilelang-rknpu/results/20261023T061116Z-host/
+?? research/tilelang-rknpu/results/20261023T063711Z-host/
+?? research/tilelang-rknpu/results/20261023T063916Z-host/
+?? research/tilelang-rknpu/results/20261023T064021Z-host/
+?? research/tilelang-rknpu/results/20261023T072604Z-host/
+?? research/tilelang-rknpu/results/20261023T074715Z-rk3588/
+?? research/tilelang-rknpu/results/20261023T075050Z-host/
+?? research/tilelang-rknpu/results/20261023T080513Z-rk3588/
+?? research/tilelang-rknpu/results/20261023T080557Z-host/
+?? research/tilelang-rknpu/results/20261023T080703Z-rk3588/
+?? research/tilelang-rknpu/results/20261023T081249Z-host/
+?? research/tilelang-rknpu/results/20261023T101551Z-rk3588/
+?? research/tilelang-rknpu/results/20261023T101649Z-host/
+?? research/tilelang-rknpu/results/20261023T103617Z-host/
+?? research/tilelang-rknpu/results/20261023T103655Z-rk3588/
+?? research/tilelang-rknpu/results/20261023T105602Z-rk3588/
+?? research/tilelang-rknpu/results/20261023T111042Z-rk3588/
+?? research/tilelang-rknpu/results/20261023T111450Z-host/
+?? research/tilelang-rknpu/results/20261023T112114Z-host/
+?? research/tilelang-rknpu/results/20261023T112251Z-host/
+?? research/tilelang-rknpu/results/20261023T121507Z-rk3588/
+?? research/tilelang-rknpu/results/20261023T121654Z-host/
+?? research/tilelang-rknpu/schema/rkplan.v2.json
+?? research/tilelang-rknpu/scripts/check_isolation.py
+?? research/tilelang-rknpu/scripts/lock_deps.sh
+?? research/tilelang-rknpu/scripts/lock_source.py
+?? research/tilelang-rknpu/scripts/run-board-admission-native.sh
+?? research/tilelang-rknpu/scripts/run-board-admission.sh
+?? research/tilelang-rknpu/scripts/run-verification.sh
+?? research/tilelang-rknpu/tests/fixtures/guard_after_download_worker.py
+?? research/tilelang-rknpu/tests/fixtures/guard_failure_worker.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_branch_staged.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_broadcast.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_ffn.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_ffn_staged.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_kloop.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_mntile.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_multi_output.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_negative.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_projection_staged.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_ragged.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_semantics.py
+?? research/tilelang-rknpu/tests/fixtures/tilelang_silu_proj.py
+?? research/tilelang-rknpu/tests/test_board_campaign.py
+?? research/tilelang-rknpu/tests/test_board_verifier.py
+?? research/tilelang-rknpu/tests/test_broadcast_execution.py
+?? research/tilelang-rknpu/tests/test_dataflow.py
+?? research/tilelang-rknpu/tests/test_dataflow_multitile.py
+?? research/tilelang-rknpu/tests/test_ffn_execution.py
+?? research/tilelang-rknpu/tests/test_frontend_broadcast.py
+?? research/tilelang-rknpu/tests/test_frontend_ffn.py
+?? research/tilelang-rknpu/tests/test_frontend_kloop.py
+?? research/tilelang-rknpu/tests/test_frontend_mntile.py
+?? research/tilelang-rknpu/tests/test_frontend_multi_output.py
+?? research/tilelang-rknpu/tests/test_frontend_ragged.py
+?? research/tilelang-rknpu/tests/test_frontend_semantics.py
+?? research/tilelang-rknpu/tests/test_frontend_silu_proj.py
+?? research/tilelang-rknpu/tests/test_guard_failure.py
+?? research/tilelang-rknpu/tests/test_mock_api.py
+?? research/tilelang-rknpu/tests/test_multi_output_execution.py
+?? research/tilelang-rknpu/tests/test_ragged_execution.py
+?? research/tilelang-rknpu/tests/test_silu_proj_execution.py
+?? research/tilelang-rknpu/tests/test_staged_tilelang.py
+?? research/tilelang-rknpu/tests/test_swiglu.py
+?? research/tilelang-rknpu/tests/test_target_check.py
+?? research/tilelang-rknpu/tests/test_workspace_busy.py
+?? research/tilelang-rknpu/tests/test_ws_poison.py
+?? research/tilelang-rknpu/tools/
+
+# worktree diffstat (scoped)
+ research/custom-ops/CMakeLists.txt                 |   93 +-
+ research/custom-ops/README.md                      |   24 +-
+ research/custom-ops/implementation-notes.md        |    2 +-
+ research/custom-ops/include/custom_ops.h           |    5 +
+ research/custom-ops/include/rk_plan.h              |   35 +-
+ research/custom-ops/src/custom_ops.c               |   23 +
+ research/custom-ops/src/rk_plan_internal.h         |    3 +
+ research/custom-ops/src/rk_plan_runtime.c          |  315 +-
+ research/custom-ops/src/rk_plan_validate.c         |  716 +++-
+ research/custom-ops/tests/c/graph_host_test.c      |   17 +
+ .../custom-ops/tests/c/rk_plan_contract_test.c     |  162 +
+ research/custom-ops/tests/c/rk_plan_host_test.c    | 1448 ++++++-
+ research/tilelang-rknpu/.gitignore                 |   20 +-
+ research/tilelang-rknpu/IMPLEMENTATION-STATUS.md   |  746 +++-
+ research/tilelang-rknpu/README.md                  |  195 +-
+ .../capabilities/rk3588_vendor_co_v1.json          |   28 +-
+ research/tilelang-rknpu/overview.md                |   18 +-
+ research/tilelang-rknpu/provenance.json            |  341 +-
+ .../python/rknpu_backend/__init__.py               |    6 +-
+ .../tilelang-rknpu/python/rknpu_backend/api.py     |   29 +-
+ .../python/rknpu_backend/capabilities.py           |   14 +
+ .../tilelang-rknpu/python/rknpu_backend/cli.py     |   72 +-
+ .../rknpu_backend/frontend/tilelang_adapter.py     | 4401 ++++++++++++++++++--
+ research/tilelang-rknpu/python/rknpu_backend/ir.py |  297 +-
+ .../tilelang-rknpu/python/rknpu_backend/options.py |    3 +
+ .../python/rknpu_backend/passes/dag.py             | 1025 ++++-
+ .../python/rknpu_backend/passes/infer.py           |    8 +-
+ .../python/rknpu_backend/passes/legalize.py        |  497 ++-
+ .../python/rknpu_backend/passes/schedule.py        |    8 +-
+ .../python/rknpu_backend/passes/storage.py         |   15 +-
+ .../tilelang-rknpu/python/rknpu_backend/plan.py    |  253 +-
+ .../python/rknpu_backend/runtime/ffi.py            |  148 +-
+ research/tilelang-rknpu/results/README.md          |  144 +-
+ research/tilelang-rknpu/schema/rkir.v1.json        |    6 +-
+ .../tilelang-rknpu/scripts/setup-tilelang-env.sh   |    4 +
+ research/tilelang-rknpu/specific.md                |   49 +-
+ research/tilelang-rknpu/tests/test_cli.py          |  224 +-
+ research/tilelang-rknpu/tests/test_ffi.py          |   86 +-
+ research/tilelang-rknpu/tests/test_frontend.py     |  135 +
+ research/tilelang-rknpu/tests/test_ir.py           |   12 +-
+ research/tilelang-rknpu/tests/test_lowering.py     |   45 +-
+ research/tilelang-rknpu/tests/test_plan_verify.py  |   56 +-
+ research/tilelang-rknpu/tests/test_storage.py      |   73 +-
+ 43 files changed, 11013 insertions(+), 788 deletions(-)
+
+# toolchain
+cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+cmake version 3.28.3
+Python 3.12.3
+
+# installed distributions visible to the test interpreter
+<stdin>:22: DeprecationWarning: Accessing jsonschema.__version__ is deprecated and will be removed in a future release. Use importlib.metadata directly to query for jsonschema's version.
+search_roots=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0
+apache-tvm-ffi==0.1.12
+attrs==26.1.0
+cloudpickle==3.1.2
+filelock==3.20.4
+fsspec==2026.9.0
+iniconfig==2.3.1
+Jinja2==3.1.6
+jsonschema==4.25.1
+jsonschema-specifications==2025.9.1
+MarkupSafe==3.0.4
+ml_dtypes==0.6.0
+networkx==3.6.1
+numpy==2.5.4
+packaging==26.3
+pluggy==1.7.0
+psutil==7.2.2
+Pygments==2.21.0
+pytest==9.1.1
+referencing==0.37.0
+rpds-py==2026.9.1
+setuptools==84.2.0
+sympy==1.14.0
+tilelang==0.1.15
+torch==2.9.0+cpu
+torch_c_dlpack_ext==0.1.5
+tqdm==4.70.1
+typing_extensions==4.16.0
+z3-solver==4.15.4.0
+duplicate_distribution_names=[]
+
+# imported module identity
+numpy=2.5.4 origin=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/numpy/__init__.py
+jsonschema=4.25.1 origin=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/jsonschema/__init__.py
+pytest=9.1.1 origin=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/pytest/__init__.py
+tilelang=0.1.15 origin=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tilelang/__init__.py
+tvm=0.25.dev0 origin=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tilelang/3rdparty/tvm/python/tvm/__init__.py
+tvm_ffi=0.1.12 origin=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/tvm_ffi/__init__.py
+z3=unknown origin=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/z3/__init__.py
+torch=2.9.0+cpu origin=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0/torch/__init__.py
+
+# optional dependency root
+1.2G	/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0

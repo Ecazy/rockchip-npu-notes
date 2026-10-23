@@ -1,0 +1,102 @@
+=== [environment] shell function capture_environment
+--- started: 2026-10-20T08:53:56Z
+--- exit: 0
+=== [source-hashes] shell function capture_hashes
+--- started: 2026-10-20T08:53:58Z
+--- exit: 0
+=== [prepare-build] shell function prepare_build_dirs
+--- started: 2026-10-20T08:53:58Z
+--- exit: 0
+=== [configure] cmake -S /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops -B /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+--- started: 2026-10-20T08:53:58Z
+--- exit: 1
+--- FAILED, tail follows
+injected cmake failure
+=== [build] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp -j4
+--- started: 2026-10-20T08:53:58Z
+--- exit: 1
+--- FAILED, tail follows
+injected cmake failure
+=== [ctest] ctest --test-dir /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp --output-on-failure
+--- started: 2026-10-20T08:53:58Z
+--- exit: 1
+--- FAILED, tail follows
+Internal ctest changing into directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+Failed to change working directory to "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp" : No such file or directory
+=== [rk_plan_contract] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_contract_test
+--- started: 2026-10-20T08:53:58Z
+--- exit: 127
+--- FAILED, tail follows
+./scripts/run-verification.sh: line 63: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_contract_test: No such file or directory
+=== [rk_plan_host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_host_test
+--- started: 2026-10-20T08:53:58Z
+--- exit: 127
+--- FAILED, tail follows
+./scripts/run-verification.sh: line 63: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_host_test: No such file or directory
+=== [configure-sanitize] shell function configure_sanitize
+--- started: 2026-10-20T08:53:58Z
+--- exit: 1
+--- FAILED, tail follows
+injected cmake failure
+=== [build-sanitize] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk --target rk_plan_contract_test rk_plan_host_test -j4
+--- started: 2026-10-20T08:53:58Z
+--- exit: 1
+--- FAILED, tail follows
+injected cmake failure
+=== [sanitize-contract] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_contract_test
+--- started: 2026-10-20T08:53:58Z
+--- exit: 127
+--- FAILED, tail follows
+./scripts/run-verification.sh: line 63: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_contract_test: No such file or directory
+=== [sanitize-host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_host_test
+--- started: 2026-10-20T08:53:58Z
+--- exit: 127
+--- FAILED, tail follows
+./scripts/run-verification.sh: line 63: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_host_test: No such file or directory
+=== [archive-flags] shell function archive_flags
+--- started: 2026-10-20T08:53:58Z
+--- exit: 1
+--- FAILED, tail follows
+host: compile_commands.json missing
+=== [pytest] python3 -m pytest /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tests -o addopts= -q -rs --tb=short
+--- started: 2026-10-20T08:53:58Z
+--- exit: 1
+--- FAILED, tail follows
+.....F.s....................................................             [100%]
+=================================== FAILURES ===================================
+_______________ CLITests.test_compile_validate_explain_roundtrip _______________
+tests/test_cli.py:45: in test_compile_validate_explain_roundtrip
+    self.assertEqual(proc.returncode, 0, proc.stderr)
+E   AssertionError: 2 != 0 : RK_E_UNSUPPORTED: cannot load rknpu_plan shared library: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/librknpu_plan.so: cannot open shared object file: No such file or directory
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_ffi.py:26: rknpu_plan shared library not built: RK_E_UNSUPPORTED: cannot load rknpu_plan shared library: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/librknpu_plan.so: cannot open shared object file: No such file or directory
+1 failed, 58 passed, 1 skipped in 1.31s
+=== [summary] shell function build_summary
+--- started: 2026-10-20T08:53:59Z
+--- exit: 1
+--- FAILED, tail follows
+  "c_checks": {
+    "rk_plan_contract": {
+      "checks": null,
+      "failures": null
+    },
+    "rk_plan_host": {
+      "checks": null,
+      "failures": null
+    }
+  },
+  "pytest": {
+    "passed": 58,
+    "skipped": 1,
+    "skip_reasons": [
+      "SKIPPED [1] tests/test_ffi.py:26: rknpu_plan shared library not built: RK_E_UNSUPPORTED: cannot load rknpu_plan shared library: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/librknpu_plan.so: cannot open shared object file: No such file or directory"
+    ]
+  },
+  "sanitizer": {
+    "enabled_explicitly": true,
+    "flags": "-fsanitize=address,undefined"
+  },
+  "device_access": "none",
+  "board_acceptance": "not_run"
+}
+evidence incomplete: ['missing or empty artifact: compile-flags/compile-commands-sanitize.json', 'could not parse the ctest summary line', 'could not parse check counts from rk_plan_contract.log', 'could not parse check counts from rk_plan_host.log']

@@ -11,6 +11,7 @@
 | [FP16 K 分片](kernels/FP16-K-TILING.md) | K>256 的设备累计及融合对照 | 真机验证 |
 | [Two-Task Chaining](scheduling/TWO-TASK-CHAINING.md) | 描述符、寄存器组、IRQ 和 BO 生命周期 | 真机验证 |
 | [静态图编译与 SwiGLU FFN](graphs/STATIC-GRAPH-COMPILER.md) | 有限 FP16 图的形状、tiling、生命周期与 BO 规划 | 三核 FFN 数值及边界传输验收 |
+| [TileLang RKNPU 后端](tilelang-rknpu/README.md) / [设计与开发契约](tilelang-rknpu/overview.md) | 复用 TileLang/TVM，静态 FP16 RKIR/RKPlan、逐节点 tiling、CLI 与板端 campaign | Host 与 RK3588 三个单核串行检查点通过；支持域和未完成项见模块文档，未宣称完整 MVP |
 | [跨 tile RMSNorm 与 Softmax](kernels/CROSS-TILE-ROW-OPS.md) | 混合归约、mask、指数分段与前置 RMSNorm FFN | 真机；含明确的 CPU 阶段 |
 | [RoPE、KV cache 与 self-attention](kernels/ATTENTION-KERNELS.md) | 固定容量 MHA/GQA、prefill/decode、主机 KV 事务 | 三核双模式验收；混合实现 |
 | [Transformer decoder block](graphs/TRANSFORMER-DECODER-BLOCK.md) | 多输出 Q/K/V 图、残差/FFN、KV 回滚与单行 decode | 真机功能验收；API 收益按形状限定 |

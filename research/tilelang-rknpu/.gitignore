@@ -1,7 +1,41 @@
+# Local, regenerable tooling state.
 .pydeps/
 .venv/
 .cache/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+
+# Large or binary campaign payloads stay local; the small text evidence
+# (commands.log, manifest.json, summary.md, source-hashes.json, *.log) is
+# committed next to results/README.md so a run can be audited later.
 results/**/*.npy
-results/**/*.log
+results/**/*.npz
+results/**/*.tgz
+results/**/*.bin
+results/**/inputs/
+results/**/outputs/
+
+# P0 clean-install target, isolation venv and pip log.
+.pydeps-p0/
+.pydeps-p0.install.log
+.venv-p0/
+# Upstream source/tree cache used to derive the source lock.
+.src/
+# Generated locks are small and regenerable.
+
+# Archived/redundant local evidence; keep only curated checkpoints in Git.
+results/.archive/
+results/*/
+!results/20261020T085356Z-host/
+!results/20261021T114612Z-host/
+!results/20261021T114712Z-host/
+!results/20261021T115302Z-host/
+!results/20261022T111948Z-host/
+!results/20261023T080703Z-rk3588/
+!results/20261023T103655Z-rk3588/
+!results/20261023T111042Z-rk3588/
+!results/20261023T121507Z-rk3588/
+!results/20261023T121654Z-host/
+!results/20261023T122811Z-host/
+!results/20261023T123836Z-host/

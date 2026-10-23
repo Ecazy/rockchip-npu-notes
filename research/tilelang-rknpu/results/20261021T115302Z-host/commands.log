@@ -1,0 +1,53 @@
+=== [environment] shell function capture_environment
+--- started: 2026-10-21T11:53:02Z
+--- exit: 0
+=== [isolation] shell function check_isolation
+--- started: 2026-10-21T11:53:03Z
+--- exit: 0
+=== [source-hashes] shell function capture_hashes
+--- started: 2026-10-21T11:53:04Z
+--- exit: 0
+=== [prepare-build] shell function prepare_build_dirs
+--- started: 2026-10-21T11:53:05Z
+--- exit: 1
+--- FAILED, tail follows
+keeping existing build trees (--keep-build)
+reusing /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp (source /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops)
+reusing /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk (source /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops)
+ERROR: kept sanitizer tree has no sanitizer flags; re-run without --keep-build to reconfigure
+=== [configure] cmake -S /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops -B /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DPython3_EXECUTABLE=/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python
+--- started: 2026-10-21T11:53:05Z
+--- exit: 0
+=== [build] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp -j4
+--- started: 2026-10-21T11:53:05Z
+--- exit: 0
+=== [ctest] ctest --test-dir /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp --output-on-failure
+--- started: 2026-10-21T11:53:05Z
+--- exit: 0
+=== [rk_plan_contract] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_contract_test
+--- started: 2026-10-21T11:53:15Z
+--- exit: 0
+=== [rk_plan_host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_host_test
+--- started: 2026-10-21T11:53:15Z
+--- exit: 0
+=== [configure-sanitize] shell function configure_sanitize
+--- started: 2026-10-21T11:53:15Z
+--- exit: 0
+=== [build-sanitize] cmake --build /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk --target rk_plan_contract_test rk_plan_host_test -j4
+--- started: 2026-10-21T11:53:15Z
+--- exit: 0
+=== [sanitize-contract] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_contract_test
+--- started: 2026-10-21T11:53:16Z
+--- exit: 0
+=== [sanitize-host] /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-sanitize-rk/rk_plan_host_test
+--- started: 2026-10-21T11:53:16Z
+--- exit: 0
+=== [archive-flags] shell function archive_flags
+--- started: 2026-10-21T11:53:16Z
+--- exit: 0
+=== [pytest] /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python -m pytest /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tests -o addopts= -q -rs --tb=short
+--- started: 2026-10-21T11:53:16Z
+--- exit: 0
+=== [summary] shell function build_summary
+--- started: 2026-10-21T11:53:18Z
+--- exit: 0

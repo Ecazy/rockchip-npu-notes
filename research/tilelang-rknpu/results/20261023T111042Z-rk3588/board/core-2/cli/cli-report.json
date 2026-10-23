@@ -1,0 +1,58 @@
+{
+  "baseline_fds": 4,
+  "fd": [
+    {
+      "after": 4,
+      "before": 4,
+      "round": 0
+    },
+    {
+      "after": 4,
+      "before": 4,
+      "round": 1
+    },
+    {
+      "after": 4,
+      "before": 4,
+      "round": "bad_binding"
+    }
+  ],
+  "status": "PASS",
+  "steps": {
+    "bad_binding": {
+      "fd_after": 4,
+      "fd_before": 4,
+      "published": false,
+      "rc": 2,
+      "stderr": "RK_E_INVALID: missing runtime constant 'B'\n"
+    },
+    "compile": {
+      "rc": 0,
+      "stderr": ""
+    },
+    "explain": {
+      "rc": 0,
+      "stderr": ""
+    },
+    "run_0": {
+      "fd_after": 4,
+      "fd_before": 4,
+      "max_abs": 0.0,
+      "numeric_ok": true,
+      "rc": 0,
+      "stderr": ""
+    },
+    "run_1": {
+      "fd_after": 4,
+      "fd_before": 4,
+      "max_abs": 0.0,
+      "numeric_ok": true,
+      "rc": 0,
+      "stderr": ""
+    },
+    "validate": {
+      "rc": 0,
+      "stderr": ""
+    }
+  }
+}

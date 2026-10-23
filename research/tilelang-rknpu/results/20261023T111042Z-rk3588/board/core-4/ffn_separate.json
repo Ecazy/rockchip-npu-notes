@@ -1,0 +1,170 @@
+{
+  "bindings": [
+    {
+      "name": "X",
+      "role": "input",
+      "shape": [
+        8,
+        64
+      ]
+    },
+    {
+      "name": "Wg",
+      "role": "constant",
+      "shape": [
+        64,
+        32
+      ]
+    },
+    {
+      "name": "Wu",
+      "role": "constant",
+      "shape": [
+        64,
+        32
+      ]
+    },
+    {
+      "name": "Wd",
+      "role": "constant",
+      "shape": [
+        32,
+        64
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        8,
+        64
+      ]
+    },
+    {
+      "name": "__identity_32",
+      "role": "constant",
+      "shape": [
+        32,
+        32
+      ]
+    },
+    {
+      "name": "__identity_64",
+      "role": "constant",
+      "shape": [
+        64,
+        64
+      ]
+    }
+  ],
+  "case": "ffn_separate",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "ffn",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.linear.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "ab4aaa1cf1a5377c8096cd892b6d42506e3830768517753e420e3185da261bc6",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 1,
+  "raw_outputs": "ffn_separate.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 512,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 512,
+          "max_abs": 0.00020260402273220013,
+          "max_rel": 0.030934011227434065,
+          "mismatch_elements": 512
+        },
+        "max_abs": 0.0001220703125,
+        "max_rel": 0.0010851871947911015,
+        "mismatch_elements": 8
+      },
+      "download_bytes": 1536,
+      "download_calls": 1,
+      "emit_us": 50.16595458984375,
+      "output_sync_us": 23.04095458984375,
+      "pack_us": 10.7919921875,
+      "round": 0,
+      "submit_count": 7,
+      "submit_wait_us": 545.1169738769531,
+      "task_count": 7,
+      "upload_bytes": 1536,
+      "upload_calls": 1
+    },
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 512,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 512,
+          "max_abs": 0.00023776873110370467,
+          "max_rel": 0.005441529153727188,
+          "mismatch_elements": 512
+        },
+        "max_abs": 0.000244140625,
+        "max_rel": 0.005494505494505495,
+        "mismatch_elements": 19
+      },
+      "download_bytes": 1536,
+      "download_calls": 1,
+      "emit_us": 39.663970947265625,
+      "output_sync_us": 22.748016357421875,
+      "pack_us": 8.165985107421875,
+      "round": 1,
+      "submit_count": 7,
+      "submit_wait_us": 117.83200073242188,
+      "task_count": 7,
+      "upload_bytes": 1536,
+      "upload_calls": 1
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 7,
+  "submits": [
+    {
+      "mode": "separate",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "separate",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "separate",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "separate",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "separate",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "separate",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "separate",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 7,
+  "wall_seconds": 0.016582250595092773
+}
