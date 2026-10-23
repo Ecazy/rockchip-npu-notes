@@ -29,3 +29,6 @@ experiments/vendor_models/
 
 # Local full-history backup; source history also remains in the original checkout.
 .archive/
+
+# RKNN converter optimization checkpoints (regenerable, not source models).
+/experiments/check[0-9]_*.onnx

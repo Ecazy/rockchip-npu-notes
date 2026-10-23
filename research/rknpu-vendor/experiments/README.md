@@ -19,6 +19,10 @@
 | 推理与训练管线 | `pipeline_pool_conv.sh`、`pipeline_conv_pool_conv.sh`、`pipeline_conv_pool_conv_train.sh` |
 | 命令流报告与 LUT | `rknpu_trace_report.py`、`lut_scan.py`、`vendor_op_signature.py` |
 | SDPA 模块/数学阶段时间线 | `sdpa_operation_map.py`、`analyze_sdpa_module_occupancy.py`、`render_sdpa_module_timeline_svg.py`、`validate_sdpa_math_mapping.py` |
+| GDN 层 RKNN 结构与模块分布 | `build_gdn_layer_onnx.py`、`validate_gdn_layer_onnx.py`、`convert_gdn_layer_rknn.py`、`gdn_feed.c`、`analyze_gdn_trace.py`、`render_gdn_timeline_svg.py` |
+| GDN lowering 探针与板端回归 | `probe_gdn_primitives.py`、`cut_gdn_probe.py`、`gdn_cycle.py`、`onnx_mapping_shim.py` |
+| GDN CPU/NPU 拆分与阶段耗时 | `build_gdn_layer_onnx.py --front-end/--tail`、`validate_gdn_cuts.py`、`export_gdn_cpu_inputs.py`、`gdn_cpu_layer.c`、`analyze_gdn_fe_timeline.py`、`render_gdn_split_svgs.py` |
+| SDPA regcmd issue order | `render_sdpa_regcmd_order_svg.py` |
 | 寄存器与任务比较 | `compare_regcmd.py`、`extract_task_blocks.py`、`analyze_vendor_*.py` |
 | 模型与权重分析 | `rknn_blob_dump.py`、`vendor_blob_decode.py`、`fp16_blob_decode.py`、`fp16_diff.py` |
 | 专用边界和训练探针 | 其余 `run_*_probe.sh`、`run_*_loop.sh` 及标定脚本 |
