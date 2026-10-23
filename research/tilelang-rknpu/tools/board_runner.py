@@ -144,10 +144,8 @@ def run_one(case: dict, campaign: Path, manifest: dict, lib,
     ws = None
     try:
         if fake_fd is None:
-            lib.cdll.rocket_open.argtypes = []
-            lib.cdll.rocket_open.restype = __import__("ctypes").c_int
-            lib.cdll.rocket_close.argtypes = [__import__("ctypes").c_int]
-            lib.cdll.rocket_close.restype = __import__("ctypes").c_int
+            from rknpu_backend.runtime.ffi import configure_rocket_abi
+            configure_rocket_abi(lib.cdll)
             fd = int(lib.cdll.rocket_open())
             close_fd = True
             if fd < 0:

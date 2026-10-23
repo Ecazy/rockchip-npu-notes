@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/gregordinary/rknpu-submit.git",
+  "base_commit": "6b144b19bb6700f96fc1638ccc7f20ad8719d527",
+  "patch_file": "provenance/patches/rknpu-submit-context-fault.patch",
+  "patch_sha256": "d63ca27c4dbcef8c87b84e8d85acc8083736874061892f937a7df9823513ad81",
+  "purpose": "provider shared-context quarantine after unknown submit failure; void close ABI-compatible retention of fd/task BO until process-level recovery",
+  "applies_to": [
+    "src/rknpu_provider.c",
+    "include/rknpu_submit.h",
+    "tests/provider_context_test.c"
+  ],
+  "rebuild": "checkout base_commit, apply this patch with git apply, then configure research/custom-ops with the existing pinned upstream checkouts"
+}

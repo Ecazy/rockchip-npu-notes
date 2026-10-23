@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #define _POSIX_C_SOURCE 200809L
 #include "rk_plan_internal.h"
+#include "rknpu_submit.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -217,6 +218,17 @@ int rk_workspace_create(int fd, const rk_plan *plan,
     }
     int target_rc = rk_target_check(diag);
     if (target_rc) return target_rc;
+    int context_rc = rocket_context_faulted(fd);
+    if (context_rc != 0) {
+        int code = context_rc > 0 ? RK_E_POISONED : RK_E_DEVICE;
+        rk_diag_set(diag, code, "workspace_create",
+                    context_rc > 0
+                        ? "provider context is quarantined; no workspace may "
+                          "reuse this fd until process-level recovery"
+                        : "provider context state is unavailable",
+                    "", UINT32_MAX, context_rc);
+        return code;
+    }
     if ((nconstants && !constants) || nconstants > plan->nvalues) {
         rk_diag_set(diag, RK_E_SCHEMA, "workspace_create",
                     "constant pointer/count mismatch", "", UINT32_MAX, 0);
@@ -225,8 +237,8 @@ int rk_workspace_create(int fd, const rk_plan *plan,
     rk_workspace *ws = calloc(1, sizeof(*ws));
     if (!ws) return RK_E_NOMEM;
     ws->fd = fd;
-    ws->busy = 0;
-    ws->poisoned = 0;
+    atomic_init(&ws->busy, 0);
+    atomic_init(&ws->poisoned, 0);
     if (rk_plan_clone_plan(plan, &ws->plan, diag)) {
         free(ws);
         return diag && diag->code ? diag->code : RK_E_INVALID;
@@ -338,16 +350,31 @@ int rk_workspace_run(rk_workspace *ws,
         report->numeric_mode = 1;
     }
     if (!ws) return RK_E_INVALID;
-    if (ws->poisoned) {
+    /* Acquire the single-run gate before observing poison.  A failing run sets
+     * poisoned while it owns busy, so this read cannot race a concurrent write. */
+    if (atomic_exchange_explicit(&ws->busy, 1, memory_order_acq_rel)) {
+        rk_diag_set(diag, RK_E_BUSY, "run", "workspace is already running",
+                    "", UINT32_MAX, 0);
+        return RK_E_BUSY;
+    }
+    if (atomic_load_explicit(&ws->poisoned, memory_order_acquire)) {
+        atomic_store_explicit(&ws->busy, 0, memory_order_release);
         rk_diag_set(diag, RK_E_POISONED, "run",
                     "workspace is poisoned after an unclassified device error",
                     "", UINT32_MAX, 0);
         return RK_E_POISONED;
     }
-    if (atomic_exchange_explicit(&ws->busy, 1, memory_order_acq_rel)) {
-        rk_diag_set(diag, RK_E_BUSY, "run", "workspace is already running",
-                    "", UINT32_MAX, 0);
-        return RK_E_BUSY;
+    int context_rc = rocket_context_faulted(ws->fd);
+    if (context_rc != 0) {
+        int code = context_rc > 0 ? RK_E_POISONED : RK_E_DEVICE;
+        atomic_store_explicit(&ws->poisoned, 1, memory_order_release);
+        atomic_store_explicit(&ws->busy, 0, memory_order_release);
+        rk_diag_set(diag, code, "run",
+                    context_rc > 0
+                        ? "provider context is quarantined; refusing submit"
+                        : "provider context state is unavailable",
+                    "", UINT32_MAX, context_rc);
+        return code;
     }
     int result = RK_E_INVALID;
     uint32_t input_values = 0, output_values = 0;
@@ -468,7 +495,8 @@ int rk_workspace_run(rk_workspace *ws,
             emit_us += 0.0;
             (void)t1;
             if (native) {
-                ws->poisoned = 1;
+                atomic_store_explicit(&ws->poisoned, 1,
+                                      memory_order_release);
                 rk_diag_set(diag, RK_E_DEVICE, "run",
                             "submission failed; workspace is poisoned", "",
                             submit->task_ids[0], native);
@@ -521,7 +549,8 @@ int rk_workspace_run(rk_workspace *ws,
             int native = co_download(view, tile);
             if (native) {
                 free(tile);
-                ws->poisoned = 1;
+                atomic_store_explicit(&ws->poisoned, 1,
+                                      memory_order_release);
                 rk_diag_set(diag, RK_E_DEVICE, "run",
                             "output download failed; workspace is poisoned",
                             "", a->id, native);
@@ -572,7 +601,8 @@ int rk_workspace_run(rk_workspace *ws,
     for (uint32_t slot = 0; slot < ws->nslots; slot++) {
         int native = co_guard_check(&ws->slots[slot]);
         if (native) {
-            ws->poisoned = 1;
+            atomic_store_explicit(&ws->poisoned, 1,
+                                  memory_order_release);
             rk_diag_set(diag, RK_E_DEVICE, "run",
                         "data BO slack/guard check failed; refusing to publish",
                         "", UINT32_MAX, native);
@@ -619,14 +649,15 @@ out:
 int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag) {
     rk_diag_clear(diag);
     if (!ws) return 0;
-    if (atomic_load_explicit(&ws->busy, memory_order_acquire)) {
+    if (atomic_exchange_explicit(&ws->busy, 1, memory_order_acq_rel)) {
         rk_diag_set(diag, RK_E_BUSY, "workspace_destroy",
                     "destroy raced a running workspace", "", UINT32_MAX, 0);
         return RK_E_BUSY;
     }
-    if (ws->poisoned) {
+    if (atomic_load_explicit(&ws->poisoned, memory_order_acquire)) {
         /* Without a provider-confirmed quiescence protocol we do not release BOs
          * that the device may still be touching.  The handle stays caller-owned. */
+        atomic_store_explicit(&ws->busy, 0, memory_order_release);
         rk_diag_set(diag, RK_E_POISONED, "workspace_destroy",
                     "workspace is poisoned; process-level recovery required",
                     "", UINT32_MAX, 0);

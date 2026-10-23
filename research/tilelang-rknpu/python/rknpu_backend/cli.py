@@ -184,15 +184,12 @@ def _cmd_run(args: argparse.Namespace) -> int:
               if b.role == "input" and b.name in arrays}
     constants = {b.name: arrays[b.name] for b in plan.bindings
                  if b.role == "constant" and b.name in arrays}
-    from .runtime.ffi import default_library
+    from .runtime.ffi import configure_rocket_abi, default_library
     lib = default_library()
     owns_fd = args.fd is None
     if owns_fd:
-        # rocket_open/rocket_close are exported by the same vendor-backed library.
-        lib.cdll.rocket_open.argtypes = []
-        lib.cdll.rocket_open.restype = ctypes.c_int
-        lib.cdll.rocket_close.argtypes = [ctypes.c_int]
-        lib.cdll.rocket_close.restype = ctypes.c_int
+        # rocket_close is void in the vendor header; only open has a status.
+        configure_rocket_abi(lib.cdll)
         fd = int(lib.cdll.rocket_open())
         if fd < 0:
             raise BackendError(
@@ -207,6 +204,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     ws = None
     run_error: BaseException | None = None
     cleanup_errors: list[BackendError] = []
+    workspace_destroyed = False
     try:
         from .runtime.bindings import Workspace
         ws = Workspace.create(plan, fd=fd, constants=constants)
@@ -219,23 +217,31 @@ def _cmd_run(args: argparse.Namespace) -> int:
         if ws is not None:
             try:
                 ws.close()
+                workspace_destroyed = True
             except BackendError as exc:
                 cleanup_errors.append(exc)
             except BaseException as exc:
                 cleanup_errors.append(BackendError(
                     RK_E_DEVICE, f"workspace destroy raised {type(exc).__name__}: "
                     f"{exc}", stage="cli"))
-        if owns_fd:
+        else:
+            workspace_destroyed = True
+        # Closing the fd is safe only after the workspace has confirmed that its
+        # BOs are quiescent.  POISONED/BUSY destroy means provider/context state is
+        # unknown; the fd (and any provider task BO) must be retained for
+        # process-level recovery.  rocket_close itself is void.
+        if owns_fd and workspace_destroyed:
             try:
-                close_rc = int(lib.cdll.rocket_close(fd))
-                if close_rc < 0:
-                    cleanup_errors.append(BackendError(
-                        RK_E_DEVICE, "rocket_close failed; fd release is "
-                        "unconfirmed", stage="cli", native_status=close_rc))
+                lib.cdll.rocket_close(fd)
             except BaseException as exc:
                 cleanup_errors.append(BackendError(
                     RK_E_DEVICE, f"rocket_close raised {type(exc).__name__}: "
                     f"{exc}", stage="cli"))
+        elif owns_fd:
+            cleanup_errors.append(BackendError(
+                RK_E_POISONED,
+                "workspace destroy did not confirm quiescence; provider fd and "
+                "task BO retained for process-level recovery", stage="cli"))
 
     # Preserve the execution error when cleanup also fails.  Cleanup failures are
     # always reported and are never converted into a successful exit.

@@ -484,6 +484,8 @@ class LibRKPlan:
         "rk_mock_delay_us": (None, (ctypes.c_uint,)),
         "rk_mock_fail_prep_at": (None, (ctypes.c_uint,)),
         "rk_mock_prep_calls": (ctypes.c_uint, ()),
+        "rk_mock_context_fault": (None, (ctypes.c_uint, ctypes.c_uint)),
+        "rk_mock_context_faulted": (ctypes.c_int, (ctypes.c_int,)),
         "rk_mock_reset": (None, ()),
         "rk_mock_allocs": (ctypes.c_uint, ()),
         "rk_mock_tag_count": (ctypes.c_uint, ()),
@@ -624,6 +626,22 @@ class CWorkspace:
         if not self.handle:
             return  # already released: cleanup must be idempotent
         self.lib.workspace_destroy(self)
+
+
+def configure_rocket_abi(cdll) -> None:
+    """Apply the vendor header's real ABI to ctypes declarations.
+
+    ``rocket_open`` returns int; ``rocket_close`` is declared void and has no
+    status result.  Callers must not infer closure success from a fabricated
+    return value.
+    """
+    cdll.rocket_open.argtypes = []
+    cdll.rocket_open.restype = ctypes.c_int
+    cdll.rocket_close.argtypes = [ctypes.c_int]
+    cdll.rocket_close.restype = None
+    if hasattr(cdll, "rocket_context_faulted"):
+        cdll.rocket_context_faulted.argtypes = [ctypes.c_int]
+        cdll.rocket_context_faulted.restype = ctypes.c_int
 
 
 def default_library() -> LibRKPlan:

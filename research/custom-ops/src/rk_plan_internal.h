@@ -65,7 +65,7 @@ typedef struct rk_workspace {
     co_execute_workspace execute_workspace;
     int execute_workspace_ready;
     atomic_int busy;
-    int poisoned;
+    atomic_int poisoned;
     int created;
     uint32_t max_submit_tasks;
 } rk_workspace;

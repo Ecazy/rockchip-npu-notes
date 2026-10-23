@@ -1,0 +1,207 @@
+diff --git a/include/rknpu_submit.h b/include/rknpu_submit.h
+index afe014e..6955de2 100644
+--- a/include/rknpu_submit.h
++++ b/include/rknpu_submit.h
+@@ -65,6 +65,12 @@ int64_t rknpu_last_hw_elapse_ns(int fd);
+  * Submits the driver never committed write back 0 and are counted in neither sum. */
+ uint64_t rknpu_hw_elapse_total_ns(uint64_t *n_submits);
+ 
++/* Shared-context quarantine state for this fd.  Returns 1 if any submit failed
++ * and the provider retained the context, 0 if healthy, or a negative errno for an
++ * fd this provider does not know.  A faulted context rejects all later submits on
++ * the same fd, including from other workspaces, until process-level recovery. */
++int rocket_context_faulted(int fd);
++
+ /* Raw DRM_IOCTL_RKNPU_ACTION. `action` is one of the RKNPU_GET_ / RKNPU_SET_ numbers
+  * in src/rknpu_uapi.h; *value is the input for a SET and receives the result for a GET.
+  * Returns 0, or a negative errno — EINVAL is what an action this part does not
+diff --git a/src/rknpu_provider.c b/src/rknpu_provider.c
+index 9b31b92..41bc641 100644
+--- a/src/rknpu_provider.c
++++ b/src/rknpu_provider.c
+@@ -109,6 +109,11 @@ struct rknpu_dev {
+      * paths as a cosine similarity of 0.88-0.94 that moved between runs, while every
+      * single-threaded gate was exact. */
+     pthread_mutex_t submit_lock;
++    /* Once an ioctl/submit path fails, the provider cannot prove that the device
++     * stopped touching this fd's task BO.  This shared-context flag is set while
++     * submit_lock is held and blocks every later submit on the same fd, including
++     * other workspaces that share the descriptor. */
++    atomic_int faulted;
+ };
+ 
+ static struct rknpu_dev *_Atomic g_blocks[RKNPU_DEV_BLOCKS];
+@@ -526,6 +531,7 @@ int rocket_open(void)
+      * no lock is needed to claim it — only to grow the block, which dev_slot did. */
+     *slot = tmp;
+     pthread_mutex_init(&slot->submit_lock, NULL);
++    atomic_init(&slot->faulted, 0);
+ 
+     /* Resolve the chip profile at the one point every user passes through, matching
+      * the mainline provider — so a chip with no profile warns once per process even on
+@@ -536,18 +542,34 @@ int rocket_open(void)
+     return slot->fd;
+ }
+ 
++int rocket_context_faulted(int fd)
++{
++    struct rknpu_dev *d = dev_find(fd);
++    if (!d) return -EBADF;
++    return atomic_load_explicit(&d->faulted, memory_order_acquire) ? 1 : 0;
++}
++
+ void rocket_close(int fd)
+ {
+     if (fd < 0) return;
+     struct rknpu_dev *d = dev_find(fd);
+     if (d) {
++        pthread_mutex_lock(&d->submit_lock);
++        if (atomic_load_explicit(&d->faulted, memory_order_acquire)) {
++            /* No provider-confirmed quiescence: retain the fd/context and task BO
++             * for process-level recovery.  Closing here would let the kernel destroy
++             * the object while the device may still be reading it. */
++            pthread_mutex_unlock(&d->submit_lock);
++            return;
++        }
+         /* BEFORE the close, as on the mainline provider: the task BO's handle belongs
+          * to this file and close() destroys it, so a teardown after would free an
+          * object that no longer exists. */
+         bo_destroy(d, &d->taskbo);
+         d->taskbo_cap = 0;
+-        pthread_mutex_destroy(&d->submit_lock);
+         d->fd = -1;
++        pthread_mutex_unlock(&d->submit_lock);
++        pthread_mutex_destroy(&d->submit_lock);
+     }
+     close(fd);
+ }
+@@ -920,7 +942,13 @@ static int submit_kick(struct rknpu_dev *d, const rocket_task_desc *tasks,
+                        uint32_t n_prog, uint32_t int_mask, uint32_t timeout_ms)
+ {
+     pthread_mutex_lock(&d->submit_lock);
++    if (atomic_load_explicit(&d->faulted, memory_order_acquire)) {
++        pthread_mutex_unlock(&d->submit_lock);
++        return -EPIPE;   /* shared context quarantined after an unknown failure */
++    }
+     int rc = submit_locked(d, tasks, n_prog, int_mask, timeout_ms);
++    if (rc < 0)
++        atomic_store_explicit(&d->faulted, 1, memory_order_release);
+     pthread_mutex_unlock(&d->submit_lock);
+     return rc;
+ }
+diff --git a/tests/provider_context_test.c b/tests/provider_context_test.c
+new file mode 100644
+index 0000000..80eff71
+--- /dev/null
++++ b/tests/provider_context_test.c
+@@ -0,0 +1,110 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++/* Provider-boundary test for shared-fd context quarantine.
++ *
++ * The provider object is included into this translation unit so the test can seed a
++ * fake per-fd context without opening a device.  submit_locked reaches the real
++ * provider path but its BO sync ioctl targets an invalid fd, which fails while the
++ * submit lock is held.  Two queued submit_kick callers then prove that the loser
++ * observes the context fault before it can rewrite the task BO.
++ */
++#include <assert.h>
++#include <pthread.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "rocket_hw_profile.h"
++const struct rocket_hw_profile *rocket_hw_current(void) { return NULL; }
++
++#include "../src/rknpu_provider.c"
++
++#define TEST_FD 4095
++
++struct thread_arg {
++    struct rknpu_dev *d;
++    rocket_task_desc task;
++    int rc;
++    pthread_barrier_t *barrier;
++};
++
++static void *queued_submit(void *opaque)
++{
++    struct thread_arg *arg = opaque;
++    pthread_barrier_wait(arg->barrier);
++    arg->rc = submit_kick(arg->d, &arg->task, 1, RKNPU_TASK_INT_MASK_DPU, 10);
++    return NULL;
++}
++
++int main(void)
++{
++    struct rknpu_dev *d = dev_slot(TEST_FD, 1);
++    assert(d != NULL);
++    d->fd = TEST_FD;
++    d->is_drm = 0;
++    atomic_init(&d->faulted, 0);
++    pthread_mutex_init(&d->submit_lock, NULL);
++
++    const uint32_t cap = 64;
++    void *taskmem = calloc(cap, sizeof(struct rknpu_task));
++    assert(taskmem != NULL);
++    d->taskbo.handle = 0x1234u;
++    d->taskbo.obj_addr = 0x5678u;
++    d->taskbo.size = cap * sizeof(struct rknpu_task);
++    d->taskbo.ptr = taskmem;
++    d->taskbo_cap = cap;
++
++    pthread_barrier_t barrier;
++    assert(pthread_barrier_init(&barrier, NULL, 2) == 0);
++    struct thread_arg a = {
++        .d = d,
++        .task = {.regcmd = 0xAAAA0000u, .regcmd_count = 8},
++        .rc = 12345,
++        .barrier = &barrier,
++    };
++    struct thread_arg b = {
++        .d = d,
++        .task = {.regcmd = 0xBBBB0000u, .regcmd_count = 8},
++        .rc = 12345,
++        .barrier = &barrier,
++    };
++    pthread_t ta, tb;
++    assert(pthread_create(&ta, NULL, queued_submit, &a) == 0);
++    assert(pthread_create(&tb, NULL, queued_submit, &b) == 0);
++    assert(pthread_join(ta, NULL) == 0);
++    assert(pthread_join(tb, NULL) == 0);
++    pthread_barrier_destroy(&barrier);
++
++    assert(a.rc < 0 && b.rc < 0);
++    const int epipe = -EPIPE;
++    assert((a.rc == epipe) != (b.rc == epipe));
++    struct thread_arg *winner = a.rc == epipe ? &b : &a;
++    struct rknpu_task *task = (struct rknpu_task *)d->taskbo.ptr;
++    assert(task[0].regcmd_addr == winner->task.regcmd);
++    assert(rocket_context_faulted(TEST_FD) == 1);
++
++    void *saved_taskbo = d->taskbo.ptr;
++    uint32_t saved_handle = d->taskbo.handle;
++    rocket_close(TEST_FD); /* must not destroy the faulted context/task BO */
++    assert(d->fd == TEST_FD);
++    assert(d->taskbo.ptr == saved_taskbo);
++    assert(d->taskbo.handle == saved_handle);
++    assert(rocket_context_faulted(TEST_FD) == 1);
++
++    /* A healthy context keeps the existing close contract: task BO is destroyed,
++     * the slot is retired and the fd path is closed normally. */
++    const int healthy_fd = TEST_FD - 1;
++    struct rknpu_dev *healthy = dev_slot(healthy_fd, 1);
++    assert(healthy != NULL);
++    healthy->fd = healthy_fd;
++    atomic_init(&healthy->faulted, 0);
++    pthread_mutex_init(&healthy->submit_lock, NULL);
++    healthy->taskbo.handle = 0x9999u;
++    healthy->taskbo.ptr = NULL;
++    rocket_close(healthy_fd);
++    assert(healthy->fd == -1);
++    assert(healthy->taskbo.handle == 0);
++    assert(rocket_context_faulted(healthy_fd) == -EBADF);
++    puts("PROVIDER_CONTEXT PASS");
++    return 0;
++}
