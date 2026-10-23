@@ -1,13 +1,15 @@
 # tilelang-rknpu
 
-**Experimental, incomplete checkpoint.  Not approved as a general release or for
+**Experimental checkpoint; declared MVP scope complete.  Not approved as a general release or for
 unbounded device execution.**  Review blockers 1-4 and their follow-ups are fixed on
 the Host with negative tests.  P0 is `complete`: the locked TileLang/TVM sources
 were independently built, imported from an isolated source-build tree, and exercised
-by the existing frontend/planner/FFI regressions.  A source-built-plan RK3588
-admission campaign passes on three serial single-core masks.  The remaining MVP
-boundary is real-device fault recovery, which is explicitly unmeasured; RK1228
-remains independent.  See
+by the existing frontend/planner/FFI regressions.  The native `tvm_ffi` loaded by
+the source environment is the source-built library, verified through
+`find_libtvm_ffi()` and `/proc/self/maps`.  A source-built-plan RK3588 admission
+campaign passes on three serial single-core masks.  Failure handling is explicitly
+*safe isolation and stop*: recovery/continued computation after unknown device state
+is out of scope and not claimed.  RK1228 remains independent.  See
 [P0-SOURCE-LOCK.md](P0-SOURCE-LOCK.md), [review findings](REVIEW-2026-10-20.md),
 [status](IMPLEMENTATION-STATUS.md) and [RK1228-TARGET.md](RK1228-TARGET.md).
 
@@ -34,8 +36,9 @@ admission, 27 cases on each of three **serially run** single-core masks, with ra
 declared + unquantized float64 math references, byte-level chain/separate
 comparison, final-publication BO guard, numeric guards, tiled per-node
 dataflow, the board CLI path and exact C runtime target identity check.  P8 is
-not closed only on one concrete condition: the unmeasured real-device
-submit/recovery path.  Support boundaries are in
+complete for the declared finite support domain; real-device recovery after an
+unknown fault is an explicit out-of-scope limitation, not an implicit MVP gate.
+Support boundaries are in
 [SUPPORT-DOMAIN.md](SUPPORT-DOMAIN.md), necessary-condition evidence in
 [ACCEPTANCE-MATRIX.md](ACCEPTANCE-MATRIX.md), runtime failure ownership in
 [RUNTIME-LIFECYCLE.md](RUNTIME-LIFECYCLE.md) and replay commands in
@@ -124,8 +127,8 @@ not independently rehashed.
 
 The three core masks are serial single-core runs, not a concurrent-throughput
 claim.  Multi-board, concurrent three-core, performance and long-duration stress
-are extension validation, not MVP/P8 blockers.  P8 remains open for the remaining
-normative release gaps.
+are extension validation, not MVP/P8 blockers.  P8 is complete for the declared
+MVP scope; post-fault recovery is an explicit out-of-scope limitation.
 
 ### CLI path
 

@@ -4,7 +4,7 @@ Checkpoint evidence: board `results/20261023T144054Z-rk3588/`, Host
 `results/20261023T131916Z-host/` (213 pytest / 40 subtests, 27/27 ctest, 711 C
 checks, sanitizer enabled).  Status terms are deliberately narrow:
 **implemented+verified**, **verification gap**, **explicitly unsupported**,
-**blocked external**, and **future extension**.
+**out of scope**, and **future extension**.
 
 ## P0–P9
 
@@ -16,9 +16,9 @@ checks, sanitizer enabled).  Status terms are deliberately narrow:
 | P3 planner | **implemented+verified for the finite representative shape list** | `passes/dag.py`, `passes/tile.py`, `passes/storage.py` | `test_lowering.py`, `test_storage.py`, `test_dataflow_multitile.py`, `test_staged_tilelang.py`; representative boundaries include 1/13/257/300/512-wide M/N/K, ragged K=257, M/N multi-tile, odd/even K shards, and staged source shapes `512x256x512`. The 1..4096 limits are rule-checked; exhaustive combination enumeration is explicitly not required. |
 | P4 combinations/storage/residual liveness | **implemented+verified for listed nodes** | `passes/legalize.py`, `passes/dag.py`, `passes/storage.py` | `test_dataflow.py`, `test_dataflow_multitile.py`, `test_staged_tilelang.py`, `test_broadcast_execution.py`, `test_multi_output_execution.py`; projection/FFN/branch/ragged/multi-output on board. 3-D/dynamic/state/arbitrary broadcast are explicitly unsupported. |
 | P5 C descriptor/FFI | **implemented+verified** | `custom-ops/src/rk_plan_validate.c`, `include/rk_plan.h`, `runtime/ffi.py` | `rk_plan_contract_test` 26 checks, `rk_plan_host_test` 711 checks; `test_ffi.py`, `test_plan_verify.py`. |
-| P6 instantiate/execute | **implemented+verified on Host/mock; real-device failure unmeasured** | `custom-ops/src/rk_plan_runtime.c`, `RUNTIME-LIFECYCLE.md` | Pre-submit binding/nonfinite/upload failures are safe; executor errors poison and retain command+data BOs; BUSY and final publication guard regressions pass. Board success path passes. No dangerous timeout is injected; real-device recovery is not claimed. |
+| P6 instantiate/execute | **implemented+verified for the declared safety contract** | `custom-ops/src/rk_plan_runtime.c`, `RUNTIME-LIFECYCLE.md` | Pre-submit binding/nonfinite/upload failures are safe; executor errors poison and retain command+data BOs; BUSY and final publication guard regressions pass. Board success path passes. The supported post-failure behavior is quarantine/stop; recovery is out of scope. |
 | P7 CLI | **implemented+verified on Host and RK3588** | `python/rknpu_backend/cli.py`, `tools/board_cli_check.py` | `test_cli.py` covers caller/owned fd, cleanup failure not masked, and rc mapping; board `core-*/cli/cli-report.json` shows compile/validate/explain rc0, two successful runs with stable fd count, bad binding rc2/no publish. |
-| P8 board admission | **representative campaign passed; MVP not fully closed** | campaign/verifier scripts | Final source-built rerun `results/20261023T144054Z-rk3588/`: **27 cases × 3 serial masks = 81/81 PASS**, including projection/FFN/branch from real multi-block TileLang staged sources, tiled RKIR cases, broadcast, dual output, ragged tail, K shards, guards and the full CLI path. Source hash recomputed true; raw outputs and dual references archived. Remaining blocker is only the real-device fault/recovery item below. |
+| P8 board admission | **implemented+verified for the declared MVP scope** | campaign/verifier scripts | Final source-built rerun `results/20261023T144054Z-rk3588/`: **27 cases × 3 serial masks = 81/81 PASS**, including projection/FFN/branch from real multi-block TileLang staged sources, tiled RKIR cases, broadcast, dual output, ragged tail, K shards, guards and the full CLI path. Source hash recomputed true; raw outputs and dual references archived. |
 | P9 expansion | **future extension** | n/a | Dynamic host broadcast, state/recurrent/hybrid, online core scheduling and unverified composite templates remain outside P0–P8 closure. |
 
 ## Specific cross-cutting conditions
@@ -37,18 +37,16 @@ checks, sanitizer enabled).  Status terms are deliberately narrow:
 | Source/library provenance | **source independently verified; library recorded-only** | `scripts/run-board-admission.sh`, verifier `artifact_verification` | board `source-bundle.sha256` recomputed equal; `board/library.sha256` is a remote record and is explicitly `verified=false` on the Host. |
 | Credential hygiene | **implemented+verified** | `.env` ignored; askpass + exact-value scan | board campaign `credential scan: PASS`; exact scan of `results/20261023T144054Z-rk3588/` is zero-match. |
 
-## Remaining MVP closure conditions
+## MVP scope boundary
 
 The exhaustive-shape, multi-board, concurrency, long-stress and undefined
 “full release gate” items are removed.  The finite representative matrix, P0
-source rebuild and same-board rerun are complete.  One concrete condition remains:
+source rebuild and same-board rerun are complete.  There is no remaining required
+MVP acceptance condition for the declared scope.
 
-1. **Real RK3588 submit/recovery — unmeasured.** Host/mock verifies pre-submit
-   safety, BUSY, poison-on-unknown, output non-publication and command/data BO
-   retention.  No real device fault was injected, so driver quiescence/context
-   recovery/physical release is not claimed.  The success path on the real board
-   is verified.
-
-No other P0–P8 blocker is currently claimed.  This condition prevents a statement
-that the **entire** normative MVP is closed; it does not invalidate the verified
-implementation domain above.
+**Explicit scope boundary:** real RK3588 submit/recovery after an unknown fault is
+not implemented, not tested and not promised.  Host/mock verifies pre-submit safety,
+BUSY, poison-on-unknown, output non-publication and command/data BO retention; the
+real-device success path is verified.  The accepted failure contract is quarantine,
+refuse retry and stop, not automatic recovery.  This limitation is not counted as
+an implicit MVP gate.

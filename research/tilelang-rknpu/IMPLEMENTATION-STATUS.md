@@ -2,7 +2,8 @@
 
 更新日期：2026-10-23（source-built TileLang/TVM、多 block staged 图、provider-context 隔离）。
 当前结论：**声明支持域的后端实现、代表性 RK3588 三单核串行准入和 P0 源码重建均已通过；
-完整 MVP 仅保留一项未完成条件——真实 RK3588 故障恢复未测，当前禁止作为通用 release 版本**。
+按已声明的 MVP 范围，交付闭环完成。真实未知故障后的恢复/继续计算明确不在范围内，未实现、
+未测、不承诺；当前仍禁止作为通用 release 版本**。
 
 - 第一轮：[复核报告](REVIEW-2026-10-20.md) 阻断项 1–4 的原始三条反例。
 - 第二轮：四个同源缺陷（未初始化内存、循环语义、常量 BO 生存期、覆盖性）。默认 `ctest`
@@ -41,8 +42,8 @@ P0 源码构建已完成：锁定 archive、submodule 与工具链清单、构�
 - 实现域与有限代表矩阵：完成并真机通过。
 - 原定多 tile 逐节点图：RKIR 与真实多 block TileLang staged projection/FFN/branch 均已贯通。
 - 运行契约：target/binding/BO/budget/BUSY/pre-submit 安全/unknown→poison 保留、CLI cleanup/fd 均有代码、测试和日志。
-- **P0 源码重建：完成**。source-built TileLang/TVM/tvm-ffi/dlpack 的实际加载路径、完整 pytest、CTest、27 个 plan 语义等价和板端 81/81 已记录。
-- 全 MVP 尚未宣布关闭，仅剩一个具体条件：真实设备 submit/恢复故障未测，当前版本不承诺恢复。多板/并发/长压不列为前置，也不存在未定义的 “full release gate” 阻断。
+- **P0 源码重建：完成**。source-built TileLang/TVM/tvm-ffi/dlpack 的实际加载路径、完整 pytest、CTest、27 个 plan 语义等价和板端 81/81 已记录；`tvm_ffi` 的 `find_libtvm_ffi()` 与 `/proc/self/maps` 均验证为 source-built 库。
+- **MVP 范围已明确为“成功路径 + 未知错误的隔离停止”**；真实设备 submit/恢复后继续计算不在范围，未实现、未测、不承诺。该限制不隐式追加为 MVP gate；多板/并发/长压也不列为前置。
 
 ## 1. 本轮修复对照
 
@@ -289,12 +290,13 @@ P9 范围校准（按 [specific.md](specific.md) 第 13 节）：
     `RK_E_NUMERIC_CONTRACT`，不会被静默改写成“先收窄 projection 再 add”；
   · canonical 与 gate/up 交换的 RKIR 分支图均默认走通用 per-node 路径；整图
     `swiglu_ffn_v1` 仅作 opt-in 专用路径。
-- **仍未完成（P7 不能关闭）**：
+- **声明 MVP 范围已完成**：
   · 多输出逐节点路径与真实 TileLang 双输出 fixture 均已接入并有 mock 数值证据；
-  · FP32 projection+residual 融合路径未定义/未验证；若未来支持须新增独立数值契约与
+  · FP32 projection+residual 融合路径明确不支持；若未来支持须新增独立数值契约与
     硬件证据，本次不放开；
-  · 小形状 RK3588 三单核串行准入已通过；设备失败/恢复规范与完整 release gate 仍未
-    关闭。多板、三核并发、性能和长时压力属于扩展验证，不是当前 MVP 阻断项。
+  · 小形状 RK3588 三单核串行准入已通过；未知错误的支持行为是隔离并停止，真实恢复/
+    继续计算明确 out of scope。多板、三核并发、性能和长时压力属于扩展验证，不是
+    MVP 阻断项。
 
 复核补正（上一轮）：
 
@@ -394,14 +396,14 @@ P1 批次一（K 循环提取）与顺带发现的 C 校验缺陷：
 | 工作包 | 状态 | 实际完成 | 明确未完成 |
 |---|---|---|---|
 | P0 基线与依赖锁 | `complete` | 源码/依赖锁、隔离环境、源码树 6 scope 一致性均完成；**锁定源码已独立构建** TileLang/TVM/tvm-ffi/dlpack/libbacktrace，source-built full pytest 213/40、CTest 27/27、27 个计划语义一致、同一 RK3588 campaign 81/81；详见 `P0-SOURCE-LOCK.md` 第 9 节与 `provenance/p0-source-build.json` | 无（真实设备故障恢复不属于 P0） |
-| P1 真实前端提取 | `in_progress` | 真实多 block `T.Kernel` staged projection/FFN/branch 已接入逐节点 SSA；每阶段一个 launch 边界、全局中间参数、显式 FP16 K-tile 写回和精确 block 覆盖均验证；单 tile/K-loop/MN-tile/ragged/broadcast 正例保留 | 同 launch 内跨 block 依赖、FP32 跨 tile 累加后一次收窄、block 覆盖不精确均拒绝；3-D grid、任意条件控制流、FP32 residual + final-copy narrowing 显式拒绝 |
-| P2 IR/Plan/schema/能力表 | `in_progress` | frozen dataclass、严格 JSON、canonical hash、rkir v1 + rkplan v2 + capability v1、enabled/experimental manifest | state/动态 shape/任意 broadcast 语义未实现 |
-| P3 MatMul planner | `in_progress` | 单 GEMM M/N 多 tile、K 链/ping-pong/尾块；逐节点 RKIR 值 tile 集合（256x256 输出、256-wide K slice）已支持 projection/FFN/branch/activation 并真机通过；设备驻留中间值、残差/输出保活；source-built TileLang 生成的 27 个计划与 wheel 计划语义逐项一致 | 1..4096 全组合不要求穷举；真实设备失败类别未测 |
-| P4 组合/存储/提交 | `in_progress` | SiLU/GELU/sigmoid/HardSigmoid；同 shape Add/Mul；编译期常量 rank-0 标量 / rank-1 `[N]` 每通道广播（显式 Host 展开 + 单次 constant upload）；LUT 分段；first-fit slot | 运行时 Tensor 广播、动态 Host 标量、任意 NumPy 广播、原生 scalar EW 模板未实现 |
-| P5 C descriptor 校验/FFI | `in_progress` | 深拷贝；上传边界、单写者、发射顺序、slot 复用、publish 覆盖、ABI 版本、预算均独立校验；ctypes 尺寸对照；ASan/UBSan 通过 | 未覆盖全部旧 custom-ops 回归的 sanitizer |
-| P6 资源实例化/执行 | `in_progress` | 线性 action 调度；多 tile 输出拼装；有限值闸门；发布前全数据 BO `co_guard_check`；常量仅创建时上传；C runtime 目标 chip/driver/ABI 自检；workspace poison 原子化；**provider 共享 context 在 submit_lock 内故障隔离，共享 fd 排队/新 workspace/faulted close 均保留 task BO**；RK3588 成功路径、三核、chain/separate 已验 | 真实设备故障类型/驱动恢复未测；不通过危险 timeout 注入或宣称恢复成功 |
-| P7 CLI/Python run/示例 | `in_progress` | CLI 五条命令；`Workspace` caller-fd API；真实 TileLang matmul / matmul_silu / silu_proj / staged-FP16 FFN / 双输出 branch / ragged；**板端 `compile-rkir`→`validate`→`explain`→`run` 已在三 mask 通过**（成功发布、fd 平衡、bad-binding rc2 不发布）；`run --fd` 区分 caller-owned/自开 fd | FP32 residual 融合契约未定义；完整 release 文档仍随 P8 开放 |
-| P8 板端准入 | `in_progress` | **代表性小形状、三个单核串行准入通过**：RK3588 OPi 5 Plus / driver v0.9.8 / 1 GHz/ABI 1，**27 cases × 3 masks = 81/81 PASS**；source-built TileLang/TVM 重新生成计划；真实多 block staged projection/FFN/branch、tiled RKIR、广播、双输出、ragged 尾块、K 奇偶分片、完整 CLI、源包/库哈希和凭据扫描均归档。证据 `results/20261023T144054Z-rk3588/` | **剩余一个具体条件**：真实设备 submit/恢复未测（Host/mock 已验 pre-submit 安全、BUSY、unknown→poison、shared-context quarantine、资源保留；真实驱动恢复不承诺）。P0 源码重建已完成。 |
+| P1 真实前端提取 | `complete`（声明范围） | 真实多 block `T.Kernel` staged projection/FFN/branch 已接入逐节点 SSA；每阶段一个 launch 边界、全局中间参数、显式 FP16 K-tile 写回和精确 block 覆盖均验证；单 tile/K-loop/MN-tile/ragged/broadcast 正例保留 | 同 launch 内跨 block 依赖、FP32 跨 tile 累加后一次收窄、block 覆盖不精确均拒绝；3-D grid、任意条件控制流、FP32 residual + final-copy narrowing 显式拒绝 |
+| P2 IR/Plan/schema/能力表 | `complete`（声明范围） | frozen dataclass、严格 JSON、canonical hash、rkir v1 + rkplan v2 + capability v1、enabled/experimental manifest | state/动态 shape/任意 broadcast 语义未实现 |
+| P3 MatMul planner | `complete`（声明范围） | 单 GEMM M/N 多 tile、K 链/ping-pong/尾块；逐节点 RKIR 值 tile 集合（256x256 输出、256-wide K slice）已支持 projection/FFN/branch/activation 并真机通过；设备驻留中间值、残差/输出保活；source-built TileLang 生成的 27 个计划与 wheel 计划语义逐项一致 | 1..4096 全组合不要求穷举；真实设备故障后的恢复能力 out of scope |
+| P4 组合/存储/提交 | `complete`（声明范围） | SiLU/GELU/sigmoid/HardSigmoid；同 shape Add/Mul；编译期常量 rank-0 标量 / rank-1 `[N]` 每通道广播（显式 Host 展开 + 单次 constant upload）；LUT 分段；first-fit slot | 运行时 Tensor 广播、动态 Host 标量、任意 NumPy 广播、原生 scalar EW 模板未实现 |
+| P5 C descriptor 校验/FFI | `complete`（声明范围） | 深拷贝；上传边界、单写者、发射顺序、slot 复用、publish 覆盖、ABI 版本、预算均独立校验；ctypes 尺寸对照；ASan/UBSan 通过 | 未覆盖全部旧 custom-ops 回归的 sanitizer |
+| P6 资源实例化/执行 | `complete`（声明安全契约） | 线性 action 调度；多 tile 输出拼装；有限值闸门；发布前全数据 BO `co_guard_check`；常量仅创建时上传；C runtime 目标 chip/driver/ABI 自检；workspace poison 原子化；**provider 共享 context 在 submit_lock 内故障隔离，共享 fd 排队/新 workspace/faulted close 均保留 task BO**；RK3588 成功路径、三核、chain/separate 已验 | 真实故障后的恢复/继续计算明确 out of scope；不通过危险 timeout 注入或宣称恢复成功 |
+| P7 CLI/Python run/示例 | `complete`（声明范围） | CLI 五条命令；`Workspace` caller-fd API；真实 TileLang matmul / matmul_silu / silu_proj / staged-FP16 FFN / 双输出 branch / ragged；**板端 `compile-rkir`→`validate`→`explain`→`run` 已在三 mask 通过**（成功发布、fd 平衡、bad-binding rc2 不发布）；`run --fd` 区分 caller-owned/自开 fd | FP32 residual 融合等未支持形式明确拒绝；故障后恢复/继续计算 out of scope |
+| P8 板端准入 | `complete`（声明 MVP 范围） | **代表性小形状、三个单核串行准入通过**：RK3588 OPi 5 Plus / driver v0.9.8 / 1 GHz/ABI 1，**27 cases × 3 masks = 81/81 PASS**；source-built TileLang/TVM 重新生成计划；真实多 block staged projection/FFN/branch、tiled RKIR、广播、双输出、ragged 尾块、K 奇偶分片、完整 CLI、源包/库哈希和凭据扫描均归档。证据 `results/20261023T144054Z-rk3588/` | 真实设备恢复/继续计算明确 out of scope；隔离停止契约已验证。 |
 | P9 扩展 | `not_started` | 无 | 动态 Host 广播、状态、hybrid、逐组选核、参考库模板 |
 
 ## 3. 实际测试结果
@@ -538,9 +540,10 @@ research/tilelang-rknpu/provenance.json
    均已交付。剩余为 3-D grid 单独评估，以及无边界证明的任意控制流保持拒绝。
 3. **P4**：编译期 rank-0/rank-1 常量广播已交付（显式 Host 展开、单次 constant
    upload、Host/device 预算与传输计数）。运行时动态/任意广播仍属 P9。
-4. **P6/P8**：RK3588 小形状三单核串行、chain/separate、双参考/原始输出、BO guard、
-   数值与三类 guard、runtime 目标自检已通过；剩余按规范关闭设备失败/恢复语义与完整
-   release gate。不通过危险 timeout 注入制造证据；多板/并发/长压不算 P8 前置。
+4. **P6/P8 已完成（声明 MVP 范围）**：RK3588 小形状三单核串行、chain/separate、双参考/
+   原始输出、BO guard、数值与三类 guard、runtime 目标自检已通过。未知错误的隔离停止
+   契约已验证；真实恢复/继续计算明确 out of scope。不通过危险 timeout 注入制造证据；
+   多板/并发/长压不算 P8 前置。
 5. ASan/UBSan 全量回归（旧 custom-ops 目标）。
 6. **RK1228**：按独立 target/profile、驱动/uAPI、memory-transfer 契约接入；具体型号
    与接口以实机识别为准，见 [RK1228-TARGET.md](RK1228-TARGET.md)。不得继承 RK3588

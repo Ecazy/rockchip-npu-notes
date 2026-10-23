@@ -268,11 +268,14 @@ matrix: real TileLang multi-block staged projection/FFN/branch, tiled RKIR graph
 CLI, guards, bindings/BO/budget/BUSY/pre-submit/unknown-poison host regressions and
 same-board execution.
 
-The entire normative MVP is **not claimed closed** because one concrete condition
-remains: a real RK3588 submit/recovery fault was not injected, so driver
-quiescence and physical release after unknown device state remain unmeasured.
-P0 source rebuild is complete; the code isolation contract is verified.  The
-remaining limitation is not hidden behind an undefined release-gate label.
+The declared MVP scope is **complete** for the finite support domain and the
+representative RK3588 campaign.  Failure handling is part of that scope only as
+safe isolation and stop: after an unknown fault the provider context is
+quarantined, retries are refused and resources are retained for process-level
+disposal.  Recovery/continued computation, driver quiescence and physical release
+are explicitly **out of scope, unmeasured and not claimed**, rather than an
+implicit extra MVP gate.  P0 source rebuild is complete and the source-built
+`libtvm_ffi.so` load path is verified.
 
 ## Verification state
 

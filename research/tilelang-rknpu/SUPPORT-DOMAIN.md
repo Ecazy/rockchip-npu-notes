@@ -74,6 +74,15 @@ Updated for the MVP closure checkpoint, 2026-10-23.
 - RK1228 is a separate target; no RK3588 recipe or acceptance conclusion is
   inherited. See `RK1228-TARGET.md`.
 
+## Recovery boundary
+
+Unknown submit/device errors are handled by quarantine and stop: the provider
+context rejects further submissions, the workspace is poisoned, outputs are not
+published and resources are retained for process-level disposal.  Driver
+quiescence, context reinitialization, physical release and continued computation
+after such a fault are **not implemented, not tested and not promised**.  This is
+an explicit scope boundary, not a hidden MVP acceptance condition.
+
 ## CLI contract
 
 `run` loads a bindings JSON whose values are `.npy` paths relative to the JSON

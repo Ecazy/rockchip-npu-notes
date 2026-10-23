@@ -9,7 +9,10 @@
 | shared provider-context quarantine | **CLOSED (Host/provider boundary)** | per-fd provider `faulted` set under `submit_lock`; queued/shared-fd/new-workspace refusal; faulted close retains fd/task BO; C `provider_context` + shared-fd worker tests |
 
 These close the **code isolation** items.  Physical recovery after a real device
-fault remains **unmeasured**; see the evidence boundary below.
+fault remains **unmeasured and is explicitly out of scope** for this delivery;
+the supported behavior after unknown device state is quarantine, refuse further
+submission, retain resources and stop.  Failure isolation is verified; recovery is
+not claimed.  See the evidence boundary below.
 
 This audit follows `rk_workspace_create -> rk_workspace_run -> rk_emit_action ->
 co_execute_profiled -> rocket_submit_tasks_flags` and the destruction path.  It

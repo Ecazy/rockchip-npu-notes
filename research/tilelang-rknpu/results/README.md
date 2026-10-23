@@ -127,8 +127,9 @@ corruption regression proves failure does not publish and poisons the workspace.
 The declared-path acceptance formula and its 8e-3/8e-3 provenance are recorded in
 `campaign/manifest.json`; FP64 math references are stored separately but are not
 the acceptance predicate.  This is finite representative small-shape admission
-evidence.  P0 source rebuild is complete; the remaining MVP condition is the
-unmeasured real-device submit/recovery path.  Offline recomputation from archived
+evidence.  P0 source rebuild is complete.  Real-device recovery after an unknown
+fault is explicitly out of scope, unmeasured and not claimed; the accepted failure
+contract is quarantine and stop.  Offline recomputation from archived
 raw outputs is in
 `recomputed/summary.md`; it recomputes both declared and unquantized float64 math
 references.  Multi-board, concurrent three-core, performance and long-duration
