@@ -2,6 +2,8 @@
 
 分析日期：2026-10-10。只读公开头文件、文档、示例及 x86_64 Runtime 的 ELF 元数据和动态符号，没有加载或执行厂商二进制，也没有 RK182X 真机测量。所有源码快照、下载 URL、SHA256 见 [source-manifest.json](../static-analysis/source-manifest.json)，完整路径索引见两个 `*-tree.json`。快照保留上游内容与许可，不将其改标为本项目许可。
 
+2026-10-16 补充：[RK182X 命令生成边界](../../rk182x-re/README.md) 已进一步检查完整 Toolkit、官方板级发行包和 Host 驱动源码，并从官方预转换 `.rknn` 解码出 RV32 NPU 控制程序。该后续报告回答离线编译、Host 传输、设备端参数更新与提交的边界；下文“未反汇编”等限制保留为 10 月 10 日分析范围，不代表后续材料仍不可分析。
+
 固定版本：`airockchip/rknn3-toolkit@2136cc54fa79ad289c43e56ed9cf7e63ef56439b`（2026-08-31，V1.1.0），`airockchip/rknn3-model-zoo@ca92e7fe1a418b220985455446a986b80d6a899f`（2026-09-09）。工具包与 model-zoo 是两个独立 revision，不能默认版本兼容；部署须回读 API/driver 版本及固件版本。
 
 ## 软件层与设备边界

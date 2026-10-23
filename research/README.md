@@ -6,6 +6,7 @@
 | [rknpu-vendor](rknpu-vendor/INTEGRATION.md) | 厂商逆向 Hook、旧发射器、实验台账、原始捕获与驱动参考 | 历史实验，独立保留 |
 | [upstream-components](upstream-components/README.md) | 固定版本组件索引与独立源码 checkout | 外部依赖 |
 | [multidevice-scheduling](multidevice-scheduling/README.md) | Job 成本数据、驻留与迁移、多设备模拟、硬件适配和 RKNN3 静态分析 | 新研究模块；RK182X 实机成本待测 |
+| [RK182X 命令生成边界](rk182x-re/README.md) | 完整 Toolkit、官方板级发行包、固件拆分、Host 驱动及模型内 RV32 控制程序 | 静态实证；设备端完整 ABI 与真机轨迹待验证 |
 | [GDN 动态执行与状态更新](kernels/GDN-EXECUTION.md) | GEMV-A/B/CPU 对照、K1/EW 外积、六 task Ping-Pong 递推；CPU-FP16/FP32 完整基线、成本拆解、标量缩放与合并 k/q | 三核五形状双模式真机；另有三形状七路线固定 NPU/CPU 频率对照；动态向量仍 Host 打包，非整模型加速 |
 | [FP16 K 分片](kernels/FP16-K-TILING.md) | K>256 的设备累计及融合对照 | 真机验证 |
 | [Two-Task Chaining](scheduling/TWO-TASK-CHAINING.md) | 描述符、寄存器组、IRQ 和 BO 生命周期 | 真机验证 |
