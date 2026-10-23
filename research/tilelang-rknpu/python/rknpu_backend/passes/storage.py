@@ -76,11 +76,15 @@ def assign_storage(draft: DraftPlan, *, profile: TargetProfile,
     command_workspace = max_tasks * CO_MAX_WORDS * 8
     device_request = reserved + command_workspace
 
-    input_bytes = sum(b.shape[0] * b.shape[1] * 2
-                      for b in draft.bindings if b.role == "input")
-    output_bytes = sum(b.shape[0] * b.shape[1] * 2
-                       for b in draft.bindings if b.role == "output")
-    constant_bytes = sum(c.nbytes for c in draft.constants)
+    input_bytes = sum(b.nbytes for b in draft.bindings if b.role == "input")
+    output_bytes = sum(b.nbytes for b in draft.bindings if b.role == "output")
+    broadcast_expand_bytes = sum(
+        draft.views[action.outputs[0]].tensor.bytes
+        for action in draft.actions
+        if action.kind == "upload" and action.attrs.get("broadcast") is not None)
+    # The caller still supplies the scalar/channel source; the expanded tile is
+    # an additional Host preparation allocation, not an extra device transfer.
+    constant_bytes = sum(c.nbytes for c in draft.constants) + broadcast_expand_bytes
     host_bytes = input_bytes + output_bytes + constant_bytes + \
         max(output_bytes, 65536)
 
@@ -105,6 +109,7 @@ def assign_storage(draft: DraftPlan, *, profile: TargetProfile,
         submit_count=len(submits),
         transfers=sum(1 for action in draft.actions
                       if action.kind in {"upload", "download"}),
+        broadcast_expand_bytes=broadcast_expand_bytes,
     )
     plan = Plan(
         name=draft.name, profile_hash=draft.profile_hash,

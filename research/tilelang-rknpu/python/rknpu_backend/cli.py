@@ -186,33 +186,70 @@ def _cmd_run(args: argparse.Namespace) -> int:
                  if b.role == "constant" and b.name in arrays}
     from .runtime.ffi import default_library
     lib = default_library()
-    # rocket_open/rocket_close are exported by the same vendor-backed library.
-    lib.cdll.rocket_open.argtypes = []
-    lib.cdll.rocket_open.restype = ctypes.c_int
-    lib.cdll.rocket_close.argtypes = [ctypes.c_int]
-    lib.cdll.rocket_close.restype = ctypes.c_int
-    fd = int(lib.cdll.rocket_open())
-    if fd < 0:
-        raise BackendError(RK_E_DEVICE, "rocket_open failed; no supported RKNPU fd",
-                           stage="cli", native_status=fd)
+    owns_fd = args.fd is None
+    if owns_fd:
+        # rocket_open/rocket_close are exported by the same vendor-backed library.
+        lib.cdll.rocket_open.argtypes = []
+        lib.cdll.rocket_open.restype = ctypes.c_int
+        lib.cdll.rocket_close.argtypes = [ctypes.c_int]
+        lib.cdll.rocket_close.restype = ctypes.c_int
+        fd = int(lib.cdll.rocket_open())
+        if fd < 0:
+            raise BackendError(
+                RK_E_DEVICE, "rocket_open failed; no supported RKNPU fd",
+                stage="cli", native_status=fd)
+    else:
+        if args.fd < 0:
+            raise BackendError(RK_E_INVALID,
+                               "--fd must be a non-negative caller-owned fd",
+                               stage="cli")
+        fd = int(args.fd)
     ws = None
+    run_error: BaseException | None = None
+    cleanup_errors: list[BackendError] = []
     try:
         from .runtime.bindings import Workspace
         ws = Workspace.create(plan, fd=fd, constants=constants)
         result = ws.run(inputs)
         for name, array in result.items():
             _atomic_save_npy(os.path.join(args.output_dir, name + ".npy"), array)
-        return 0
+    except BaseException as exc:
+        run_error = exc
     finally:
         if ws is not None:
             try:
                 ws.close()
-            except BackendError:
-                pass
-        try:
-            lib.cdll.rocket_close(fd)
-        except Exception:
-            pass
+            except BackendError as exc:
+                cleanup_errors.append(exc)
+            except BaseException as exc:
+                cleanup_errors.append(BackendError(
+                    RK_E_DEVICE, f"workspace destroy raised {type(exc).__name__}: "
+                    f"{exc}", stage="cli"))
+        if owns_fd:
+            try:
+                close_rc = int(lib.cdll.rocket_close(fd))
+                if close_rc < 0:
+                    cleanup_errors.append(BackendError(
+                        RK_E_DEVICE, "rocket_close failed; fd release is "
+                        "unconfirmed", stage="cli", native_status=close_rc))
+            except BaseException as exc:
+                cleanup_errors.append(BackendError(
+                    RK_E_DEVICE, f"rocket_close raised {type(exc).__name__}: "
+                    f"{exc}", stage="cli"))
+
+    # Preserve the execution error when cleanup also fails.  Cleanup failures are
+    # always reported and are never converted into a successful exit.
+    if run_error is not None:
+        for diag_error in cleanup_errors:
+            for diag in diag_error.diagnostics:
+                sys.stderr.write("cleanup: " + diag.format() + "\n")
+        raise run_error
+    if cleanup_errors:
+        for diag_error in cleanup_errors:
+            for diag in diag_error.diagnostics:
+                sys.stderr.write("cleanup: " + diag.format() + "\n")
+        raise cleanup_errors[0]
+    return 0
 
 
 def _add_compile_args(parser: argparse.ArgumentParser) -> None:
@@ -255,6 +292,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("path")
     p.add_argument("--bindings", required=True)
     p.add_argument("--output-dir", required=True)
+    p.add_argument("--fd", type=int, default=None,
+                   help="advanced/test: use a caller-owned fd; CLI will not "
+                        "close it")
     p.set_defaults(func=_cmd_run)
     return parser
 

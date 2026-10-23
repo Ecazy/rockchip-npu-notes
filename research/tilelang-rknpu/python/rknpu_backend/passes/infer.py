@@ -19,7 +19,13 @@ def infer_and_verify(module: Module) -> Module:
     for value in module.values:
         if not isinstance(value.type, TensorType):
             reject(RK_E_SHAPE, f"value {value.id} has no TensorType", stage="infer")
-        if len(value.type.shape) != 2 or any(v <= 0 for v in value.type.shape):
+        if value.role == "constant":
+            if len(value.type.shape) > 2 or \
+                    any(v <= 0 for v in value.type.shape):
+                reject(RK_E_SHAPE,
+                       f"constant value {value.id} has an invalid broadcast shape",
+                       stage="infer", actual=list(value.type.shape))
+        elif len(value.type.shape) != 2 or any(v <= 0 for v in value.type.shape):
             reject(RK_E_SHAPE, f"value {value.id} is not a static rank-2 tensor",
                    stage="infer")
     return module

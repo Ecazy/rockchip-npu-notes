@@ -212,6 +212,20 @@ class TargetProfile:
                    stage="capabilities", target_profile=self.profile_hash)
         return cap
 
+    def experimental(self, capability_id: str) -> Capability:
+        """Select an experimental capability.
+
+        Only callers that explicitly opted in may reach this; everything else must
+        use :meth:`enabled`, so an unimplemented pattern can never be chosen by
+        default.
+        """
+        cap = self.capability(capability_id)
+        if cap.status != "experimental":
+            reject(RK_E_UNSUPPORTED,
+                   f"capability {capability_id} is {cap.status}, not experimental",
+                   stage="capabilities", target_profile=self.profile_hash)
+        return cap
+
     def validate_environment(self) -> None:
         """Validate explicit host hints without opening a device.
 

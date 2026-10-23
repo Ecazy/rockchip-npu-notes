@@ -17,6 +17,9 @@ class CompileOptions:
     tile_limit: int = 256
     device_budget_bytes: int = 256 * 1024 * 1024
     host_budget_bytes: int = 256 * 1024 * 1024
+    # Experimental patterns are opt-in: only ``enabled`` capabilities are selected
+    # by default (P2).
+    allow_experimental: bool = False
     max_actions: int = 1_000_000
     max_ir_nodes: int = 4096
 

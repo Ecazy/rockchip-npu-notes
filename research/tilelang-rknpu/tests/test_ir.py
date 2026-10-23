@@ -4,7 +4,8 @@ from pathlib import Path
 
 import jsonschema
 
-from rknpu_backend.errors import BackendError, RK_E_SCHEMA, RK_E_SHAPE
+from rknpu_backend.errors import (BackendError, RK_E_SCHEMA, RK_E_SHAPE,
+                                  RK_E_UNSUPPORTED)
 from rknpu_backend.ir import Module, matmul_module
 from rknpu_backend.serialize import canonical_json, loads
 
@@ -39,6 +40,15 @@ class IRTests(unittest.TestCase):
         obj["values"][0]["type"]["shape"][0] = True
         with self.assertRaises(BackendError):
             Module.from_dict(obj)
+
+    def test_strided_tensor_is_rejected(self):
+        # The lowering packs dense row-major tiles only.
+        from rknpu_backend.ir import TensorType
+        with self.assertRaises(BackendError) as ctx:
+            TensorType("float16", (4, 8), stride=(16, 1))
+        self.assertEqual(ctx.exception.code, RK_E_UNSUPPORTED)
+        # the canonical dense stride stays accepted
+        TensorType("float16", (4, 8), stride=(8, 1))
 
     def test_non_contiguous_value_ids_rejected(self):
         obj = matmul_module(m=2, k=3, n=4).to_dict()

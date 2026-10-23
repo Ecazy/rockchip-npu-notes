@@ -12,8 +12,11 @@ class LoweringTests(unittest.TestCase):
         self.options = CompileOptions(numeric_mode="rk_f16_tiled",
                                       allow_approx_lut=True)
 
-    def _compile(self, m=13, k=257, n=33, activation=None, **kwargs):
-        return compile_rkir(matmul_module(m=m, k=k, n=n, activation=activation),
+    def _compile(self, m=13, k=257, n=33, activation=None, residual=None,
+                 **kwargs):
+        return compile_rkir(
+            matmul_module(m=m, k=k, n=n, activation=activation,
+                          residual=residual),
                             profile=self.profile,
                             options=CompileOptions(
                                 numeric_mode=kwargs.pop("numeric_mode",
@@ -62,6 +65,44 @@ class LoweringTests(unittest.TestCase):
         with self.assertRaises(BackendError) as ctx:
             self._compile(k=4097)
         self.assertEqual(ctx.exception.code, RK_E_SHAPE)
+
+    def test_same_shape_add_after_matmul(self):
+        result = self._compile(activation=None, residual="add")
+        tasks = [a for a in result.plan.actions if a.kind == "npu_task"]
+        self.assertEqual([a.template_id for a in tasks],
+                         ["co.mm.f16.v1", "co.mm_acc.f16.v1",
+                          "co.ew_add.f16.v1"])
+        self.assertEqual(len(result.plan.submits), 2)
+        # The residual is a second input binding, packed per output tile.
+        names = [b.name for b in result.plan.bindings if b.role == "input"]
+        self.assertEqual(names, ["A", "R"])
+        uploads = [a for a in result.plan.actions
+                   if a.kind == "upload" and
+                   result.plan.bindings[a.attrs["source_binding"]].name == "R"]
+        self.assertEqual(len(uploads), 1)
+
+    def test_gated_multiply_with_runtime_operand(self):
+        result = self._compile(activation="silu", residual="mul")
+        templates = [a.template_id for a in result.plan.actions
+                     if a.kind == "npu_task"]
+        self.assertEqual(templates, ["co.mm.f16.v1", "co.mm_acc.f16.v1",
+                                     "co.lut.sigmoid.f16.v1",
+                                     "co.ew_mul.f16.v1", "co.ew_mul.f16.v1"])
+        self.assertEqual(len(result.plan.submits), 3)
+
+    def test_binary_operand_must_be_same_shape_input(self):
+        module = matmul_module(m=13, k=257, n=33, residual="add")
+        obj = module.to_dict()
+        # Shrink the residual binding: broadcast shapes are not in this path.
+        for value in obj["values"]:
+            if value["name"] == "R":
+                value["type"]["shape"] = [1, 33]
+        from rknpu_backend.ir import Module
+        # The IR itself rejects a broadcast-shaped binary operand, before the
+        # planner is reached.
+        with self.assertRaises(BackendError) as ctx:
+            Module.from_dict(obj)
+        self.assertEqual(ctx.exception.code, RK_E_UNSUPPORTED)
 
     def test_separate_mode_changes_submit_count_and_hash(self):
         chain = self._compile(activation="silu", submit_mode="chain")

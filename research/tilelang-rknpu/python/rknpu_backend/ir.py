@@ -70,9 +70,9 @@ class TensorType:
         if self.dtype not in SUPPORTED_DTYPES:
             reject(RK_E_UNSUPPORTED, f"unsupported dtype {self.dtype!r}",
                    stage="infer", actual=self.dtype, required=sorted(SUPPORTED_DTYPES))
-        if len(self.shape) != 2:
-            reject(RK_E_SHAPE, "MVP tensors must be rank 2", stage="infer",
-                   actual=list(self.shape), required=2)
+        if len(self.shape) > 2:
+            reject(RK_E_SHAPE, "MVP tensors must be rank 0, 1 or 2", stage="infer",
+                   actual=list(self.shape), required="<= 2")
         for dim in self.shape:
             if not _is_int(dim) or dim <= 0:
                 reject(RK_E_SHAPE, "tensor dimensions must be static positive integers",
@@ -80,24 +80,53 @@ class TensorType:
             if dim > MAX_EXTENT:
                 reject(RK_E_SHAPE, f"tensor extent {dim} exceeds {MAX_EXTENT}",
                        stage="infer", actual=dim, required=f"<= {MAX_EXTENT}")
-        if len(self.axes) != 2 or any(not isinstance(a, str) or not a for a in self.axes):
-            reject(RK_E_SCHEMA, "axes must contain two non-empty strings", stage="schema")
+        if len(self.axes) != len(self.shape) or \
+                any(not isinstance(a, str) or not a for a in self.axes):
+            reject(RK_E_SCHEMA,
+                   "axes must contain one non-empty string per tensor rank",
+                   stage="schema", actual=list(self.axes))
         if self.stride is not None:
-            if len(self.stride) != 2 or any(not _is_int(v) for v in self.stride):
-                reject(RK_E_SCHEMA, "stride must contain two integers", stage="schema")
+            if len(self.stride) != len(self.shape) or \
+                    any(not _is_int(v) for v in self.stride):
+                reject(RK_E_SCHEMA,
+                       "stride must contain one integer per tensor rank",
+                       stage="schema")
             if any(v < 0 for v in self.stride):
                 reject(RK_E_UNSUPPORTED, "negative strides are not supported",
                        stage="infer", actual=list(self.stride))
+            # The lowering packs dense row-major tiles only.  A logical stride that
+            # is not ``(cols, 1)`` would silently change which elements are copied
+            # and contracted.  Rank-0/1 broadcast constants are unpacked by the
+            # explicit Host upload path, so they must not claim a strided view.
+            if len(self.shape) == 2 and tuple(self.stride) != (self.shape[1], 1):
+                reject(RK_E_UNSUPPORTED,
+                       "only dense row-major strides are lowered; a strided "
+                       "tensor view would change the packing", stage="infer",
+                       actual=list(self.stride), required=[self.shape[1], 1])
+            if len(self.shape) < 2 and any(v != 1 for v in self.stride):
+                reject(RK_E_UNSUPPORTED,
+                       "broadcast constants require a contiguous scalar/channel "
+                       "source", stage="infer", actual=list(self.stride))
         if self.index_map != "identity":
             reject(RK_E_UNSUPPORTED,
                    f"index map {self.index_map!r} is not supported", stage="infer")
 
     @property
+    def rank(self) -> int:
+        return len(self.shape)
+
+    @property
     def rows(self) -> int:
+        if self.rank != 2:
+            reject(RK_E_SHAPE, "rows is only defined for rank-2 tensors",
+                   stage="infer", actual=list(self.shape))
         return self.shape[0]
 
     @property
     def cols(self) -> int:
+        if self.rank != 2:
+            reject(RK_E_SHAPE, "cols is only defined for rank-2 tensors",
+                   stage="infer", actual=list(self.shape))
         return self.shape[1]
 
     def to_dict(self) -> dict[str, Any]:
@@ -123,7 +152,7 @@ class TensorType:
             stride = _int_tuple(stride, "TensorType.stride", 2)
         return cls(
             dtype=obj["dtype"],
-            shape=_int_tuple(obj["shape"], "TensorType.shape", 2),
+            shape=_int_tuple(obj["shape"], "TensorType.shape"),
             axes=tuple(obj["axes"]) if isinstance(obj["axes"], list) else (),
             stride=stride,
             index_map=obj["index_map"],
@@ -219,6 +248,11 @@ class Value:
         if self.role == "state":
             reject(RK_E_UNSUPPORTED, "state is not supported by the MVP",
                    stage="infer")
+        if self.role != "constant" and self.type.rank != 2:
+            reject(RK_E_SHAPE,
+                   "only constants may be rank-0/1 broadcast sources; runtime "
+                   "tensors and device values are rank 2", stage="infer",
+                   actual={"role": self.role, "shape": list(self.type.shape)})
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -236,6 +270,21 @@ class Value:
         _check_keys(obj, {"id", "name", "type", "producer", "role"}, set(), "Value")
         return cls(obj["id"], obj["name"], TensorType.from_dict(obj["type"]),
                    obj["producer"], obj["role"])
+
+
+def _check_elementwise_attrs(op: "Op", allowed: str) -> None:
+    unknown = sorted(set(op.attrs) - {allowed})
+    if unknown:
+        reject(RK_E_UNSUPPORTED,
+               "broadcast/general elementwise attributes are not supported",
+               stage="infer", op=op.opcode, source=op.source,
+               actual=unknown)
+    if allowed in op.attrs:
+        contract = op.attrs[allowed]
+        if not isinstance(contract, dict):
+            reject(RK_E_SCHEMA, f"{allowed} must be an object", stage="schema",
+                   op=op.opcode, source=op.source)
+        NumericContract.from_dict(contract)
 
 
 @dataclass(frozen=True)
@@ -269,17 +318,15 @@ class Op:
             if len(self.inputs) != 1:
                 reject(RK_E_SHAPE, f"{self.opcode} needs exactly one input",
                        stage="infer", op=self.opcode, source=self.source)
-            if self.attrs:
-                reject(RK_E_UNSUPPORTED, f"{self.opcode} attributes are not supported",
-                       stage="infer", op=self.opcode, source=self.source)
+            _check_elementwise_attrs(self, "numeric_contract")
         elif self.opcode in BINARY_OPS:
             if len(self.inputs) != 2:
                 reject(RK_E_SHAPE, f"{self.opcode} needs exactly two inputs",
                        stage="infer", op=self.opcode, source=self.source)
-            if self.attrs:
-                reject(RK_E_UNSUPPORTED,
-                       "broadcast/general elementwise attributes are not supported",
-                       stage="infer", op=self.opcode, source=self.source)
+            # Broadcast and other arithmetic attributes remain unsupported; a
+            # NumericContract is metadata about explicit FP16 narrowing points,
+            # not an arithmetic attribute.
+            _check_elementwise_attrs(self, "numeric_contract")
         if self.side_effects:
             reject(RK_E_UNSUPPORTED, "side-effecting ops are not supported by the MVP",
                    stage="frontend", op=self.opcode, source=self.source)
@@ -439,6 +486,10 @@ class Module:
             out = by_id[op.outputs[0]]
             if op.opcode == "matmul":
                 a, b = by_id[op.inputs[0]], by_id[op.inputs[1]]
+                if a.type.rank != 2 or b.type.rank != 2 or out.type.rank != 2:
+                    reject(RK_E_SHAPE,
+                           "matmul operands and result must be rank 2",
+                           stage="infer", op=op.opcode, source=op.source)
                 if a.type.dtype != DTYPE_F16 or b.type.dtype != DTYPE_F16:
                     reject(RK_E_NUMERIC_CONTRACT, "matmul inputs must be FP16",
                            stage="infer", op=op.opcode, source=op.source)
@@ -472,11 +523,38 @@ class Module:
                            stage="infer", op=op.opcode, source=op.source)
             elif op.opcode in BINARY_OPS:
                 a, b = by_id[op.inputs[0]], by_id[op.inputs[1]]
-                if a.type != b.type or a.type != out.type:
+                if a.type == b.type == out.type:
+                    continue
+                # Compile-time broadcast is allowed only when exactly one
+                # operand is a constant rank-0 scalar or rank-1 [N] channel
+                # vector and the other operand is the exact output tensor.
+                constant_side = None
+                tensor_side = None
+                for value, other in ((a, b), (b, a)):
+                    if value.role == "constant" and value.type.rank < 2:
+                        if constant_side is not None:
+                            reject(RK_E_UNSUPPORTED,
+                                   "two broadcast constants need an explicit "
+                                   "materialised tensor", stage="infer",
+                                   op=op.opcode, source=op.source)
+                        constant_side, tensor_side = value, other
+                if constant_side is None or tensor_side is None or \
+                        tensor_side.type.rank != 2 or tensor_side.type != out.type:
                     reject(RK_E_UNSUPPORTED,
-                           "MVP binary ops require exact same-shape operands; "
-                           "broadcast is rejected",
-                           stage="infer", op=op.opcode, source=op.source)
+                           "MVP binary ops accept exact same-shape operands or "
+                           "one explicit rank-0/rank-1 constant broadcast",
+                           stage="infer", op=op.opcode, source=op.source,
+                           actual={"a": list(a.type.shape),
+                                   "b": list(b.type.shape),
+                                   "out": list(out.type.shape)})
+                if constant_side.type.rank == 1 and \
+                        constant_side.type.shape[0] != tensor_side.type.cols:
+                    reject(RK_E_SHAPE,
+                           "per-channel constant length must equal the tensor "
+                           "column count", stage="infer", op=op.opcode,
+                           source=op.source,
+                           actual=list(constant_side.type.shape),
+                           required=tensor_side.type.cols)
 
     def value(self, value_id: int) -> Value:
         if value_id < 0 or value_id >= len(self.values):
@@ -523,7 +601,58 @@ class Module:
         )
 
 
+def swiglu_module(*, m: int, d: int, h: int, name: str = "swiglu",
+                  numeric_mode: str = "rk_f16_tiled",
+                  source: str = "rk-builder:swiglu") -> Module:
+    """Build the closed SwiGLU FFN graph ``Y = (SiLU(X@Wg^T)*(X@Wu^T))@Wd^T + X``.
+
+    ``d`` is the model width (input and output), ``h`` the hidden width.
+    """
+    if numeric_mode == "strict":
+        contract = NumericContract(
+            accumulator_dtype="float32", accumulation="strict_unspecified",
+            narrowing_points=(), approximate=False,
+            tolerance={"atol": 1e-3, "rtol": 1e-3})
+    elif numeric_mode == "rk_f16_tiled":
+        contract = NumericContract(
+            accumulator_dtype="float16",
+            accumulation="ordered_k_tiles_with_f16_writeback",
+            narrowing_points=("k_tile_boundary",), approximate=False,
+            tolerance={"atol": 8e-3, "rtol": 8e-3})
+    else:
+        reject(RK_E_NUMERIC_CONTRACT, f"unknown numeric mode {numeric_mode!r}",
+               stage="frontend")
+    x_ty = TensorType(DTYPE_F16, (m, d))
+    hid_ty = TensorType(DTYPE_F16, (m, h))
+    out_ty = TensorType(DTYPE_F16, (m, d))
+    values = [
+        Value(0, "X", x_ty, None, "input"),
+        Value(1, "Wg", TensorType(DTYPE_F16, (h, d)), None, "constant"),
+        Value(2, "Wu", TensorType(DTYPE_F16, (h, d)), None, "constant"),
+        Value(3, "Wd", TensorType(DTYPE_F16, (d, h)), None, "constant"),
+        Value(4, "Zg", hid_ty, 0, "temporary"),
+        Value(5, "Zu", hid_ty, 1, "temporary"),
+        Value(6, "S", hid_ty, 2, "temporary"),
+        Value(7, "A", hid_ty, 3, "temporary"),
+        Value(8, "H", out_ty, 4, "temporary"),
+        Value(9, "Y", out_ty, 5, "output"),
+    ]
+    attrs = {"b_layout": "nk", "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    ops = [
+        Op(0, "matmul", (0, 1), (4,), dict(attrs), source),
+        Op(1, "matmul", (0, 2), (5,), dict(attrs), source),
+        Op(2, "silu", (4,), (6,), {}, source),
+        Op(3, "mul", (6, 5), (7,), {}, source),
+        Op(4, "matmul", (7, 3), (8,), dict(attrs), source),
+        Op(5, "add", (8, 0), (9,), {}, source),
+    ]
+    return Module(name=name, values=tuple(values), ops=tuple(ops), inputs=(0,),
+                  outputs=(9,), source_hash="builder", state_signature="")
+
+
 def matmul_module(*, m: int, k: int, n: int, name: str = "matmul",
+                  residual: str | None = None,
                   b_layout: str = "kn", activation: str | None = None,
                   numeric_mode: str = "rk_f16_tiled",
                   source: str = "rk-builder:matmul") -> Module:
@@ -558,21 +687,135 @@ def matmul_module(*, m: int, k: int, n: int, name: str = "matmul",
     else:
         reject(RK_E_NUMERIC_CONTRACT, f"unknown numeric mode {numeric_mode!r}",
                stage="frontend")
-    matmul_out_role = "temporary" if activation else "output"
+    matmul_out_role = "temporary" if (activation or residual) else "output"
     c = Value(2, "Z" if activation else "Y", y_ty, 0, matmul_out_role)
     values.append(c)
     ops.append(Op(0, "matmul", (0, 1), (2,),
                   {"b_layout": b_layout,
                    "numeric_contract": contract.to_dict()}, source))
+    next_id = len(values)
+    op_id = len(ops)
+    previous = 2
     if activation:
-        out = Value(3, "Y", y_ty, 1, "output")
+        out = Value(next_id, "A1", y_ty, op_id, "temporary")
         values.append(out)
-        ops.append(Op(1, activation, (2,), (3,), {}, source))
-        outputs = (3,)
-        final = 3
+        ops.append(Op(op_id, activation, (previous,), (next_id,), {}, source))
+        previous = next_id
+        next_id += 1
+        op_id += 1
+    if residual is not None:
+        if residual not in {"add", "mul"}:
+            reject(RK_E_UNSUPPORTED, f"unsupported residual op {residual!r}",
+                   stage="frontend")
+        operand = Value(next_id, "R", y_ty, None, "input")
+        values.append(operand)
+        next_id += 1
+        out = Value(next_id, "Y", y_ty, op_id, "output")
+        values.append(out)
+        ops.append(Op(op_id, residual, (previous, operand.id), (out.id,), {},
+                      source))
+        previous = out.id
+        inputs = (0, operand.id)
     else:
-        outputs = (2,)
-        final = 2
+        out = values[previous]
+        # The last produced value becomes the exported output.
+        values[previous] = replace(out, role="output")
+        inputs = (0,)
     return Module(name=name, values=tuple(values), ops=tuple(ops),
-                  inputs=(0,), outputs=outputs, source_hash="builder",
+                  inputs=inputs, outputs=(previous,), source_hash="builder",
                   state_signature="")
+
+
+def _builder_contract(numeric_mode: str) -> NumericContract:
+    if numeric_mode == "strict":
+        return NumericContract(
+            accumulator_dtype="float32", accumulation="strict_unspecified",
+            narrowing_points=(), approximate=False,
+            tolerance={"atol": 1e-3, "rtol": 1e-3})
+    if numeric_mode == "rk_f16_tiled":
+        return NumericContract(
+            accumulator_dtype="float16",
+            accumulation="ordered_k_tiles_with_f16_writeback",
+            narrowing_points=("k_tile_boundary",), approximate=False,
+            tolerance={"atol": 8e-3, "rtol": 8e-3})
+    reject(RK_E_NUMERIC_CONTRACT, f"unknown numeric mode {numeric_mode!r}",
+           stage="frontend")
+
+
+def projection_module(*, m: int, d: int, h: int, name: str = "projection",
+                      b_layout: str = "nk",
+                      numeric_mode: str = "rk_f16_tiled",
+                      source: str = "rk-builder:projection") -> Module:
+    """Build ``Y = SiLU(X@W1^T) @ W2^T + X``.
+
+    With ``b_layout='nk'`` the weights use the custom-ops ``[N,K]`` convention.
+    The graph is a debug/offline construction helper for tiled dataflow tests.
+    """
+    contract = _builder_contract(numeric_mode)
+    w1_shape = (h, d) if b_layout == "nk" else (d, h)
+    w2_shape = (d, h) if b_layout == "nk" else (h, d)
+    x_ty = TensorType(DTYPE_F16, (m, d))
+    hid_ty = TensorType(DTYPE_F16, (m, h))
+    out_ty = TensorType(DTYPE_F16, (m, d))
+    values = (
+        Value(0, "X", x_ty, None, "input"),
+        Value(1, "W1", TensorType(DTYPE_F16, w1_shape), None, "constant"),
+        Value(2, "W2", TensorType(DTYPE_F16, w2_shape), None, "constant"),
+        Value(3, "Z", hid_ty, 0, "temporary"),
+        Value(4, "S", hid_ty, 1, "temporary"),
+        Value(5, "G", hid_ty, 2, "temporary"),
+        Value(6, "P", out_ty, 3, "temporary"),
+        Value(7, "Y", out_ty, 4, "output"),
+    )
+    attrs = {"b_layout": b_layout, "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    ops = (
+        Op(0, "matmul", (0, 1), (3,), dict(attrs), source),
+        Op(1, "sigmoid", (3,), (4,), {}, source),
+        Op(2, "mul", (4, 3), (5,), {}, source),
+        Op(3, "matmul", (5, 2), (6,), dict(attrs), source),
+        Op(4, "add", (6, 0), (7,), {}, source),
+    )
+    return Module(name=name, values=values, ops=ops, inputs=(0,), outputs=(7,),
+                  source_hash="builder", state_signature="")
+
+
+def branch_outputs_module(*, m: int, k: int, n1: int, n2: int,
+                          name: str = "branch",
+                          b_layout: str = "nk",
+                          numeric_mode: str = "rk_f16_tiled",
+                          source: str = "rk-builder:branch") -> Module:
+    """Build two independent matmul outputs from one shared input."""
+    contract = _builder_contract(numeric_mode)
+    w1_shape = (n1, k) if b_layout == "nk" else (k, n1)
+    w2_shape = (n2, k) if b_layout == "nk" else (k, n2)
+    attrs = {"b_layout": b_layout, "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    values = (
+        Value(0, "X", TensorType(DTYPE_F16, (m, k)), None, "input"),
+        Value(1, "W1", TensorType(DTYPE_F16, w1_shape), None, "constant"),
+        Value(2, "W2", TensorType(DTYPE_F16, w2_shape), None, "constant"),
+        Value(3, "Y1", TensorType(DTYPE_F16, (m, n1)), 0, "output"),
+        Value(4, "Y2", TensorType(DTYPE_F16, (m, n2)), 1, "output"),
+    )
+    ops = (
+        Op(0, "matmul", (0, 1), (3,), dict(attrs), source),
+        Op(1, "matmul", (0, 2), (4,), dict(attrs), source),
+    )
+    return Module(name=name, values=values, ops=ops, inputs=(0,),
+                  outputs=(3, 4), source_hash="builder", state_signature="")
+
+
+def activation_module(*, m: int, n: int, activation: str = "silu",
+                      name: str = "activation",
+                      source: str = "rk-builder:activation") -> Module:
+    """Build one standalone unary activation graph."""
+    if activation not in UNARY_OPS:
+        reject(RK_E_UNSUPPORTED, f"activation {activation!r} is not supported",
+               stage="frontend")
+    ty = TensorType(DTYPE_F16, (m, n))
+    values = (Value(0, "X", ty, None, "input"),
+              Value(1, "Y", ty, 0, "output"))
+    ops = (Op(0, activation, (0,), (1,), {}, source),)
+    return Module(name=name, values=values, ops=ops, inputs=(0,), outputs=(1,),
+                  source_hash="builder", state_signature="")

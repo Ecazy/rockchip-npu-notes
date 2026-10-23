@@ -7,7 +7,7 @@
     "runtime_abi_id": "rk-plan-v1",
     "custom_ops_source_hash": "68e1d33b9c494a8e0195399c9134244bdb0c117e941ca4e5f0eb04ab8e5cf090",
     "generator_source_hash": "752eba092073c2eb258739491901d773e734a6cf645c47022008429f3c917c91",
-    "capability_manifest_hash": "4fcd6768fbde88d89acee90ccd630303029a178e3a158b64bea3f559677db22a",
+    "capability_manifest_hash": "7700970a79cadcc441a5ec201ac121dbcbaaacc21b2eac546ce28b6a5305c914",
     "tensor_layout_versions": [
       "co.cube.f16.v1",
       "co.weight.f16.v1",
@@ -192,6 +192,32 @@
       "validation_domain": "specific experimental shapes only",
       "uncovered_risks": [
         "not a default broadcast lowering"
+      ]
+    },
+    {
+      "id": "co.swiglu_ffn.f16.v1",
+      "op": "rk.swiglu_ffn",
+      "emitter": "composite:co_emit_mm+co_emit_lut+co_emit_ew",
+      "target_profile": "rk3588_vendor_co_v1",
+      "status": "experimental",
+      "inputs": [
+        "cube_f16",
+        "weight_f16",
+        "weight_f16",
+        "weight_f16",
+        "identity_f16"
+      ],
+      "output": "cube_f16",
+      "numeric": "f16_tiled_k_acc_plus_lut_gate",
+      "alias": "every_stage_device_distinct_bos",
+      "chain_recipe": "swiglu_ffn_v1",
+      "evidence": "research/custom-ops/tests/c/graph_host_test.c",
+      "validation_domain": "single primitive tile per stage: M<=256, d<=256, h<=256",
+      "uncovered_risks": [
+        "no composed numeric execution test yet (Host mock covers mm/EW-add only)",
+        "no TileLang frontend path: the RKIR graph is built by the debug builder",
+        "single primitive tile per stage only",
+        "LUT approximation tolerance is recipe-specific"
       ]
     }
   ]

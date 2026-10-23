@@ -8,6 +8,7 @@ into JSON and never treats a Python ``verified`` flag as authority.
 from __future__ import annotations
 
 import ctypes
+from dataclasses import dataclass
 import os
 import struct
 from pathlib import Path
@@ -20,7 +21,7 @@ from ..errors import (RK_E_INVALID, RK_E_NOMEM, RK_E_UNSUPPORTED, BackendError,
 from ..plan import Plan
 
 RK_ABI_VERSION = 1
-RK_SCHEMA_VERSION = 1
+RK_SCHEMA_VERSION = 2
 
 RK_ROLE_INPUT = 0
 RK_ROLE_CONSTANT = 1
@@ -62,6 +63,8 @@ RK_CORE_AUTO = 1
 
 RK_ACTION_FLAG_TRANSPOSE_SOURCE = 1
 RK_ACTION_FLAG_CACHE_CONSTANT = 2
+RK_ACTION_FLAG_BROADCAST_SCALAR = 4
+RK_ACTION_FLAG_BROADCAST_CHANNEL = 8
 
 BUFFER_ROLE_MAP = {
     "input": RK_ROLE_INPUT,
@@ -176,6 +179,8 @@ class RKPublishDesc(ctypes.Structure):
     _fields_ = [
         ("abi_version", ctypes.c_uint32), ("struct_size", ctypes.c_uint32),
         ("binding_id", ctypes.c_uint32), ("view_id", ctypes.c_uint32),
+        ("dst_row_offset", ctypes.c_uint32), ("dst_col_offset", ctypes.c_uint32),
+        ("rows", ctypes.c_uint32), ("cols", ctypes.c_uint32),
     ]
 
 
@@ -200,6 +205,8 @@ class RKPlanDesc(ctypes.Structure):
         ("host_budget_bytes", ctypes.c_uint64),
         ("claimed_device_bytes", ctypes.c_uint64),
         ("claimed_host_bytes", ctypes.c_uint64),
+        ("runtime_abi_version", ctypes.c_uint32),
+        ("reserved6", ctypes.c_uint32),
     ]
 
 
@@ -265,14 +272,15 @@ def build_plan_descriptor(plan: Plan):
     for i, binding in enumerate(plan.bindings):
         name = _c_string(binding.name)
         holder.append(name)
+        shape = list(binding.shape) + [0] * (2 - len(binding.shape))
         values[i] = RKValueDesc(
             abi_version=RK_ABI_VERSION,
             struct_size=ctypes.sizeof(RKValueDesc), id=binding.id,
             role={"input": RK_ROLE_INPUT, "constant": RK_ROLE_CONSTANT,
                   "output": RK_ROLE_OUTPUT}[binding.role],
-            dtype=RK_DTYPE_F16, rank=2,
-            shape=(ctypes.c_uint32 * 2)(*binding.shape),
-            nbytes=binding.shape[0] * binding.shape[1] * 2,
+            dtype=RK_DTYPE_F16, rank=len(binding.shape),
+            shape=(ctypes.c_uint32 * 2)(*shape),
+            nbytes=binding.nbytes,
             name=name, name_len=len(name), reserved=0)
     holder.append(values)
 
@@ -318,6 +326,14 @@ def build_plan_descriptor(plan: Plan):
             flags |= RK_ACTION_FLAG_TRANSPOSE_SOURCE
         if attrs.get("cache") == "constant":
             flags |= RK_ACTION_FLAG_CACHE_CONSTANT
+        if attrs.get("broadcast") == "scalar":
+            flags |= RK_ACTION_FLAG_BROADCAST_SCALAR
+        elif attrs.get("broadcast") == "channel":
+            flags |= RK_ACTION_FLAG_BROADCAST_CHANNEL
+        elif attrs.get("broadcast") is not None:
+            reject(RK_E_UNSUPPORTED,
+                   f"unknown broadcast kind {attrs.get('broadcast')!r}",
+                   stage="ffi")
         origin = _c_string(action.origin)[:63]
         actions[i] = RKActionDesc(
             abi_version=RK_ABI_VERSION, struct_size=ctypes.sizeof(RKActionDesc),
@@ -354,7 +370,9 @@ def build_plan_descriptor(plan: Plan):
         publish[i] = RKPublishDesc(
             abi_version=RK_ABI_VERSION,
             struct_size=ctypes.sizeof(RKPublishDesc),
-            binding_id=item.binding_id, view_id=item.view_id)
+            binding_id=item.binding_id, view_id=item.view_id,
+            dst_row_offset=item.dst_row, dst_col_offset=item.dst_col,
+            rows=item.rows, cols=item.cols)
     holder.append(publish)
 
     desc = RKPlanDesc(
@@ -371,7 +389,8 @@ def build_plan_descriptor(plan: Plan):
         device_budget_bytes=plan.accounting.device_request_bytes,
         host_budget_bytes=plan.accounting.host_bytes,
         claimed_device_bytes=plan.accounting.device_request_bytes,
-        claimed_host_bytes=plan.accounting.host_bytes)
+        claimed_host_bytes=plan.accounting.host_bytes,
+        runtime_abi_version=RK_ABI_VERSION, reserved6=0)
     holder.append(desc)
     return desc, holder
 
@@ -451,6 +470,99 @@ class LibRKPlan:
     def abi_version(self) -> int:
         return int(self.cdll.rk_abi_version())
 
+    def _missing(self, name: str) -> bool:
+        return not hasattr(self.cdll, name)
+
+    _MOCK_SIGNATURES = {
+        "rk_mock_execs": (ctypes.c_uint, ()),
+        "rk_mock_live_bos": (ctypes.c_int, ()),
+        "rk_mock_resident": (ctypes.c_size_t, ()),
+        "rk_mock_fail_at": (None, (ctypes.c_uint,)),
+        "rk_mock_inject_nan": (None, (ctypes.c_uint,)),
+        "rk_mock_corrupt_guard": (None, (ctypes.c_uint,)),
+        "rk_mock_corrupt_guard_at": (None, (ctypes.c_uint,)),
+        "rk_mock_delay_us": (None, (ctypes.c_uint,)),
+        "rk_mock_fail_prep_at": (None, (ctypes.c_uint,)),
+        "rk_mock_prep_calls": (ctypes.c_uint, ()),
+        "rk_mock_reset": (None, ()),
+        "rk_mock_allocs": (ctypes.c_uint, ()),
+        "rk_mock_tag_count": (ctypes.c_uint, ()),
+        "rk_mock_tag_overflow": (ctypes.c_uint, ()),
+        "rk_mock_untracked": (ctypes.c_uint, ()),
+        "rk_mock_bo_count": (ctypes.c_uint, ()),
+        "rk_mock_tag_capacity": (ctypes.c_uint, ()),
+        "rk_mock_fail_alloc": (None, (ctypes.c_uint,)),
+        "rk_mock_force_tag_overflow": (None, (ctypes.c_uint,)),
+        "rk_mock_dma_of": (ctypes.c_uint32, (ctypes.c_uint32,)),
+        "rk_mock_bo_dma_address": (ctypes.c_uint64, (ctypes.c_uint32,)),
+        "rk_mock_dma_range": (ctypes.c_int, (ctypes.c_uint, ctypes.POINTER(ctypes.c_uint32),
+                                             ctypes.POINTER(ctypes.c_uint32),
+                                             ctypes.POINTER(ctypes.c_size_t))),
+        "rk_mock_find_half": (ctypes.c_int, (ctypes.c_uint16, ctypes.POINTER(ctypes.c_uint),
+                                             ctypes.POINTER(ctypes.c_size_t))),
+    }
+
+    #: Every rk_mock_* export with its exact ctypes signature.  The C side is
+    #: checked against this at compile time by tests/mock/mock_signature_probe.c
+    #: (which pins the same prototypes from mock_npu.h); nothing parses C at run
+    #: time.
+    def mock_exports(self) -> dict:
+        return dict(self._MOCK_SIGNATURES)
+
+    def mock_control(self, name: str, *args):
+        """Call a test-only ``rk_mock_*`` symbol if this library exposes one."""
+        fn = getattr(self.cdll, name, None)
+        if fn is not None:
+            restype, argtypes = self._MOCK_SIGNATURES[name]
+            fn.restype = restype
+            fn.argtypes = argtypes
+        if fn is None:
+            raise RuntimeError(
+                f"{name} is not exported by {self.path!r}; use "
+                "librknpu_plan_mock.so for execution tests")
+        return fn(*args)
+
+    def create_workspace(self, plan: CPlan, constants: list, fd: int = 0) -> CWorkspace:
+        for name in ("rk_workspace_create", "rk_workspace_run",
+                     "rk_workspace_destroy"):
+            if self._missing(name):
+                raise RuntimeError(f"library does not export {name}")
+        arr = (RKBinding * max(len(constants), 1))()
+        for i, binding in enumerate(constants):
+            arr[i] = binding
+        handle = ctypes.c_void_p()
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_create(fd, plan._ptr, arr, len(constants),
+                                           ctypes.byref(handle), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "workspace_create")
+        return CWorkspace(lib=self, handle=handle)
+
+    def workspace_run(self, workspace: CWorkspace, inputs: list, outputs: list):
+        in_arr = (RKBinding * max(len(inputs), 1))()
+        for i, binding in enumerate(inputs):
+            in_arr[i] = binding
+        out_arr = (RKBinding * max(len(outputs), 1))()
+        for i, binding in enumerate(outputs):
+            out_arr[i] = binding
+        report = RKRunReport()
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_run(workspace.handle, in_arr, len(inputs),
+                                        out_arr, len(outputs),
+                                        ctypes.byref(report), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "workspace_run")
+        return report
+
+    def workspace_destroy(self, workspace: CWorkspace) -> None:
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_destroy(workspace.handle, ctypes.byref(diag))
+        if rc:
+            # BUSY / POISONED keep ownership: the caller must retry, so the handle
+            # must stay valid instead of being dropped here.
+            raise _diag_to_exception(diag, "workspace_destroy")
+        workspace.handle = ctypes.c_void_p()
+
     def create_plan(self, plan: Plan) -> CPlan:
         desc, holder = build_plan_descriptor(plan)
         diag = RKDiag()
@@ -498,6 +610,22 @@ def find_library() -> str:
 _DEFAULT_LIB: LibRKPlan | None = None
 
 
+@dataclass
+class CWorkspace:
+    """Wraps ``rk_workspace *``; the mock library exposes run counters."""
+
+    lib: "LibRKPlan"
+    handle: ctypes.c_void_p
+
+    def run(self, inputs, outputs):
+        return self.lib.workspace_run(self, inputs, outputs)
+
+    def destroy(self) -> None:
+        if not self.handle:
+            return  # already released: cleanup must be idempotent
+        self.lib.workspace_destroy(self)
+
+
 def default_library() -> LibRKPlan:
     global _DEFAULT_LIB
     if _DEFAULT_LIB is None:
@@ -506,10 +634,14 @@ def default_library() -> LibRKPlan:
 
 
 def make_binding(binding_id: int, array: np.ndarray) -> RKBinding:
+    if array.ndim > 2:
+        reject(RK_E_INVALID, "bindings must be rank 0, 1 or 2",
+               stage="binding", actual=array.shape)
+    shape = list(array.shape) + [0] * (2 - array.ndim)
     return RKBinding(
         abi_version=RK_ABI_VERSION, struct_size=ctypes.sizeof(RKBinding),
-        id=binding_id, dtype=RK_DTYPE_F16, rank=2,
-        shape=(ctypes.c_uint32 * 2)(*array.shape),
+        id=binding_id, dtype=RK_DTYPE_F16, rank=array.ndim,
+        shape=(ctypes.c_uint32 * 2)(*shape),
         data=array.ctypes.data_as(ctypes.c_void_p),
         nbytes=array.nbytes)
 

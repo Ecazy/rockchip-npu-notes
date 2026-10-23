@@ -10,7 +10,8 @@ from .errors import (BackendError, Diagnostic, RK_E_ALIAS, RK_E_BUDGET,
                      RK_E_SHAPE, RK_E_TARGET_MISMATCH, RK_E_UNSUPPORTED,
                      RK_E_BUSY)
 from .ir import (Module, NumericContract, Op, TensorType, Value,
-                 matmul_module)
+                 activation_module, branch_outputs_module, matmul_module,
+                 projection_module, swiglu_module)
 from .options import CompileOptions
 from .plan import Plan
 from .runtime.bindings import Workspace
@@ -20,7 +21,8 @@ __all__ = [
     "Diagnostic", "Module", "NumericContract", "Op", "Plan", "TargetProfile",
     "TensorType", "Value", "Workspace", "compile_rkir", "compile_tilelang",
     "default_profile", "explain_plan", "load_plan", "load_profile",
-    "load_target_profile", "matmul_module", "save_plan",
+    "load_target_profile", "activation_module", "branch_outputs_module",
+    "matmul_module", "projection_module", "swiglu_module", "save_plan",
     "RK_E_INVALID", "RK_E_UNSUPPORTED", "RK_E_SHAPE", "RK_E_NUMERIC_CONTRACT",
     "RK_E_BUDGET", "RK_E_TARGET_MISMATCH", "RK_E_ALIAS", "RK_E_NOMEM",
     "RK_E_DEVICE", "RK_E_BUSY", "RK_E_POISONED", "RK_E_SCHEMA", "RK_E_DOMAIN",

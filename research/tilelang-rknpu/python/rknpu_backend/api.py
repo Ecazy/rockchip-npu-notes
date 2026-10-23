@@ -47,11 +47,27 @@ def _compile_module(module: Module, *, profile: TargetProfile,
                           submits=submits)
     plan = verify_plan(plan)
     report = explain_plan(plan)
+    matmul = next((op for op in module.ops if op.opcode == "matmul"), None)
+    narrowing: list[str] = []
+    for op in module.ops:
+        declared = op.attrs.get("source_narrowing_points")
+        if isinstance(declared, (list, tuple)):
+            for point in declared:
+                if isinstance(point, str) and point not in narrowing:
+                    narrowing.append(point)
     report["source"] = {"module": module.name,
                         "source_hash": module.source_hash,
                         "numeric_mode": options.numeric_mode,
                         "submit_mode": options.submit_mode,
-                        "approx_lut": options.allow_approx_lut}
+                        "approx_lut": options.allow_approx_lut,
+                        "narrowing_points": narrowing,
+                        "source_k_loop": (matmul.attrs.get("source_k_loop")
+                                          if matmul is not None else None),
+                        "source_mn_tiling": (matmul.attrs.get("source_mn_tiling")
+                                             if matmul is not None else None),
+                        "source_tail_contract": (
+                            matmul.attrs.get("source_tail_contract")
+                            if matmul is not None else None)}
     return CompileResult(plan=plan, diagnostics=[], report=report)
 
 
@@ -127,6 +143,17 @@ def explain_plan(plan: Plan) -> dict[str, Any]:
             "tasks": plan.accounting.task_count,
             "submits": plan.accounting.submit_count,
             "data_bos": plan.accounting.data_bo_count,
+            "broadcast_expand_actions": sum(
+                1 for action in plan.actions
+                if action.kind == "upload" and
+                action.attrs.get("broadcast") is not None),
+        },
+        "broadcast": {
+            "expanded_bytes": plan.accounting.broadcast_expand_bytes,
+            "kinds": sorted({str(action.attrs.get("broadcast"))
+                             for action in plan.actions
+                             if action.kind == "upload" and
+                             action.attrs.get("broadcast") is not None}),
         },
         "slots": [
             {"slot_id": slot_id, "payload_bytes": payload,

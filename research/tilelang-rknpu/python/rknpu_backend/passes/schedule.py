@@ -31,8 +31,12 @@ def build_submits(draft: DraftPlan, *, options: CompileOptions) -> list[Submit]:
         tasks = by_group[group]
         if len(tasks) > 64:
             reject(RK_E_SHAPE, "submit group exceeds 64 tasks", stage="schedule")
-        recipe = ("linear_k_acc_v1" if group.startswith("mm:")
-                  else "gate_ew_v1")
+        if group.startswith("mm:"):
+            recipe = "linear_k_acc_v1"
+        elif group.startswith("swiglu:"):
+            recipe = "swiglu_ffn_v1"
+        else:
+            recipe = "gate_ew_v1"
         if options.submit_mode == "chain":
             sid = len(submits)
             submits.append(Submit(sid, tuple(tasks), recipe, "chain",

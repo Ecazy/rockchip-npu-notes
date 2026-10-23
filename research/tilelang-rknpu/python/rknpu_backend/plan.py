@@ -17,7 +17,7 @@ from typing import Any
 from .errors import RK_E_ALIAS, RK_E_SCHEMA, RK_E_SHAPE, reject
 from .serialize import sha256_json
 
-PLAN_SCHEMA_VERSION = 1
+PLAN_SCHEMA_VERSION = 2
 PLAN_KIND = "rkplan"
 LAYOUT_IDS = {"co.cube.f16.v1", "co.weight.f16.v1", "co.linear.f16.v1"}
 TEMPLATE_IDS = {
@@ -28,6 +28,57 @@ TEMPLATE_IDS = {
 ACTION_KINDS = {"host_pack", "host_expand", "host_check", "upload", "npu_task",
                 "download", "host_compute", "commit"}
 BINDING_ROLES = {"input", "constant", "output"}
+# A submit's recipe must match the task sequence it actually carries.  This is the
+# plan-level half of the "no arbitrary chain" rule; the C verifier re-checks the
+# per-template contracts but cannot infer a recipe from a task list.
+RECIPE_SIGNATURES = {
+    # recipe -> list of (head, repeated middle or None, optional final task)
+    # A K chain, or a single accumulating task when submits are split
+    "linear_k_acc_v1": [("co.mm.f16.v1", "co.mm_acc.f16.v1", None),
+                        ("co.mm_acc.f16.v1", None, None)],
+    # Each SwiGLU stage is its own submit; the recipe names the stage shapes.
+    "swiglu_ffn_v1": [
+        ("co.mm.f16.v1", None, None),
+        ("co.lut.sigmoid.f16.v1", "co.lut.sigmoid.f16.v1", "co.ew_mul.f16.v1"),
+        ("co.lut.sigmoid.f16.v1", "co.lut.sigmoid.f16.v1", None),
+        ("co.ew_mul.f16.v1", None, None),
+        ("co.ew_add.f16.v1", None, None),
+    ],
+    "gate_ew_v1": [
+        # chunked LUT, optionally followed by the gated multiply
+        ("co.lut.sigmoid.f16.v1", "co.lut.sigmoid.f16.v1", None),
+        ("co.lut.sigmoid.f16.v1", "co.lut.sigmoid.f16.v1", "co.ew_mul.f16.v1"),
+        ("co.lut.gelu_gate.f16.v1", "co.lut.gelu_gate.f16.v1", None),
+        ("co.lut.gelu_gate.f16.v1", "co.lut.gelu_gate.f16.v1", "co.ew_mul.f16.v1"),
+        ("co.lut.hardsigmoid.f16.v1", "co.lut.hardsigmoid.f16.v1", None),
+        # a single element-wise task (residual add / runtime-operand multiply)
+        ("co.ew_add.f16.v1", None, None),
+        ("co.ew_mul.f16.v1", None, None),
+    ],
+}
+
+
+def _recipe_matches(recipe: str, templates: list[str]) -> bool:
+    """Prove a submit's declared recipe describes its actual task sequence."""
+    signatures = RECIPE_SIGNATURES.get(recipe)
+    if not signatures or not templates:
+        return False
+    for head, repeat, final in signatures:
+        if templates[0] != head:
+            continue
+        body = templates[1:]
+        if final is not None:
+            if body and body[-1] == final:
+                body = body[:-1]
+            elif len(templates) > 1:
+                continue
+        if not body:
+            if len(templates) == 1 or final is not None:
+                return True
+            continue
+        if repeat is not None and all(t == repeat for t in body):
+            return True
+    return False
 BUFFER_ROLES = {"input", "input_slice", "weight", "accumulator", "gate",
                 "output", "workspace", "constant", "identity", "state"}
 PADDING_STATES = {"zero", "finite", "unknown", "valid_only"}
@@ -84,9 +135,25 @@ class Binding:
             reject(RK_E_SCHEMA, f"unknown binding role {self.role!r}", stage="schema")
         if self.dtype != "float16":
             reject(RK_E_SCHEMA, "MVP bindings must be float16", stage="schema")
-        if len(self.shape) != 2 or any(v <= 0 or v > 4096 for v in self.shape):
-            reject(RK_E_SHAPE, "binding shape must be static rank-2 within 1..4096",
-                   stage="shape")
+        if len(self.shape) > 2:
+            reject(RK_E_SHAPE, "binding rank must be 0, 1 or 2", stage="shape",
+                   actual=list(self.shape))
+        if self.role in {"input", "output"} and len(self.shape) != 2:
+            reject(RK_E_SHAPE,
+                   "runtime input/output bindings must be rank 2",
+                   stage="shape", actual={"role": self.role,
+                                          "shape": list(self.shape)})
+        if any(v <= 0 or v > 4096 for v in self.shape):
+            reject(RK_E_SHAPE,
+                   "binding dimensions must be static within 1..4096",
+                   stage="shape", actual=list(self.shape))
+
+    @property
+    def nbytes(self) -> int:
+        elements = 1
+        for dim in self.shape:
+            elements *= dim
+        return elements * 2
 
     def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "name": self.name, "role": self.role,
@@ -108,7 +175,7 @@ class ConstantSpec:
     name: str
     binding_id: int
     dtype: str
-    shape: tuple[int, int]
+    shape: tuple[int, ...]
     nbytes: int
     sha256: str
     pack_key: str
@@ -123,9 +190,20 @@ class ConstantSpec:
         if self.generator not in {None, "identity"}:
             reject(RK_E_SCHEMA, f"unknown constant generator {self.generator!r}",
                    stage="schema")
-        expected = self.shape[0] * self.shape[1] * 2
+        if len(self.shape) > 2:
+            reject(RK_E_SCHEMA, "constant rank must be 0, 1 or 2", stage="schema",
+                   actual=list(self.shape))
+        elements = 1
+        for dim in self.shape:
+            if not isinstance(dim, int) or isinstance(dim, bool) or dim <= 0:
+                reject(RK_E_SCHEMA,
+                       "constant dimensions must be positive integers",
+                       stage="schema", actual=list(self.shape))
+            elements *= dim
+        expected = elements * 2
         if self.nbytes != expected:
-            reject(RK_E_SCHEMA, "constant nbytes does not match shape", stage="schema")
+            reject(RK_E_SCHEMA, "constant nbytes does not match shape", stage="schema",
+                   actual=self.nbytes, required=expected)
 
     def to_dict(self) -> dict[str, Any]:
         out = {
@@ -181,6 +259,31 @@ class TensorLayout:
         expected = self.physical_rows * self.physical_cols * 2
         if self.bytes != expected:
             reject(RK_E_SHAPE, "layout byte size is inconsistent", stage="shape")
+        # Physical geometry is fixed by the C layout authority (co_tensor_*), not
+        # a free tuning knob: two views of one buffer must agree on addressing.
+        if self.layout == "co.linear.f16.v1":
+            ok = (self.atom == 1 and self.physical_rows == 1 and
+                  self.physical_cols == self.cols)
+            expected_rule = "atom=1, physical_rows=1, physical_cols=cols"
+        elif self.layout == "co.weight.f16.v1":
+            ok = (self.atom == 32 and
+                  self.physical_rows == -(-self.rows // 32) * 32 and
+                  self.physical_cols == -(-self.cols // 32) * 32)
+            expected_rule = ("atom=32, rows/cols padded to a multiple of 32")
+        else:
+            ok = (self.atom == 8 and
+                  self.physical_rows == -(-max(self.rows, 12) // 4) * 4 and
+                  self.physical_cols == -(-self.cols // 32) * 32)
+            expected_rule = ("atom=8, physical_rows=round_up(max(rows,12),4), "
+                             "physical_cols=round_up(cols,32)")
+        if not ok:
+            reject(RK_E_SHAPE,
+                   f"{self.layout} physical geometry is not canonical: "
+                   f"{expected_rule}", stage="shape",
+                   actual={"rows": self.rows, "cols": self.cols,
+                           "physical_rows": self.physical_rows,
+                           "physical_cols": self.physical_cols,
+                           "atom": self.atom})
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -393,22 +496,49 @@ class Submit:
 
 @dataclass(frozen=True)
 class Publish:
+    """One written tile of an output binding.
+
+    ``dst_row``/``dst_col`` place the tile's logical ``rows``x``cols`` inside the
+    row-major output binding.  A binding is published by a set of non-overlapping
+    tiles that exactly cover it; nothing may be published twice.
+    """
+
     name: str
     binding_id: int
     view_id: int
+    dst_row: int
+    dst_col: int
+    rows: int
+    cols: int
+
+    def __post_init__(self) -> None:
+        for field in ("dst_row", "dst_col", "rows", "cols"):
+            value = getattr(self, field)
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                reject(RK_E_SCHEMA, f"Publish.{field} must be a non-negative integer",
+                       stage="schema")
+        if self.rows <= 0 or self.cols <= 0:
+            reject(RK_E_SCHEMA, "Publish tile must have positive extents",
+                   stage="schema")
 
     def to_dict(self) -> dict[str, Any]:
         return {"name": self.name, "binding_id": self.binding_id,
-                "view_id": self.view_id}
+                "view_id": self.view_id, "dst_row": self.dst_row,
+                "dst_col": self.dst_col, "rows": self.rows, "cols": self.cols}
 
     @classmethod
     def from_dict(cls, obj: Any) -> "Publish":
         _require(isinstance(obj, dict), RK_E_SCHEMA, "Publish must be an object",
                  stage="schema")
-        _keys(obj, {"name", "binding_id", "view_id"}, where="Publish")
+        _keys(obj, {"name", "binding_id", "view_id", "dst_row", "dst_col",
+                    "rows", "cols"}, where="Publish")
         return cls(_str(obj["name"], "name", where="Publish"),
                    _int(obj["binding_id"], "binding_id", where="Publish"),
-                   _int(obj["view_id"], "view_id", where="Publish"))
+                   _int(obj["view_id"], "view_id", where="Publish"),
+                   _int(obj["dst_row"], "dst_row", where="Publish"),
+                   _int(obj["dst_col"], "dst_col", where="Publish"),
+                   _int(obj["rows"], "rows", minimum=1, where="Publish"),
+                   _int(obj["cols"], "cols", minimum=1, where="Publish"))
 
 
 @dataclass(frozen=True)
@@ -422,9 +552,10 @@ class Accounting:
     task_count: int
     submit_count: int
     transfers: int = 0
+    broadcast_expand_bytes: int = 0
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "peak_payload_bytes": self.peak_payload_bytes,
             "reserved_bytes": self.reserved_bytes,
             "data_bo_count": self.data_bo_count,
@@ -435,6 +566,9 @@ class Accounting:
             "submit_count": self.submit_count,
             "transfers": self.transfers,
         }
+        if self.broadcast_expand_bytes:
+            out["broadcast_expand_bytes"] = self.broadcast_expand_bytes
+        return out
 
     @classmethod
     def from_dict(cls, obj: Any) -> "Accounting":
@@ -443,9 +577,12 @@ class Accounting:
         required = {"peak_payload_bytes", "reserved_bytes", "data_bo_count",
                     "device_request_bytes", "command_workspace_bytes", "host_bytes",
                     "task_count", "submit_count", "transfers"}
-        _keys(obj, required, where="Accounting")
+        _keys(obj, required, {"broadcast_expand_bytes"}, "Accounting")
         return cls(**{key: _int(obj[key], key, where="Accounting")
-                      for key in required})
+                      for key in required},
+                   broadcast_expand_bytes=_int(
+                       obj.get("broadcast_expand_bytes", 0),
+                       "broadcast_expand_bytes", where="Accounting"))
 
 
 @dataclass(frozen=True)
@@ -637,6 +774,24 @@ def _validate_plan(plan: Plan) -> None:
                    f"output binding {binding.name!r} has no download action",
                    stage="publish")
 
+    # Recipe validation: the declared recipe must describe the actual task order.
+    for submit in plan.submits:
+        if not 1 <= len(submit.task_ids) <= 64:
+            reject(RK_E_SHAPE, "a submit group must carry 1..64 tasks",
+                   stage="schedule", actual=len(submit.task_ids))
+        templates = []
+        for task_id in submit.task_ids:
+            action = action_by_id.get(task_id)
+            if action is None or action.kind != "npu_task":
+                reject(RK_E_SCHEMA,
+                       "submit references a task id that is not an NPU task",
+                       stage="schedule", actual=task_id)
+            templates.append(action.template_id)
+        if not _recipe_matches(submit.recipe_id, templates):
+            reject(RK_E_SCHEMA,
+                   f"submit recipe {submit.recipe_id!r} does not match its task "
+                   "sequence", stage="schedule", actual=templates)
+
     seen_tasks: set[int] = set()
     for submit in plan.submits:
         if not submit.task_ids:
@@ -666,9 +821,10 @@ def _validate_plan(plan: Plan) -> None:
     published_bindings = {p.binding_id for p in plan.publish}
     output_bindings = {b.id for b in plan.bindings if b.role == "output"}
     if published_bindings != output_bindings:
-        reject(RK_E_SCHEMA, "publish set must match output bindings", stage="publish")
-    if len(plan.publish) != len(published_bindings):
-        reject(RK_E_SCHEMA, "duplicate publish entries are not allowed",
+        reject(RK_E_SCHEMA, "publish set must cover every output binding",
+               stage="publish")
+    if len({p.view_id for p in plan.publish}) != len(plan.publish):
+        reject(RK_E_SCHEMA, "the same view cannot be published twice",
                stage="publish")
     for item in plan.publish:
         binding = binding_by_id.get(item.binding_id)
@@ -678,9 +834,70 @@ def _validate_plan(plan: Plan) -> None:
         if item.view_id not in view_by_id:
             reject(RK_E_SCHEMA, "publish references missing view", stage="publish")
         view = view_by_id[item.view_id]
-        if view.tensor.rows < binding.shape[0] or view.tensor.cols < binding.shape[1]:
-            reject(RK_E_SHAPE, "publish view is smaller than output binding",
+        if item.rows != view.tensor.rows or item.cols != view.tensor.cols:
+            reject(RK_E_SHAPE, "publish tile must publish the whole view",
                    stage="publish")
+        if item.dst_row + item.rows > binding.shape[0] or \
+                item.dst_col + item.cols > binding.shape[1]:
+            reject(RK_E_SHAPE, "publish tile exceeds the output binding",
+                   stage="publish")
+        for other in plan.publish:
+            if other is item or other.binding_id != item.binding_id:
+                continue
+            if (other.dst_row < item.dst_row + item.rows and
+                    item.dst_row < other.dst_row + other.rows and
+                    other.dst_col < item.dst_col + item.cols and
+                    item.dst_col < other.dst_col + other.cols):
+                reject(RK_E_SHAPE, "publish tiles overlap", stage="publish")
+    for binding in plan.bindings:
+        if binding.role != "output":
+            continue
+        area = sum(p.rows * p.cols for p in plan.publish
+                   if p.binding_id == binding.id)
+        if area != binding.shape[0] * binding.shape[1]:
+            reject(RK_E_SHAPE,
+                   "publish tiles do not cover the output binding exactly",
+                   stage="publish", actual=area,
+                   required=binding.shape[0] * binding.shape[1])
+    # Every published view must be the source of a declared download boundary.
+    download_views = {(int(a.attrs.get("binding_id", -1)), a.inputs[0])
+                      for a in plan.actions if a.kind == "download"}
+    for item in plan.publish:
+        if (item.binding_id, item.view_id) not in download_views:
+            reject(RK_E_SCHEMA, "publish view has no matching download action",
+                   stage="publish")
+    for action in plan.actions:
+        if action.kind != "download":
+            continue
+        matches = [p for p in plan.publish
+                   if p.binding_id == int(action.attrs.get("binding_id", -1))
+                   and action.inputs and p.view_id == action.inputs[0]]
+        if len(matches) != 1:
+            reject(RK_E_SCHEMA,
+                   "every download must map to exactly one publish tile",
+                   stage="publish")
+
+    # A constant upload happens once at workspace creation, so the buffers it
+    # fills must own their slot for the whole workspace lifetime: a per-run
+    # buffer sharing that BO would silently corrupt the cached constant.
+    persistent: set[int] = set()
+    for action in plan.actions:
+        if action.kind != "upload":
+            continue
+        binding = binding_by_id.get(int(action.attrs.get("source_binding", -1)))
+        if action.attrs.get("cache") == "constant" or \
+                (binding is not None and binding.role == "constant"):
+            for view_id in action.outputs:
+                persistent.add(view_by_id[view_id].buffer_id)
+    slot_owner: dict[int, list[int]] = {}
+    for buffer in plan.buffers:
+        slot_owner.setdefault(buffer.slot_id, []).append(buffer.id)
+    for buffer in plan.buffers:
+        if buffer.id in persistent and len(slot_owner[buffer.slot_id]) != 1:
+            reject(RK_E_ALIAS,
+                   "a constant workspace buffer must own its slot for the whole "
+                   "workspace lifetime", stage="storage",
+                   actual=[buffer.id, buffer.slot_id])
 
     # Conservative BO alias contract.  Accumulation and EW/LUT outputs must never
     # alias the buffers they read, even when byte ranges happen to be disjoint.

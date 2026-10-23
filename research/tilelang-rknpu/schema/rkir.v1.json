@@ -24,9 +24,9 @@
       "required": ["dtype", "shape", "axes", "index_map", "finite"],
       "properties": {
         "dtype": {"const": "float16"},
-        "shape": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1, "maximum": 4096}},
-        "axes": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string", "minLength": 1}},
-        "stride": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 0}},
+        "shape": {"type": "array", "minItems": 0, "maxItems": 2, "items": {"type": "integer", "minimum": 1, "maximum": 4096}},
+        "axes": {"type": "array", "minItems": 0, "maxItems": 2, "items": {"type": "string", "minLength": 1}},
+        "stride": {"type": "array", "minItems": 0, "maxItems": 2, "items": {"type": "integer", "minimum": 0}},
         "index_map": {"const": "identity"},
         "finite": {"type": "boolean"}
       }
