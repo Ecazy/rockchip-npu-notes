@@ -7,7 +7,7 @@ payloads needed for independent numerical replay.
 
 ## Workspace checkpoint cleanup (2026-10-23)
 
-- The current implementation checkpoint is board `20261023T131610Z-rk3588`
+- The current implementation checkpoint is board `20261023T141328Z-rk3588`
   (27 cases × 3 serial masks) and Host `20261023T131916Z-host` (213 pytest,
   27/27 ctest). The cleanup preflight is `20261023T122811Z-host`; the final cleanup
   verification is `20261023T123836Z-host` (212 pytest, 26/26 ctest,
@@ -112,21 +112,24 @@ result tree):
   chain/separate bytes, target/profile/ABI, source-bundle hash recomputation,
   password scan).
 
-Latest campaign: `20261023T131610Z-rk3588/` on RK3588 OPi 5 Plus, driver v0.9.8,
+Latest campaign: `20261023T141328Z-rk3588/` on RK3588 OPi 5 Plus, driver v0.9.8,
 runtime ABI 1: **27 cases × 3 serial single-core masks = 81/81 PASS**.  Coverage
 includes MatMul, projection and staged-FP16 FFN chain/separate, one explicit
 guarded ragged tail, scalar/per-channel broadcast, independent activation, a
 256x256 LUT split, dual output, M/N multi-tile, K=512/257 sharding, tiled per-node
 projection/FFN/branch/activation, real multi-block TileLang staged
-projection/FFN/branch, and the full board CLI path.  Numeric guards remain
-included.
+projection/FFN/branch, and the full board CLI path.  This latest campaign was
+regenerated with the source-built TileLang/TVM tree; the wheel and source-built
+plans are semantically equal after excluding source-span/hash metadata.  Numeric
+guards remain included.
 Publishing is preceded by the existing `co_guard_check` for every data BO; a Host
 corruption regression proves failure does not publish and poisons the workspace.
 The declared-path acceptance formula and its 8e-3/8e-3 provenance are recorded in
 `campaign/manifest.json`; FP64 math references are stored separately but are not
 the acceptance predicate.  This is finite representative small-shape admission
-evidence; remaining MVP conditions are the external P0 source build and the
-unmeasured real-device submit/recovery path.  Offline recomputation from archived raw outputs is in
+evidence.  P0 source rebuild is complete; the remaining MVP condition is the
+unmeasured real-device submit/recovery path.  Offline recomputation from archived
+raw outputs is in
 `recomputed/summary.md`; it recomputes both declared and unquantized float64 math
 references.  Multi-board, concurrent three-core, performance and long-duration
 stress are extension validation, not P8 blockers.

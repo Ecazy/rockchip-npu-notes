@@ -1,0 +1,115 @@
+{
+  "bindings": [
+    {
+      "name": "X",
+      "role": "input",
+      "shape": [
+        8,
+        64
+      ]
+    },
+    {
+      "name": "W1",
+      "role": "constant",
+      "shape": [
+        64,
+        33
+      ]
+    },
+    {
+      "name": "W2",
+      "role": "constant",
+      "shape": [
+        64,
+        47
+      ]
+    },
+    {
+      "name": "Y1",
+      "role": "output",
+      "shape": [
+        8,
+        33
+      ]
+    },
+    {
+      "name": "Y2",
+      "role": "output",
+      "shape": [
+        8,
+        47
+      ]
+    }
+  ],
+  "case": "dual_output_chain",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "multi_output",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "618eb20ce8de641a7e2f5ed572050f08af179f2a9e90e1c3fa766ed70627f317",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 2,
+  "raw_outputs": "dual_output_chain.npz",
+  "rounds": [
+    {
+      "Y1": {
+        "allclose": true,
+        "element_count": 264,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 264,
+          "max_abs": 0.00011455943240434863,
+          "max_rel": 0.0004455128777600672,
+          "mismatch_elements": 264
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "Y2": {
+        "allclose": true,
+        "element_count": 376,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 376,
+          "max_abs": 0.0001146747381426394,
+          "max_rel": 0.00045675947389877926,
+          "mismatch_elements": 376
+        },
+        "max_abs": 0.0,
+        "max_rel": 0.0,
+        "mismatch_elements": 0
+      },
+      "download_bytes": 3072,
+      "download_calls": 2,
+      "emit_us": 11.6669921875,
+      "output_sync_us": 5.832977294921875,
+      "pack_us": 9.3330078125,
+      "round": 0,
+      "submit_count": 2,
+      "submit_wait_us": 214.37197875976562,
+      "task_count": 2,
+      "upload_bytes": 1536,
+      "upload_calls": 1
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 2,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 2,
+  "wall_seconds": 0.011129379272460938
+}

@@ -1,0 +1,200 @@
+{
+  "bindings": [
+    {
+      "name": "X",
+      "role": "input",
+      "shape": [
+        300,
+        300
+      ]
+    },
+    {
+      "name": "W1",
+      "role": "constant",
+      "shape": [
+        300,
+        300
+      ]
+    },
+    {
+      "name": "W2",
+      "role": "constant",
+      "shape": [
+        300,
+        300
+      ]
+    },
+    {
+      "name": "Y",
+      "role": "output",
+      "shape": [
+        300,
+        300
+      ]
+    },
+    {
+      "name": "__identity_64",
+      "role": "constant",
+      "shape": [
+        64,
+        64
+      ]
+    },
+    {
+      "name": "__identity_256",
+      "role": "constant",
+      "shape": [
+        256,
+        256
+      ]
+    }
+  ],
+  "case": "projection_multitile_300_chain",
+  "core_mask_env": "4",
+  "guard": null,
+  "kind": "projection_multitile",
+  "layout_ids": [
+    "co.cube.f16.v1",
+    "co.linear.f16.v1",
+    "co.weight.f16.v1"
+  ],
+  "plan_hash": "954ba9558138734cdc9fe64f308420e189c0502af55f0aa671919d44bf250153",
+  "profile_hash": "954d071351959ddbe2bb7351de196c6b45f6b5bcd6f81f603b649e3e62eb692d",
+  "publish_count": 4,
+  "raw_outputs": "projection_multitile_300_chain.npz",
+  "rounds": [
+    {
+      "Y": {
+        "allclose": true,
+        "element_count": 90000,
+        "fp64_math": {
+          "allclose": true,
+          "element_count": 90000,
+          "max_abs": 0.0005600726838718151,
+          "max_rel": 197.2379786988301,
+          "mismatch_elements": 90000
+        },
+        "max_abs": 0.0009765625,
+        "max_rel": 122070312.5,
+        "mismatch_elements": 24938
+      },
+      "download_bytes": 192000,
+      "download_calls": 4,
+      "emit_us": 176.16201782226562,
+      "output_sync_us": 158.37591552734375,
+      "pack_us": 476.8689880371094,
+      "round": 0,
+      "submit_count": 20,
+      "submit_wait_us": 4820.313049316406,
+      "task_count": 29,
+      "upload_bytes": 192000,
+      "upload_calls": 4
+    }
+  ],
+  "status": "PASS",
+  "submit_count": 20,
+  "submits": [
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "linear_k_acc_v1",
+      "tasks": 2
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    },
+    {
+      "mode": "chain",
+      "recipe_id": "gate_ew_v1",
+      "tasks": 1
+    }
+  ],
+  "task_count": 29,
+  "wall_seconds": 0.07570910453796387
+}
