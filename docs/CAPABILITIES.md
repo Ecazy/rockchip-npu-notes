@@ -42,6 +42,7 @@ CBUF/bank 容量规划、SDP precision、DMA stride 等可参考 [硬件概览](
 | `co_emit_mm` | 有界 FP16 MatMul，单 primitive tile 的 M/K/N ≤256 | 本地真机；Host 形状可以非对齐，物理维度按契约补齐 |
 | `co_emit_mm_acc` | MatMul 后融合 DPU EW 累加，双 BO 乒乓 | 本地真机；每片累计收窄到 FP16，禁止原位别名 |
 | `co_graph_*` | 静态 FP16 Input/Linear/Add/Mul/SiLU/GELU/HardSigmoid 图及混合RMSNorm/Softmax/RoPE/self-attention；自动形状、tiling与生命周期规划 | 本地真机 SwiGLU FFN 三核验收；Linear/逐元素仅边界搬运，混合归约另有CPU处理；无 ONNX/GGUF 导入或动态 shape；attention为固定容量混合实现 |
+| `co_gdn_*` | 固定单 head、dv/dk 1..256、FP16 六 task 状态更新；State 双 BO 保持 feature 布局；CPU-FP16/FP32 完整基线及实验性 beta-fold/merged/native-alpha 路线 | 三核五形状双模式及 32 步递推验收；三形状七路线在固定 CPU 2.304 GHz/NPU 1 GHz 下完成端到端与成本拆解；动态 k/q/v 仍 Host 打包；native 标量仅是已验证探针，未放开通用广播或原位别名；[结果](../research/kernels/GDN-EXECUTION.md) |
 | `co_decoder_*` | 完整bias-free pre-RMSNorm decoder block；Q/K/V、RoPE/GQA、Wo/residual、SwiGLU/residual；persistent KV及M=1几何 | 本地真机三核双模式；完整block和post-FFN回滚通过；混合路径、容量固定、非真实模型runtime，API优化收益按形状限定 |
 | `co_attention_*` | 固定容量MHA/GQA/MQA self-attention；RoPE、causal/window/additive mask、prefill与增量decode、事务式主机KV | 本地真机三核双模式，QK/PV在NPU；CPU KV/动态权重/Softmax，固定满容量计算；未测整模型/优化decode |
 | `co_rope_*` | interleaved/split-half、partial、跨tile配对 | 本地真机；CPU配对/系数，NPU FP16乘加；head_dim≤256、总通道≤4096 |

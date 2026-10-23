@@ -288,6 +288,29 @@ int co_emit_lut(co_program *p,co_view x,co_view o,enum co_act kind) {
     p->count=(uint32_t)a.task_count;p->reads[0]=x;p->nreads=1;p->output=o;
     return p->count&&p->count<=CO_MAX_WORDS?0:ROCKET_E_TILING;
 }
+int co_emit_scale_native(co_program *p,co_view x,co_view o,_Float16 scalar){
+    if(!p||!same(x,o)||x.tensor.type!=CO_F16||
+       (x.tensor.layout!=CO_CUBE&&x.tensor.layout!=CO_LINEAR)||
+       x.buffer->fd!=o.buffer->fd||x.buffer->bo.handle==o.buffer->bo.handle||
+       x.tensor.bytes/2>32768||!isfinite((float)scalar))return ROCKET_E_SHAPE;
+    uint16_t lut[1026]={0},bits;memcpy(&bits,&scalar,2);
+    uint64_t words[CO_MAX_WORDS];
+    lut_act_params_t a={.input_dma=address(x),.output_dma=address(o),
+        .n=(int)(x.tensor.bytes/2),.lut=lut,.bn_mul_operand=bits,
+        .out_cvt_scale=1,.tasks=words};
+    int rc=gen_lut_activation_fp16(&a);if(rc)return rc;
+    memset(p,0,sizeof(*p));
+    for(int i=0;i<a.task_count;i++){
+        uint16_t reg=(uint16_t)words[i];uint32_t val=(uint32_t)(words[i]>>16);
+        /* LUT is bypassed: omit table access AND LUT control registers. */
+        if(reg>=0x4100&&reg<=0x41ff)continue;
+        if(reg==0x4060)val=(1u<<6)|(1u<<1); /* BN active, ALU/RELU bypass, MUL scalar */
+        if(reg==0x4070)val=(1u<<9)|(1u<<8)|(1u<<7)|(1u<<1)|1u;
+        p->words[p->count++]=(words[i]&0xffff00000000ffffull)|((uint64_t)val<<16);
+    }
+    p->reads[0]=x;p->nreads=1;p->output=o;return 0;
+}
+
 int co_emit_reformat_8x8x8(co_program *p,co_view x,co_view o) {
     if(!p||!same(x,o)||x.tensor.layout!=CO_LINEAR||x.tensor.type!=CO_F16||
        x.tensor.cols!=512||overlap(x,o))return ROCKET_E_SHAPE;

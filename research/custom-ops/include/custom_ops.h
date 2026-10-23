@@ -102,6 +102,11 @@ int co_execute_workspace_init(int fd,unsigned max_programs,co_execute_workspace 
 void co_execute_workspace_destroy(co_execute_workspace *);
 int co_execute_profiled(int fd,const co_program *,unsigned,enum co_mode,
                         co_execute_workspace *,co_execute_profile *);
+/* Experimental DPU-only per-tensor BN multiplier, no arbitrary broadcasting.
+ * Same FP16 cube/linear geometry; <=32768 physical elements per task.
+ * No overlapping BO aliases. Explicitly selected by GDN experiments. */
+int co_emit_scale_native(co_program *,co_view x,co_view out,_Float16 scalar);
+
 /* SiLU (gelu=0) or erf-GELU (gelu=1): LUT gate then identity-conv EW multiply.
  * No CPU activation math or tensor round trip during execution. */
 int co_gated_activation(int fd, co_view x, co_view out, int gelu, enum co_mode);

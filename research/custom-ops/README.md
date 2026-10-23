@@ -5,6 +5,7 @@
 新增代码负责张量契约、打包、边界检查、LUT 内容、原语组合、执行顺序及数值验收。
 
 当前目标为 Orange Pi 5 Plus / RK3588 / 厂商 `rknpu 0.9.8` / FP16。
+新增 [GDN 动态 GEMV、外积与状态递推](../kernels/GDN-EXECUTION.md)：`co_gdn_*` 提供单 head FP16 六 task 更新与双 BO 状态，三核五形状双模式验收；后续补齐 CPU-FP16/FP32 完整递推基线、六 task 成本拆解、alpha/beta 标量 A/B/C/D 和完整 merged k/q 路线，并以固定 CPU/NPU 频率、FP64 oracle 和可复现报告门禁验收。
 最新 [K 维分片与加速](../kernels/FP16-K-TILING.md) 将组合算子的 K 上限扩至 4096，保持单次 Submit 和设备 Cube 交接。
 新增 [静态图编译与 SwiGLU FFN](../graphs/STATIC-GRAPH-COMPILER.md) 提供 `co_linear_*`、`co_graph_plan_init/compile/run`，自动拓扑/形状分析、统一 tile 布局与 BO 生命周期规划；中间张量保持设备 Cube。
 后续 [跨 tile 混合 RMSNorm/稳定 Softmax](../kernels/CROSS-TILE-ROW-OPS.md) 已加入图接口；Softmax明确读取logits到CPU，归约/rsqrt和系数展开为混合路径，不能归入仅图边界传输。
@@ -61,6 +62,9 @@ bash research/custom-ops/scripts/run-device-cost-board.sh resident 5 600 20
 | [row_cli.c](tools/c/row_cli.c) / [row_gate.py](tools/python/row_gate.py) | 图归约文件接口、数学参考、mask/负尾与饱和拒绝检查 |
 | [co_graph.h](include/co_graph.h) / [co_graph.c](src/co_graph.c) | 静态 FP16 图 IR、拓扑/形状/tiling/生命周期规划与执行 |
 | [graph_cli.c](tools/c/graph_cli.c) / [graph_gate.py](tools/python/graph_gate.py) | SwiGLU FFN 文件接口、独立数值参考与边界传输计数 |
+| [co_gdn.h](include/co_gdn.h) / [co_gdn_cpu.h](include/co_gdn_cpu.h) | 单 head FP16 递推、六 task/实验图配方，及 CPU-FP16/FP32 NEON 常驻基线 |
+| [gdn_experiments.c](tools/c/gdn_experiments.c) / [gdn_experiments_gate.py](tools/python/gdn_experiments_gate.py) / [gdn_experiment_report.py](tools/python/gdn_experiment_report.py) | 七路线三形状端到端与分项计时、A/B/C/D 标量基准、独立 FP64/证据门禁及 Markdown 报告 |
+| [run-gdn-experiments-board.sh](scripts/run-gdn-experiments-board.sh) | 上传当前源码、固定并恢复 CPU/NPU 频率、三核复跑与证据回收 |
 | [custom_ops.h](include/custom_ops.h) | 支持范围与调用契约 |
 | [custom_ops.c](src/custom_ops.c) | Tensor/Buffer/View、原语发射、链提交及混合归一化 |
 | [linear_plan.c](src/linear_plan.c) | M/N/K 自动分解、输出块几何、BO 容量与提交数规划 |

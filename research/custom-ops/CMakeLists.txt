@@ -10,7 +10,7 @@ endif()
 set(ROCKETNPU_INCLUDE_DIR "${RKT}/include" CACHE PATH "" FORCE)
 add_subdirectory("${UPSTREAM_ROOT}/rknpu-submit" provider)
 # Only the portable generator and submit seam are needed; no frontend or ARM NEON dependency.
-add_library(custom_ops STATIC src/custom_ops.c src/linear_hardsigmoid.c src/linear_plan.c src/co_graph.c src/co_row_ops.c src/co_rope.c src/co_attention.c src/co_decoder.c
+add_library(custom_ops STATIC src/custom_ops.c src/linear_hardsigmoid.c src/linear_plan.c src/co_graph.c src/co_row_ops.c src/co_rope.c src/co_attention.c src/co_decoder.c src/co_gdn.c src/co_gdn_cpu.c
   "${RKT}/src/npu_regcmd.c" "${RKT}/src/rocket_hw_profile.c"
   "${RKT}/src/rocket_sysfs.c" "${RKT}/src/rocket_log.c"
   "${RKT}/src/rocket_chain.c" "${RKT}/src/rocket_op.c")
@@ -123,6 +123,22 @@ target_compile_options(regcmd_overlap_probe PRIVATE -Wall -Wextra -Werror)
 add_test(NAME regcmd_overlap_host COMMAND regcmd_overlap_probe host)
 set_tests_properties(regcmd_overlap_host PROPERTIES ENVIRONMENT "ROCKET_CHIP=rk3588")
 add_test(NAME matched_overlap_evidence COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/python/matched_overlap_analyze_test.py")
+
+add_executable(gdn_probe tools/c/gdn_probe.c)
+target_link_libraries(gdn_probe PRIVATE custom_ops)
+target_compile_options(gdn_probe PRIVATE -Wall -Wextra -Werror)
+add_test(NAME gdn_host COMMAND gdn_probe host)
+set_tests_properties(gdn_host PROPERTIES ENVIRONMENT "ROCKET_CHIP=rk3588")
+target_link_options(gdn_probe PRIVATE -Wl,--wrap=co_upload_f16 -Wl,--wrap=co_download -Wl,--wrap=co_execute)
+add_test(NAME gdn_evidence_negative COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/python/gdn_gate_test.py")
+add_executable(gdn_experiments tools/c/gdn_experiments.c)
+target_link_libraries(gdn_experiments PRIVATE custom_ops)
+target_compile_options(gdn_experiments PRIVATE -Wall -Wextra -Werror)
+add_executable(gdn_cpu_test tests/c/gdn_cpu_test.c)
+target_link_libraries(gdn_cpu_test PRIVATE custom_ops)
+target_compile_options(gdn_cpu_test PRIVATE -Wall -Wextra -Werror)
+add_test(NAME gdn_cpu_stages COMMAND gdn_cpu_test)
+add_test(NAME gdn_experiments_evidence COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/python/gdn_experiments_test.py")
 
 # TileLang -> RKIR -> RKPlan descriptor ABI and synchronous runtime.
 set_target_properties(custom_ops PROPERTIES POSITION_INDEPENDENT_CODE ON)
