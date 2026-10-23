@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "generated_utc": "2026-10-20T11:29:57Z",
+  "tilelang": {
+    "repository": "https://github.com/tile-ai/tilelang",
+    "tag": "v0.1.15",
+    "commit": "a35f8ddf45eba16c21211ec8822d56ce5363036f",
+    "resolved_by": "api:git/ref/tags",
+    "tree_entries": 2265
+  },
+  "submodules": {
+    "3rdparty/cutlass": "b2dd65dc864e09688245b316ac46c4a6cd07e15c",
+    "3rdparty/tvm": "4211874e9e4b8770fd20ad0d98ab80afd1df5028"
+  },
+  "tvm_repository": "https://github.com/apache/tvm",
+  "tvm_commit": "4211874e9e4b8770fd20ad0d98ab80afd1df5028",
+  "python_surface": {
+    "scope": "tilelang/** (minus 3rdparty), 3rdparty/tvm/{python,include,src}",
+    "completeness": "python files in those scopes are complete; vendored cutlass is a subset and makes no completeness claim",
+    "totals": {
+      "files_compared": 3644,
+      "files_matched": 3644,
+      "files_mismatched": 0,
+      "installed_python": 1136,
+      "upstream_python_full_scopes": 1135
+    }
+  },
+  "patches": [],
+  "patch_policy": "no patches are applied to TileLang or TVM; the backend only reads their public Python objects",
+  "backends_files_hashed": {
+    "python/rknpu_backend/frontend/tilelang_adapter.py": "41708d91eea0ac839ab3ae99a1abaa2a14f4403a3a68075a11299381c4ba75dc",
+    "scripts/lock_source.py": "882bd2213b1208864e7b379609b50537a0ff16b7ec50fb66dc66747438b611e2"
+  }
+}

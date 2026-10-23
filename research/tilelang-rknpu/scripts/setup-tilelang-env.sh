@@ -3,6 +3,10 @@
 # It deliberately avoids pip's default torch-CUDA dependency graph: only a CPU
 # torch wheel is installed, because the frontend tests build TIR and never run a
 # GPU kernel.
+#
+# NOTE: this is the legacy, non-hash-locked recipe that produced the `.pydeps`
+# migration baseline.  P0 uses `scripts/lock_deps.sh` (requirements.lock, all
+# artifacts pinned by SHA-256) instead; keep this only to rebuild the baseline.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 cd "$HERE"
