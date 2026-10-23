@@ -9,10 +9,18 @@ extern "C" {
 #endif
 
 #define RK_ABI_VERSION 1u
-#define RK_SCHEMA_VERSION 1u
+#define RK_SCHEMA_VERSION 2u
 #define RK_MAX_SUBMIT_TASKS 64u
 #define RK_MAX_PROGRAMS_PER_SUBMIT 64u
 #define RK_MAX_WORDS_PER_PROGRAM 2048u
+/* MVP verifier complexity bounds.  Real plans stay far below these; the limits
+ * keep the pairwise alias/lifetime checks bounded for hostile descriptors. */
+#define RK_MAX_WRITERS_PER_BUFFER 64u
+/* Upper bound on inputs/outputs/deps an action may declare. */
+#define RK_MAX_ACTION_ARGS 8u
+/* Declared dependencies can cover every host action of a tile. */
+#define RK_MAX_ACTION_DEPS 64u
+#define RK_MAX_BUFFERS_PER_SLOT 64u
 #define RK_DIAG_STAGE_LEN 32u
 #define RK_DIAG_MESSAGE_LEN 512u
 #define RK_DIAG_SOURCE_LEN 128u
@@ -82,6 +90,10 @@ enum rk_core_policy { RK_CORE_SINGLE = 0, RK_CORE_AUTO = 1 };
 /* Action flags. */
 #define RK_ACTION_FLAG_TRANSPOSE_SOURCE 1u
 #define RK_ACTION_FLAG_CACHE_CONSTANT 2u
+/* Upload-only expansion of an explicit constant source: scalar fills every
+ * logical destination element; channel requires rank-1 [N] == destination cols. */
+#define RK_ACTION_FLAG_BROADCAST_SCALAR 4u
+#define RK_ACTION_FLAG_BROADCAST_CHANNEL 8u
 
 typedef struct rk_diag {
     uint32_t abi_version;
@@ -182,11 +194,19 @@ typedef struct rk_submit_desc {
     const uint32_t *deps;
 } rk_submit_desc;
 
+/* One written tile of an output binding.  The view supplies the physical
+ * packed tile; dst_row_offset/dst_col_offset place its logical rows/cols into
+ * the row-major [rows][cols] output binding.  A binding is published by a set
+ * of non-overlapping tiles that exactly cover it. */
 typedef struct rk_publish_desc {
     uint32_t abi_version;
     uint32_t struct_size;
     uint32_t binding_id;
     uint32_t view_id;
+    uint32_t dst_row_offset;
+    uint32_t dst_col_offset;
+    uint32_t rows;
+    uint32_t cols;
 } rk_publish_desc;
 
 typedef struct rk_plan_desc {
@@ -218,6 +238,10 @@ typedef struct rk_plan_desc {
     uint64_t host_budget_bytes;
     uint64_t claimed_device_bytes;
     uint64_t claimed_host_bytes;
+    /* Must equal RK_ABI_VERSION of the loaded library.  Catches a stale
+     * librknpu_plan.so paired with a newer Python descriptor builder. */
+    uint32_t runtime_abi_version;
+    uint32_t reserved6;
 } rk_plan_desc;
 
 typedef struct rk_binding {
@@ -252,6 +276,15 @@ typedef struct rk_plan rk_plan;
 typedef struct rk_workspace rk_workspace;
 
 uint32_t rk_abi_version(void);
+/* Production target identity check.  The RK3588 build verifies the board
+ * compatible string and kernel driver version before a workspace is created;
+ * the test-only mock build intentionally supplies only the weak no-op. */
+int rk_target_check(rk_diag *diag);
+/* Pure parsing helper used by host regression tests: exact NUL-token compatible
+ * match plus exact driver-version match. */
+int rk_target_validate_text(const char *compat, size_t compat_len,
+                            const char *version, rk_diag *diag);
+
 int rk_plan_create(const rk_plan_desc *desc, rk_plan **out, rk_diag *diag);
 void rk_plan_destroy(rk_plan *plan);
 int rk_workspace_create(int fd, const rk_plan *plan,

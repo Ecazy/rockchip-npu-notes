@@ -28,12 +28,15 @@ typedef struct rk_plan {
     rk_submit_desc *submits;
     uint32_t **submit_tasks;
     uint32_t **submit_deps;
+    /* action id -> owning submit id, UINT32_MAX for host actions */
+    uint32_t *task_submit;
     uint32_t npublish;
     rk_publish_desc *publish;
     uint64_t device_budget_bytes;
     uint64_t host_budget_bytes;
     uint64_t claimed_device_bytes;
     uint64_t claimed_host_bytes;
+    uint32_t runtime_abi_version;
 } rk_plan;
 
 void rk_diag_clear(rk_diag *diag);

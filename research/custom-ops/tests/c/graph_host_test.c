@@ -111,6 +111,23 @@ static void execution_case(unsigned m,unsigned d,unsigned h) {
         EXPECT(co_graph_run(g,&input,1,y)==ROCKET_E_DEVICE);fail_exec=0;
         for(size_t i=0;i<(size_t)m*d*2;i++)EXPECT(((unsigned char *)y)[i]==0x23);
         EXPECT(!co_graph_run(g,&input,1,y));EXPECT(!memcmp(y,ref,(size_t)m*d*2));
+        /* A second run with different inputs must produce a different, correct
+         * result: the plan is re-runnable, not a one-shot buffer image. */
+        for(size_t i=0;i<(size_t)m*d;i++)x[i]=(_Float16)((double)x[i]*0.5+0.125);
+        linear_ref(m,d,h,x,wg,bias,gate);linear_ref(m,d,h,x,wu,NULL,up);
+        for(size_t i=0;i<(size_t)m*h;i++) {
+            _Float16 sig=(_Float16)(1/(1+exp(-(double)gate[i])));
+            gate[i]=(_Float16)(gate[i]*sig);gate[i]=(_Float16)(gate[i]*up[i]);
+        }
+        linear_ref(m,h,d,gate,wd,NULL,ref);
+        for(size_t i=0;i<(size_t)m*d;i++)ref[i]=(_Float16)(ref[i]+x[i]);
+        _Float16 first_out=y[0];
+        EXPECT(!co_graph_run(g,&input,1,y));EXPECT(!memcmp(y,ref,(size_t)m*d*2));
+        EXPECT(y[0]!=first_out);
+        /* and the failure path still leaves the buffer untouched afterwards */
+        memset(y,0x23,(size_t)m*d*2);fail_exec=execs+2;
+        EXPECT(co_graph_run(g,&input,1,y)==ROCKET_E_DEVICE);fail_exec=0;
+        for(size_t i=0;i<(size_t)m*d*2;i++)EXPECT(((unsigned char *)y)[i]==0x23);
         co_graph_destroy(g);EXPECT(!live&&!resident);
     }
     desc.device_budget=p.device_bytes-1;EXPECT(co_graph_plan_init(&desc,&p)==ROCKET_E_TILING);

@@ -152,21 +152,68 @@ target_include_directories(rk_plan_runtime_obj PRIVATE include src)
 target_link_libraries(rk_plan_runtime_obj PUBLIC custom_ops)
 target_compile_options(rk_plan_runtime_obj PRIVATE -Wall -Wextra -Werror)
 set_target_properties(rk_plan_runtime_obj PROPERTIES POSITION_INDEPENDENT_CODE ON)
-add_library(rknpu_plan SHARED $<TARGET_OBJECTS:rk_plan_runtime_obj>)
-target_include_directories(rknpu_plan PUBLIC include)
+add_library(rknpu_plan SHARED $<TARGET_OBJECTS:rk_plan_runtime_obj>
+  src/rk_plan_target.c)
+target_include_directories(rknpu_plan PUBLIC include PRIVATE src)
 target_link_libraries(rknpu_plan PRIVATE rk_plan_core custom_ops)
 set_target_properties(rknpu_plan PROPERTIES OUTPUT_NAME rknpu_plan)
+# Test-only shared library: same runtime objects and C ABI, but the vendor calls
+# resolve to the mock seam.  The production rknpu_plan target never links it.
+add_library(rknpu_plan_mock SHARED $<TARGET_OBJECTS:rk_plan_runtime_obj>
+  tests/mock/npu_mock.c)
+target_include_directories(rknpu_plan_mock PRIVATE include src)
+target_link_libraries(rknpu_plan_mock PRIVATE rk_plan_core m)
+target_compile_options(rknpu_plan_mock PRIVATE -Wall -Wextra -Werror)
+target_link_options(rknpu_plan_mock PRIVATE
+  -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
+  -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
+  -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
+  -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc)
+set_target_properties(rknpu_plan_mock PROPERTIES OUTPUT_NAME rknpu_plan_mock)
+
+# Compile-time check that the test-only mock API matches the ctypes table.
+add_executable(mock_signature_probe tests/mock/mock_signature_probe.c
+  tests/mock/npu_mock.c)
+target_include_directories(mock_signature_probe PRIVATE include src tests/mock)
+target_link_libraries(mock_signature_probe PRIVATE custom_ops m)
+target_link_options(mock_signature_probe PRIVATE
+  -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
+  -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
+  -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
+  -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc)
+target_compile_options(mock_signature_probe PRIVATE -Wall -Wextra -Werror)
+
+# Test-only scenarios driven through the production emitters.
+add_executable(rk_mock_scenarios tests/c/mock_scenarios.c tests/mock/npu_mock.c)
+target_include_directories(rk_mock_scenarios PRIVATE include src tests/mock)
+target_link_libraries(rk_mock_scenarios PRIVATE custom_ops m)
+target_compile_options(rk_mock_scenarios PRIVATE -Wall -Wextra -Werror)
+target_link_options(rk_mock_scenarios PRIVATE
+  -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
+  -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
+  -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
+  -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc)
+
 add_executable(rk_plan_contract_test tests/c/rk_plan_contract_test.c)
 target_link_libraries(rk_plan_contract_test PRIVATE rk_plan_core custom_ops)
 target_compile_options(rk_plan_contract_test PRIVATE -Wall -Wextra -Werror)
 add_test(NAME rk_plan_contract COMMAND rk_plan_contract_test)
-add_executable(rk_plan_host_test tests/c/rk_plan_host_test.c $<TARGET_OBJECTS:rk_plan_runtime_obj>)
-target_include_directories(rk_plan_host_test PRIVATE include src)
+add_executable(rk_plan_host_test tests/c/rk_plan_host_test.c
+  tests/mock/npu_mock.c $<TARGET_OBJECTS:rk_plan_runtime_obj>)
+target_include_directories(rk_plan_host_test PRIVATE include src tests/mock)
 target_link_libraries(rk_plan_host_test PRIVATE rk_plan_core custom_ops m)
 target_compile_options(rk_plan_host_test PRIVATE -Wall -Wextra -Werror)
 target_link_options(rk_plan_host_test PRIVATE
   -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
-  -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled)
+  -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
+  -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc)
 add_test(NAME rk_plan_host COMMAND rk_plan_host_test)
-set_tests_properties(rk_plan_host PROPERTIES ENVIRONMENT "ROCKET_CHIP=rk3588")
+# MALLOC_PERTURB_ makes any read of uninitialised Host staging memory
+# deterministic instead of silently seeing zeroed fresh heap pages.
+set_tests_properties(rk_plan_host PROPERTIES
+  ENVIRONMENT "ROCKET_CHIP=rk3588;MALLOC_PERTURB_=128")

@@ -21,6 +21,11 @@ static int map_native(int rc) {
     return RK_E_DEVICE;
 }
 
+__attribute__((weak)) int rk_target_check(rk_diag *diag) {
+    (void)diag;
+    return 0;
+}
+
 static int fail_native(rk_diag *diag, const char *stage, const char *what,
                        uint32_t action_id, int native) {
     int code = map_native(native);
@@ -125,19 +130,55 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
     const _Float16 *src = (const _Float16 *)binding->data;
     _Float16 *base = (_Float16 *)((char *)dst->buffer->bo.ptr + dst->offset);
     uint32_t transpose = (a->flags & RK_ACTION_FLAG_TRANSPOSE_SOURCE) != 0;
+    uint32_t broadcast_scalar = (a->flags & RK_ACTION_FLAG_BROADCAST_SCALAR) != 0;
+    uint32_t broadcast_channel = (a->flags & RK_ACTION_FLAG_BROADCAST_CHANNEL) != 0;
+    const uint64_t elements = binding->nbytes / 2u;
     for (uint32_t r = 0; r < dst->tensor.rows; r++) {
         for (uint32_t c = 0; c < dst->tensor.cols; c++) {
-            uint32_t sr = transpose ? a->source_row_offset + c
-                                    : a->source_row_offset + r;
-            uint32_t sc = transpose ? a->source_col_offset + r
-                                    : a->source_col_offset + c;
-            size_t source_index = (size_t)sr * a->source_row_stride + sc;
-            base[co_index(&dst->tensor, r, c)] = src[source_index];
+            _Float16 value;
+            if (broadcast_scalar) {
+                if (elements != 1u) {
+                    (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    rk_diag_set(diag, RK_E_SHAPE, "upload",
+                                "scalar broadcast binding is not one element", "",
+                                a->id, 0);
+                    return RK_E_SHAPE;
+                }
+                value = src[0];
+            } else if (broadcast_channel) {
+                uint64_t source_col = (uint64_t)a->source_col_offset + c;
+                if (source_col >= elements) {
+                    (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    rk_diag_set(diag, RK_E_SHAPE, "upload",
+                                "channel broadcast binding is shorter than the "
+                                "destination row", "", a->id, 0);
+                    return RK_E_SHAPE;
+                }
+                value = src[source_col];
+            } else {
+                uint32_t sr = transpose ? a->source_row_offset + c
+                                        : a->source_row_offset + r;
+                uint32_t sc = transpose ? a->source_col_offset + r
+                                        : a->source_col_offset + c;
+                /* Re-checked here as well: the verifier already proved this, but the
+                 * packing loop must never index outside the borrowed binding even if
+                 * a future caller bypasses rk_plan_create. */
+                if ((uint64_t)sr * a->source_row_stride + sc >= elements) {
+                    (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    rk_diag_set(diag, RK_E_SHAPE, "upload",
+                                "packer source index exceeds the binding", "", a->id, 0);
+                    return RK_E_SHAPE;
+                }
+                value = src[(size_t)sr * a->source_row_stride + sc];
+            }
+            base[co_index(&dst->tensor, r, c)] = value;
         }
     }
     rc = rocket_bo_fini(ws->fd, &dst->buffer->bo);
     if (rc) return fail_native(diag, "upload", "rocket_bo_fini failed", a->id, rc);
-    if (bytes_out) *bytes_out += binding->nbytes;
+    /* Transfer accounting counts the packed bytes actually written for this
+     * action, not the whole borrowing binding once per tile. */
+    if (bytes_out) *bytes_out += (uint64_t)dst->tensor.bytes;
     return 0;
 }
 
@@ -174,6 +215,8 @@ int rk_workspace_create(int fd, const rk_plan *plan,
                     "fd>=0 and a validated plan are required", "", UINT32_MAX, 0);
         return RK_E_INVALID;
     }
+    int target_rc = rk_target_check(diag);
+    if (target_rc) return target_rc;
     if ((nconstants && !constants) || nconstants > plan->nvalues) {
         rk_diag_set(diag, RK_E_SCHEMA, "workspace_create",
                     "constant pointer/count mismatch", "", UINT32_MAX, 0);
@@ -353,118 +396,210 @@ int rk_workspace_run(rk_workspace *ws,
                 goto out;
             }
 
+    /* ---- Linear schedule: host preparation, blocking submits and downloads
+     * execute in the verified action order.  A task group is flushed as one
+     * blocking submit when its last task is reached. ---- */
     uint64_t upload_calls = 0, upload_bytes = 0;
-    result = upload_role(ws, RK_ROLE_INPUT, inputs, ninputs,
-                         &upload_calls, &upload_bytes, diag);
-    if (result) goto out;
-
+    uint64_t download_calls = 0, download_bytes = 0;
     double pack_us = 0.0, emit_us = 0.0, submit_us = 0.0, sync_us = 0.0;
-    for (uint32_t s = 0; s < ws->plan->nsubmits; s++) {
-        const rk_submit_desc *submit = &ws->plan->submits[s];
-        co_program *programs = calloc(submit->ntask_ids, sizeof(*programs));
-        if (!programs) {
-            rk_diag_set(diag, RK_E_NOMEM, "run", "out of memory for programs",
-                        "", UINT32_MAX, 0);
-            result = RK_E_NOMEM;
-            goto out;
-        }
-        double t0 = now_us();
-        for (uint32_t t = 0; t < submit->ntask_ids; t++) {
-            int rc = rk_emit_action(ws->plan, ws->views, submit->task_ids[t],
-                                    &programs[t], diag);
-            if (rc) {
-                free(programs);
-                result = rc;
-                goto out;
-            }
-            if (programs[t].count > CO_MAX_WORDS) {
-                free(programs);
-                rk_diag_set(diag, RK_E_SHAPE, "run", "program word count overflow",
-                            "", submit->task_ids[t], 0);
-                result = RK_E_SHAPE;
-                goto out;
-            }
-        }
-        double t1 = now_us();
-        co_execute_profile profile;
-        memset(&profile, 0, sizeof(profile));
-        int native = co_execute_profiled(ws->fd, programs, submit->ntask_ids,
-                submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE,
-                &ws->execute_workspace, &profile);
-        emit_us += t1 - t0;
-        submit_us += profile.submit_wait_us;
-        sync_us += profile.output_sync_us;
-        free(programs);
-        if (native) {
-            ws->poisoned = 1;
-            rk_diag_set(diag, RK_E_DEVICE, "run",
-                        "submission failed; workspace is poisoned", "",
-                        submit->task_ids[0], native);
-            if (report) report->fail_action_id = submit->task_ids[0];
-            result = RK_E_DEVICE;
-            goto out;
-        }
-    }
-
-    /* Download into host staging and publish only after every output succeeds. */
     void **staging = calloc(noutputs ? noutputs : 1u, sizeof(void *));
-    if (!staging) {
-        rk_diag_set(diag, RK_E_NOMEM, "run", "out of memory for output staging",
+    uint32_t *tile_count = calloc(noutputs ? noutputs : 1u, sizeof(uint32_t));
+    co_program *batch = calloc(RK_MAX_PROGRAMS_PER_SUBMIT, sizeof(*batch));
+    if (!staging || !tile_count || !batch) {
+        rk_diag_set(diag, RK_E_NOMEM, "run", "out of memory for run state",
                     "", UINT32_MAX, 0);
         result = RK_E_NOMEM;
-        goto out;
+        goto done;
     }
-    uint64_t download_calls = 0, download_bytes = 0;
-    for (uint32_t p = 0; p < ws->plan->npublish; p++) {
-        const rk_publish_desc *pub = &ws->plan->publish[p];
-        const rk_value_desc *value = rk_plan_value(ws->plan, pub->binding_id);
-        co_view *view = &ws->views[pub->view_id];
-        void *tmp = malloc(value->nbytes ? (size_t)value->nbytes : 1u);
-        if (!tmp) {
-            rk_diag_set(diag, RK_E_NOMEM, "run", "out of memory for output",
-                        "", UINT32_MAX, 0);
-            result = RK_E_NOMEM;
-            goto downloads_done;
+    for (uint32_t i = 0; i < ws->plan->nactions; i++) {
+        const rk_action_desc *a = &ws->plan->actions[i];
+        if (a->kind == RK_ACTION_UPLOAD) {
+            const rk_value_desc *v = rk_plan_value(ws->plan, a->source_binding);
+            if (!v) {
+                rk_diag_set(diag, RK_E_SCHEMA, "run", "upload binding missing",
+                            "", a->id, 0);
+                result = RK_E_SCHEMA;
+                goto done;
+            }
+            if (v->role == RK_ROLE_CONSTANT) continue; /* uploaded once at create */
+            const rk_binding *b = find_binding(inputs, ninputs, a->source_binding);
+            if (!b) {
+                rk_diag_set(diag, RK_E_SHAPE, "run",
+                            "input binding is absent or duplicated", "", a->id, 0);
+                result = RK_E_SHAPE;
+                goto done;
+            }
+            double t0 = now_us();
+            result = upload_action(ws, a, b, &upload_bytes, diag);
+            pack_us += now_us() - t0;
+            if (result) {
+                if (report) report->fail_action_id = a->id;
+                goto done;
+            }
+            upload_calls++;
+            continue;
         }
-        int native = co_download(view, tmp);
+        if (a->kind == RK_ACTION_NPU_TASK) {
+            uint32_t sid = ws->plan->task_submit[a->id];
+            if (sid == UINT32_MAX) {
+                rk_diag_set(diag, RK_E_SCHEMA, "run",
+                            "NPU task is not assigned to a submit", "", a->id, 0);
+                result = RK_E_SCHEMA;
+                goto done;
+            }
+            const rk_submit_desc *submit = &ws->plan->submits[sid];
+            uint32_t index = a->id - submit->task_ids[0];
+            double t0 = now_us();
+            result = rk_emit_action(ws->plan, ws->views, a->id, &batch[index], diag);
+            emit_us += now_us() - t0;
+            if (result) {
+                if (report) report->fail_action_id = a->id;
+                goto done;
+            }
+            if (index + 1u != submit->ntask_ids) continue;
+            double t1 = now_us();
+            co_execute_profile profile;
+            memset(&profile, 0, sizeof(profile));
+            int native = co_execute_profiled(ws->fd, batch, submit->ntask_ids,
+                    submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE,
+                    &ws->execute_workspace, &profile);
+            submit_us += profile.submit_wait_us;
+            sync_us += profile.output_sync_us;
+            emit_us += 0.0;
+            (void)t1;
+            if (native) {
+                ws->poisoned = 1;
+                rk_diag_set(diag, RK_E_DEVICE, "run",
+                            "submission failed; workspace is poisoned", "",
+                            submit->task_ids[0], native);
+                if (report) report->fail_action_id = submit->task_ids[0];
+                result = RK_E_DEVICE;
+                goto done;
+            }
+            if (report) report->submit_count++;
+            continue;
+        }
+        if (a->kind == RK_ACTION_DOWNLOAD) {
+            if (a->ninputs != 1) {
+                rk_diag_set(diag, RK_E_SCHEMA, "run", "download arity invalid",
+                            "", a->id, 0);
+                result = RK_E_SCHEMA;
+                goto done;
+            }
+            const rk_publish_desc *pub = NULL;
+            for (uint32_t q = 0; q < ws->plan->npublish; q++)
+                if (ws->plan->publish[q].binding_id == a->source_binding &&
+                    ws->plan->publish[q].view_id == a->inputs[0])
+                    pub = &ws->plan->publish[q];
+            const rk_value_desc *value = rk_plan_value(ws->plan, a->source_binding);
+            co_view *view = &ws->views[a->inputs[0]];
+            uint32_t slot = UINT32_MAX;
+            for (uint32_t q = 0; q < noutputs; q++)
+                if (outputs[q].id == a->source_binding) { slot = q; break; }
+            if (!pub || !value || slot == UINT32_MAX) {
+                rk_diag_set(diag, RK_E_SCHEMA, "run",
+                            "download/publish mapping invalid", "", a->id, 0);
+                result = RK_E_SCHEMA;
+                goto done;
+            }
+            if (!staging[slot]) {
+                staging[slot] = calloc(1, value->nbytes ? (size_t)value->nbytes : 1u);
+                if (!staging[slot]) {
+                    rk_diag_set(diag, RK_E_NOMEM, "run",
+                                "out of memory for output staging", "", UINT32_MAX, 0);
+                    result = RK_E_NOMEM;
+                    goto done;
+                }
+            }
+            void *tile = malloc(view->tensor.bytes ? (size_t)view->tensor.bytes : 1u);
+            if (!tile) {
+                rk_diag_set(diag, RK_E_NOMEM, "run",
+                            "out of memory for output tile", "", UINT32_MAX, 0);
+                result = RK_E_NOMEM;
+                goto done;
+            }
+            int native = co_download(view, tile);
+            if (native) {
+                free(tile);
+                ws->poisoned = 1;
+                rk_diag_set(diag, RK_E_DEVICE, "run",
+                            "output download failed; workspace is poisoned",
+                            "", a->id, native);
+                result = RK_E_DEVICE;
+                goto done;
+            }
+            download_calls++;
+            download_bytes += (uint64_t)view->tensor.bytes;
+            const _Float16 *tile_data = (const _Float16 *)tile;
+            /* co_download fills the logical rows*cols elements in row-major
+             * order; the rest of the physical tile is padding that the Host
+             * never wrote.  Scanning the physical extent would read
+             * uninitialised memory and produce random false failures.  Padding
+             * validity is a device-side property and is checked separately by
+             * guard/sentinel campaigns, not here. */
+            const uint64_t logical = (uint64_t)view->tensor.rows * view->tensor.cols;
+            int finite = 1;
+            for (uint64_t q = 0; q < logical; q++)
+                if (!isfinite((double)tile_data[q])) finite = 0;
+            if (!finite) {
+                free(tile);
+                rk_diag_set(diag, RK_E_NUMERIC_CONTRACT, "run",
+                            "downloaded output tile is not finite; refusing to "
+                            "publish", "", a->id, 0);
+                result = RK_E_NUMERIC_CONTRACT;
+                goto done;
+            }
+            _Float16 *dst = (_Float16 *)staging[slot];
+            for (uint32_t r = 0; r < pub->rows; r++)
+                for (uint32_t c = 0; c < pub->cols; c++)
+                    dst[((size_t)pub->dst_row_offset + r) * value->shape[1] +
+                        pub->dst_col_offset + c] =
+                        tile_data[(size_t)r * pub->cols + c];
+            tile_count[slot]++;
+            free(tile);
+            continue;
+        }
+        rk_diag_set(diag, RK_E_UNSUPPORTED, "run",
+                    "unsupported action in the verified schedule", "", a->id, 0);
+        result = RK_E_UNSUPPORTED;
+        goto done;
+    }
+
+    /* Final publication gate: all submits and all staging downloads are done.
+     * Check every allocated data BO before committing any staged bytes to the
+     * caller's output bindings.  This covers multi-output plans where a later
+     * submit can still run after an earlier download. */
+    for (uint32_t slot = 0; slot < ws->nslots; slot++) {
+        int native = co_guard_check(&ws->slots[slot]);
         if (native) {
-            free(tmp);
             ws->poisoned = 1;
             rk_diag_set(diag, RK_E_DEVICE, "run",
-                        "output download failed; workspace is poisoned",
+                        "data BO slack/guard check failed; refusing to publish",
                         "", UINT32_MAX, native);
             result = RK_E_DEVICE;
-            goto downloads_done;
+            goto done;
         }
-        download_calls++;
-        download_bytes += value->nbytes;
-        for (uint32_t i = 0; i < noutputs; i++) {
-            if (outputs[i].id == pub->binding_id) {
-                staging[i] = tmp;
-                tmp = NULL;
-                break;
-            }
-        }
-        free(tmp);
     }
+
     for (uint32_t i = 0; i < noutputs; i++) {
-        if (!staging[i]) {
+        if (!staging[i] || !tile_count[i]) {
             rk_diag_set(diag, RK_E_INVALID, "run", "missing staged output",
                         "", UINT32_MAX, 0);
             result = RK_E_INVALID;
-            goto downloads_done;
+            goto done;
         }
         memcpy((void *)outputs[i].data, staging[i], (size_t)outputs[i].nbytes);
     }
     result = 0;
-downloads_done:
-    for (uint32_t i = 0; i < noutputs; i++) free(staging[i]);
+done:
+    for (uint32_t i = 0; i < noutputs; i++) free(staging ? staging[i] : NULL);
     free(staging);
+    free(tile_count);
+    free(batch);
     if (result) goto out;
 
     if (report) {
         report->task_count = 0;
-        report->submit_count = ws->plan->nsubmits;
         for (uint32_t i = 0; i < ws->plan->nsubmits; i++)
             report->task_count += ws->plan->submits[i].ntask_ids;
         report->upload_calls = upload_calls;
