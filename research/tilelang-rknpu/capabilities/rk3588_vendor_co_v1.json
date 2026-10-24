@@ -7,7 +7,7 @@
     "runtime_abi_id": "rk-plan-v1",
     "custom_ops_source_hash": "68e1d33b9c494a8e0195399c9134244bdb0c117e941ca4e5f0eb04ab8e5cf090",
     "generator_source_hash": "752eba092073c2eb258739491901d773e734a6cf645c47022008429f3c917c91",
-    "capability_manifest_hash": "7700970a79cadcc441a5ec201ac121dbcbaaacc21b2eac546ce28b6a5305c914",
+    "capability_manifest_hash": "43dfb4a274ee94944d2bec59331aea252017636aab7213127a5c95c92307ec45",
     "tensor_layout_versions": [
       "co.cube.f16.v1",
       "co.weight.f16.v1",
@@ -18,6 +18,7 @@
       "co.mm_acc.f16.v1",
       "co.ew_add.f16.v1",
       "co.ew_mul.f16.v1",
+      "co.ew_max.f16.v1",
       "co.lut.sigmoid.f16.v1",
       "co.lut.hardsigmoid.f16.v1",
       "co.lut.gelu_gate.f16.v1"
@@ -114,6 +115,27 @@
       "chain_recipe": "gate_ew_v1",
       "evidence": "docs/CAPABILITIES.md#3",
       "validation_domain": "exact same shape/layout only",
+      "uncovered_risks": [
+        "no general broadcasting"
+      ]
+    },
+    {
+      "id": "co.ew_max.f16.v1",
+      "op": "rk.max",
+      "emitter": "co_emit_ew_max",
+      "target_profile": "rk3588_vendor_co_v1",
+      "status": "enabled",
+      "inputs": [
+        "cube_f16",
+        "cube_f16",
+        "identity_weight_f16"
+      ],
+      "output": "cube_f16",
+      "numeric": "f16_ew_exact_max",
+      "alias": "output_distinct_bos",
+      "chain_recipe": "gate_ew_v1",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "validation_domain": "exact same shape/layout only; ReLU uses a zero cube operand",
       "uncovered_risks": [
         "no general broadcasting"
       ]

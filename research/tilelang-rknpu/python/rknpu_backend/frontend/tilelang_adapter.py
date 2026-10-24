@@ -729,6 +729,16 @@ def _parse_elementwise_expr(node: Any, tirx: Any, loop_vars: tuple[Any, Any],
         return _Expr("load", buffer=node.buffer, dtype=str(node.buffer.dtype))
 
     name = type(node).__name__
+    if name in {"IntImm", "FloatImm"} and hasattr(node, "value"):
+        try:
+            value = float(node.value)
+        except Exception:
+            value = None
+        if value == 0.0:
+            return _Expr("zero", dtype="float16")
+        reject(RK_E_UNSUPPORTED,
+               "only the literal zero may appear in a relu elementwise form",
+               stage="frontend", source=span, actual=repr(node))
     if name == "Cast":
         if str(node.dtype) != "float16":
             reject(RK_E_NUMERIC_CONTRACT,
@@ -749,7 +759,7 @@ def _parse_elementwise_expr(node: Any, tirx: Any, loop_vars: tuple[Any, Any],
                      args=(_parse_elementwise_expr(node.args[0], tirx, loop_vars,
                                                    target_shape, span, params),),
                      dtype=str(node.dtype))
-    if name in {"Mul", "Add"}:
+    if name in {"Mul", "Add", "Max"}:
         return _Expr(name.lower(),
                      args=(_parse_elementwise_expr(node.a, tirx, loop_vars,
                                                    target_shape, span, params),
@@ -915,10 +925,10 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
                 return index
         return None
 
-    def pshape(index: int) -> tuple[int, int]:
+    def pshape(index: int) -> tuple[int, ...]:
         shape = tuple(int(x) for x in params[index].shape)
-        if len(shape) != 2:
-            reject(RK_E_SHAPE, "staged dataflow parameters are rank-2 only",
+        if len(shape) not in (1, 2):
+            reject(RK_E_SHAPE, "staged dataflow parameters must be rank 1 or 2",
                    stage="frontend", source=span, actual=list(shape))
         return shape
 
@@ -1443,6 +1453,7 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
 
             inner = _strip_expr_casts(expr)
             used_origins: set[int] = set()
+            direct_params: set[int] = set()
             def arg_pid(arg: _Expr, label: str) -> int:
                 if arg.kind != "load" or arg.buffer is None:
                     reject(RK_E_UNSUPPORTED,
@@ -1454,6 +1465,8 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
                            f"{label} does not resolve to a parameter tensor",
                            stage="frontend", source=span,
                            actual=_buffer_name(arg.buffer))
+                if pidx(arg.buffer) is not None:
+                    direct_params.add(pid)
                 used_origins.add(pid)
                 return pid
             if inner.kind == "sigmoid" and len(inner.args) == 1:
@@ -1463,27 +1476,58 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
                 opcode = inner.kind
                 inputs = (arg_pid(inner.args[0], f"{opcode} lhs"),
                           arg_pid(inner.args[1], f"{opcode} rhs"))
+            elif inner.kind == "max" and len(inner.args) == 2:
+                # ReLU is exactly max(x, 0); only a literal zero is accepted.
+                z = [a for a in inner.args if a.kind == "zero"]
+                x = [a for a in inner.args if a.kind != "zero"]
+                if len(z) != 1 or len(x) != 1:
+                    reject(RK_E_UNSUPPORTED,
+                           "staged max is only accepted as relu(x, 0)",
+                           stage="frontend", source=span)
+                opcode = "relu"
+                inputs = (arg_pid(x[0], "relu input"),)
             else:
                 reject(RK_E_UNSUPPORTED,
-                       "staged elementwise operation must be sigmoid, add or mul",
-                       stage="frontend", source=span,
+                       "staged elementwise operation must be sigmoid, add, mul "
+                       "or relu", stage="frontend", source=span,
                        actual=inner.kind)
             copy_sources = {pid for _, pid in origins}
-            if copy_sources != used_origins:
+            if not used_origins <= (copy_sources | direct_params):
                 reject(RK_E_UNSUPPORTED,
-                       "staged elementwise stage copies a parameter that is not "
-                       "consumed by its store", stage="frontend", source=span,
+                       "staged elementwise store uses a parameter that was "
+                       "neither copied nor directly loaded as a constant",
+                       stage="frontend", source=span,
                        actual={"copied": sorted(copy_sources),
+                               "direct": sorted(direct_params),
                                "used": sorted(used_origins)})
+            feature_pids = {pid for info in stage_infos
+                            if info["opcode"] == "matmul"
+                            for pid in info["inputs"]}
+            copied_constants = {pid for _, pid in origins
+                                if pid not in write_stage
+                                and pid not in feature_pids}
             stage_infos.append({
                 "stage": stage_index, "opcode": opcode, "inputs": inputs,
                 "reads": set(used_origins), "output": out_pid,
                 "mapping": mapping,
+                "constant_pids": direct_params | copied_constants,
             })
 
     # ---- parameter roles and SSA ordering --------------------------------
     weight_pids = {info["b_pid"] for info in stage_infos
                    if info["opcode"] == "matmul"}
+    constant_pids = {pid for info in stage_infos
+                     for pid in info.get("constant_pids", set())}
+    if weight_pids & constant_pids:
+        reject(RK_E_UNSUPPORTED,
+               "a parameter cannot be both a GEMM weight and an elementwise "
+               "constant", stage="frontend", source=span)
+    for pid in constant_pids:
+        shape = tuple(int(x) for x in params[pid].shape)
+        if len(shape) > 2:
+            reject(RK_E_SHAPE,
+                   "staged constants must be rank 0, 1 or 2",
+                   stage="frontend", source=span, actual=list(shape))
     produced = set(write_stage)
     external = [i for i in range(len(params)) if i not in produced]
     reads: dict[int, set[int]] = {i: set() for i in range(len(params))}
@@ -1569,6 +1613,7 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
                 "sigmoid": ("sigmoid",),
                 "mul": ("silu_mul",),
                 "add": ("residual_add",),
+                "relu": ("relu",),
             }[info["opcode"]]
             contract = _contract_with_points(options, points)
             ops.append(Op(op_id, info["opcode"], info["inputs"],
@@ -1582,12 +1627,17 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
             role = "output" if pid in output_pids else "temporary"
             producer = op_for_stage[write_stage[pid]]
         else:
-            role = "constant" if pid in weight_pids else "input"
+            role = "constant" if (pid in weight_pids or pid in constant_pids) \
+                else "input"
             producer = None
+        axes = () if len(shape) == 0 else (("col",) if len(shape) == 1
+                                           else ("row", "col"))
         values.append(Value(pid, _buffer_name(params[pid]),
-                            TensorType("float16", shape), producer, role))
+                            TensorType("float16", shape, axes=axes),
+                            producer, role))
     inputs = tuple(pid for pid in range(len(params))
-                   if pid in external and pid not in weight_pids)
+                   if pid in external and pid not in weight_pids
+                   and pid not in constant_pids)
     outputs = tuple(output_pids)
     return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
                   ops=tuple(ops), inputs=inputs, outputs=outputs,
@@ -3999,7 +4049,7 @@ def _numeric_contract(options: CompileOptions) -> NumericContract:
 
 
 def extract(prim_func: Any, *, options: CompileOptions,
-            profile_hash: str = "") -> Module:
+            profile_hash: str = "", b_is_input: bool = False) -> Module:
     tirx = _import_tirx()
     if not isinstance(prim_func, tirx.PrimFunc):
         reject(RK_E_UNSUPPORTED,
@@ -4315,9 +4365,10 @@ def extract(prim_func: Any, *, options: CompileOptions,
             narrowing_points=("k_tile_boundary",), approximate=False,
             tolerance={"atol": 8e-3, "rtol": 8e-3})
 
+    b_role = "input" if b_is_input else "constant"
     values = [
         Value(0, "A", TensorType("float16", (gm, gk)), None, "input"),
-        Value(1, "B", TensorType("float16", (gk, gn)), None, "constant"),
+        Value(1, "B", TensorType("float16", (gk, gn)), None, b_role),
         Value(2, "Z" if activation else "Y", TensorType("float16", (gm, gn)),
               0, "temporary" if activation else "output"),
     ]
@@ -4332,7 +4383,8 @@ def extract(prim_func: Any, *, options: CompileOptions,
         outputs = (3,)
     else:
         outputs = (2,)
+    module_inputs = (0, 1) if b_is_input else (0,)
     return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
-                  ops=tuple(ops), inputs=(0,), outputs=outputs,
+                  ops=tuple(ops), inputs=module_inputs, outputs=outputs,
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")

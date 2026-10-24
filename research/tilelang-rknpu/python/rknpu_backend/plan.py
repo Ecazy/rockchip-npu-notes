@@ -22,7 +22,7 @@ PLAN_KIND = "rkplan"
 LAYOUT_IDS = {"co.cube.f16.v1", "co.weight.f16.v1", "co.linear.f16.v1"}
 TEMPLATE_IDS = {
     "co.mm.f16.v1", "co.mm_acc.f16.v1", "co.ew_add.f16.v1",
-    "co.ew_mul.f16.v1", "co.lut.sigmoid.f16.v1",
+    "co.ew_mul.f16.v1", "co.ew_max.f16.v1", "co.lut.sigmoid.f16.v1",
     "co.lut.hardsigmoid.f16.v1", "co.lut.gelu_gate.f16.v1",
 }
 ACTION_KINDS = {"host_pack", "host_expand", "host_check", "upload", "npu_task",
@@ -54,6 +54,7 @@ RECIPE_SIGNATURES = {
         # a single element-wise task (residual add / runtime-operand multiply)
         ("co.ew_add.f16.v1", None, None),
         ("co.ew_mul.f16.v1", None, None),
+        ("co.ew_max.f16.v1", None, None),
     ],
 }
 
@@ -187,7 +188,7 @@ class ConstantSpec:
         if len(self.sha256) != 64:
             reject(RK_E_SCHEMA, "constant sha256 must be 64 hex characters",
                    stage="schema")
-        if self.generator not in {None, "identity"}:
+        if self.generator not in {None, "identity", "zero"}:
             reject(RK_E_SCHEMA, f"unknown constant generator {self.generator!r}",
                    stage="schema")
         if len(self.shape) > 2:
@@ -966,7 +967,8 @@ def _validate_action_template(plan: Plan, action: Action, view_by_id: dict[int, 
                 w.tensor.rows != out.tensor.cols:
             reject(RK_E_SHAPE, "co.mm_acc tensor extents mismatch", stage="verify",
                    action_id=action.id)
-    elif action.template_id in {"co.ew_add.f16.v1", "co.ew_mul.f16.v1"}:
+    elif action.template_id in {"co.ew_add.f16.v1", "co.ew_mul.f16.v1",
+                                "co.ew_max.f16.v1"}:
         if len(action.inputs) != 3 or len(action.outputs) != 1:
             reject(RK_E_SHAPE, "co.ew requires three inputs and one output",
                    stage="verify", action_id=action.id)

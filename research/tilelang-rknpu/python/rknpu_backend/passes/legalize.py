@@ -10,6 +10,7 @@ from ..ir import Module, NumericContract, Op
 from ..options import CompileOptions
 
 ACTIVATION_CAPABILITY = {
+    "relu": "co.ew_max.f16.v1",
     "silu": "co.lut.sigmoid.f16.v1",
     "gelu": "co.lut.gelu_gate.f16.v1",
     "sigmoid": "co.lut.sigmoid.f16.v1",
@@ -148,7 +149,7 @@ def legalize(module: Module, *, profile: TargetProfile,
                            "matmul_output": produced},
                    alternative="express the program as one matmul followed by one "
                                "activation of its result")
-        if not options.allow_approx_lut:
+        if activation_op.opcode != "relu" and not options.allow_approx_lut:
             reject(RK_E_NUMERIC_CONTRACT,
                    "activation uses a LUT approximation; explicit "
                    "allow_approx_lut is required",
@@ -398,7 +399,7 @@ def _legalize_static_dataflow(module: Module, *, profile: TargetProfile,
                                          "co.mm.f16.v1"))
             matmuls.append(op)
         elif op.opcode in ACTIVATION_CAPABILITY:
-            if not options.allow_approx_lut:
+            if op.opcode != "relu" and not options.allow_approx_lut:
                 reject(RK_E_NUMERIC_CONTRACT,
                        "activation uses a LUT approximation; explicit "
                        "allow_approx_lut is required", stage="legalize",

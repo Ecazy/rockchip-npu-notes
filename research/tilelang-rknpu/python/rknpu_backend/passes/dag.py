@@ -63,6 +63,8 @@ class _Builder:
         self.publish: list[Publish] = []
         self._identity_buffers: dict[int, tuple[int, int]] = {}
         self._identity_values: dict[int, int] = {}
+        self._zero_buffers: dict[tuple[int, int], tuple[int, int]] = {}
+        self._zero_values: dict[int, int] = {}
         # Static-dataflow mapping: every RKIR value names the device view that
         # holds it and the action that produced it.  A later node consumes the
         # view directly; intermediates never make a host round trip.
@@ -188,6 +190,39 @@ class _Builder:
                                "cache": "constant"})
         self._identity_buffers[physical_cols] = (value_id, view_id)
         self._identity_values[value_id] = binding_id
+        return value_id, view_id
+
+    def zero_for(self, rows: int, cols: int) -> tuple[int, int]:
+        """Return (value_id, view_id) for an internal zero cube constant."""
+        key = (rows, cols)
+        if key in self._zero_buffers:
+            return self._zero_buffers[key]
+        cr, cc, cbytes = cube_layout(rows, cols)
+        payload = bytes(max(1, rows * cols * 2))
+        digest = hashlib.sha256(payload).hexdigest()
+        value_id = 20_000 + len(self._zero_values)
+        binding_id = len(self.bindings)
+        name = f"__zero_{rows}x{cols}"
+        self.bindings.append(Binding(binding_id, name, "constant", "float16",
+                                     (rows, cols)))
+        self.constants.append(ConstantSpec(
+            name=name, binding_id=binding_id, dtype="float16",
+            shape=(rows, cols), nbytes=rows * cols * 2, sha256=digest,
+            pack_key=f"zero:f16:{rows}x{cols}:v1", generator="zero"))
+        layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols, cr, cc, 8,
+                              cr * cc * 2)
+        buffer_id = self.add_buffer(role="constant", capacity=cbytes,
+                                    layout_id=CUBE_LAYOUT, reuse=False,
+                                    padding_state="zero")
+        view_id = self.add_view(buffer_id, 0, layout)
+        self.add_action("upload", outputs=(view_id,),
+                        origin="lowering:zero",
+                        attrs={"source_binding": binding_id,
+                               "src_row_offset": 0, "src_col_offset": 0,
+                               "src_row_stride": cols,
+                               "transpose_source": False, "cache": "constant"})
+        self._zero_buffers[key] = (value_id, view_id)
+        self._zero_values[value_id] = binding_id
         return value_id, view_id
 
     def _broadcast_targets(self) -> dict[int, tuple[int, int]]:
@@ -385,7 +420,7 @@ class _Builder:
         # action-id liveness disagree with the runtime's Host-first phase.
         identity_cols: set[int] = set()
         for op in self.module.ops:
-            if op.opcode in {"silu", "gelu"}:
+            if op.opcode in {"relu", "silu", "gelu"}:
                 rows, cols = self.module.value(op.inputs[0]).type.shape
                 identity_cols.add(cube_layout(rows, cols)[1])
             elif op.opcode in {"add", "mul"}:
@@ -393,6 +428,10 @@ class _Builder:
                 identity_cols.add(cube_layout(rows, cols)[1])
         for cols in sorted(identity_cols):
             self.identity_for(cols)
+        for op in self.module.ops:
+            if op.opcode == "relu":
+                rows, cols = self.module.value(op.inputs[0]).type.shape
+                self.zero_for(rows, cols)
         for op in self.module.ops:
             if op.opcode == "matmul":
                 x_view = self.value_views.get(op.inputs[0])
@@ -424,7 +463,7 @@ class _Builder:
                 self.value_action[out_value.id] = task
                 continue
 
-            if op.opcode in {"silu", "gelu", "sigmoid", "hardsigmoid"}:
+            if op.opcode in {"relu", "silu", "gelu", "sigmoid", "hardsigmoid"}:
                 in_id = op.inputs[0]
                 in_view = self.value_views.get(in_id)
                 if in_view is None:
@@ -671,7 +710,7 @@ class _Builder:
         # physical width before the first task action.
         identity_cols: set[int] = set()
         for op in self.module.ops:
-            if op.opcode in {"silu", "gelu", "sigmoid", "hardsigmoid"}:
+            if op.opcode in {"relu", "silu", "gelu", "sigmoid", "hardsigmoid"}:
                 for tile in value_tiles[op.inputs[0]]:
                     identity_cols.add(cube_layout(tile.rows, tile.cols)[1])
             elif op.opcode in {"add", "mul"}:
@@ -679,6 +718,10 @@ class _Builder:
                     identity_cols.add(cube_layout(tile.rows, tile.cols)[1])
         for cols in sorted(identity_cols):
             self.identity_for(cols)
+        for op in self.module.ops:
+            if op.opcode == "relu":
+                for tile in value_tiles[op.inputs[0]]:
+                    self.zero_for(tile.rows, tile.cols)
 
         # 5. Emit NPU tasks tile by tile in topological order.
         for op in self.module.ops:
@@ -761,7 +804,7 @@ class _Builder:
                         else "workspace")
                 continue
 
-            if op.opcode in {"silu", "gelu", "sigmoid", "hardsigmoid"}:
+            if op.opcode in {"relu", "silu", "gelu", "sigmoid", "hardsigmoid"}:
                 in_id = op.inputs[0]
                 in_value = self.module.value(in_id)
                 out_id = op.outputs[0]
@@ -1309,6 +1352,28 @@ class _Builder:
                          cube_rows: int, cube_cols: int, input_view: int,
                          input_buffer: int, deps: tuple[int, ...],
                          group: str) -> int:
+        if activation == "relu":
+            _, zero_view = self.zero_for(rows, cols)
+            zero_upload = self._last_upload_of(zero_view)
+            _, identity_view = self.identity_for(cube_cols)
+            identity_upload = self._last_upload_of(identity_view)
+            out_layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols,
+                                      cube_rows, cube_cols, 8,
+                                      cube_rows * cube_cols * 2)
+            out_buffer = self.add_buffer(role="output", capacity=out_layout.bytes,
+                                         layout_id=CUBE_LAYOUT,
+                                         padding_state="finite", reuse=False)
+            out_view = self.add_view(out_buffer, 0, out_layout)
+            deps = tuple(d for d in (deps[0] if deps else None, zero_upload,
+                                      identity_upload) if d is not None)
+            self.add_action(
+                "npu_task", template_id="co.ew_max.f16.v1",
+                inputs=(input_view, zero_view, identity_view),
+                outputs=(out_view,), deps=deps,
+                origin=f"lowering:{activation}",
+                attrs={"submit_group": group})
+            return out_view
+
         chunks = lut_chunks(cube_rows * cube_cols)
         requires_gate = activation in {"silu", "gelu"}
         if requires_gate:

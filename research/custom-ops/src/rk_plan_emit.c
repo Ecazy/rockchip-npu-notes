@@ -26,6 +26,10 @@ int rk_emit_action(const rk_plan *plan, const co_view *views,
         rc = co_emit_ew(out, views[a->inputs[0]], views[a->inputs[1]],
                         views[a->inputs[2]], views[a->outputs[0]], 1);
         break;
+    case RK_TEMPLATE_EW_MAX_F16:
+        rc = co_emit_ew_max(out, views[a->inputs[0]], views[a->inputs[1]],
+                            views[a->inputs[2]], views[a->outputs[0]]);
+        break;
     case RK_TEMPLATE_LUT_SIGMOID_F16:
         rc = co_emit_lut(out, views[a->inputs[0]], views[a->outputs[0]], CO_SIGMOID);
         break;

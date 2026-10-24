@@ -81,6 +81,9 @@ int co_emit_mm(co_program *, co_view x, co_view weights, co_view out);
 int co_emit_mm_acc(co_program *, co_view x, co_view weights, co_view prior, co_view out);
 int co_emit_ew(co_program *, co_view x, co_view operand, co_view identity,
                co_view out, int multiply);  /* exact-shape only; no implicit broadcast */
+/* Exact elementwise maximum of x and operand, using an identity-conv main feed. */
+int co_emit_ew_max(co_program *, co_view x, co_view operand, co_view identity,
+                   co_view out);
 int co_emit_lut(co_program *, co_view x, co_view out, enum co_act);
 /* CO_EXP_BOUNDED: caller guarantees x in [-4,4]; CO_RSQRT_BOUNDED: x in
  * [0.25,4]. These are bounded LUT approximations, not full-range exp/rsqrt.

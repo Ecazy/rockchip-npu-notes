@@ -55,6 +55,7 @@ RK_TEMPLATE_EW_MUL_F16 = 4
 RK_TEMPLATE_LUT_SIGMOID_F16 = 5
 RK_TEMPLATE_LUT_HARDSIGMOID_F16 = 6
 RK_TEMPLATE_LUT_GELU_GATE_F16 = 7
+RK_TEMPLATE_EW_MAX_F16 = 8
 
 RK_SUBMIT_CHAIN = 0
 RK_SUBMIT_SEPARATE = 1
@@ -98,6 +99,7 @@ TEMPLATE_MAP = {
     "co.mm_acc.f16.v1": RK_TEMPLATE_MM_ACC_F16,
     "co.ew_add.f16.v1": RK_TEMPLATE_EW_ADD_F16,
     "co.ew_mul.f16.v1": RK_TEMPLATE_EW_MUL_F16,
+    "co.ew_max.f16.v1": RK_TEMPLATE_EW_MAX_F16,
     "co.lut.sigmoid.f16.v1": RK_TEMPLATE_LUT_SIGMOID_F16,
     "co.lut.hardsigmoid.f16.v1": RK_TEMPLATE_LUT_HARDSIGMOID_F16,
     "co.lut.gelu_gate.f16.v1": RK_TEMPLATE_LUT_GELU_GATE_F16,
@@ -484,6 +486,7 @@ class LibRKPlan:
         "rk_mock_delay_us": (None, (ctypes.c_uint,)),
         "rk_mock_fail_prep_at": (None, (ctypes.c_uint,)),
         "rk_mock_prep_calls": (ctypes.c_uint, ()),
+        "rk_mock_reset_tags": (None, ()),
         "rk_mock_context_fault": (None, (ctypes.c_uint, ctypes.c_uint)),
         "rk_mock_context_faulted": (ctypes.c_int, (ctypes.c_int,)),
         "rk_mock_reset": (None, ()),

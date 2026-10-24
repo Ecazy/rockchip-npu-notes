@@ -80,7 +80,7 @@ def compile_rkir(module: Module, *, profile: TargetProfile,
 
 
 def compile_tilelang(prim_func: Any, *, profile: TargetProfile,
-                     options: CompileOptions) -> CompileResult:
+                     options: CompileOptions, b_is_input: bool = False) -> CompileResult:
     """Extract a real TileLang PrimFunc and compile it to RKPlan.
 
     TileLang is an optional import.  Without the pinned dependency this function
@@ -103,7 +103,8 @@ def compile_tilelang(prim_func: Any, *, profile: TargetProfile,
                 prim_func = candidate
                 break
     module = tilelang_adapter.extract(prim_func, options=options,
-                                      profile_hash=profile.profile_hash)
+                                      profile_hash=profile.profile_hash,
+                                      b_is_input=b_is_input)
     return _compile_module(module, profile=profile, options=options)
 
 

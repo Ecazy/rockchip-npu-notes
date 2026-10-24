@@ -18,8 +18,8 @@ SCHEMA_VERSION = 1
 KIND = "rkir"
 DTYPE_F16 = "float16"
 SUPPORTED_DTYPES = {DTYPE_F16}
-SUPPORTED_OPS = {"matmul", "add", "mul", "silu", "gelu", "sigmoid", "hardsigmoid"}
-UNARY_OPS = {"silu", "gelu", "sigmoid", "hardsigmoid"}
+SUPPORTED_OPS = {"matmul", "add", "mul", "relu", "silu", "gelu", "sigmoid", "hardsigmoid"}
+UNARY_OPS = {"relu", "silu", "gelu", "sigmoid", "hardsigmoid"}
 BINARY_OPS = {"add", "mul"}
 MAX_EXTENT = 4096
 
