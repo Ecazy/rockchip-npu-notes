@@ -19,10 +19,9 @@ from pathlib import Path
 
 import numpy as np
 
-from rknpu_backend import load_plan
 from rknpu_backend.hostinfo import thread_config
-from rknpu_backend.models import (MLPRunner, RunStats, TinyViTRunner,
-                                  load_weight_npz)
+from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+from rknpu_backend.models import RunStats, load_weight_npz
 from rknpu_backend.model_reference import (mlp_logits, mlp_logits_declared,
                                            tiny_vit_logits,
                                            tiny_vit_logits_declared)
@@ -119,36 +118,46 @@ def _reference_with_schedule(fn, weights, x, schedule):
     return out
 
 
-def _model_plan(manifest: dict, plans_dir: Path, name: str):
-    info = manifest["plans"][name]
-    return load_plan(str(plans_dir / info["path"]))
+def _hybrid_path(manifest: dict, plans_dir: Path, key: str) -> Path:
+    entry = manifest.get("hybrid_manifests", {}).get(key)
+    if entry is None:
+        raise RuntimeError(f"compiled manifest has no rkhybrid entry {key!r}")
+    return plans_dir / entry["path"]
 
 
-def _build_mlp_runners(lib, plans_dir, manifest, weights, schedule, fd):
+def _build_mlp_runners(lib, plans_dir, manifest, weights, weights_path,
+                       schedule, fd):
     t0 = time.perf_counter()
     profiles = sorted({row["profile"] for row in schedule}, reverse=True)
     runners = {}
     try:
         for batch in profiles:
-            runners[batch] = MLPRunner(
-                lib, _model_plan(manifest, plans_dir, f"mnist_mlp_b{batch}"),
-                weights, batch, fd=fd)
-    except BaseException:
+            program = load_hybrid_program(
+                _hybrid_path(manifest, plans_dir, f"mnist_mlp_b{batch}"),
+                plans_dir=plans_dir)
+            runners[batch] = HybridRunner(
+                lib, program, weights, weights_path=weights_path, fd=fd)
+    except BaseException as exc:
+        cleanup_errors = []
         for runner in reversed(list(runners.values())):
             try:
                 runner.close()
-            except BaseException:
-                pass
+            except BaseException as cleanup:
+                cleanup_errors.append(cleanup)
+        if cleanup_errors:
+            exc.add_note("runner construction cleanup also failed: " +
+                         "; ".join(repr(e) for e in cleanup_errors))
         raise
     return runners, time.perf_counter() - t0
 
 
 def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
-                     *, weight_load_seconds: float, primary_full: bool):
+                     *, weight_load_seconds: float, primary_full: bool,
+                     weights_path: Path):
     """Evaluate one static MLP profile; reference time is outside the interval."""
     schedule = make_batch_schedule(len(x), batch, tail_profiles=(8, 1))
     runners, setup_seconds = _build_mlp_runners(
-        lib, plans_dir, manifest, weights, schedule, fd)
+        lib, plans_dir, manifest, weights, weights_path, schedule, fd)
     stats = RunStats()
     warm_stats = RunStats()
     logits = np.empty((len(x), 10), dtype=np.float32)
@@ -170,7 +179,7 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
         for row in schedule:
             start, size = row["offset"], row["size"]
             logits[start:start + size] = runners[row["profile"]].run(
-                x[start:start + size], stats=stats)
+                x[start:start + size], stats=stats).outputs["logits"]
         model_call_seconds = time.perf_counter() - t0
 
         t_argmax = time.perf_counter()
@@ -225,29 +234,36 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
         })
         return result, logits, ref, declared
     finally:
+        cleanup_errors = []
         for runner in reversed(list(runners.values())):
-            runner.close()
+            try:
+                runner.close()
+            except BaseException as cleanup:
+                cleanup_errors.append(cleanup)
+        if cleanup_errors:
+            # Evaluation has already either returned or raised; do not replace a
+            # successful result with cleanup noise.  The runtime keeps poisoned
+            # workspaces owned for the process-level quarantine policy.
+            pass
 
 
-def _build_vit_runners(lib, plans_dir, manifest, weights, batch, fd):
+def _build_vit_runners(lib, plans_dir, manifest, weights, weights_path,
+                       batch, fd):
     t0 = time.perf_counter()
-    prefix = f"tiny_vit_b{batch}_"
-    plans = {name[len(prefix):]:
-             load_plan(str(plans_dir / info["path"]))
-             for name, info in manifest["plans"].items()
-             if name.startswith(prefix)}
-    try:
-        runner = TinyViTRunner(lib, plans, weights, batch, fd=fd)
-    except BaseException:
-        raise
+    program = load_hybrid_program(
+        _hybrid_path(manifest, plans_dir, f"tiny_vit_b{batch}"),
+        plans_dir=plans_dir)
+    runner = HybridRunner(lib, program, weights, weights_path=weights_path,
+                          fd=fd)
     return runner, time.perf_counter() - t0
 
 
 def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
-                     *, weight_load_seconds: float, primary_full: bool):
+                     *, weight_load_seconds: float, primary_full: bool,
+                     weights_path: Path):
     schedule = make_batch_schedule(len(x), batch, tail_profiles=())
     runner, setup_seconds = _build_vit_runners(
-        lib, plans_dir, manifest, weights, batch, fd)
+        lib, plans_dir, manifest, weights, weights_path, batch, fd)
     stats = RunStats()
     warm_stats = RunStats()
     logits = np.empty((len(x), 10), dtype=np.float32)
@@ -262,7 +278,7 @@ def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
         for row in schedule:
             start, size = row["offset"], row["size"]
             logits[start:start + size] = runner.run(
-                x[start:start + size], stats=stats)
+                x[start:start + size], stats=stats).outputs["logits"]
         model_call_seconds = time.perf_counter() - t0
 
         t_argmax = time.perf_counter()
@@ -317,7 +333,11 @@ def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
         })
         return result, logits, ref, declared
     finally:
-        runner.close()
+        try:
+            runner.close()
+        except BaseException:
+            # The original evaluation exception must remain authoritative.
+            pass
 
 
 def _sidecar(out: Path, model: str, batch: int, kind: str) -> Path:
@@ -384,7 +404,8 @@ def main() -> int:
                 result, logits, ref, declared = _run_mlp_profile(
                     lib, plans_dir, manifest, w, xe, ye, batch, fd,
                     weight_load_seconds=weight_load_seconds,
-                    primary_full=(primary and full_requested))
+                    primary_full=(primary and full_requested),
+                    weights_path=Path(args.weights_dir) / "mnist_mlp.npz")
                 result["model"] = "mnist_mlp"
                 report["models"].append(result)
                 np.save(_sidecar(Path(args.out), "mlp", batch, "logits"), logits)
@@ -403,7 +424,8 @@ def main() -> int:
                 result, logits, ref, declared = _run_vit_profile(
                     lib, plans_dir, manifest, w, xe, ye, batch, fd,
                     weight_load_seconds=weight_load_seconds,
-                    primary_full=(primary and full_requested))
+                    primary_full=(primary and full_requested),
+                    weights_path=Path(args.weights_dir) / "tiny_vit.npz")
                 result["model"] = "tiny_vit"
                 report["models"].append(result)
                 np.save(_sidecar(Path(args.out), "vit", batch, "logits"), logits)

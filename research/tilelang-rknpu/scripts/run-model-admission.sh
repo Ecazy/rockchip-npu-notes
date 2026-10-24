@@ -16,6 +16,7 @@ LOCAL="$HERE/results/$STAMP-models"
 mkdir -p "$LOCAL/campaign"/{plans,weights,data,tools}
 CAMPAIGN="$LOCAL/campaign"
 cp "$HERE"/models/compiled/*.rkplan.json "$CAMPAIGN/plans/"
+cp "$HERE"/models/compiled/*.rkhybrid.json "$CAMPAIGN/plans/"
 cp "$HERE"/models/compiled/manifest.json "$CAMPAIGN/plans/manifest.json"
 cp "$HERE"/models/*.npz "$CAMPAIGN/weights/"
 cp "$HERE"/.data/mnist/t10k-images-idx3-ubyte.gz "$CAMPAIGN/data/"
@@ -38,6 +39,7 @@ manifest={
   'models/tilelang_mlp.py':sha(here/'models/tilelang_mlp.py'),
   'models/tilelang_matmul.py':sha(here/'models/tilelang_matmul.py'),
   'models/compiled/manifest.json':sha(here/'models/compiled/manifest.json'),
+  'python/rknpu_backend/hybrid.py':sha(here/'python/rknpu_backend/hybrid.py'),
   'tools/evaluate_models.py':sha(here/'tools/evaluate_models.py'),
   'tools/benchmark_cpu_models.py':sha(here/'tools/benchmark_cpu_models.py'),
  },

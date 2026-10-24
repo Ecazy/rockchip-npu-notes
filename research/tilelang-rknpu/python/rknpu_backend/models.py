@@ -17,7 +17,8 @@ import numpy as np
 
 from .errors import RK_E_INVALID, RK_E_SHAPE, RK_E_UNSUPPORTED, reject
 from .plan import Plan
-from .runtime.ffi import CWorkspace, LibRKPlan, make_binding
+from .runtime.ffi import (CWorkspace, LibRKPlan, make_binding,
+                          validate_numpy_binding)
 
 MNIST_MEAN = np.float32(0.1307)
 MNIST_STD = np.float32(0.3081)
@@ -224,47 +225,120 @@ class RunStats:
         }
 
 class PlanCall:
-    """Reusable workspace for one immutable plan and its constants."""
+    """Reusable workspace for one immutable plan and its constants.
+
+    Construction validates/materialises every Host constant before asking C to
+    create the plan.  If a later C call fails, already-created handles are
+    destroyed without replacing the original exception.  Destruction is
+    idempotent; a failed workspace destroy keeps both workspace and CPlan alive
+    because the runtime owns quarantine retry state.
+    """
 
     def __init__(self, lib: LibRKPlan, plan: Plan, constants: dict[str, np.ndarray],
                  *, fd: int = 0):
         self.lib = lib
         self.plan = plan
-        self.cplan = lib.create_plan(plan)
-        self._const_arrays = []
+        self.cplan: CPlan | None = None
+        self.workspace: CWorkspace | None = None
+        self._closed = False
+        self._const_arrays: list[np.ndarray] = []
         bindings = []
-        for spec in plan.constants:
-            if spec.name not in constants:
-                raise KeyError(f"missing constant {spec.name!r} for {plan.name}")
-            arr = _f16(constants[spec.name])
-            expected = tuple(spec.shape)
-            if arr.shape != expected:
-                reject(RK_E_SHAPE, f"constant {spec.name!r} shape mismatch",
-                       stage="model", actual=list(arr.shape), required=list(expected))
-            self._const_arrays.append(arr)
-            bindings.append(make_binding(spec.binding_id, arr))
-        self.workspace: CWorkspace = lib.create_workspace(
-            self.cplan, bindings, fd=fd)
+        try:
+            # A missing/mismatched Host constant is a construction error before
+            # any C resource exists.
+            for spec in plan.constants:
+                if spec.name not in constants:
+                    raise KeyError(
+                        f"missing constant {spec.name!r} for {plan.name}")
+                arr = _f16(constants[spec.name])
+                expected = tuple(spec.shape)
+                if arr.shape != expected:
+                    reject(RK_E_SHAPE, f"constant {spec.name!r} shape mismatch",
+                           stage="model", actual=list(arr.shape),
+                           required=list(expected))
+                self._const_arrays.append(arr)
+                bindings.append(make_binding(spec.binding_id, arr))
+            self.cplan = lib.create_plan(plan)
+            self.workspace = lib.create_workspace(
+                self.cplan, bindings, fd=fd)
+        except BaseException as exc:
+            cleanup_errors = []
+            workspace, cplan = self.workspace, self.cplan
+            if workspace is not None:
+                try:
+                    workspace.destroy()
+                except BaseException as cleanup:
+                    cleanup_errors.append(cleanup)
+            # A live workspace may still point at the plan, so only destroy the
+            # plan after a successful workspace release.
+            if not cleanup_errors and cplan is not None:
+                try:
+                    cplan.destroy()
+                except BaseException as cleanup:
+                    cleanup_errors.append(cleanup)
+            self.workspace = None
+            self.cplan = None
+            self._closed = not cleanup_errors
+            if cleanup_errors:
+                exc.add_note(
+                    "model PlanCall construction cleanup also failed: " +
+                    "; ".join(repr(e) for e in cleanup_errors))
+            raise
         self.inputs = [b for b in plan.bindings if b.role == "input"]
         self.outputs = [b for b in plan.bindings if b.role == "output"]
 
-    def run(self, inputs: list[np.ndarray]) -> tuple[list[np.ndarray], Any, float]:
+    def _prepare_inputs(self, inputs: list[np.ndarray]) -> list[np.ndarray]:
         if len(inputs) != len(self.inputs):
             reject(RK_E_SHAPE, "model plan input count mismatch", stage="model",
                    actual=len(inputs), required=len(self.inputs))
-        in_bind = []
-        keep_in = []
+        prepared = []
         for spec, arr in zip(self.inputs, inputs):
-            a = _f16(arr)
-            if a.shape != tuple(spec.shape):
+            if not isinstance(arr, np.ndarray):
+                reject(RK_E_INVALID, "model plan input must be numpy.ndarray",
+                       stage="model")
+            if arr.dtype != np.dtype("<f2"):
+                reject(RK_E_INVALID,
+                       "model plan input must be native FP16; implicit astype is "
+                       "forbidden at the runtime boundary", stage="model",
+                       actual=str(arr.dtype), required="float16")
+            if arr.shape != tuple(spec.shape):
                 reject(RK_E_SHAPE, "model plan input shape mismatch", stage="model",
-                       actual=list(a.shape), required=list(spec.shape))
-            keep_in.append(a)
-            in_bind.append(make_binding(spec.id, a))
-        out_arrays = [np.empty(tuple(b.shape), dtype=np.float16)
-                      for b in self.outputs]
-        out_bind = [make_binding(b.id, a)
-                    for b, a in zip(self.outputs, out_arrays)]
+                       actual=list(arr.shape), required=list(spec.shape))
+            prepared.append(validate_numpy_binding(
+                arr, tuple(spec.shape), writable=False, name=spec.name))
+        return prepared
+
+    def _prepare_outputs(self, outputs: list[np.ndarray]) -> list[np.ndarray]:
+        if len(outputs) != len(self.outputs):
+            reject(RK_E_SHAPE, "model plan output count mismatch", stage="model",
+                   actual=len(outputs), required=len(self.outputs))
+        prepared = []
+        for spec, arr in zip(self.outputs, outputs):
+            if not isinstance(arr, np.ndarray):
+                reject(RK_E_INVALID, "model plan output must be numpy.ndarray",
+                       stage="model")
+            if arr.dtype != np.dtype("<f2"):
+                reject(RK_E_INVALID,
+                       "model plan output must be native FP16", stage="model",
+                       actual=str(arr.dtype), required="float16")
+            if arr.shape != tuple(spec.shape):
+                reject(RK_E_SHAPE, "model plan output shape mismatch", stage="model",
+                       actual=list(arr.shape), required=list(spec.shape))
+            prepared.append(validate_numpy_binding(
+                arr, tuple(spec.shape), writable=True, name=spec.name))
+        return prepared
+
+    def run_into(self, inputs: list[np.ndarray],
+                 outputs: list[np.ndarray]) -> tuple[Any, float]:
+        if self.workspace is None:
+            reject(RK_E_INVALID, "model plan workspace is already closed",
+                   stage="model")
+        in_arrays = self._prepare_inputs(inputs)
+        out_arrays = self._prepare_outputs(outputs)
+        in_bind = [make_binding(spec.id, arr)
+                   for spec, arr in zip(self.inputs, in_arrays)]
+        out_bind = [make_binding(spec.id, arr)
+                    for spec, arr in zip(self.outputs, out_arrays)]
         # The mock harness snapshots each emitted co_program.  Clear that
         # test-only cache between calls; production builds have no such symbol.
         if hasattr(self.lib.cdll, "rk_mock_reset_tags"):
@@ -272,261 +346,97 @@ class PlanCall:
         t0 = time.perf_counter()
         report = self.workspace.run(in_bind, out_bind)
         elapsed_us = (time.perf_counter() - t0) * 1e6
+        return report, elapsed_us
+
+    def run(self, inputs: list[np.ndarray]) -> tuple[list[np.ndarray], Any, float]:
+        out_arrays = [np.empty(tuple(b.shape), dtype=np.float16)
+                      for b in self.outputs]
+        report, elapsed_us = self.run_into(inputs, out_arrays)
         return out_arrays, report, elapsed_us
 
     def close(self) -> None:
-        self.workspace.destroy()
-        self.cplan.destroy()
+        """Release handles once; preserve the first cleanup error if any."""
+        if self._closed:
+            return
+        errors: list[BaseException] = []
+        if self.workspace is not None:
+            try:
+                self.workspace.destroy()
+            except BaseException as exc:
+                # The runtime retains ownership after BUSY/POISONED.  Keep the
+                # CPlan and workspace handle intact so a later close can retry.
+                errors.append(exc)
+            else:
+                self.workspace = None
+        if not errors and self.cplan is not None:
+            try:
+                self.cplan.destroy()
+            except BaseException as exc:
+                errors.append(exc)
+            else:
+                self.cplan = None
+        if not errors:
+            self._closed = True
+        if errors:
+            raise errors[0]
 
 
-def _generated_constant(spec, weights: dict[str, np.ndarray]) -> np.ndarray:
-    name = spec.name
-    if name.startswith("__identity_"):
-        n = spec.shape[0]
-        return np.eye(n, dtype=np.float16)
-    if name.startswith("__zero_"):
-        return np.zeros(spec.shape, dtype=np.float16)
-    if name in weights:
-        return np.asarray(weights[name], dtype=np.float16)
-    raise KeyError(f"cannot synthesize constant {name!r}")
+class HybridModelRunner:
+    """Thin model-safe wrapper around the versioned hybrid graph executor.
 
+    There is no second Python orchestration path: preprocessing, bridge layout,
+    every matrix RKPlan and postprocessing are nodes in the manifest.
+    """
 
-class MLPRunner:
-    """Complete learned MNIST MLP, one static batch profile per runner."""
-
-    def __init__(self, lib: LibRKPlan, plan: Plan, weights: dict[str, np.ndarray],
-                 batch: int, *, fd: int = 0):
-        self.lib = lib
-        self.plan = plan
+    def __init__(self, lib: LibRKPlan, program: Any,
+                 weights: dict[str, np.ndarray], batch: int, *,
+                 weights_path: str | Path | None = None, fd: int = 0):
+        from .hybrid import HybridRunner, HybridProgram, load_hybrid_program
+        if isinstance(program, (str, Path)):
+            program = load_hybrid_program(program)
+        if not isinstance(program, HybridProgram):
+            reject(RK_E_UNSUPPORTED,
+                   "model runner requires a versioned rkhybrid manifest",
+                   stage="model")
+        if int(batch) != program.batch:
+            reject(RK_E_SHAPE, "raw batch does not match hybrid profile",
+                   stage="model", actual=int(batch), required=program.batch)
+        self.program = program
         self.batch = int(batch)
-        self.call = PlanCall(lib, plan, self._constants(plan, weights, self.batch),
-                             fd=fd)
+        self.runner = HybridRunner(lib, program, weights,
+                                   weights_path=weights_path, fd=fd)
+        self.last_trace: dict[str, np.ndarray] = {}
 
-    @staticmethod
-    def _constants(plan: Plan, w: dict[str, np.ndarray], batch: int) -> dict[str, np.ndarray]:
-        # Source W arrays are [K,N]; bias arrays are expanded to the static tile.
-        w1 = np.zeros((1024, 256), dtype=np.float16)
-        w1[:784] = np.asarray(w["W1"], dtype=np.float16)
-        w2 = np.asarray(w["W2"], dtype=np.float16)
-        w3 = np.zeros((128, 16), dtype=np.float16)
-        w3[:, :10] = np.asarray(w["W3"], dtype=np.float16)
-        b1 = np.repeat(np.asarray(w["b1"], dtype=np.float16)[None, :], batch, axis=0)
-        b2 = np.repeat(np.asarray(w["b2"], dtype=np.float16)[None, :], batch, axis=0)
-        b3 = np.zeros((batch, 16), dtype=np.float16)
-        b3[:, :10] = np.asarray(w["b3"], dtype=np.float16)
-        named = {"W1": w1, "B1": b1, "W2": w2, "B2": b2, "W3": w3, "B3": b3}
-        out = {}
-        for spec in plan.constants:
-            out[spec.name] = _generated_constant(spec, named)
-        return out
-
-    def run(self, raw_images: np.ndarray, *, stats: RunStats | None = None) -> np.ndarray:
-        t_run = time.perf_counter()
-        t0 = time.perf_counter()
-        x = preprocess_mnist(raw_images)
-        if x.shape[0] != self.batch:
-            reject(RK_E_SHAPE, "MLP raw batch does not match compiled profile",
-                   stage="model", actual=x.shape[0], required=self.batch)
-        xp = np.zeros((self.batch, 1024), dtype=np.float16)
-        xp[:, :784] = x.astype(np.float16)
-        if stats is not None:
-            stats.add_host_action("mlp.preprocess", "preprocess",
-                                  (time.perf_counter() - t0) * 1e6,
-                                  inputs=(np.asarray(raw_images),), outputs=(xp,))
-        outs, report, elapsed = self.call.run([xp])
-        if stats is not None:
-            stats.add_report("mlp", report, elapsed)
-        t0 = time.perf_counter()
-        logits = np.asarray(outs[0][:, :10], dtype=np.float32)
-        if stats is not None:
-            stats.add_host_action("mlp.logits_export", "postprocess",
-                                  (time.perf_counter() - t0) * 1e6,
-                                  inputs=(outs[0],), outputs=(logits,))
-            stats.record_run((time.perf_counter() - t_run) * 1e6)
-        return logits
+    def run_result(self, raw_images: np.ndarray, *, stats: RunStats | None = None,
+                   capture: bool = False):
+        result = self.runner.run(raw_images, stats=stats, capture=capture)
+        self.last_trace = result.trace
+        return result
 
     def close(self) -> None:
-        self.call.close()
+        self.runner.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        return self.runner.__exit__(exc_type, exc, tb)
 
 
-class TinyViTRunner:
-    """Hybrid 16-token, one-layer, 4-head Tiny Transformer image classifier."""
+class MLPRunner(HybridModelRunner):
+    """Compatibility facade returning the public ``[B,10]`` logits array."""
 
-    def __init__(self, lib: LibRKPlan, plans: dict[str, Plan],
-                 weights: dict[str, np.ndarray], batch: int, *, fd: int = 0):
-        self.lib = lib
-        self.batch = int(batch)
-        self.weights = {k: np.asarray(v, dtype=np.float16) for k, v in weights.items()}
-        self.calls: dict[str, PlanCall] = {}
-        for name, plan in plans.items():
-            name_consts = {}
-            for spec in plan.constants:
-                name_consts[spec.name] = self._constant_for(name, spec)
-            self.calls[name] = PlanCall(lib, plan, name_consts, fd=fd)
+    def run(self, raw_images: np.ndarray, *, stats: RunStats | None = None
+            ) -> np.ndarray:
+        return self.run_result(raw_images, stats=stats).outputs["logits"]
 
-    def _constant_for(self, plan_name: str, spec) -> np.ndarray:
-        w = self.weights
-        if spec.name == "B":
-            if plan_name == "patch":
-                b = np.zeros((64, 64), dtype=np.float16)
-                b[:49] = w["patch_w"]
-                return b
-            if plan_name == "qkv":
-                return w["qkv_w"]
-            if plan_name == "attn_out":
-                return w["attn_out_w"]
-            if plan_name == "gate":
-                return w["ffn_gate_w"]
-            if plan_name == "up":
-                return w["ffn_up_w"]
-            if plan_name == "down":
-                return w["ffn_down_w"]
-            if plan_name == "classifier":
-                b = np.zeros((64, 16), dtype=np.float16)
-                b[:, :10] = w["class_w"]
-                return b
-        if spec.name.startswith("__identity_"):
-            n = spec.shape[0]
-            return np.eye(n, dtype=np.float16)
-        if spec.name.startswith("__zero_"):
-            return np.zeros(spec.shape, dtype=np.float16)
-        raise KeyError(f"no Transformer constant for {plan_name}/{spec.name}")
 
-    @staticmethod
-    def _rmsnorm(x: np.ndarray, gamma: np.ndarray, eps: float = 1e-6) -> np.ndarray:
-        xf = x.astype(np.float32)
-        scale = 1.0 / np.sqrt(np.mean(xf * xf, axis=-1, keepdims=True) + eps)
-        return np.asarray(xf * scale * gamma.astype(np.float32), dtype=np.float16)
+class TinyViTRunner(HybridModelRunner):
+    """Compatibility facade returning the public ``[B,10]`` logits array."""
 
-    def run(self, raw_images: np.ndarray, *, stats: RunStats | None = None) -> np.ndarray:
-        t_run = time.perf_counter()
-        b = self.batch
-
-        def host(name: str, phase: str, fn, inputs=()):
-            t0 = time.perf_counter()
-            result = fn()
-            if stats is not None:
-                outputs = result if isinstance(result, tuple) else (result,)
-                stats.add_host_action(name, phase,
-                                      (time.perf_counter() - t0) * 1e6,
-                                      inputs=tuple(inputs), outputs=tuple(outputs))
-            return result
-
-        patches = patchify_mnist(raw_images)
-        if patches.shape[0] != b:
-            reject(RK_E_SHAPE, "Transformer raw batch does not match profile",
-                   stage="model", actual=patches.shape[0], required=b)
-
-        def make_pflat():
-            flat = np.zeros((b * 16, 64), dtype=np.float16)
-            flat[:, :49] = patches.reshape(b * 16, 49).astype(np.float16)
-            return flat
-        pflat = host("tiny_vit.patch_rasterize_pad", "preprocess", make_pflat,
-                     inputs=(np.asarray(raw_images),))
-
-        patch_out, rep, us = self.calls["patch"].run([pflat])
-        if stats is not None: stats.add_report("patch", rep, us)
-
-        def position_add():
-            value = patch_out[0].reshape(b, 16, 64).astype(np.float32)
-            value += self.weights["pos"][None, :, :].astype(np.float32)
-            return value.astype(np.float16)
-        h = host("tiny_vit.position_add", "execution", position_add,
-                 inputs=(patch_out[0], self.weights["pos"]))
-
-        z = host("tiny_vit.rmsnorm1", "execution",
-                 lambda: self._rmsnorm(h, self.weights["norm1_gamma"]),
-                 inputs=(h, self.weights["norm1_gamma"]))
-        qkv, rep, us = self.calls["qkv"].run([z.reshape(b * 16, 64)])
-        if stats is not None: stats.add_report("qkv", rep, us)
-
-        def split_heads():
-            value = qkv[0].reshape(b, 16, 3, 4, 16)
-            q = value[:, :, 0].transpose(0, 2, 1, 3)
-            k = value[:, :, 1].transpose(0, 2, 1, 3)
-            v = value[:, :, 2].transpose(0, 2, 1, 3)
-            return (np.ascontiguousarray(q), np.ascontiguousarray(k),
-                    np.ascontiguousarray(v))
-        q, k, v = host("tiny_vit.qkv_split_heads", "execution", split_heads,
-                       inputs=(qkv[0],))
-        heads = np.empty((b, 4, 16, 16), dtype=np.float16)
-        for bi in range(b):
-            for hi in range(4):
-                qh = np.ascontiguousarray(q[bi, hi], dtype=np.float16)
-                kh = np.ascontiguousarray(k[bi, hi], dtype=np.float16)
-                vh = np.ascontiguousarray(v[bi, hi], dtype=np.float16)
-                scores, rep, us = self.calls["qk"].run([qh, kh.T])
-                if stats is not None: stats.add_report("qk", rep, us)
-
-                def softmax():
-                    sf = scores[0].astype(np.float32) / np.float32(4.0)
-                    sf = sf - sf.max(axis=-1, keepdims=True)
-                    e = np.exp(sf)
-                    return (e / e.sum(axis=-1, keepdims=True)).astype(np.float16)
-                probs = host("tiny_vit.scaled_softmax", "execution", softmax,
-                             inputs=(scores[0],))
-                out, rep, us = self.calls["pv"].run([probs, vh])
-                if stats is not None: stats.add_report("pv", rep, us)
-                heads[bi, hi] = out[0]
-
-        def merge_heads():
-            return np.ascontiguousarray(
-                heads.transpose(0, 2, 1, 3).reshape(b * 16, 64))
-        merged = host("tiny_vit.merge_heads", "execution", merge_heads,
-                      inputs=(heads,))
-        attn, rep, us = self.calls["attn_out"].run([merged])
-        if stats is not None: stats.add_report("attn_out", rep, us)
-
-        def residual_attention():
-            return (h.reshape(b * 16, 64).astype(np.float32) +
-                    attn[0].astype(np.float32)).astype(np.float16)
-        h = host("tiny_vit.residual_attention", "execution",
-                 residual_attention, inputs=(h, attn[0]))
-
-        z = host("tiny_vit.rmsnorm2", "execution",
-                 lambda: self._rmsnorm(h.reshape(b, 16, 64),
-                                       self.weights["norm2_gamma"]),
-                 inputs=(h, self.weights["norm2_gamma"]))
-        zf = z.reshape(b * 16, 64)
-        gate, rep, us = self.calls["gate"].run([zf])
-        if stats is not None: stats.add_report("gate", rep, us)
-        up, rep, us = self.calls["up"].run([zf])
-        if stats is not None: stats.add_report("up", rep, us)
-
-        def swiglu():
-            g = gate[0].astype(np.float32)
-            u = up[0].astype(np.float32)
-            return (g / (1.0 + np.exp(-g)) * u).astype(np.float16)
-        act = host("tiny_vit.swiglu", "execution", swiglu,
-                   inputs=(gate[0], up[0]))
-        down, rep, us = self.calls["down"].run([act])
-        if stats is not None: stats.add_report("down", rep, us)
-
-        def residual_ffn():
-            return (h.reshape(b * 16, 64).astype(np.float32) +
-                    down[0].astype(np.float32)).astype(np.float16)
-        h = host("tiny_vit.residual_ffn", "execution", residual_ffn,
-                 inputs=(h, down[0]))
-
-        def mean_pool():
-            return h.reshape(b, 16, 64).astype(np.float32).mean(
-                axis=1).astype(np.float16)
-        pooled = host("tiny_vit.mean_pool", "execution", mean_pool,
-                      inputs=(h,))
-        logits_padded, rep, us = self.calls["classifier"].run([pooled])
-        if stats is not None: stats.add_report("classifier", rep, us)
-
-        def export_logits():
-            return np.asarray(logits_padded[0][:, :10], dtype=np.float32)
-        logits = host("tiny_vit.logits_export", "postprocess", export_logits,
-                      inputs=(logits_padded[0],))
-        if stats is not None:
-            stats.record_run((time.perf_counter() - t_run) * 1e6)
-        return logits
-
-    def close(self) -> None:
-        for c in self.calls.values():
-            c.close()
+    def run(self, raw_images: np.ndarray, *, stats: RunStats | None = None
+            ) -> np.ndarray:
+        return self.run_result(raw_images, stats=stats).outputs["logits"]
 
 
 def load_weight_npz(path: str | Path) -> dict[str, np.ndarray]:

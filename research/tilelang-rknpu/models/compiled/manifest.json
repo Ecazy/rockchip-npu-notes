@@ -1,6 +1,48 @@
 {
   "allow_approx_lut": false,
   "compiler": "real TileLang PrimFunc -> rknpu_backend.compile_tilelang",
+  "hybrid_manifests": {
+    "mnist_mlp_b1": {
+      "batch": 1,
+      "model": "mnist_mlp",
+      "path": "mnist_mlp_b1.rkhybrid.json",
+      "sha256": "7ffb83f9f4afe491a3d07f2ad4203bf1425a25e8c1727d72b4186e82355713ae"
+    },
+    "mnist_mlp_b32": {
+      "batch": 32,
+      "model": "mnist_mlp",
+      "path": "mnist_mlp_b32.rkhybrid.json",
+      "sha256": "a5a4203ff4be863a40ac80917c343a74eb48e4d718c21901aef769baba4edf3b"
+    },
+    "mnist_mlp_b8": {
+      "batch": 8,
+      "model": "mnist_mlp",
+      "path": "mnist_mlp_b8.rkhybrid.json",
+      "sha256": "2c18c039fd5d31a7ce954492505061ece75ccd1f77708bdd94bcb0f6d71ffd41"
+    },
+    "tiny_vit_b1": {
+      "batch": 1,
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1.rkhybrid.json",
+      "sha256": "70707ffaec5e67933ca784ccdcfddd290eb3db58b462b0e4a37c647a060025ae"
+    },
+    "tiny_vit_b8": {
+      "batch": 8,
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8.rkhybrid.json",
+      "sha256": "d2d0f01f8c0a5f8ebe15bb21611b2eae3854e9fdde73977d4ade9f0942f1efbb"
+    }
+  },
+  "hybrid_policy": {
+    "dynamic_shapes": "forbidden",
+    "host_actions": "rknpu_backend.hybrid.HOST_ACTIONS",
+    "host_actions_version": 1,
+    "host_fallback": "forbidden",
+    "kind": "explicit_versioned_rkhybrid",
+    "npu_fallback": "forbidden",
+    "unknown_action": "reject"
+  },
+  "hybrid_schema_version": 1,
   "numeric_mode": "rk_f16_tiled",
   "plans": {
     "mnist_mlp_b1": {

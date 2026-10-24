@@ -50,6 +50,9 @@ class CompleteModelTests(unittest.TestCase):
         from rknpu_backend import load_plan
         return load_plan(str(PLANS / f"{name}.rkplan.json"))
 
+    def _hybrid(self, name):
+        return PLANS / f"{name}.rkhybrid.json"
+
     def test_weight_manifest_and_learned_model_baselines(self):
         manifest = json.loads((ROOT / "models" / "manifest.json").read_text())
         names = {m["name"]: m for m in manifest["models"]}
@@ -86,8 +89,9 @@ class CompleteModelTests(unittest.TestCase):
         from rknpu_backend.models import MLPRunner
         from rknpu_backend.model_reference import mlp_logits_declared
         for batch in (1, 8, 32):
-            runner = MLPRunner(self.lib, self._plan(f"mnist_mlp_b{batch}"),
-                               self.mlp_weights, batch, fd=0)
+            runner = MLPRunner(self.lib, self._hybrid(f"mnist_mlp_b{batch}"),
+                               self.mlp_weights, batch, fd=0,
+                               weights_path=WEIGHTS / "mnist_mlp.npz")
             try:
                 for start in (0, batch):
                     raw = self.x[start:start + batch]
@@ -100,8 +104,9 @@ class CompleteModelTests(unittest.TestCase):
 
     def test_timing_phases_are_explicit_and_reference_is_outside(self):
         from rknpu_backend.models import MLPRunner, RunStats, TIMING_SCHEMA_VERSION
-        runner = MLPRunner(self.lib, self._plan("mnist_mlp_b1"),
-                           self.mlp_weights, 1, fd=0)
+        runner = MLPRunner(self.lib, self._hybrid("mnist_mlp_b1"),
+                           self.mlp_weights, 1, fd=0,
+                           weights_path=WEIGHTS / "mnist_mlp.npz")
         stats = RunStats()
         try:
             runner.run(self.x[:1], stats=stats)
@@ -116,8 +121,9 @@ class CompleteModelTests(unittest.TestCase):
                      data["postprocess_us"])
         self.assertLessEqual(phase_sum, data["end_to_end_us"] + 1.0)
         action_names = {row["name"] for row in data["host_actions"]}
-        self.assertIn("mlp.preprocess", action_names)
-        self.assertIn("mlp.logits_export", action_names)
+        self.assertIn("normalize", action_names)
+        self.assertIn("pad_k", action_names)
+        self.assertIn("export_logits", action_names)
         self.assertNotIn("reference", " ".join(action_names).lower())
 
     def test_static_batch_schedule_matches_compiled_tails(self):
@@ -131,6 +137,140 @@ class CompleteModelTests(unittest.TestCase):
         self.assertEqual([row["size"] for row in schedule[-2:]], [8, 8])
         self.assertTrue(all(row["profile"] == row["size"] for row in schedule))
         self.assertTrue(module.schedule_summary(schedule)["no_dynamic_shapes"])
+
+    def test_hybrid_manifest_is_explicit_versioned_and_reuses_plans(self):
+        from rknpu_backend.hybrid import (HOST_ACTIONS, HostNode, HybridRunner,
+                                          NpuNode, load_hybrid_program)
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        self.assertEqual(program.execution_policy["mode"], "explicit_hybrid")
+        self.assertEqual(program.execution_policy["npu_fallback"], "forbidden")
+        self.assertEqual(program.execution_policy["host_fallback"], "forbidden")
+        self.assertEqual(len(program.tensors), 25)
+        node_ids = [node.id for node in program.nodes]
+        self.assertEqual(node_ids, [
+            "patchify", "patch_pad", "patch", "position_add", "rmsnorm1",
+            "qkv", "split_heads", "qk", "softmax", "pv", "merge_heads",
+            "attn_out", "residual_attention", "rmsnorm2", "gate", "up",
+            "swiglu", "down", "residual_ffn", "reshape_tokens", "mean_pool",
+            "classifier", "export_logits"])
+        host_ids = [node.id for node in program.nodes
+                    if isinstance(node, HostNode)]
+        self.assertIn("patchify", host_ids)
+        self.assertIn("position_add", host_ids)
+        self.assertIn("split_heads", host_ids)
+        self.assertIn("softmax", host_ids)
+        self.assertIn("merge_heads", host_ids)
+        self.assertIn("residual_attention", host_ids)
+        self.assertIn("residual_ffn", host_ids)
+        for node in program.nodes:
+            if isinstance(node, HostNode):
+                action = HOST_ACTIONS.get(node.action.action_id)
+                self.assertIsNotNone(action)
+                self.assertEqual(action.version, node.action.version)
+        npu = [node for node in program.nodes if isinstance(node, NpuNode)]
+        self.assertEqual(len(npu), 9)
+        self.assertEqual(len(program.plans), 8)  # QK/PV share one immutable plan
+        qk = next(node for node in npu if node.id == "qk")
+        pv = next(node for node in npu if node.id == "pv")
+        self.assertEqual(qk.plan, pv.plan)
+        self.assertEqual([(r.name, r.extent) for r in qk.repeat],
+                         [("bi", 8), ("hi", 4)])
+        self.assertTrue(program.plans[qk.plan].dynamic_operand == "B")
+        for spec in program.tensors.values():
+            self.assertEqual(len(spec.shape), len(spec.axes))
+        with HybridRunner(self.lib, program, self.vit_weights,
+                          weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+            self.assertEqual(len(runner.calls), 8)
+            stats = __import__("rknpu_backend.models", fromlist=["RunStats"]).RunStats()
+            result = runner.run(self.x[:8], stats=stats, capture=True)
+            self.assertEqual(result.outputs["logits"].shape, (8, 10))
+            self.assertTrue(np.isfinite(result.outputs["logits"]).all())
+            actions = {row["name"] for row in stats.to_dict()["host_actions"]}
+            for name in ("patchify", "patch_pad", "position_add", "rmsnorm1",
+                         "split_heads", "softmax", "merge_heads",
+                         "residual_attention", "rmsnorm2", "swiglu",
+                         "residual_ffn", "reshape_tokens", "mean_pool",
+                         "export_logits"):
+                self.assertIn(name, actions)
+            plans = {row["name"]: row for row in stats.to_dict()["plans"]}
+            self.assertEqual(plans["qk"]["calls"], 32)
+            self.assertEqual(plans["pv"]["calls"], 32)
+
+    def test_hybrid_manifest_rejects_unknown_action(self):
+        from rknpu_backend.hybrid import load_hybrid_program
+        from rknpu_backend.errors import BackendError
+        import tempfile
+        data = json.loads(self._hybrid("tiny_vit_b1").read_text())
+        for node in data["nodes"]:
+            if node["kind"] == "host_action":
+                node["action"] = "transformer.run_everything.v1"
+                break
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad.rkhybrid.json"
+            path.write_text(json.dumps(data))
+            with self.assertRaises(BackendError) as ctx:
+                load_hybrid_program(path, plans_dir=PLANS)
+            self.assertIn("unregistered Host action", ctx.exception.diagnostics[0].message)
+
+    def test_plan_call_creation_failure_cleans_c_plan(self):
+        from rknpu_backend.models import PlanCall
+        plan = self._plan("tiny_vit_b1_qk")  # no constants
+        class Handle:
+            def __init__(self):
+                self.destroyed = 0
+            def destroy(self):
+                self.destroyed += 1
+        class FakeLib:
+            def __init__(self):
+                self.handle = Handle()
+                self.plan_creates = 0
+                self.workspace_creates = 0
+            def create_plan(self, _plan):
+                self.plan_creates += 1
+                return self.handle
+            def create_workspace(self, _cplan, _bindings, fd=0):
+                self.workspace_creates += 1
+                raise RuntimeError("injected workspace failure")
+        fake = FakeLib()
+        with self.assertRaisesRegex(RuntimeError, "injected workspace failure"):
+            PlanCall(fake, plan, {}, fd=0)
+        self.assertEqual(fake.plan_creates, 1)
+        self.assertEqual(fake.workspace_creates, 1)
+        self.assertEqual(fake.handle.destroyed, 1)
+
+    def test_plan_call_validates_constants_before_c_plan(self):
+        from rknpu_backend.models import PlanCall
+        plan = self._plan("tiny_vit_b1_patch")  # has B constant
+        class FakeLib:
+            plan_creates = 0
+            def create_plan(self, _plan):
+                self.plan_creates += 1
+                raise AssertionError("must not create C plan")
+        fake = FakeLib()
+        with self.assertRaises(KeyError):
+            PlanCall(fake, plan, {}, fd=0)
+        self.assertEqual(fake.plan_creates, 0)
+
+    def test_cleanup_failure_does_not_replace_original_exception(self):
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        program = load_hybrid_program(self._hybrid("tiny_vit_b1"))
+        runner = HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0)
+        call = next(iter(runner.calls.values()))
+        original_close = call.close
+        def fail_close():
+            raise RuntimeError("injected cleanup failure")
+        call.close = fail_close
+        try:
+            with self.assertRaisesRegex(RuntimeError, "original run failure"):
+                with runner:
+                    raise RuntimeError("original run failure")
+        finally:
+            call.close = original_close
+            try:
+                runner.close()
+            except Exception:
+                pass
 
     def test_model_failure_does_not_publish(self):
         import subprocess
@@ -164,17 +304,19 @@ class CompleteModelTests(unittest.TestCase):
                          ["input", "input"])
         names = ("patch", "qkv", "qk", "pv", "attn_out", "gate", "up",
                  "down", "classifier")
-        plans = {n: self._plan(f"tiny_vit_b1_{n}") for n in names}
-        runner = TinyViTRunner(self.lib, plans, self.vit_weights, 1, fd=0)
+        plan_objects = [self._plan(f"tiny_vit_b1_{n}") for n in names]
+        runner = TinyViTRunner(self.lib, self._hybrid("tiny_vit_b1"),
+                               self.vit_weights, 1, fd=0,
+                               weights_path=WEIGHTS / "tiny_vit.npz")
         try:
             raw = self.x[:2]
             got = np.concatenate([runner.run(raw[i:i + 1]) for i in range(2)])
             ref = tiny_vit_logits_declared(self.vit_weights, raw)
             np.testing.assert_allclose(got, ref, atol=0.08, rtol=0.02)
             self.assertEqual((got.argmax(1) == ref.argmax(1)).all(), True)
-            # Every matrix plan is a real one-task RKPlan; Host work is explicit
-            # in TinyViTRunner, never a co_execute/graph fallback.
-            for plan in plans.values():
+            # Every matrix plan is a real one-task RKPlan; the graph executor
+            # never bypasses it with a co_execute/graph fallback.
+            for plan in plan_objects:
                 self.assertTrue(all(a.template_id == "co.mm.f16.v1"
                                     for a in plan.actions
                                     if a.kind == "npu_task"))

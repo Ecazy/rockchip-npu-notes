@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from rknpu_backend import load_plan
 from rknpu_backend.models import MLPRunner, load_weight_npz
 from rknpu_backend.runtime.ffi import LibRKPlan
 
@@ -27,11 +26,12 @@ def read_idx(path, rank):
 
 def main() -> int:
     lib = LibRKPlan(os.environ["RKNPU_PLAN_MOCK_LIB"])
-    plan = load_plan(str(ROOT / "models" / "compiled" /
-                         "mnist_mlp_b1.rkplan.json"))
-    weights = load_weight_npz(ROOT / "models" / "mnist_mlp.npz")
+    weights_path = ROOT / "models" / "mnist_mlp.npz"
+    weights = load_weight_npz(weights_path)
     x = read_idx(ROOT / ".data" / "mnist" / "t10k-images-idx3-ubyte.gz", 3)
-    runner = MLPRunner(lib, plan, weights, 1, fd=0)
+    runner = MLPRunner(lib, ROOT / "models" / "compiled" /
+                       "mnist_mlp_b1.rkhybrid.json", weights, 1, fd=0,
+                       weights_path=weights_path)
     before = int(lib.mock_control("rk_mock_execs"))
     lib.mock_control("rk_mock_fail_at", before + 1)
     out = {"run_code": "NO_ERROR", "close_code": "NO_ERROR",
