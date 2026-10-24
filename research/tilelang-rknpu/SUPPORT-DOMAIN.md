@@ -45,9 +45,12 @@ Updated for the MVP closure checkpoint, 2026-10-23.
 
 - Declared FP16 path: staged/ordered FP16 writeback at each K-tile boundary and
   explicit FP16 stores at activation/gated/residual points.
-- Acceptance is the per-plan `NumericContract` allclose policy
-  `abs(got-declared) <= atol + rtol*abs(declared)`, normally `8e-3/8e-3` for
-  `rk_f16_tiled`.
+- Per-plan/operator acceptance remains the declared `NumericContract` allclose
+  policy.  The complete-model milestone adds a separate, frozen layer/task
+  gate: deterministic sample traces, 28 per-layer and 5 per-profile absolute
+  limits (`rtol=0`), calibrated as 2x the maximum observed error over mock and
+  all RK3588 core masks and rounded up to 2^-12.  Top-1 accuracy is reported but
+  is not used to select these limits.
 - An unquantized float64 mathematical reference is stored separately and is
   never the acceptance predicate.
 - Strict FP32 fused/unspecified accumulation is **not supported**.
@@ -56,7 +59,10 @@ Updated for the MVP closure checkpoint, 2026-10-23.
 
 ## Explicitly unsupported / future extension
 
-- 3-D grids, dynamic shapes, state/recurrent or hybrid ops.
+- 3-D grids, dynamic shapes, state/recurrent graphs, and arbitrary hybrid IR.
+  The frozen complete-model package supports a finite versioned hybrid form:
+  an `rkhybrid` manifest may call registered Host actions and immutable RKPlans;
+  unknown actions, shapes, plans and fallbacks are rejected.
 - Runtime tensor/dynamic/arbitrary broadcast; only compile-time rank-0 and
   `[N]` constants are accepted.
 - Arbitrary masks, non-rectangular predicates, else branches, and unproved
@@ -105,14 +111,15 @@ reported.
 
 ## Next-milestone model bridge
 
-The separate complete-model milestone is documented in
+The complete-model milestone is documented in
 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md).  It adds a learned
 784→256→128→10 MLP with exact NPU ReLU and bias, and a 16-token/64-wide/4-head
-one-layer image Transformer.  For the Transformer first round, patch
-rasterization/position add, RMSNorm, stable softmax, head layout bridges,
-SwiGLU elementwise operations, residual adds and mean pooling are explicit Host
-work; all matrix products and the classifier run through real TileLang-derived
-RKPlans and the production runtime.  This is a reported hybrid boundary, not an
-implicit CPU matrix fallback.  Dynamic shape, arbitrary ONNX, full LLM/KV cache,
-quantization, NPU training, multi-board/concurrent throughput and post-fault
-recovery remain outside scope.
+one-layer image Transformer.  A bounded versioned `rkhybrid` manifest records
+shape/axes, dependencies, numeric contracts and bridge accounting.  Transformer
+patch rasterization/position add, RMSNorm, stable softmax, head layout bridges,
+SwiGLU elementwise operations, residual adds and mean pooling are named registered
+Host actions; all matrix products and the classifier execute through immutable
+real-TileLang-derived RKPlans.  Unknown Host actions, RKPlans, shapes, numeric
+contracts or module fallback are rejected.  Dynamic shape, arbitrary ONNX, full
+LLM/KV cache, quantization, NPU training, multi-board/concurrent throughput and
+post-fault recovery remain outside scope.

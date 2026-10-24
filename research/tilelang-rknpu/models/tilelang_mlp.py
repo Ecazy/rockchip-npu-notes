@@ -121,3 +121,40 @@ def make_mlp_prim(m: int, *, k_pad: int = 1024):
             T.copy(Yl, Y[0, 0])
 
     return mnist_mlp_staged
+
+
+def make_relu_probe_prim(m: int = 2, n: int = 256):
+    """Return a real TileLang bias-add -> exact-ReLU diagnostic PrimFunc.
+
+    Two explicit kernel launches keep the same production extraction/lowering
+    path as the MLP activation stages.  ``co.ew_max.f16.v1`` is exercised against
+    a zero operand; this is not a LUT/HardSigmoid approximation.
+    """
+
+    @T.prim_func
+    def mnist_relu_probe(
+        X: T.Tensor((m, n), "float16"),
+        B: T.Tensor((m, n), "float16"),
+        Z: T.Tensor((m, n), "float16"),
+        Y: T.Tensor((m, n), "float16"),
+    ):
+        with T.Kernel(1, 1, threads=128) as (bx, by):
+            Xs = T.alloc_shared((m, n), "float16")
+            Bs = T.alloc_shared((m, n), "float16")
+            Zl = T.alloc_fragment((m, n), "float16")
+            T.copy(X[0, 0], Xs)
+            T.copy(B[0, 0], Bs)
+            for i, j in T.Parallel(m, n):
+                Zl[i, j] = T.cast(Xs[i, j] + Bs[i, j], "float16")
+            T.copy(Zl, Z[0, 0])
+
+        with T.Kernel(1, 1, threads=128) as (bx, by):
+            Zs = T.alloc_shared((m, n), "float16")
+            Yl = T.alloc_fragment((m, n), "float16")
+            T.copy(Z[0, 0], Zs)
+            for i, j in T.Parallel(m, n):
+                Yl[i, j] = T.cast(T.max(Zs[i, j], T.float16(0.0)),
+                                  "float16")
+            T.copy(Yl, Y[0, 0])
+
+    return mnist_relu_probe

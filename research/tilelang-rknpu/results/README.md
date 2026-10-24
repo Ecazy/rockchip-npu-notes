@@ -5,6 +5,15 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Current checkpoint (2026-10-24)
+
+- Complete-model final board campaign: `results/20261024T071144Z-models/`.
+- Final Host verification: `results/20261024T072125Z-host/` (231 pytest /
+  41 subtests, 27/27 ctest, 26 contract + 711 host + 2,400,033 graph C checks,
+  explicit ASan/UBSan).
+- Old model performance fields: see
+  `results/20261024T031249Z-models/PERFORMANCE-RETRACTION.md`.
+
 ## Workspace checkpoint cleanup (2026-10-23)
 
 - The current implementation checkpoint is board `20261023T144054Z-rk3588`
@@ -68,13 +77,27 @@ Guarantees encoded in `scripts/run-verification.sh`:
 ## Complete-model milestone checkpoint (2026-10-24)
 
 - **Model package:** `models/manifest.json`, `models/mnist_mlp.npz`,
-  `models/tiny_vit.npz`, and `models/compiled/`.
-- **Board campaign:** `results/20261024T031249Z-models/`; core 1 ran the
+  `models/tiny_vit.npz`, `models/numeric_golden.npz`,
+  `models/numeric_acceptance.json`, and `models/compiled/` (RKPlan plus
+  versioned rkhybrid manifests).
+- **Final board campaign:** `results/20261024T071144Z-models/`; core 1 ran the
   complete 10,000-image MNIST test split for both models, while masks 2 and 4
   ran the fixed 512-image admission subset.  Accuracy: MLP 98.31%, Tiny
-  Transformer 98.21%; CPU/declared top-1 agreement 100%; verifier PASS.
-- **Host/mock evidence:** `evidence/model_eval_mock.json` and
-  `evidence/cpu_benchmark.json`; raw logits and MNIST archives remain local.
+  Transformer 98.21%; CPU/declared top-1 agreement 100%; independent verifier
+  PASS, including deterministic per-layer traces and a same-top-1 amplified
+  logits rejection test.
+- **Host/mock evidence:** `evidence/model_eval_mock_v2.json`,
+  `evidence/cpu_benchmark_v2.json`, and `evidence/numeric-calibration/`.
+  Raw board logits and layer traces are retained with the final campaign.
+- **Final Host checks:** `results/20261024T072125Z-host/` is PASS with
+  **231 pytest / 41 subtests, 27/27 ctest**, 26 contract + 711 host +
+  2,400,033 graph C checks, and explicit ASan/UBSan.
+- **Timing/performance:** schema-v2 timing excludes reference calculation,
+  measures all registered Host nodes and uses a matched static batch schedule
+  for the explicitly single-threaded CPU baseline.
+- **Historical report:** `results/20261024T031249Z-models/` is retained, but its
+  `wall_seconds`/`throughput_images_s` fields are invalid; see
+  `PERFORMANCE-RETRACTION.md`.
 - **Single-core scope:** masks 1/2/4 are serial, not concurrent throughput.
   The first-round Transformer Host bridge cost is reported in
   `MODEL-MILESTONE-STATUS.md`.
@@ -153,8 +176,10 @@ stress are extension validation, not P8 blockers.
 
 
 
-_The notes below are historical incident records.  The current Host verification
-run is green at `20261024T032922Z-host` (219 pytest, 27/27 ctest)._
+_The notes below are historical incident records.  The MVP Host run at that time
+was `20261024T032922Z-host` (219 pytest, 27/27 ctest); the final complete-model
+Host verification is `20261024T072125Z-host` (231 pytest / 41 subtests, 27/27
+ctest, sanitizer enabled)._
 
 **FFN 数值对照已通过**（20261022T130044Z-host）。根因：mock seam 把模板标签写进 `co_program.flags`，而该字段是生产语义（`co_schedule.c:38` 要求为 0，`custom_ops.c:344` 用 `ROCKET_JOB_PPU_DONE`），导致 LUT/EW/MM 误分派（511/512 元素错）。改为 mock 私有旁表（按程序地址记模板与 mul）后，剩余差异仅为参考实现的收窄顺序；按"先 sigmoid→收紧、再乘 gate→收紧 SiLU"修正参考后逐元素严格相等。
 

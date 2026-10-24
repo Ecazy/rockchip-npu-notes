@@ -1166,15 +1166,16 @@ class HybridRunner:
                    stage="model")
         values: dict[str, np.ndarray] = {spec.name: arr}
         values.update(self.host_constant_values)
+        phase_before_us = (stats.preprocess_us + stats.execution_us +
+                           stats.postprocess_us) if stats is not None else 0.0
         t_run = time.perf_counter()
         for node in self.program.nodes:
             if isinstance(node, HostNode):
+                t0 = time.perf_counter()
                 inputs = {name: self._resolve(
                     ref, values, {}, f"{node.id}.inputs.{name}")
                     for name, ref in node.inputs.items()}
-                t0 = time.perf_counter()
                 outputs = node.action.func(inputs, node.attrs)
-                elapsed_us = (time.perf_counter() - t0) * 1e6
                 if not isinstance(outputs, dict) or \
                         set(outputs) != set(node.action.output_names):
                     reject(RK_E_SCHEMA,
@@ -1200,6 +1201,7 @@ class HybridRunner:
                         value = np.ascontiguousarray(value)
                     values[ref.tensor] = value
                     produced.append(value)
+                elapsed_us = (time.perf_counter() - t0) * 1e6
                 if stats is not None:
                     stats.add_host_action(
                         node.id, node.phase, elapsed_us,
@@ -1208,6 +1210,7 @@ class HybridRunner:
                 info = self.program.plans[node.plan]
                 call = self.calls[node.plan]
                 for bindings in self._repeat_bindings(node):
+                    t_node = time.perf_counter()
                     inputs = [self._resolve(
                         node.inputs[name], values, bindings,
                         f"{node.id}.inputs.{name}")
@@ -1218,10 +1221,12 @@ class HybridRunner:
                         f"{node.id}.outputs.{name}")
                         for name in [b.name for b in info.plan.bindings
                                      if b.role == "output"]]
-                    report, elapsed_us = call.run_into(inputs, outputs)
+                    report, workspace_us = call.run_into(inputs, outputs)
+                    node_us = (time.perf_counter() - t_node) * 1e6
                     if stats is not None:
-                        stats.add_report(node.id, report, elapsed_us,
-                                         phase=node.phase)
+                        stats.add_report(node.id, report, node_us,
+                                         phase=node.phase,
+                                         workspace_us=workspace_us)
         public_outputs: dict[str, np.ndarray] = {}
         for public, tensor in self.program.outputs.items():
             if tensor not in values:
@@ -1243,7 +1248,14 @@ class HybridRunner:
                 if name in values:
                     trace[name] = np.array(values[name], copy=True)
         if stats is not None:
-            stats.record_run((time.perf_counter() - t_run) * 1e6)
+            elapsed_us = (time.perf_counter() - t_run) * 1e6
+            phase_now_us = (stats.preprocess_us + stats.execution_us +
+                            stats.postprocess_us)
+            residual_us = max(0.0, elapsed_us -
+                              (phase_now_us - phase_before_us))
+            if residual_us > 0.0:
+                stats.add_executor_overhead(residual_us)
+            stats.record_run(elapsed_us)
         return HybridResult(public_outputs, trace)
 
     def close(self) -> None:

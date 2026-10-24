@@ -1,6 +1,7 @@
 # tilelang-rknpu
 
-下一阶段目标：[完整 MLP 与 hybrid Tiny Transformer 模型推理](NEXT-MILESTONE.md)；以真实模型补齐能力，保持已完成 MVP 的验收边界。
+独立里程碑：[完整 MLP 与 hybrid Tiny Transformer 模型推理](NEXT-MILESTONE.md)
+已按 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md) 关闭；不改变已完成 MVP 的验收边界。
 
 **Experimental checkpoint; declared MVP scope complete.  Not approved as a general release or for
 unbounded device execution.**  Review blockers 1-4 and their follow-ups are fixed on
@@ -14,8 +15,10 @@ campaign passes on three serial single-core masks.  Failure handling is explicit
 is out of scope and not claimed.  RK1228 remains independent.  See
 [P0-SOURCE-LOCK.md](P0-SOURCE-LOCK.md), [review findings](REVIEW-2026-10-20.md),
 [status](IMPLEMENTATION-STATUS.md) and [RK1228-TARGET.md](RK1228-TARGET.md).
-The separate next-milestone model package and acceptance report are in
-[MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md).
+The separate complete-model milestone is also closed: versioned `rkhybrid`
+manifests expose every Host boundary, RKPlan matrix nodes remain the only
+matrix execution path, and deterministic layer/raw-logit gates are checked by an
+independent verifier. See [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md).
 
 Minimal vertical slice for the design in [overview.md](overview.md) and
 [specific.md](specific.md):

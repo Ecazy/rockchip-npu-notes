@@ -49,3 +49,10 @@ results/**/*.gz
 evidence/*.npy
 !results/20261024T031249Z-models/
 !results/20261024T032922Z-host/
+
+# Final complete-model acceptance campaign: keep verifier inputs and layer
+# traces; large regenerated campaign weights/data bundles remain local.
+!results/20261024T071144Z-models/
+!results/20261024T071144Z-models/model-results/core-*/
+!results/20261024T071144Z-models/model-results/core-*/model_eval.*.logits.npy
+!results/20261024T071144Z-models/model-results/core-*/model_eval.layers.npz

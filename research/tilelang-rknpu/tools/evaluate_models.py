@@ -20,8 +20,10 @@ from pathlib import Path
 import numpy as np
 
 from rknpu_backend.hostinfo import thread_config
+from rknpu_backend import load_plan
 from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
-from rknpu_backend.models import RunStats, load_weight_npz
+from rknpu_backend.models import PlanCall, RunStats, load_weight_npz
+from rknpu_backend.numeric import relu_probe_constants
 from rknpu_backend.model_reference import (mlp_logits, mlp_logits_declared,
                                            tiny_vit_logits,
                                            tiny_vit_logits_declared)
@@ -118,6 +120,10 @@ def _reference_with_schedule(fn, weights, x, schedule):
     return out
 
 
+def _overhead_us(stats: RunStats) -> float:
+    return stats.executor_overhead_us
+
+
 def _hybrid_path(manifest: dict, plans_dir: Path, key: str) -> Path:
     entry = manifest.get("hybrid_manifests", {}).get(key)
     if entry is None:
@@ -161,6 +167,7 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
     stats = RunStats()
     warm_stats = RunStats()
     logits = np.empty((len(x), 10), dtype=np.float32)
+    failure: BaseException | None = None
     try:
         # Warm each distinct compiled profile once.  This is recorded separately
         # and never included in the timed interval.
@@ -208,7 +215,9 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
             "model_call_seconds": model_call_seconds,
             "end_to_end_seconds": model_call_seconds + argmax_seconds,
             "plan_call_seconds": stats.plan_call_us / 1e6,
+            "plan_workspace_seconds": stats.plan_workspace_us / 1e6,
             "host_action_seconds": stats.host_action_us / 1e6,
+            "executor_overhead_seconds": _overhead_us(stats) / 1e6,
             "unattributed_seconds": max(
                 0.0, stats.end_to_end_us / 1e6 - (
                     stats.preprocess_us + stats.execution_us +
@@ -233,6 +242,9 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
             "stats": stats.to_dict(),
         })
         return result, logits, ref, declared
+    except BaseException as exc:
+        failure = exc
+        raise
     finally:
         cleanup_errors = []
         for runner in reversed(list(runners.values())):
@@ -241,10 +253,12 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
             except BaseException as cleanup:
                 cleanup_errors.append(cleanup)
         if cleanup_errors:
-            # Evaluation has already either returned or raised; do not replace a
-            # successful result with cleanup noise.  The runtime keeps poisoned
-            # workspaces owned for the process-level quarantine policy.
-            pass
+            if failure is not None:
+                failure.add_note(
+                    "MLP runner cleanup also failed: " +
+                    "; ".join(repr(e) for e in cleanup_errors))
+            else:
+                raise cleanup_errors[0]
 
 
 def _build_vit_runners(lib, plans_dir, manifest, weights, weights_path,
@@ -267,6 +281,7 @@ def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
     stats = RunStats()
     warm_stats = RunStats()
     logits = np.empty((len(x), 10), dtype=np.float32)
+    failure: BaseException | None = None
     try:
         first = schedule[0]
         t0 = time.perf_counter()
@@ -307,7 +322,9 @@ def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
             "model_call_seconds": model_call_seconds,
             "end_to_end_seconds": model_call_seconds + argmax_seconds,
             "plan_call_seconds": stats.plan_call_us / 1e6,
+            "plan_workspace_seconds": stats.plan_workspace_us / 1e6,
             "host_action_seconds": stats.host_action_us / 1e6,
+            "executor_overhead_seconds": _overhead_us(stats) / 1e6,
             "unattributed_seconds": max(
                 0.0, stats.end_to_end_us / 1e6 - (
                     stats.preprocess_us + stats.execution_us +
@@ -332,12 +349,77 @@ def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
             "stats": stats.to_dict(),
         })
         return result, logits, ref, declared
+    except BaseException as exc:
+        failure = exc
+        raise
     finally:
         try:
             runner.close()
-        except BaseException:
-            # The original evaluation exception must remain authoritative.
-            pass
+        except BaseException as cleanup:
+            if failure is not None:
+                failure.add_note("ViT runner cleanup also failed: " +
+                                 repr(cleanup))
+            else:
+                raise
+
+
+def _layer_trace_path(out: Path) -> Path:
+    return out.with_name(f"{out.stem}.layers.npz")
+
+
+def _run_layer_traces(lib, plans_dir, manifest, *, weights_dir: Path,
+                      x: np.ndarray, numeric_spec: dict, fd: int,
+                      models: str) -> dict:
+    """Capture the deterministic subset from the same planized graph nodes."""
+    indices = [int(v) for v in numeric_spec["sample_policy"]["indices"]]
+    if len(x) <= max(indices):
+        return {"status": "skipped",
+                "reason": "evaluation split is shorter than frozen sample set"}
+    sample = x[indices]
+    arrays: dict[str, np.ndarray] = {
+        "schema_version": np.asarray(1, dtype=np.int64),
+        "sample_indices": np.asarray(indices, dtype=np.int64),
+    }
+    span: dict[str, float] = {}
+    t0 = time.perf_counter()
+    if models in {"mlp", "both"}:
+        weights_path = weights_dir / "mnist_mlp.npz"
+        weights = load_weight_npz(weights_path)
+        program = load_hybrid_program(
+            _hybrid_path(manifest, plans_dir, "mnist_mlp_b8"),
+            plans_dir=plans_dir)
+        t_model = time.perf_counter()
+        with HybridRunner(lib, program, weights, weights_path=weights_path,
+                          fd=fd) as runner:
+            result = runner.run(sample, capture=True)
+            for key in program.trace_tensors:
+                arrays[f"mlp.{key}"] = np.asarray(result.trace[key])
+        span["mlp_seconds"] = time.perf_counter() - t_model
+
+        probe_info = manifest["plans"]["mnist_relu_probe"]
+        probe_plan = load_plan(str(plans_dir / probe_info["path"]))
+        probe_constants = relu_probe_constants(probe_plan, weights)
+        t_probe = time.perf_counter()
+        with PlanCall(lib, probe_plan, probe_constants, fd=fd) as probe:
+            outputs, _report, _elapsed = probe.run([])
+            arrays["relu_probe.output"] = np.asarray(outputs[0])
+        span["relu_probe_seconds"] = time.perf_counter() - t_probe
+    if models in {"vit", "both"}:
+        weights_path = weights_dir / "tiny_vit.npz"
+        weights = load_weight_npz(weights_path)
+        program = load_hybrid_program(
+            _hybrid_path(manifest, plans_dir, "tiny_vit_b8"),
+            plans_dir=plans_dir)
+        t_model = time.perf_counter()
+        with HybridRunner(lib, program, weights, weights_path=weights_path,
+                          fd=fd) as runner:
+            result = runner.run(sample, capture=True)
+            for key in program.trace_tensors:
+                arrays[f"tiny_vit.{key}"] = np.asarray(result.trace[key])
+        span["tiny_vit_seconds"] = time.perf_counter() - t_model
+    span["total_seconds"] = time.perf_counter() - t0
+    return {"status": "captured", "arrays": arrays,
+            "sample_indices": indices, "timing": span}
 
 
 def _sidecar(out: Path, model: str, batch: int, kind: str) -> Path:
@@ -360,13 +442,22 @@ def main() -> int:
                     help="sample count for non-primary batch profiles")
     ap.add_argument("--global-limit", type=int, default=0,
                     help="limit the loaded split; 0 means the full 10000 test set")
+    ap.add_argument("--numeric-spec", default=str(ROOT / "models" /
+                                                   "numeric_acceptance.json"),
+                    help="frozen layer sample list and trace contract")
     args = ap.parse_args()
     plans_dir = Path(args.plans_dir).resolve()
     manifest = json.loads((plans_dir / "manifest.json").read_text())
-    x, y = load_test(Path(args.data_dir))
+    numeric_spec = json.loads(Path(args.numeric_spec).read_text())
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    x_all, y_all = load_test(Path(args.data_dir))
+    total_test_images = len(x_all)
+    full_requested = (args.global_limit == 0 or
+                      args.global_limit >= total_test_images)
     if args.global_limit:
-        x, y = x[:args.global_limit], y[:args.global_limit]
-    full_requested = args.global_limit == 0
+        x, y = x_all[:args.global_limit], y_all[:args.global_limit]
+    else:
+        x, y = x_all, y_all
     if args.backend == "mock":
         lib_path = args.lib or str(ROOT / ".." / "custom-ops" / "build-host-mvp" /
                                    "librknpu_plan_mock.so")
@@ -390,6 +481,11 @@ def main() -> int:
         "test_images": int(len(x)),
         "full_test_split": bool(full_requested),
         "cpu_thread_config": thread_config(),
+        "numeric_spec": {
+            "path": str(Path(args.numeric_spec).name),
+            "schema_version": numeric_spec.get("schema_version"),
+            "calibration_status": numeric_spec.get("calibration", {}).get("status"),
+        },
         "models": [],
     }
     try:
@@ -434,10 +530,26 @@ def main() -> int:
                         declared)
                 print("ViT", batch, result["accuracy"],
                       result["top1_agreement"], flush=True)
+        trace = _run_layer_traces(
+            lib, plans_dir, manifest,
+            weights_dir=Path(args.weights_dir).resolve(), x=x,
+            numeric_spec=numeric_spec, fd=fd, models=args.models)
+        if trace["status"] == "captured":
+            trace_path = _layer_trace_path(Path(args.out))
+            np.savez_compressed(trace_path, **trace["arrays"])
+            report["layer_trace"] = {
+                "status": "captured", "path": trace_path.name,
+                "sample_indices": trace["sample_indices"],
+                "tensors": sorted(k for k in trace["arrays"]
+                                  if k not in {"schema_version",
+                                               "sample_indices"}),
+                "timing": trace["timing"],
+            }
+        else:
+            report["layer_trace"] = trace
     finally:
         if args.backend == "board" and args.fd is None and fd >= 0:
             lib.cdll.rocket_close(fd)
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(args.out)
     return 0

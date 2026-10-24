@@ -251,6 +251,74 @@ class CompleteModelTests(unittest.TestCase):
             PlanCall(fake, plan, {}, fd=0)
         self.assertEqual(fake.plan_creates, 0)
 
+    def test_frozen_numeric_spec_and_mock_layer_tolerances(self):
+        import importlib.util
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.models import PlanCall
+        from rknpu_backend.numeric import SAMPLE_INDICES, relu_probe_constants
+        spec_data = json.loads((WEIGHTS / "numeric_acceptance.json").read_text())
+        self.assertEqual(spec_data["status"], "frozen")
+        self.assertEqual(spec_data["calibration"]["status"], "frozen")
+        self.assertEqual(spec_data["calibration"]["uses_classification_metric"],
+                         False)
+        self.assertEqual(set(spec_data["task_logit_tolerances"]),
+                         {"mnist_mlp.b32", "mnist_mlp.b8", "mnist_mlp.b1",
+                          "tiny_vit.b8", "tiny_vit.b1"})
+        for key, tol in {**spec_data["layer_tolerances"],
+                         **spec_data["task_logit_tolerances"]}.items():
+            self.assertIsNotNone(tol, key)
+            self.assertGreaterEqual(tol["atol"], 0.0, key)
+            self.assertEqual(tol["rtol"], 0.0, key)
+            self.assertIn("basis", tol)
+            self.assertTrue(tol["observed_max_abs_by_source"])
+        loader_spec = importlib.util.spec_from_file_location(
+            "verify_model_results", ROOT / "tools" / "verify_model_results.py")
+        verifier = importlib.util.module_from_spec(loader_spec)
+        loader_spec.loader.exec_module(verifier)
+        golden = np.load(WEIGHTS / "numeric_golden.npz", allow_pickle=False)
+        sample = self.x[list(SAMPLE_INDICES)]
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        with HybridRunner(self.lib, program, self.vit_weights,
+                          weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+            result = runner.run(sample, capture=True)
+        for key, value in result.trace.items():
+            golden_key = f"tiny_vit.{key}"
+            ok, _err = verifier.logits_within_frozen_tolerance(
+                value, golden[golden_key],
+                spec_data["layer_tolerances"][golden_key])
+            self.assertTrue(ok, golden_key)
+        probe_plan = self._plan("mnist_relu_probe")
+        with PlanCall(self.lib, probe_plan,
+                      relu_probe_constants(probe_plan, self.mlp_weights),
+                      fd=0) as probe:
+            outputs, _report, _elapsed = probe.run([])
+        ok, _err = verifier.logits_within_frozen_tolerance(
+            outputs[0], golden["relu_probe.output"],
+            spec_data["layer_tolerances"]["relu_probe.output"])
+        self.assertTrue(ok)
+
+    def test_model_runner_rejects_non_manifest_bypass(self):
+        from rknpu_backend.models import MLPRunner
+        from rknpu_backend.errors import BackendError
+        with self.assertRaises(BackendError):
+            MLPRunner(self.lib, self._plan("mnist_mlp_b1"),
+                      self.mlp_weights, 1, fd=0)
+
+    def test_verifier_rejects_same_top1_amplified_logits(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "verify_model_results", ROOT / "tools" / "verify_model_results.py")
+        verifier = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(verifier)
+        expected = np.asarray([[1.0, 2.0, 3.0],
+                               [4.0, 1.0, 0.0]], dtype=np.float32)
+        amplified = expected * np.float32(1.5)
+        np.testing.assert_array_equal(amplified.argmax(1), expected.argmax(1))
+        ok, error = verifier.logits_within_frozen_tolerance(
+            amplified, expected, {"atol": 0.01, "rtol": 0.0})
+        self.assertFalse(ok)
+        self.assertGreater(error, 0.01)
+
     def test_cleanup_failure_does_not_replace_original_exception(self):
         from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
         program = load_hybrid_program(self._hybrid("tiny_vit_b1"))
@@ -271,6 +339,40 @@ class CompleteModelTests(unittest.TestCase):
                 runner.close()
             except Exception:
                 pass
+
+    def test_relu_probe_uses_real_exact_ew_max_plan(self):
+        from rknpu_backend.models import PlanCall
+        from rknpu_backend.numeric import (relu_probe_constants,
+                                           relu_probe_vectors)
+        plan = self._plan("mnist_relu_probe")
+        templates = [a.template_id for a in plan.actions
+                     if a.kind == "npu_task"]
+        self.assertEqual(templates, ["co.ew_add.f16.v1",
+                                     "co.ew_max.f16.v1"])
+        constants = relu_probe_constants(plan, self.mlp_weights)
+        _x, _b, _pre, expected = relu_probe_vectors(self.mlp_weights)
+        with PlanCall(self.lib, plan, constants, fd=0) as call:
+            outputs, _report, _elapsed = call.run([])
+        np.testing.assert_array_equal(outputs[0], expected)
+
+    def test_deterministic_layer_golden_is_reproducible(self):
+        import hashlib
+        from rknpu_backend.numeric import golden_arrays
+        golden_path = WEIGHTS / "numeric_golden.npz"
+        spec = json.loads((WEIGHTS / "numeric_acceptance.json").read_text())
+        self.assertEqual(spec["golden_sha256"],
+                         hashlib.sha256(golden_path.read_bytes()).hexdigest())
+        golden = np.load(golden_path, allow_pickle=False)
+        rebuilt = golden_arrays(self.mlp_weights, self.vit_weights, self.x)
+        self.assertEqual(set(golden.files), set(rebuilt))
+        for key in golden.files:
+            np.testing.assert_array_equal(golden[key], rebuilt[key])
+        contract_keys = set()
+        for item in spec["trace_contract"].values():
+            contract_keys.update(item.get("keys", []))
+        self.assertTrue(contract_keys <= set(golden.files))
+        self.assertEqual(spec["sample_policy"]["indices"],
+                         golden["sample_indices"].tolist())
 
     def test_model_failure_does_not_publish(self):
         import subprocess

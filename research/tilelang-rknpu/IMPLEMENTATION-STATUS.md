@@ -394,11 +394,13 @@ P1 批次一（K 循环提取）与顺带发现的 C 校验缺陷：
 ## 1.6 下一阶段完整模型（独立里程碑）
 
 完整 MNIST MLP 与 Tiny Transformer 已按 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)
-完成首轮定义：真实学习权重、真实 TileLang staged 源、RKIR/RKPlan、生产 runtime；
+完整关闭：真实学习权重、真实 TileLang staged 源、RKIR/RKPlan、生产 runtime；
 完整 10,000 张测试集在 core 1 运行，MLP 98.31%、Tiny Transformer 98.21%，CPU/声明路径
-top-1 一致率均为 100%。这是独立于已验收 MVP 的新增阶段，不回写上一阶段历史验收。
-第一轮 Transformer 的 Host RMSNorm/Softmax/layout/SwiGLU 边界和成本已显式记录，未宣称
-纯 NPU 或性能优势。
+top-1 一致率均为 100%。随后补关了三个缺口：schema-v2 计时边界、版本化 `rkhybrid`
+清单化的已注册 Host action 边界、以及逐层/逐 profile 冻结容差和独立 verifier。
+最终板端证据为 `results/20261024T071144Z-models/`，verifier PASS；旧 campaign 的
+`wall_seconds`/吞吐字段已在 `PERFORMANCE-RETRACTION.md` 标记失效。该阶段独立于已验收
+MVP，不回写上一阶段历史验收，也不宣称纯 NPU Transformer 或性能增益门槛。
 
 ## 2. 工作包状态
 
@@ -413,7 +415,7 @@ top-1 一致率均为 100%。这是独立于已验收 MVP 的新增阶段，不�
 | P6 资源实例化/执行 | `complete`（声明安全契约） | 线性 action 调度；多 tile 输出拼装；有限值闸门；发布前全数据 BO `co_guard_check`；常量仅创建时上传；C runtime 目标 chip/driver/ABI 自检；workspace poison 原子化；**provider 共享 context 在 submit_lock 内故障隔离，共享 fd 排队/新 workspace/faulted close 均保留 task BO**；RK3588 成功路径、三核、chain/separate 已验 | 真实故障后的恢复/继续计算明确 out of scope；不通过危险 timeout 注入或宣称恢复成功 |
 | P7 CLI/Python run/示例 | `complete`（声明范围） | CLI 五条命令；`Workspace` caller-fd API；真实 TileLang matmul / matmul_silu / silu_proj / staged-FP16 FFN / 双输出 branch / ragged；**板端 `compile-rkir`→`validate`→`explain`→`run` 已在三 mask 通过**（成功发布、fd 平衡、bad-binding rc2 不发布）；`run --fd` 区分 caller-owned/自开 fd | FP32 residual 融合等未支持形式明确拒绝；故障后恢复/继续计算 out of scope |
 | P8 板端准入 | `complete`（声明 MVP 范围） | **代表性小形状、三个单核串行准入通过**：RK3588 OPi 5 Plus / driver v0.9.8 / 1 GHz/ABI 1，**27 cases × 3 masks = 81/81 PASS**；source-built TileLang/TVM 重新生成计划；真实多 block staged projection/FFN/branch、tiled RKIR、广播、双输出、ragged 尾块、K 奇偶分片、完整 CLI、源包/库哈希和凭据扫描均归档。证据 `results/20261023T144054Z-rk3588/` | 真实设备恢复/继续计算明确 out of scope；隔离停止契约已验证。 |
-| P9 扩展 | `not_started` | 无 | 动态 Host 广播、状态、hybrid、逐组选核、参考库模板 |
+| P9 扩展 | `not_started`（有限模型 hybrid 已作为独立里程碑交付） | `rkhybrid` + 注册 Host action + RKPlan 已在 MLP/Tiny Transformer 完整验收 | 通用 hybrid/state、动态 Host 广播、逐组选核、参考库模板 |
 
 ## 3. 实际测试结果
 
@@ -425,12 +427,14 @@ rk_plan_contract: 26 checks, 0 failures   (ABI 尺寸: publish=32, plan=168)
 rk_plan_host:     711 checks, 0 failures
 ```
 
-Python（`.pydeps` 中 pinned TileLang wheel）：
+Python（`.pydeps` 中 pinned TileLang wheel，最终 Host 验证）：
 
 ```text
-219 passed, 0 failed, 0 skipped, 41 subtests
+231 passed, 0 failed, 0 skipped, 41 subtests
                           (含 ABI 全量偏移、语义守卫、K 循环、M/N、SwiGLU、
-                           显式 ragged、常量广播、多输出、campaign host preflight)
+                           显式 ragged、常量广播、多输出、campaign host preflight、
+                           rkhybrid 图校验、逐层容差、清理不覆盖原异常，
+                           以及 top-1 不变的 logits 放大拒绝负例)
 ```
 
 RK3588 real device（`results/20261023T144054Z-rk3588/`，小形状/三单核串行）：
@@ -710,7 +714,9 @@ SwiGLU 保留为后续组合验收。
 producer)` lowering、FFI mock 执行与独立 numpy 五收窄点参考、两轮输入变化、残差
 保活断言，以及分支接错/收窄缺失/未支持算子的负例。证据：
 `tests/test_frontend_silu_proj.py`、`tests/test_silu_proj_execution.py`、
-`results/20261024T032922Z-host/`：219 pytest / 27 ctest，evidence_complete=true。
+历史 MVP Host 记录为 `results/20261024T032922Z-host/`（219 pytest / 27 ctest）；
+完整模型最终 Host 重验为 `results/20261024T072125Z-host/`（231 pytest /
+41 subtests、27/27 ctest、sanitizer，evidence_complete=true）。
 
 **已知待补的基础设施**：验证脚本的依赖短路（）与产物哈希；
  快照在  之后 —— 记录该限制，不另开整修阶段。

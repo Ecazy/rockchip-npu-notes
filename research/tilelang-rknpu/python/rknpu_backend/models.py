@@ -94,7 +94,9 @@ class RunStats:
     execution_us: float = 0.0
     postprocess_us: float = 0.0
     host_action_us: float = 0.0
+    executor_overhead_us: float = 0.0
     plan_call_us: float = 0.0
+    plan_workspace_us: float = 0.0
     plan_pack_us: float = 0.0
     plan_emit_us: float = 0.0
     plan_submit_wait_us: float = 0.0
@@ -139,10 +141,18 @@ class RunStats:
         row["host_bytes"] += nbytes
 
     def add_report(self, name: str, report: Any, elapsed_us: float,
-                   *, phase: str = "execution") -> None:
-        """Record one production RKPlan call as an ``execution`` node."""
+                   *, phase: str = "execution", workspace_us: float | None = None) -> None:
+        """Record one production RKPlan node interval.
+
+        ``elapsed_us`` is the full plan-node dwell (input resolution, binding
+        preparation, C workspace run and output-target handling).  The optional
+        ``workspace_us`` is only the C ``rk_workspace_run`` interval, so callers can
+        separate model-runtime overhead from native execution.
+        """
         phase = self._phase(phase)
         self.plan_call_us += float(elapsed_us)
+        self.plan_workspace_us += (float(elapsed_us) if workspace_us is None
+                                   else float(workspace_us))
         self.plan_pack_us += float(report.pack_us)
         self.plan_emit_us += float(report.emit_us)
         self.plan_submit_wait_us += float(report.submit_wait_us)
@@ -159,7 +169,7 @@ class RunStats:
         row = next((r for r in self.plans if r["name"] == name), None)
         if row is None:
             row = {"name": name, "kind": "rkplan", "phase": phase, "calls": 0,
-                   "elapsed_us": 0.0,
+                   "elapsed_us": 0.0, "workspace_us": 0.0,
                    "pack_us": 0.0, "emit_us": 0.0,
                    "submit_wait_us": 0.0, "output_sync_us": 0.0,
                    "upload_calls": 0, "upload_bytes": 0,
@@ -169,6 +179,8 @@ class RunStats:
             self.plans.append(row)
         row["calls"] += 1
         row["elapsed_us"] += float(elapsed_us)
+        row["workspace_us"] += (float(elapsed_us) if workspace_us is None
+                                else float(workspace_us))
         row["pack_us"] += float(report.pack_us)
         row["emit_us"] += float(report.emit_us)
         row["submit_wait_us"] += float(report.submit_wait_us)
@@ -181,6 +193,11 @@ class RunStats:
         row["submit_count"] += int(report.submit_count)
         row["bridge_bytes"] = (int(row["upload_bytes"]) +
                                int(row["download_bytes"]))
+
+    def add_executor_overhead(self, elapsed_us: float) -> None:
+        """Attribute graph dispatch/binding overhead that is not a Host action."""
+        self.executor_overhead_us += float(elapsed_us)
+        self._phase_add("execution", elapsed_us)
 
     def record_run(self, end_to_end_us: float) -> None:
         self.run_calls += 1
@@ -204,7 +221,9 @@ class RunStats:
             "unattributed_us": max(0.0, self.end_to_end_us - attributed),
             "host_action_us": self.host_action_us,
             "host_compute_us": self.host_action_us,
+            "executor_overhead_us": self.executor_overhead_us,
             "plan_call_us": self.plan_call_us,
+            "plan_workspace_us": self.plan_workspace_us,
             "plan_pack_us": self.plan_pack_us,
             "plan_emit_us": self.plan_emit_us,
             "plan_submit_wait_us": self.plan_submit_wait_us,
@@ -353,6 +372,19 @@ class PlanCall:
                       for b in self.outputs]
         report, elapsed_us = self.run_into(inputs, out_arrays)
         return out_arrays, report, elapsed_us
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        try:
+            self.close()
+        except BaseException as cleanup:
+            if exc is not None:
+                exc.add_note("PlanCall cleanup also failed: " + repr(cleanup))
+                return False
+            raise
+        return False
 
     def close(self) -> None:
         """Release handles once; preserve the first cleanup error if any."""

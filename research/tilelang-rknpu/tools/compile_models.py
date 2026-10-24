@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from rknpu_backend import CompileOptions, compile_tilelang, default_profile, save_plan
@@ -74,6 +76,20 @@ def main() -> int:
         write(plan, f"mnist_mlp_b{batch}")
         print("wrote", f"mnist_mlp_b{batch}", plan.plan_hash, flush=True)
 
+    probe = compile_tilelang(tmlp.make_relu_probe_prim(), profile=profile,
+                             options=options).plan
+    templates = [a.template_id for a in probe.actions
+                 if a.kind == "npu_task"]
+    if templates != ["co.ew_add.f16.v1", "co.ew_max.f16.v1"]:
+        raise SystemExit(f"unexpected ReLU probe templates: {templates}")
+    write(probe, "mnist_relu_probe")
+    manifest["plans"]["mnist_relu_probe"].update({
+        "role": "numeric-acceptance-relu-probe",
+        "templates": templates,
+        "constant_inputs": ["X", "B"],
+    })
+    print("wrote mnist_relu_probe", probe.plan_hash, flush=True)
+
     for batch in (1, 8):
         plans = {}
         for name, (m, k, n, binp) in transformer_shapes(batch).items():
@@ -91,6 +107,10 @@ def main() -> int:
         print("wrote", f"tiny_vit_b{batch}", flush=True)
 
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    subprocess.run([
+        sys.executable, str(ROOT / "tools" / "build_hybrid_manifests.py"),
+        "--plans-dir", str(out),
+    ], check=True)
     print(out / "manifest.json")
     return 0
 

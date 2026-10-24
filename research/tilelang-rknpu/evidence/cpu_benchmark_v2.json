@@ -1,0 +1,299 @@
+{
+  "batch_policy": {
+    "mnist_mlp": {
+      "batch_histogram": {
+        "32": 312,
+        "8": 2
+      },
+      "calls": 314,
+      "no_dynamic_shapes": true,
+      "tail_calls": 2
+    },
+    "tiny_vit": {
+      "batch_histogram": {
+        "8": 1250
+      },
+      "calls": 1250,
+      "no_dynamic_shapes": true,
+      "tail_calls": 0
+    }
+  },
+  "cpu_thread_config": {
+    "blas": [
+      {
+        "library": "libscipy_openblas64_-017048f4.so",
+        "symbol": "scipy_openblas_get_num_threads64_",
+        "threads": 32
+      }
+    ],
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31
+    ],
+    "cpu_affinity_count": 32,
+    "cpu_count": 32,
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null
+    },
+    "cpuinfo": {
+      "max_mhz": 5500.054,
+      "mean_mhz": 4882.74103125,
+      "min_mhz": 4299.91
+    },
+    "numpy": {
+      "blas_name": "scipy-openblas",
+      "blas_openblas_configuration": "OpenBLAS 0.3.33.112.0  USE64BITINT DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64",
+      "blas_version": "0.3.33.112.0",
+      "numpy_version": "2.5.0"
+    },
+    "process_threads": 32
+  },
+  "host_label": "benchmark-host",
+  "machine": "x86_64",
+  "models": {
+    "mnist_mlp": {
+      "argmax_samples_seconds": [
+        0.00022082001669332385,
+        0.0002159140130970627,
+        0.00021540597663260996
+      ],
+      "declared": {
+        "accuracy": 0.9831,
+        "argmax_samples_seconds": [
+          0.00018191602430306375,
+          0.0001780250167939812,
+          0.00017950101755559444
+        ],
+        "end_to_end_seconds": 0.26535261402023025,
+        "execution_seconds": 0.26517311300267465,
+        "postprocess_seconds": 0.00017950101755559444,
+        "reference_timing": "not_applicable_cpu_baseline",
+        "repeats": 3,
+        "samples_seconds": [
+          0.26536625702283345,
+          0.26517311300267465,
+          0.26515437301713973
+        ],
+        "throughput_basis": "same static batch schedule as NPU; includes preprocess+forward+argmax, references excluded",
+        "throughput_images_s": 37685.70374527235,
+        "timing_schema_version": 2
+      },
+      "end_to_end_seconds": 0.025313387013738975,
+      "execution_seconds": 0.025097473000641912,
+      "fp32_accuracy": 0.9831,
+      "postprocess_seconds": 0.0002159140130970627,
+      "reference_timing": "not_applicable_cpu_baseline",
+      "repeats": 3,
+      "samples_seconds": [
+        0.025211111002136022,
+        0.025085578992730007,
+        0.025097473000641912
+      ],
+      "throughput_basis": "same static batch schedule as NPU; includes preprocess+forward+argmax, references excluded",
+      "throughput_images_s": 395047.8849224107,
+      "timing_schema_version": 2
+    },
+    "tiny_vit": {
+      "argmax_samples_seconds": [
+        0.0001885170058812946,
+        0.00018702400848269463,
+        0.00019317699479870498
+      ],
+      "declared": {
+        "accuracy": 0.9821,
+        "argmax_samples_seconds": [
+          0.00019570201402530074,
+          0.00018825597362592816,
+          0.00019799498841166496
+        ],
+        "end_to_end_seconds": 1.2127967940177768,
+        "execution_seconds": 1.2126010920037515,
+        "postprocess_seconds": 0.00019570201402530074,
+        "reference_timing": "not_applicable_cpu_baseline",
+        "repeats": 3,
+        "samples_seconds": [
+          1.2127860039763618,
+          1.2121765579795465,
+          1.2126010920037515
+        ],
+        "throughput_basis": "same static batch schedule as NPU; includes preprocess+forward+argmax, references excluded",
+        "throughput_images_s": 8245.404382107414,
+        "timing_schema_version": 2
+      },
+      "end_to_end_seconds": 0.21824091699090786,
+      "execution_seconds": 0.21805239998502657,
+      "fp32_accuracy": 0.9821,
+      "postprocess_seconds": 0.0001885170058812946,
+      "reference_timing": "not_applicable_cpu_baseline",
+      "repeats": 3,
+      "samples_seconds": [
+        0.2170348550134804,
+        0.21926650000386871,
+        0.21805239998502657
+      ],
+      "throughput_basis": "same static batch schedule as NPU; includes preprocess+forward+argmax, references excluded",
+      "throughput_images_s": 45820.921841235715,
+      "timing_schema_version": 2
+    }
+  },
+  "python": "3.12.3",
+  "schema_version": 2,
+  "test_images": 10000,
+  "thread_config_after": {
+    "blas": [
+      {
+        "library": "libscipy_openblas64_-017048f4.so",
+        "symbol": "scipy_openblas_get_num_threads64_",
+        "threads": 32
+      }
+    ],
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31
+    ],
+    "cpu_affinity_count": 32,
+    "cpu_count": 32,
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null
+    },
+    "cpuinfo": {
+      "max_mhz": 5500.054,
+      "mean_mhz": 2193.67853125,
+      "min_mhz": 800.0
+    },
+    "numpy": {
+      "blas_name": "scipy-openblas",
+      "blas_openblas_configuration": "OpenBLAS 0.3.33.112.0  USE64BITINT DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64",
+      "blas_version": "0.3.33.112.0",
+      "numpy_version": "2.5.0"
+    },
+    "process_threads": 32
+  },
+  "thread_config_before": {
+    "blas": [
+      {
+        "library": "libscipy_openblas64_-017048f4.so",
+        "symbol": "scipy_openblas_get_num_threads64_",
+        "threads": 32
+      }
+    ],
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31
+    ],
+    "cpu_affinity_count": 32,
+    "cpu_count": 32,
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null
+    },
+    "cpuinfo": {
+      "max_mhz": 5500.054,
+      "mean_mhz": 4882.74103125,
+      "min_mhz": 4299.91
+    },
+    "numpy": {
+      "blas_name": "scipy-openblas",
+      "blas_openblas_configuration": "OpenBLAS 0.3.33.112.0  USE64BITINT DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64",
+      "blas_version": "0.3.33.112.0",
+      "numpy_version": "2.5.0"
+    },
+    "process_threads": 32
+  },
+  "timing_schema_version": 2
+}

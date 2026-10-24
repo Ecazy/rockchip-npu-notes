@@ -13,9 +13,21 @@
       ]
     },
     "evidence": {
-      "board_campaign": "results/20261024T031249Z-models/",
-      "cpu_baseline": "evidence/cpu_benchmark.json",
-      "host_mock": "evidence/model_eval_mock.json"
+      "board_campaign": "results/20261024T071144Z-models/",
+      "cpu_baseline": "evidence/cpu_benchmark_v2.json",
+      "host_mock": "evidence/model_eval_mock_v2.json",
+      "host_verification": "results/20261024T072125Z-host/",
+      "numeric_calibration": "evidence/numeric-calibration/"
+    },
+    "evidence_sha256": {
+      "board_campaign_manifest": "db1480b50b3d47977921fc1a0980f324e5d04a4f73f7e97f80c8839dcd03e1d7",
+      "board_cpu_benchmark": "1246b04316f1d2e27cac62b85a26c7c7c339ebc81a225400f4e3c19c47f3aa2d",
+      "board_layer_trace_core1": "52684282ccfdf06e583b7366406f8ea6da61e79152829750d14a9bcf1f022bb4",
+      "board_raw_core1_model_eval": "08ee970e0bacfba2c60b8fac656d9eed322f6b7223651d2bdf5270a24e7e993a",
+      "board_verify_summary": "4a8e3ac04baf4916da27e9902b0438d061513bfe04498946ab8e896b7185d44d",
+      "host_cpu_benchmark": "f0a818e031dc21de8c080a6ac22258e98a9ebc323546acf01c022a837ac8a6ae",
+      "host_mock_eval": "dd5b3ee2650f69f3de94f10c8b68d974e3d8c9698f241f03bcd7e90276b8341c",
+      "host_verification_manifest": "4816847484e55bd92654dfbb844567fe7889c3c8ca21a88526ac7088442821c8"
     },
     "full_test_images": 10000,
     "mnist_mlp_accuracy_min": 0.97,
@@ -52,16 +64,18 @@
     "train_count": 60000
   },
   "host_boundaries": {
+    "host_fallback": "forbidden",
     "mnist_mlp": [
-      "input normalization",
-      "zero padding to 1024",
+      "mnist.normalize_flatten.v1",
+      "tensor.pad_2d.v1",
+      "logits.prefix.v1",
       "argmax"
     ],
     "npu": {
       "mnist_mlp": [
         "all Linear",
         "all bias",
-        "all ReLU"
+        "all exact ReLU"
       ],
       "tiny_vit": [
         "patch projection",
@@ -73,26 +87,102 @@
         "classifier"
       ]
     },
+    "npu_fallback": "forbidden",
     "tiny_vit": [
-      "patch rasterization",
-      "position add",
-      "pre-RMSNorm",
-      "stable softmax",
-      "head layout bridge",
-      "SwiGLU elementwise",
-      "residual adds",
-      "mean pooling",
+      "mnist.patchify_norm.v1",
+      "tensor.pad_2d.v1",
+      "tiny_vit.position_add.v1",
+      "rmsnorm.last_axis.v1",
+      "tiny_vit.qkv_split_heads.v1",
+      "attention.scaled_softmax.v1",
+      "tiny_vit.merge_heads.v1",
+      "tensor.add.v1",
+      "swiglu.gate_up.v1",
+      "tensor.reshape.v1",
+      "tensor.mean_axis.v1",
+      "logits.prefix.v1",
       "argmax"
     ]
   },
+  "hybrid_execution": {
+    "fallback": "error",
+    "host_actions": "rknpu_backend.hybrid.HOST_ACTIONS",
+    "host_actions_version": 1,
+    "kind": "rkhybrid",
+    "no_opaque_model_node": true,
+    "node_counts": {
+      "mnist_mlp_b8": {
+        "host": 3,
+        "rkplan": 1,
+        "total": 4
+      },
+      "tiny_vit_b8": {
+        "host": 14,
+        "rkplan": 9,
+        "total": 23
+      }
+    },
+    "plan_reuse": "QK and PV use one immutable 16x16 dynamic-B RKPlan and one workspace per runner",
+    "policy": {
+      "dynamic_shapes": "forbidden",
+      "host_actions": "rknpu_backend.hybrid.HOST_ACTIONS",
+      "host_actions_version": 1,
+      "host_fallback": "forbidden",
+      "kind": "explicit_versioned_rkhybrid",
+      "npu_fallback": "forbidden",
+      "unknown_action": "reject"
+    },
+    "schema_version": 1
+  },
+  "layer_numeric_acceptance": {
+    "calibration_evidence": "evidence/numeric-calibration/",
+    "calibration_status": "frozen",
+    "classification_used_for_tolerance": false,
+    "golden": "models/numeric_golden.npz",
+    "golden_sha256": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
+    "layer_tolerance_count": 28,
+    "profile_logit_tolerance_count": 5,
+    "relu_probe_plan": "models/compiled/mnist_relu_probe.rkplan.json",
+    "relu_probe_templates": [
+      "co.ew_add.f16.v1",
+      "co.ew_max.f16.v1"
+    ],
+    "sample_indices": [
+      10,
+      73,
+      171,
+      249,
+      279,
+      349,
+      383,
+      405
+    ],
+    "spec": "models/numeric_acceptance.json",
+    "spec_sha256": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f",
+    "status": "frozen",
+    "tolerance_rule": "atol=ceil_2^-12(2*max_observed_abs_error); rtol=0"
+  },
   "milestone": "NEXT-MILESTONE two complete models",
   "model_sources": {
-    "models/compiled/manifest.json": "4aeeb634737e584b663c678dc7f8e90af3e76168e9f0e2127a0e7855ceea8094",
+    "models/compiled/manifest.json": "3a314b989aa90d1ac5345a32cf03131f54fc360b089b92aa7c733ef24a237b6a",
+    "models/numeric_acceptance.json": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f",
+    "models/numeric_golden.npz": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
     "models/tilelang_matmul.py": "052acb72799fa594ac5ec2f1d4615be467621dca94d88c29cdae58ab8cf986ae",
-    "models/tilelang_mlp.py": "11ae931d4a46e04e72edb23b674ba5f2b1262b3096a588d433501d770cc73fb2",
-    "python/rknpu_backend/model_reference.py": "a2ac5436796d5e7662a92fc4d3575dcbc4b5ecd879b667e7ee265a6e5bfadd24",
-    "python/rknpu_backend/models.py": "7b4622ce14b8e539409aba221e338e22a4bcffadc0c2e1033ad389f7636a1426",
-    "tools/train_mnist_models.py": "c85c40b465a3a9ad8c40b37336db344c44922daba93d52d91cbe4087bdc45cda"
+    "models/tilelang_mlp.py": "bb248045f763b574fc146257aa9dcffbd62448ca88755656aac1219a0445f875",
+    "python/rknpu_backend/hostinfo.py": "6503a7d100ceacf0bfa5012b06536b095f8de5926b42410c074845b66419ca03",
+    "python/rknpu_backend/hybrid.py": "e5a566eaea8611e906d553b53049de3cc56b86314f8a4dcd0bcdde5669b15119",
+    "python/rknpu_backend/model_reference.py": "395420db9cc0f82a8980fef06bad38293d2eebeefd528d6a52fe390d8d9992d6",
+    "python/rknpu_backend/models.py": "2770485d535065e8b35577c46c860c1693387cdaf4385d0351103582924e905c",
+    "python/rknpu_backend/numeric.py": "dbe26260f307422a50ac2ef92e922d5b3c16cb574fc72dc20edf9d4d6a9342cc",
+    "tools/benchmark_cpu_models.py": "e4c5f3e58705a33be1b66cf375e784b49701f51deaa868116118e233291a2e1f",
+    "tools/build_hybrid_manifests.py": "ea81d8d9d295ae2c86b899aa07bbdf8143f6bc80cc57ff9ec2cf518f7666581b",
+    "tools/build_numeric_acceptance.py": "5a6aaa9bd8d9c4e23130b9b936df7121f024de4848b004e9ad08481061c50323",
+    "tools/calibrate_numeric_acceptance.py": "5c3a84513334027e19fbb7f7e4510c8549a2fac01a63ebb5f5421569282b0650",
+    "tools/compile_models.py": "657bd288804b2b76b4aeac2256aca00b39bfca009ea5d8573b678c900fbd6c8e",
+    "tools/compile_numeric_probe.py": "5ad982afb3ba13cb7102edf103244158702e0b486a0b2f8c5b58df454aac046e",
+    "tools/evaluate_models.py": "0caa14bfa6b4451c4a2431937000adf218646cf6d06b866a780228ad298ce0e3",
+    "tools/train_mnist_models.py": "c85c40b465a3a9ad8c40b37336db344c44922daba93d52d91cbe4087bdc45cda",
+    "tools/verify_model_results.py": "284f3cdca9c404e98cc226f6ccb99269d6dcc569851ebdf36d187224c2c8f018"
   },
   "models": [
     {
@@ -146,6 +236,38 @@
     }
   ],
   "npu_plans": {
+    "hybrid_manifests": {
+      "mnist_mlp_b1": {
+        "batch": 1,
+        "model": "mnist_mlp",
+        "path": "mnist_mlp_b1.rkhybrid.json",
+        "sha256": "7ffb83f9f4afe491a3d07f2ad4203bf1425a25e8c1727d72b4186e82355713ae"
+      },
+      "mnist_mlp_b32": {
+        "batch": 32,
+        "model": "mnist_mlp",
+        "path": "mnist_mlp_b32.rkhybrid.json",
+        "sha256": "a5a4203ff4be863a40ac80917c343a74eb48e4d718c21901aef769baba4edf3b"
+      },
+      "mnist_mlp_b8": {
+        "batch": 8,
+        "model": "mnist_mlp",
+        "path": "mnist_mlp_b8.rkhybrid.json",
+        "sha256": "2c18c039fd5d31a7ce954492505061ece75ccd1f77708bdd94bcb0f6d71ffd41"
+      },
+      "tiny_vit_b1": {
+        "batch": 1,
+        "model": "tiny_vit",
+        "path": "tiny_vit_b1.rkhybrid.json",
+        "sha256": "70707ffaec5e67933ca784ccdcfddd290eb3db58b462b0e4a37c647a060025ae"
+      },
+      "tiny_vit_b8": {
+        "batch": 8,
+        "model": "tiny_vit",
+        "path": "tiny_vit_b8.rkhybrid.json",
+        "sha256": "d2d0f01f8c0a5f8ebe15bb21611b2eae3854e9fdde73977d4ade9f0942f1efbb"
+      }
+    },
     "manifest": "models/compiled/manifest.json",
     "plans": {
       "mnist_mlp_b1": {
@@ -168,6 +290,22 @@
         "plan_hash": "d184dc7f902998fe996d5a948b2d317f0382e13ce60933b12db9ffe4dde42c9d",
         "sha256": "a03c01cd64c8cf9c29daac3db8e550b871c94d4333d7f1a60c1b95f5329e62b1",
         "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1387f6f0), 22, 22, 1, 1048576)"
+      },
+      "mnist_relu_probe": {
+        "batch": 2,
+        "constant_inputs": [
+          "X",
+          "B"
+        ],
+        "path": "mnist_relu_probe.rkplan.json",
+        "plan_hash": "00259bc01160f05608999444d49f048ac12e8961bfa04cb88136908a6de03b3d",
+        "role": "numeric-acceptance-relu-probe",
+        "sha256": "4fdddd79336dceb47ea1e860780228cb36a129968d4a03d8cdd07d05bcb13f08",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1aed2f20), 135, 135, 1, 1048576)",
+        "templates": [
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1"
+        ]
       },
       "tiny_vit_b1_attn_out": {
         "batch": 16,
@@ -299,21 +437,49 @@
     "profile_hash": "50fa71281ad979ade1543d5350cd7ac584568fddb57412e39e4d4d9f2a3f2d79"
   },
   "numeric_policy": {
-    "activation": "explicit Host SiLU/SwiGLU first-round bridge",
+    "activation": "explicit registered Host SiLU/SwiGLU nodes",
     "fallback": "error; no implicit CPU matrix fallback",
+    "layer_gate": "frozen per-layer and per-profile absolute tolerances; top-1 cannot replace the raw-logit/layer checks",
     "matmul": "ordered 256-wide K tiles with explicit FP16 writeback",
-    "relu": "exact NPU elementwise MAX against zero, no LUT approximation",
-    "softmax": "stable Max/Exp/Sum Host computation on FP32 scores"
+    "relu": "exact NPU elementwise MAX against zero; no LUT approximation",
+    "softmax": "stable Max/Exp/Sum Host node on FP32 scores"
   },
   "package": {
+    "execution_manifest": "versioned rkhybrid; registered Host actions and immutable RKPlan references only",
     "format": "npz_no_pickle_safe_arrays",
     "input_preprocessing": "MNIST mean=0.1307 std=0.3081; 784 values zero-padded to 1024 for ordered-K NPU primitive; TinyViT uses 16 raster 7x7 patches",
     "logical_weight_dtype": "float32",
     "npu_weight_dtype": "float16",
+    "numeric_acceptance": "deterministic 8-image layer trace + real-TileLang exact-ReLU probe + frozen per-layer/profile limits",
     "output_postprocessing": "argmax on first 10 logits; no threshold tuning",
     "random_operator_demo": false,
     "weights_are_learned": true
   },
   "schema_version": 1,
-  "seed": 20261024
+  "seed": 20261024,
+  "timing_contract": {
+    "cpu_baseline": "matched static batch/tail schedule; explicit single-thread BLAS env recorded",
+    "excluded_from_model_interval": [
+      "weight load",
+      "runner/constant setup",
+      "warm-up",
+      "CPU FP32 reference",
+      "declared FP16 reference"
+    ],
+    "included_in_model_interval": [
+      "preprocessing",
+      "all registered Host action nodes",
+      "all RKPlan node calls and their binding overhead",
+      "postprocessing/logits export",
+      "argmax"
+    ],
+    "invalid_history": "results/20261024T031249Z-models/PERFORMANCE-RETRACTION.md",
+    "phase_names": [
+      "preprocess",
+      "execution",
+      "postprocess"
+    ],
+    "schema_version": 2,
+    "throughput_basis": "n / end_to_end_seconds; references excluded"
+  }
 }

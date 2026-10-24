@@ -63,6 +63,21 @@
       "plan_hash": "d184dc7f902998fe996d5a948b2d317f0382e13ce60933b12db9ffe4dde42c9d",
       "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1387f6f0), 22, 22, 1, 1048576)"
     },
+    "mnist_relu_probe": {
+      "batch": 2,
+      "constant_inputs": [
+        "X",
+        "B"
+      ],
+      "path": "mnist_relu_probe.rkplan.json",
+      "plan_hash": "00259bc01160f05608999444d49f048ac12e8961bfa04cb88136908a6de03b3d",
+      "role": "numeric-acceptance-relu-probe",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1aed2f20), 135, 135, 1, 1048576)",
+      "templates": [
+        "co.ew_add.f16.v1",
+        "co.ew_max.f16.v1"
+      ]
+    },
     "tiny_vit_b1_attn_out": {
       "batch": 16,
       "path": "tiny_vit_b1_attn_out.rkplan.json",
@@ -176,6 +191,6 @@
   "schema_version": 1,
   "source_files": {
     "models/tilelang_matmul.py": "052acb72799fa594ac5ec2f1d4615be467621dca94d88c29cdae58ab8cf986ae",
-    "models/tilelang_mlp.py": "11ae931d4a46e04e72edb23b674ba5f2b1262b3096a588d433501d770cc73fb2"
+    "models/tilelang_mlp.py": "bb248045f763b574fc146257aa9dcffbd62448ca88755656aac1219a0445f875"
   }
 }

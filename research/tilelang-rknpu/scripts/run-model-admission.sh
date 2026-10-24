@@ -13,7 +13,7 @@ STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 REMOTE="$REMOTE_BASE/tl-models-$STAMP"
 LOCAL="$HERE/results/$STAMP-models"
 [[ ! -e "$LOCAL" ]] || { echo 'fresh results path required' >&2; exit 2; }
-mkdir -p "$LOCAL/campaign"/{plans,weights,data,tools}
+mkdir -p "$LOCAL/campaign"/{plans,weights,data,tools,numeric}
 CAMPAIGN="$LOCAL/campaign"
 cp "$HERE"/models/compiled/*.rkplan.json "$CAMPAIGN/plans/"
 cp "$HERE"/models/compiled/*.rkhybrid.json "$CAMPAIGN/plans/"
@@ -21,6 +21,8 @@ cp "$HERE"/models/compiled/manifest.json "$CAMPAIGN/plans/manifest.json"
 cp "$HERE"/models/*.npz "$CAMPAIGN/weights/"
 cp "$HERE"/.data/mnist/t10k-images-idx3-ubyte.gz "$CAMPAIGN/data/"
 cp "$HERE"/.data/mnist/t10k-labels-idx1-ubyte.gz "$CAMPAIGN/data/"
+cp "$HERE"/models/numeric_acceptance.json "$CAMPAIGN/numeric/"
+cp "$HERE"/models/numeric_golden.npz "$CAMPAIGN/numeric/"
 cp "$HERE"/tools/evaluate_models.py "$CAMPAIGN/tools/"
 cp "$HERE"/tools/benchmark_cpu_models.py "$CAMPAIGN/tools/"
 python3 - "$HERE" "$CAMPAIGN" <<'PY'
@@ -39,10 +41,32 @@ manifest={
   'models/tilelang_mlp.py':sha(here/'models/tilelang_mlp.py'),
   'models/tilelang_matmul.py':sha(here/'models/tilelang_matmul.py'),
   'models/compiled/manifest.json':sha(here/'models/compiled/manifest.json'),
+  'models/numeric_acceptance.json':sha(here/'models/numeric_acceptance.json'),
+  'models/numeric_golden.npz':sha(here/'models/numeric_golden.npz'),
   'python/rknpu_backend/hybrid.py':sha(here/'python/rknpu_backend/hybrid.py'),
+  'python/rknpu_backend/models.py':sha(here/'python/rknpu_backend/models.py'),
+  'python/rknpu_backend/hostinfo.py':sha(here/'python/rknpu_backend/hostinfo.py'),
+  'python/rknpu_backend/model_reference.py':sha(here/'python/rknpu_backend/model_reference.py'),
+  'python/rknpu_backend/numeric.py':sha(here/'python/rknpu_backend/numeric.py'),
   'tools/evaluate_models.py':sha(here/'tools/evaluate_models.py'),
   'tools/benchmark_cpu_models.py':sha(here/'tools/benchmark_cpu_models.py'),
+  'tools/verify_model_results.py':sha(here/'tools/verify_model_results.py'),
  },
+ 'payload':{'plans_dir':'plans','weights_dir':'weights','data_dir':'data',
+            'numeric_dir':'numeric'},
+ 'numeric':{
+  'spec':{'file':'numeric_acceptance.json',
+          'sha256':sha(here/'models/numeric_acceptance.json')},
+  'golden':{'file':'numeric_golden.npz',
+            'sha256':sha(here/'models/numeric_golden.npz')},
+ },
+ 'expected_rows':[
+  {'model':'mnist_mlp','batch':32,'primary':True},
+  {'model':'mnist_mlp','batch':8,'primary':False},
+  {'model':'mnist_mlp','batch':1,'primary':False},
+  {'model':'tiny_vit','batch':8,'primary':True},
+  {'model':'tiny_vit','batch':1,'primary':False},
+ ],
  'weights':{p.name:sha(p) for p in sorted((camp/'weights').glob('*.npz'))},
  'data':{p.name:sha(p) for p in sorted((camp/'data').glob('*.gz'))},
  'compiled_manifest':json.loads((here/'models/compiled/manifest.json').read_text()),

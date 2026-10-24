@@ -2,8 +2,15 @@
 
 日期：2026-10-24。本文是已验收静态 FP16 MVP 之后的独立里程碑，不追溯增加上一阶段的验收条件。现状见 [支持域](SUPPORT-DOMAIN.md) 和 [验收矩阵](ACCEPTANCE-MATRIX.md)。
 
-**实施状态（2026-10-24）：首轮两模型里程碑完成。** 冻结权重、真实 TileLang 源、
-编译计划、完整测试集结果和板端成本见 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)。
+**实施状态（2026-10-24）：两模型里程碑完整关闭。** 在首轮模型跑通之后，追加关闭
+了三个缺口：schema-v2 计时边界、版本化 rkhybrid 计划化 Host 边界、以及冻结的逐层/
+逐 profile 数值门禁和独立 verifier。冻结权重、真实 TileLang 源、RKPlan/rkhybrid
+清单、完整测试集结果、板端成本与精确非声明见
+[MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)。
+
+关闭证据摘要：板端最终 campaign `results/20261024T071144Z-models/`；独立 verifier
+PASS；逐层 golden/容差在 `models/numeric_golden.npz` 与
+`models/numeric_acceptance.json`；同 top-1 但 logits 放大的负例被 verifier 拒绝。
 
 ## 1. 总目标
 
@@ -83,6 +90,22 @@ NumericContract继续约束逐K片FP16写回、激活与残差收窄。hybrid仅
 9. **依赖与故障**：源码/补丁/新增依赖可追溯；无隐藏fallback，quarantine与停止策略有效，故障恢复继续不承诺。
 
 N1通过即可交付“完整MLP推理可用”的阶段成果；完成N2后才关闭本文定义的两模型里程碑。
+
+**关闭记录（2026-10-24）：**
+
+- 计时：`evaluate_models.py` 使用 schema v2，分离创建/常量准备、warm-up、
+  预处理、执行、后处理与参考计算；参考秒数不在模型区间，CPU baseline 使用与
+  NPU 相同的静态 batch/tail schedule，并在最终板端 campaign 中显式设置单线程
+  BLAS 环境。旧 campaign 的性能字段已被标记失效。
+- hybrid 计划：Transformer 与 MLP 均执行版本化 `rkhybrid` 清单；Host 节点只引用
+  注册 action，NPU 节点引用不可变 RKPlan。清单显式记录 tensor shape/axes、输入
+  输出、依赖、数值契约、bridge 记账和重复 QK/PV 轴；没有整模型不透明 Python
+  节点或 fallback。
+- 数值验收：真实 TileLang ReLU probe（EW ADD + EW MAX）、动态-B QK/PV 和两模型
+  关键层保存确定性子集输出；28 个逐层容差和 5 个 profile logit 容差按“2×观测
+  最大绝对误差、向上取 2^-12、rtol=0”冻结，分类结果不参与选参。verifier 从原始
+  logits、标签、权重和数据独立重算，检查有限值、样本集、profile 集与哈希，并拒绝
+  “top-1 不变但 logits 放大”的篡改。
 
 ## 6. 范围控制
 

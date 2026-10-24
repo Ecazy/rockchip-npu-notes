@@ -8,8 +8,46 @@ All commands run from `research/tilelang-rknpu` unless stated otherwise.
 TILELANG_DEPS_DIR=$PWD/.pydeps-p0 ./scripts/run-verification.sh --keep-build
 ```
 
-Current evidence: `results/20261024T032922Z-host/` (219 pytest, 27/27 ctest,
-711 host C checks, sanitizer enabled).
+Current evidence is recorded after the final rerun in
+`results/20261024T072125Z-host/` (231 pytest passed, 27/27 ctest, 26 contract + 711 host + 2,400,033 graph
+C checks, sanitizer explicitly enabled; see its `manifest.json` and `summary.md`).
+
+## Complete-model build and evaluation
+
+```bash
+cd research/tilelang-rknpu
+
+PYTHONPATH=$PWD:$PWD/python:$PWD/.src/p0-build-src/tilelang:$PWD/.src/p0-source-env \
+LD_LIBRARY_PATH=$PWD/.src/p0-build-tilelang/lib:$PWD/.src/p0-build-tvmffi-python/lib:$PWD/.pydeps-p0/z3/lib \
+python3 tools/compile_models.py
+
+PYTHONPATH=$PWD/python python3 tools/build_numeric_acceptance.py
+
+PYTHONPATH=$PWD/python RKNPU_PLAN_LIB=$PWD/../custom-ops/build-host-mvp/librknpu_plan_mock.so \
+python3 tools/evaluate_models.py --backend mock --models both \
+  --global-limit 10000 --profile-samples 512 \
+  --out evidence/model_eval_mock_v2.json
+
+PYTHONPATH=$PWD/python python3 tools/benchmark_cpu_models.py \
+  --repeats 3 --out evidence/cpu_benchmark_v2.json
+```
+
+`tools/compile_models.py` emits static RKPlans, the real-TileLang exact-ReLU
+probe and the versioned `*.rkhybrid.json` execution manifests.  The numeric spec
+is calibrated only from observed mock/board layer traces; see
+`tools/calibrate_numeric_acceptance.py` and `models/numeric_acceptance.json`.
+
+Final model campaign:
+
+```bash
+./scripts/run-model-admission.sh
+```
+
+Current evidence: `results/20261024T071144Z-models/` (core 1 full 10,000-image
+test split for MLP and Transformer; masks 2/4 fixed 512-image subset; independent
+verifier PASS).  The report keeps raw logits and deterministic layer traces.
+`results/20261024T031249Z-models/PERFORMANCE-RETRACTION.md` marks the older
+performance fields invalid.
 
 ## Board admission
 
@@ -27,6 +65,20 @@ chain/separate, tiled RKIR and real multi-block TileLang staged
 projection/FFN/branch, CLI path).  This campaign was generated with the independent
 source-built TileLang/TVM tree.  Runtime ownership/failure semantics are in
 `RUNTIME-LIFECYCLE.md`.
+
+## Independent complete-model verifier
+
+```bash
+PYTHONPATH=$PWD/python python3 tools/verify_model_results.py \
+  --manifest results/20261024T071144Z-models/campaign/manifest.json \
+  --results results/20261024T071144Z-models/model-results
+```
+
+The verifier does not trust reported accuracy/reference arrays.  It reloads raw
+logits, labels, weights, plans and the dataset; recomputes CPU FP32 and declared
+paths; checks all profiles, finite values, sample/layer sets and hashes; applies
+the frozen per-layer and per-profile limits; and rejects a same-top-1 logits
+amplification negative control.
 
 ## Offline reference/raw-output recomputation
 

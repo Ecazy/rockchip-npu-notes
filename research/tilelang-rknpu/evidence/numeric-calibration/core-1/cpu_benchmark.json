@@ -1,0 +1,201 @@
+{
+  "batch_policy": {
+    "mnist_mlp": {
+      "batch_histogram": {
+        "32": 312,
+        "8": 2
+      },
+      "calls": 314,
+      "no_dynamic_shapes": true,
+      "tail_calls": 2
+    },
+    "tiny_vit": {
+      "batch_histogram": {
+        "8": 1250
+      },
+      "calls": 1250,
+      "no_dynamic_shapes": true,
+      "tail_calls": 0
+    }
+  },
+  "cpu_thread_config": {
+    "blas": [],
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "cpu_affinity_count": 8,
+    "cpu_count": 8,
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1"
+    },
+    "cpuinfo": {
+      "max_mhz": 2304.0,
+      "mean_mhz": 1578.0,
+      "min_mhz": 408.0
+    },
+    "numpy": {
+      "blas_name": null,
+      "blas_openblas_configuration": null,
+      "blas_version": null,
+      "numpy_version": "1.21.5"
+    },
+    "process_threads": 1
+  },
+  "host_label": "benchmark-host",
+  "machine": "aarch64",
+  "models": {
+    "mnist_mlp": {
+      "argmax_samples_seconds": [
+        0.0003686620038934052,
+        0.00037537000025622547
+      ],
+      "declared": {
+        "accuracy": 0.9831,
+        "argmax_samples_seconds": [
+          0.00033162100589834154,
+          0.00033161998726427555
+        ],
+        "end_to_end_seconds": 3.587170953003806,
+        "execution_seconds": 3.5868393325072248,
+        "postprocess_seconds": 0.00033162049658130854,
+        "reference_timing": "not_applicable_cpu_baseline",
+        "repeats": 2,
+        "samples_seconds": [
+          3.5868944960238878,
+          3.5867841689905617
+        ],
+        "throughput_basis": "same static batch schedule as NPU; includes preprocess+forward+argmax, references excluded",
+        "throughput_images_s": 2787.712136112792,
+        "timing_schema_version": 2
+      },
+      "end_to_end_seconds": 2.16591793698899,
+      "execution_seconds": 2.165545920986915,
+      "fp32_accuracy": 0.9831,
+      "postprocess_seconds": 0.00037201600207481533,
+      "reference_timing": "not_applicable_cpu_baseline",
+      "repeats": 2,
+      "samples_seconds": [
+        2.1657318559882697,
+        2.1653599859855603
+      ],
+      "throughput_basis": "same static batch schedule as NPU; includes preprocess+forward+argmax, references excluded",
+      "throughput_images_s": 4616.980093854237,
+      "timing_schema_version": 2
+    },
+    "tiny_vit": {
+      "argmax_samples_seconds": [
+        0.0003969529934693128,
+        0.000399285985622555
+      ],
+      "declared": {
+        "accuracy": 0.9821,
+        "argmax_samples_seconds": [
+          0.0003485369961708784,
+          0.0003511620161589235
+        ],
+        "end_to_end_seconds": 11.172866402514046,
+        "execution_seconds": 11.172516553007881,
+        "postprocess_seconds": 0.00034984950616490096,
+        "reference_timing": "not_applicable_cpu_baseline",
+        "repeats": 2,
+        "samples_seconds": [
+          11.143100326997228,
+          11.201932779018534
+        ],
+        "throughput_basis": "same static batch schedule as NPU; includes preprocess+forward+argmax, references excluded",
+        "throughput_images_s": 895.0254697174097,
+        "timing_schema_version": 2
+      },
+      "end_to_end_seconds": 7.3049336899857735,
+      "execution_seconds": 7.304535570496228,
+      "fp32_accuracy": 0.9821,
+      "postprocess_seconds": 0.0003981194895459339,
+      "reference_timing": "not_applicable_cpu_baseline",
+      "repeats": 2,
+      "samples_seconds": [
+        7.305523724004161,
+        7.303547416988295
+      ],
+      "throughput_basis": "same static batch schedule as NPU; includes preprocess+forward+argmax, references excluded",
+      "throughput_images_s": 1368.9378198886122,
+      "timing_schema_version": 2
+    }
+  },
+  "python": "3.10.12",
+  "schema_version": 2,
+  "test_images": 10000,
+  "thread_config_after": {
+    "blas": [],
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "cpu_affinity_count": 8,
+    "cpu_count": 8,
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1"
+    },
+    "cpuinfo": {
+      "max_mhz": 2304.0,
+      "mean_mhz": 1578.0,
+      "min_mhz": 408.0
+    },
+    "numpy": {
+      "blas_name": null,
+      "blas_openblas_configuration": null,
+      "blas_version": null,
+      "numpy_version": "1.21.5"
+    },
+    "process_threads": 1
+  },
+  "thread_config_before": {
+    "blas": [],
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "cpu_affinity_count": 8,
+    "cpu_count": 8,
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1"
+    },
+    "cpuinfo": {
+      "max_mhz": 2304.0,
+      "mean_mhz": 1578.0,
+      "min_mhz": 408.0
+    },
+    "numpy": {
+      "blas_name": null,
+      "blas_openblas_configuration": null,
+      "blas_version": null,
+      "numpy_version": "1.21.5"
+    },
+    "process_threads": 1
+  },
+  "timing_schema_version": 2
+}

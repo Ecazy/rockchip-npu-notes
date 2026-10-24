@@ -67,6 +67,7 @@ for mask in 1 2 4; do
       --backend board --lib "$RKNPU_PLAN_LIB" \
       --plans-dir "$campaign/plans" --weights-dir "$campaign/weights" \
       --data-dir "$campaign/data" --global-limit "$limit" \
+      --numeric-spec "$campaign/numeric/numeric_acceptance.json" \
       --profile-samples 512 \
       --out "$core_dir/model_eval.json" > "$core_dir/runner.log" 2>&1
   rc=$?
@@ -76,7 +77,8 @@ for mask in 1 2 4; do
   dmesg 2>/dev/null | tail -n 160 > "$core_dir/kernel-after.log" || true
   if (( rc != 0 )); then overall=1; fi
   if [[ "$mask" == "1" ]]; then
-    if ! python3 "$campaign/tools/benchmark_cpu_models.py" \
+    if ! env OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+        python3 "$campaign/tools/benchmark_cpu_models.py" \
         --data-dir "$campaign/data" --weights-dir "$campaign/weights" \
         --out "$core_dir/cpu_benchmark.json" --repeats 2 \
         > "$core_dir/cpu_benchmark.log" 2>&1; then

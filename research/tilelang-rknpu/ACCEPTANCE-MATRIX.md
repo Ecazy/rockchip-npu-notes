@@ -1,8 +1,8 @@
 # MVP acceptance matrix
 
-Checkpoint evidence: board `results/20261023T144054Z-rk3588/`, Host
-`results/20261024T032922Z-host/` (219 pytest / 41 subtests, 27/27 ctest, 711 C
-checks, sanitizer enabled).  Status terms are deliberately narrow:
+MVP checkpoint evidence: board `results/20261023T144054Z-rk3588/`; final Host
+verification `results/20261024T072125Z-host/` (**231 pytest, 41 subtests, 27/27
+ctest, 26 contract + 711 host + 2,400,033 graph C checks**, sanitizer enabled).  Status terms are deliberately narrow:
 **implemented+verified**, **verification gap**, **explicitly unsupported**,
 **out of scope**, and **future extension**.
 
@@ -24,12 +24,16 @@ checks, sanitizer enabled).  Status terms are deliberately narrow:
 ## Next milestone (separate from MVP)
 
 The complete-model milestone is reported separately in
-`MODEL-MILESTONE-STATUS.md`: full 10,000-image MNIST test evaluation on RK3588
-core 1 passes for the learned MLP (98.31%) and Tiny Transformer (98.21%), with
-100% CPU/declared-path top-1 agreement and a PASS campaign verifier.  It adds
-ReLU, bias, model package/runtime, static multi-token/head layout, explicit
-RMSNorm/Softmax/pooling bridges and hybrid scheduling without changing the MVP
-scope above.
+`MODEL-MILESTONE-STATUS.md` and is fully closed.  Final board evidence is
+`results/20261024T071144Z-models/`: full 10,000-image evaluation on core 1 gives
+MLP 98.31% and Tiny Transformer 98.21%, with 100% CPU/declared top-1 agreement;
+masks 2/4 run the fixed 512-image profile set.  The independent verifier reloads
+raw logits and labels, recomputes references and layer traces, checks hashes and
+frozen per-layer min/max limits, and rejects a same-top-1 logits amplification
+negative control.  The milestone adds exact NPU ReLU/bias, model runtime,
+versioned `rkhybrid` manifests, registered/timed Host actions, static
+multi-token/head views and matched-batch timing without changing the MVP scope
+above.
 
 ## Specific cross-cutting conditions
 
