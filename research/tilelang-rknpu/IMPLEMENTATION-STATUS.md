@@ -391,6 +391,15 @@ P1 批次一（K 循环提取）与顺带发现的 C 校验缺陷：
 | 完整 Python 文件集合校验 | 完成 | `provenance/wheel-vs-source.json`：1135/1135 一致，0 缺失，0 无法解释 |
 | 从源码构建及产物重验 | **完成** | `provenance/p0-source-build.json`、`provenance/p0-source-build/`（archive/submodule 哈希、CMakeCache、编译命令、工具链、库哈希、pytest/CTest、源码树清单） |
 
+## 1.6 下一阶段完整模型（独立里程碑）
+
+完整 MNIST MLP 与 Tiny Transformer 已按 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)
+完成首轮定义：真实学习权重、真实 TileLang staged 源、RKIR/RKPlan、生产 runtime；
+完整 10,000 张测试集在 core 1 运行，MLP 98.31%、Tiny Transformer 98.21%，CPU/声明路径
+top-1 一致率均为 100%。这是独立于已验收 MVP 的新增阶段，不回写上一阶段历史验收。
+第一轮 Transformer 的 Host RMSNorm/Softmax/layout/SwiGLU 边界和成本已显式记录，未宣称
+纯 NPU 或性能优势。
+
 ## 2. 工作包状态
 
 | 工作包 | 状态 | 实际完成 | 明确未完成 |
@@ -419,7 +428,7 @@ rk_plan_host:     711 checks, 0 failures
 Python（`.pydeps` 中 pinned TileLang wheel）：
 
 ```text
-213 passed, 0 failed, 0 skipped, 40 subtests
+219 passed, 0 failed, 0 skipped, 41 subtests
                           (含 ABI 全量偏移、语义守卫、K 循环、M/N、SwiGLU、
                            显式 ragged、常量广播、多输出、campaign host preflight)
 ```
@@ -701,7 +710,7 @@ SwiGLU 保留为后续组合验收。
 producer)` lowering、FFI mock 执行与独立 numpy 五收窄点参考、两轮输入变化、残差
 保活断言，以及分支接错/收窄缺失/未支持算子的负例。证据：
 `tests/test_frontend_silu_proj.py`、`tests/test_silu_proj_execution.py`、
-`results/20261023T131916Z-host/`：213 pytest / 27 ctest，evidence_complete=true。
+`results/20261024T032922Z-host/`：219 pytest / 27 ctest，evidence_complete=true。
 
 **已知待补的基础设施**：验证脚本的依赖短路（）与产物哈希；
  快照在  之后 —— 记录该限制，不另开整修阶段。

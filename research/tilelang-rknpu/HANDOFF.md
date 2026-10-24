@@ -279,11 +279,11 @@ implicit extra MVP gate.  P0 source rebuild is complete and the source-built
 
 ## Verification state
 
-* `pytest tests` → **213 passed, 40 subtests**, 0 skipped.
+* `pytest tests` → **219 passed, 41 subtests**, 0 skipped.
 * `ctest --test-dir research/custom-ops/build-host-mvp` → **27/27 passed**.
 * `scripts/run-verification.sh --keep-build` → exit 0;
-  `results/20261023T131916Z-host/`:
-  - pytest 213 passed / 0 failed / 0 skipped;
+  `results/20261024T032922Z-host/`:
+  - pytest 219 passed / 0 failed / 0 skipped;
   - ASan+UBSan contract/host checks pass;
   - evidence complete.  This host record opens no device; the RK3588 evidence is
     the separate campaign above.

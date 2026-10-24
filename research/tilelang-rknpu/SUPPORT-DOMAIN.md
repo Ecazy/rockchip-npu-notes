@@ -102,3 +102,17 @@ resource error; when the workspace is poisoned/BUSY the provider fd and task BO
 are retained for process-level recovery rather than closed.  A simultaneous
 execution error remains the primary exit code and cleanup diagnostics are still
 reported.
+
+## Next-milestone model bridge
+
+The separate complete-model milestone is documented in
+[MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md).  It adds a learned
+784→256→128→10 MLP with exact NPU ReLU and bias, and a 16-token/64-wide/4-head
+one-layer image Transformer.  For the Transformer first round, patch
+rasterization/position add, RMSNorm, stable softmax, head layout bridges,
+SwiGLU elementwise operations, residual adds and mean pooling are explicit Host
+work; all matrix products and the classifier run through real TileLang-derived
+RKPlans and the production runtime.  This is a reported hybrid boundary, not an
+implicit CPU matrix fallback.  Dynamic shape, arbitrary ONNX, full LLM/KV cache,
+quantization, NPU training, multi-board/concurrent throughput and post-fault
+recovery remain outside scope.

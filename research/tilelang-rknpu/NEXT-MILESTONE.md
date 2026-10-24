@@ -2,6 +2,9 @@
 
 日期：2026-10-24。本文是已验收静态 FP16 MVP 之后的独立里程碑，不追溯增加上一阶段的验收条件。现状见 [支持域](SUPPORT-DOMAIN.md) 和 [验收矩阵](ACCEPTANCE-MATRIX.md)。
 
+**实施状态（2026-10-24）：首轮两模型里程碑完成。** 冻结权重、真实 TileLang 源、
+编译计划、完整测试集结果和板端成本见 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)。
+
 ## 1. 总目标
 
 在 RK3588 上，以真实学习所得的权重和标准数据集完成两个完整模型：核心计算全在 NPU 的 MNIST MLP，以及显式 hybrid 的小型 Transformer 分类器。交付权重/模型描述、真实 TileLang/TVM 输入、离线编译、部署、重复推理、任务准确率和成本报告的可重放流程。

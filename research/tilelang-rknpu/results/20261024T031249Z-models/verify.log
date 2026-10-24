@@ -1,0 +1,143 @@
+{
+  "cores": {
+    "core-1": {
+      "expected_images": 10000,
+      "rows": {
+        "mnist_mlp": {
+          "accuracy": 0.9831,
+          "accuracy_delta": 0.0,
+          "batch": 32,
+          "cpu_accuracy": 0.9831,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "download_bytes": 640512,
+          "host_compute_us": 0.0,
+          "max_abs_logit_error": 0.050685882568359375,
+          "n": 10000,
+          "task_count": 3454,
+          "top1_agreement": 1.0,
+          "upload_bytes": 20496384
+        },
+        "tiny_vit": {
+          "accuracy": 0.9821,
+          "accuracy_delta": 0.0,
+          "batch": 8,
+          "cpu_accuracy": 0.9821,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "download_bytes": 287680000,
+          "host_compute_us": 3197715.48936842,
+          "max_abs_logit_error": 0.038425445556640625,
+          "n": 10000,
+          "task_count": 88750,
+          "top1_agreement": 1.0,
+          "upload_bytes": 391040000
+        }
+      }
+    },
+    "core-2": {
+      "expected_images": 512,
+      "rows": {
+        "mnist_mlp": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch": 32,
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.015625,
+          "declared_top1_agreement": 1.0,
+          "download_bytes": 32768,
+          "host_compute_us": 0.0,
+          "max_abs_logit_error": 0.049335479736328125,
+          "n": 512,
+          "task_count": 176,
+          "top1_agreement": 1.0,
+          "upload_bytes": 1048576
+        },
+        "tiny_vit": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch": 8,
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "download_bytes": 14729216,
+          "host_compute_us": 175862.81613330357,
+          "max_abs_logit_error": 0.038425445556640625,
+          "n": 512,
+          "task_count": 4544,
+          "top1_agreement": 1.0,
+          "upload_bytes": 20021248
+        }
+      }
+    },
+    "core-4": {
+      "expected_images": 512,
+      "rows": {
+        "mnist_mlp": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch": 32,
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.015625,
+          "declared_top1_agreement": 1.0,
+          "download_bytes": 32768,
+          "host_compute_us": 0.0,
+          "max_abs_logit_error": 0.049335479736328125,
+          "n": 512,
+          "task_count": 176,
+          "top1_agreement": 1.0,
+          "upload_bytes": 1048576
+        },
+        "tiny_vit": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch": 8,
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "download_bytes": 14729216,
+          "host_compute_us": 184656.72925231047,
+          "max_abs_logit_error": 0.038425445556640625,
+          "n": 512,
+          "task_count": 4544,
+          "top1_agreement": 1.0,
+          "upload_bytes": 20021248
+        }
+      }
+    }
+  },
+  "cpu_benchmark": {
+    "cpu_count": 8,
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null
+    },
+    "cpuinfo": {
+      "max_mhz": 2304.0,
+      "mean_mhz": 1578.0,
+      "min_mhz": 408.0
+    },
+    "mnist_mlp": {
+      "declared_accuracy": 0.9831,
+      "declared_seconds": 3.029158114484744,
+      "fp32_accuracy": 0.9831,
+      "fp32_images_s": 4609.1922853456845,
+      "fp32_seconds": 2.16957752702001
+    },
+    "tiny_vit": {
+      "declared_accuracy": 0.9821,
+      "declared_seconds": 11.633130418995279,
+      "fp32_accuracy": 0.9821,
+      "fp32_images_s": 1214.3669126649315,
+      "fp32_seconds": 8.234743466498912
+    }
+  },
+  "status": "PASS",
+  "thresholds": {
+    "accuracy_drop_max": 0.005,
+    "mnist_mlp_accuracy": 0.97,
+    "tiny_vit_accuracy": 0.95,
+    "top1_agreement_min": 0.99
+  }
+}

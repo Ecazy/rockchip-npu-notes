@@ -14,6 +14,8 @@ campaign passes on three serial single-core masks.  Failure handling is explicit
 is out of scope and not claimed.  RK1228 remains independent.  See
 [P0-SOURCE-LOCK.md](P0-SOURCE-LOCK.md), [review findings](REVIEW-2026-10-20.md),
 [status](IMPLEMENTATION-STATUS.md) and [RK1228-TARGET.md](RK1228-TARGET.md).
+The separate next-milestone model package and acceptance report are in
+[MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md).
 
 Minimal vertical slice for the design in [overview.md](overview.md) and
 [specific.md](specific.md):

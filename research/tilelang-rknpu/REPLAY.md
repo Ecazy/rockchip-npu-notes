@@ -8,7 +8,7 @@ All commands run from `research/tilelang-rknpu` unless stated otherwise.
 TILELANG_DEPS_DIR=$PWD/.pydeps-p0 ./scripts/run-verification.sh --keep-build
 ```
 
-Current evidence: `results/20261023T131916Z-host/` (213 pytest, 27/27 ctest,
+Current evidence: `results/20261024T032922Z-host/` (219 pytest, 27/27 ctest,
 711 host C checks, sanitizer enabled).
 
 ## Board admission

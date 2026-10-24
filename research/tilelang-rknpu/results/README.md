@@ -8,7 +8,7 @@ payloads needed for independent numerical replay.
 ## Workspace checkpoint cleanup (2026-10-23)
 
 - The current implementation checkpoint is board `20261023T144054Z-rk3588`
-  (27 cases × 3 serial masks) and Host `20261023T131916Z-host` (213 pytest,
+  (27 cases × 3 serial masks) and Host `20261024T032922Z-host` (219 pytest,
   27/27 ctest). The cleanup preflight is `20261023T122811Z-host`; the final cleanup
   verification is `20261023T123836Z-host` (212 pytest, 26/26 ctest,
   C and Python sanitizer steps passed).
@@ -63,6 +63,21 @@ Guarantees encoded in `scripts/run-verification.sh`:
 - evidence generation is itself a checked step: a missing artifact or an
   unparseable statistic sets `evidence_complete: false` and fails the run while
   still writing `manifest.json`/`summary.md` so a failed run stays auditable.
+
+
+## Complete-model milestone checkpoint (2026-10-24)
+
+- **Model package:** `models/manifest.json`, `models/mnist_mlp.npz`,
+  `models/tiny_vit.npz`, and `models/compiled/`.
+- **Board campaign:** `results/20261024T031249Z-models/`; core 1 ran the
+  complete 10,000-image MNIST test split for both models, while masks 2 and 4
+  ran the fixed 512-image admission subset.  Accuracy: MLP 98.31%, Tiny
+  Transformer 98.21%; CPU/declared top-1 agreement 100%; verifier PASS.
+- **Host/mock evidence:** `evidence/model_eval_mock.json` and
+  `evidence/cpu_benchmark.json`; raw logits and MNIST archives remain local.
+- **Single-core scope:** masks 1/2/4 are serial, not concurrent throughput.
+  The first-round Transformer Host bridge cost is reported in
+  `MODEL-MILESTONE-STATUS.md`.
 
 ## P0 / regression records
 
@@ -139,7 +154,7 @@ stress are extension validation, not P8 blockers.
 
 
 _The notes below are historical incident records.  The current Host verification
-run is green at `20261023T131916Z-host` (213 pytest, 27/27 ctest)._
+run is green at `20261024T032922Z-host` (219 pytest, 27/27 ctest)._
 
 **FFN 数值对照已通过**（20261022T130044Z-host）。根因：mock seam 把模板标签写进 `co_program.flags`，而该字段是生产语义（`co_schedule.c:38` 要求为 0，`custom_ops.c:344` 用 `ROCKET_JOB_PPU_DONE`），导致 LUT/EW/MM 误分派（511/512 元素错）。改为 mock 私有旁表（按程序地址记模板与 mul）后，剩余差异仅为参考实现的收窄顺序；按"先 sigmoid→收紧、再乘 gate→收紧 SiLU"修正参考后逐元素严格相等。
 

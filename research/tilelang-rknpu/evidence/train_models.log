@@ -1,0 +1,51 @@
+/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tools/train_mnist_models.py:145: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  loss_sum += float(loss) * xb.shape[0]
+MLP epoch 01: loss=0.24032 train_acc=0.9276
+MLP epoch 02: loss=0.09478 train_acc=0.9710
+MLP epoch 03: loss=0.06251 train_acc=0.9802
+MLP epoch 04: loss=0.04504 train_acc=0.9856
+MLP epoch 05: loss=0.02980 train_acc=0.9901
+MLP epoch 06: loss=0.02001 train_acc=0.9933
+MLP epoch 07: loss=0.01221 train_acc=0.9961
+MLP epoch 08: loss=0.00588 train_acc=0.9984
+MLP epoch 09: loss=0.00315 train_acc=0.9994
+MLP epoch 10: loss=0.00148 train_acc=0.9999
+MLP epoch 11: loss=0.00098 train_acc=0.9999
+MLP epoch 12: loss=0.00083 train_acc=1.0000
+MLP test accuracy=0.9831 nll=0.06866
+ViT epoch 01: loss=0.53779 train_acc=0.8215
+ViT epoch 02: loss=0.18079 train_acc=0.9444
+ViT epoch 03: loss=0.13948 train_acc=0.9562
+ViT epoch 04: loss=0.11089 train_acc=0.9654
+ViT epoch 05: loss=0.09423 train_acc=0.9703
+ViT epoch 06: loss=0.08379 train_acc=0.9733
+ViT epoch 07: loss=0.07343 train_acc=0.9766
+ViT epoch 08: loss=0.06813 train_acc=0.9783
+ViT epoch 09: loss=0.06082 train_acc=0.9802
+ViT epoch 10: loss=0.05380 train_acc=0.9833
+ViT epoch 11: loss=0.04922 train_acc=0.9837
+ViT epoch 12: loss=0.04088 train_acc=0.9868
+ViT epoch 13: loss=0.03577 train_acc=0.9882
+ViT epoch 14: loss=0.03145 train_acc=0.9895
+ViT epoch 15: loss=0.02777 train_acc=0.9911
+ViT epoch 16: loss=0.02191 train_acc=0.9925
+ViT epoch 17: loss=0.01688 train_acc=0.9942
+ViT epoch 18: loss=0.01348 train_acc=0.9953
+ViT epoch 19: loss=0.00875 train_acc=0.9972
+ViT epoch 20: loss=0.00573 train_acc=0.9984
+ViT epoch 21: loss=0.00421 train_acc=0.9987
+ViT epoch 22: loss=0.00178 train_acc=0.9997
+ViT epoch 23: loss=0.00077 train_acc=1.0000
+ViT epoch 24: loss=0.00037 train_acc=1.0000
+ViT epoch 25: loss=0.00028 train_acc=1.0000
+ViT epoch 26: loss=0.00023 train_acc=1.0000
+ViT epoch 27: loss=0.00021 train_acc=1.0000
+ViT epoch 28: loss=0.00019 train_acc=1.0000
+ViT epoch 29: loss=0.00018 train_acc=1.0000
+ViT epoch 30: loss=0.00017 train_acc=1.0000
+ViT test accuracy=0.9821 nll=0.09418
+{
+  "mlp_accuracy": 0.9831,
+  "vit_accuracy": 0.9821
+}

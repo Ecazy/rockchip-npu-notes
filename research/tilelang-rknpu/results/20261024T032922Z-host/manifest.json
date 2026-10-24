@@ -1,0 +1,61 @@
+{
+  "kind": "tilelang-rknpu-host-verification",
+  "run_id": "20261024T032922Z-host",
+  "overall_exit": 0,
+  "evidence_complete": true,
+  "evidence_problems": [],
+  "steps": {
+    "environment": 0,
+    "isolation": 0,
+    "source-hashes": 0,
+    "prepare-build": 0,
+    "configure": 0,
+    "build": 0,
+    "ctest": 0,
+    "rk_plan_contract": 0,
+    "rk_plan_host": 0,
+    "graph_host": 0,
+    "mock_scenarios": 0,
+    "configure-sanitize": 0,
+    "build-sanitize": 0,
+    "sanitize-contract": 0,
+    "sanitize-host": 0,
+    "sanitize-mock-build": 0,
+    "sanitize-poison-worker": 0,
+    "sanitize-ffn-worker": 0,
+    "archive-flags": 0,
+    "pytest": 0
+  },
+  "ctest": {
+    "passed_percent": 100,
+    "failed": 0,
+    "total": 27
+  },
+  "c_checks": {
+    "rk_plan_contract": {
+      "checks": 26,
+      "failures": 0
+    },
+    "rk_plan_host": {
+      "checks": 711,
+      "failures": 0
+    },
+    "graph_host": {
+      "checks": 2400033,
+      "failures": 0
+    }
+  },
+  "pytest": {
+    "passed": 219,
+    "failed": 0,
+    "skipped": 0,
+    "skip_reasons": []
+  },
+  "deps_dir": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.pydeps-p0",
+  "sanitizer": {
+    "enabled_explicitly": true,
+    "flags": "-fsanitize=address,undefined"
+  },
+  "device_access": "none",
+  "board_acceptance": "not_run"
+}

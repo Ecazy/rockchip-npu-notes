@@ -1,7 +1,7 @@
 # MVP acceptance matrix
 
 Checkpoint evidence: board `results/20261023T144054Z-rk3588/`, Host
-`results/20261023T131916Z-host/` (213 pytest / 40 subtests, 27/27 ctest, 711 C
+`results/20261024T032922Z-host/` (219 pytest / 41 subtests, 27/27 ctest, 711 C
 checks, sanitizer enabled).  Status terms are deliberately narrow:
 **implemented+verified**, **verification gap**, **explicitly unsupported**,
 **out of scope**, and **future extension**.
@@ -20,6 +20,16 @@ checks, sanitizer enabled).  Status terms are deliberately narrow:
 | P7 CLI | **implemented+verified on Host and RK3588** | `python/rknpu_backend/cli.py`, `tools/board_cli_check.py` | `test_cli.py` covers caller/owned fd, cleanup failure not masked, and rc mapping; board `core-*/cli/cli-report.json` shows compile/validate/explain rc0, two successful runs with stable fd count, bad binding rc2/no publish. |
 | P8 board admission | **implemented+verified for the declared MVP scope** | campaign/verifier scripts | Final source-built rerun `results/20261023T144054Z-rk3588/`: **27 cases × 3 serial masks = 81/81 PASS**, including projection/FFN/branch from real multi-block TileLang staged sources, tiled RKIR cases, broadcast, dual output, ragged tail, K shards, guards and the full CLI path. Source hash recomputed true; raw outputs and dual references archived. |
 | P9 expansion | **future extension** | n/a | Dynamic host broadcast, state/recurrent/hybrid, online core scheduling and unverified composite templates remain outside P0–P8 closure. |
+
+## Next milestone (separate from MVP)
+
+The complete-model milestone is reported separately in
+`MODEL-MILESTONE-STATUS.md`: full 10,000-image MNIST test evaluation on RK3588
+core 1 passes for the learned MLP (98.31%) and Tiny Transformer (98.21%), with
+100% CPU/declared-path top-1 agreement and a PASS campaign verifier.  It adds
+ReLU, bias, model package/runtime, static multi-token/head layout, explicit
+RMSNorm/Softmax/pooling bridges and hybrid scheduling without changing the MVP
+scope above.
 
 ## Specific cross-cutting conditions
 
