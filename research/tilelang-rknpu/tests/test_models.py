@@ -98,6 +98,40 @@ class CompleteModelTests(unittest.TestCase):
             finally:
                 runner.close()
 
+    def test_timing_phases_are_explicit_and_reference_is_outside(self):
+        from rknpu_backend.models import MLPRunner, RunStats, TIMING_SCHEMA_VERSION
+        runner = MLPRunner(self.lib, self._plan("mnist_mlp_b1"),
+                           self.mlp_weights, 1, fd=0)
+        stats = RunStats()
+        try:
+            runner.run(self.x[:1], stats=stats)
+        finally:
+            runner.close()
+        data = stats.to_dict()
+        self.assertEqual(data["timing_schema_version"], TIMING_SCHEMA_VERSION)
+        self.assertEqual(data["reference_timing"], "excluded")
+        self.assertEqual(data["run_calls"], 1)
+        self.assertGreaterEqual(data["end_to_end_us"], 0.0)
+        phase_sum = (data["preprocess_us"] + data["execution_us"] +
+                     data["postprocess_us"])
+        self.assertLessEqual(phase_sum, data["end_to_end_us"] + 1.0)
+        action_names = {row["name"] for row in data["host_actions"]}
+        self.assertIn("mlp.preprocess", action_names)
+        self.assertIn("mlp.logits_export", action_names)
+        self.assertNotIn("reference", " ".join(action_names).lower())
+
+    def test_static_batch_schedule_matches_compiled_tails(self):
+        spec = importlib.util.spec_from_file_location(
+            "evaluate_models", ROOT / "tools" / "evaluate_models.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        schedule = module.make_batch_schedule(10000, 32, tail_profiles=(8, 1))
+        self.assertEqual(len(schedule), 314)
+        self.assertEqual(sum(row["size"] for row in schedule), 10000)
+        self.assertEqual([row["size"] for row in schedule[-2:]], [8, 8])
+        self.assertTrue(all(row["profile"] == row["size"] for row in schedule))
+        self.assertTrue(module.schedule_summary(schedule)["no_dynamic_shapes"])
+
     def test_model_failure_does_not_publish(self):
         import subprocess
         env = dict(os.environ)
