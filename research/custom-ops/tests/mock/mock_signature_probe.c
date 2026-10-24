@@ -40,6 +40,7 @@ static void (*probe_rk_mock_corrupt_guard_at)(unsigned) = rk_mock_corrupt_guard_
 static void (*probe_rk_mock_delay_us)(unsigned) = rk_mock_delay_us;
 static void (*probe_rk_mock_fail_prep_at)(unsigned) = rk_mock_fail_prep_at;
 static unsigned (*probe_rk_mock_prep_calls)(void) = rk_mock_prep_calls;
+static void (*probe_rk_mock_reset_tags)(void) = rk_mock_reset_tags;
 static void (*probe_rk_mock_context_fault)(unsigned, unsigned) = rk_mock_context_fault;
 static int (*probe_rk_mock_context_faulted)(int) = rk_mock_context_faulted;
 static void (*probe_rk_mock_force_tag_overflow)(unsigned) = rk_mock_force_tag_overflow;
@@ -71,6 +72,7 @@ static const struct { const char *name, *ret, *args; } kSignatures[] = {
     {"rk_mock_delay_us", "void", "unsigned"},
     {"rk_mock_fail_prep_at", "void", "unsigned"},
     {"rk_mock_prep_calls", "unsigned", ""},
+    {"rk_mock_reset_tags", "void", ""},
     {"rk_mock_context_fault", "void", "unsigned,unsigned"},
     {"rk_mock_context_faulted", "int", "int"},
     {"rk_mock_force_tag_overflow", "void", "unsigned"},
@@ -96,6 +98,7 @@ int main(void) {
     (void)probe_rk_mock_delay_us;
     (void)probe_rk_mock_fail_prep_at;
     (void)probe_rk_mock_prep_calls;
+    (void)probe_rk_mock_reset_tags;
     (void)probe_rk_mock_context_fault;
     (void)probe_rk_mock_context_faulted;
     (void)probe_rk_mock_force_tag_overflow; (void)probe_rk_mock_reset;

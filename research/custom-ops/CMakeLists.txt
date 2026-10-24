@@ -169,6 +169,7 @@ target_link_options(rknpu_plan_mock PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_ew_max
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
   -Wl,--wrap=rocket_context_faulted)
 set_target_properties(rknpu_plan_mock PROPERTIES OUTPUT_NAME rknpu_plan_mock)
@@ -183,6 +184,7 @@ target_link_options(mock_signature_probe PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_ew_max
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
   -Wl,--wrap=rocket_context_faulted)
 target_compile_options(mock_signature_probe PRIVATE -Wall -Wextra -Werror)
@@ -197,6 +199,7 @@ target_link_options(rk_mock_scenarios PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_ew_max
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
   -Wl,--wrap=rocket_context_faulted)
 
@@ -214,6 +217,7 @@ target_link_options(rk_plan_host_test PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_ew_max
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
   -Wl,--wrap=rocket_context_faulted)
 add_test(NAME rk_plan_host COMMAND rk_plan_host_test)

@@ -1,0 +1,319 @@
+{
+  "acceptance": {
+    "accuracy_drop_max": 0.005,
+    "batch_profiles": {
+      "mnist_mlp": [
+        1,
+        8,
+        32
+      ],
+      "tiny_vit": [
+        1,
+        8
+      ]
+    },
+    "evidence": {
+      "board_campaign": "results/20261024T031249Z-models/",
+      "cpu_baseline": "evidence/cpu_benchmark.json",
+      "host_mock": "evidence/model_eval_mock.json"
+    },
+    "full_test_images": 10000,
+    "mnist_mlp_accuracy_min": 0.97,
+    "tiny_vit_accuracy_min": 0.95,
+    "top1_agreement_min": 0.99
+  },
+  "created_utc": "2026-10-24T01:46:02Z",
+  "dataset": {
+    "files": {
+      "t10k-images-idx3-ubyte.gz": {
+        "bytes": 1648877,
+        "sha256": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6"
+      },
+      "t10k-labels-idx1-ubyte.gz": {
+        "bytes": 4542,
+        "sha256": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6"
+      },
+      "train-images-idx3-ubyte.gz": {
+        "bytes": 9912422,
+        "sha256": "440fcabf73cc546fa21475e81ea370265605f56be210a4024d2ca8f203523609"
+      },
+      "train-labels-idx1-ubyte.gz": {
+        "bytes": 28881,
+        "sha256": "3552534a0a558bbed6aed32b30c495cca23d567ec52cac8be1a0730e8010255c"
+      }
+    },
+    "name": "MNIST",
+    "preprocessing": {
+      "normalize_mean": 0.1307,
+      "normalize_std": 0.3081
+    },
+    "source": "https://storage.googleapis.com/cvdf-datasets/mnist/",
+    "test_count": 10000,
+    "train_count": 60000
+  },
+  "host_boundaries": {
+    "mnist_mlp": [
+      "input normalization",
+      "zero padding to 1024",
+      "argmax"
+    ],
+    "npu": {
+      "mnist_mlp": [
+        "all Linear",
+        "all bias",
+        "all ReLU"
+      ],
+      "tiny_vit": [
+        "patch projection",
+        "QKV",
+        "QK",
+        "PV",
+        "attention output projection",
+        "FFN gate/up/down",
+        "classifier"
+      ]
+    },
+    "tiny_vit": [
+      "patch rasterization",
+      "position add",
+      "pre-RMSNorm",
+      "stable softmax",
+      "head layout bridge",
+      "SwiGLU elementwise",
+      "residual adds",
+      "mean pooling",
+      "argmax"
+    ]
+  },
+  "milestone": "NEXT-MILESTONE two complete models",
+  "model_sources": {
+    "models/compiled/manifest.json": "4aeeb634737e584b663c678dc7f8e90af3e76168e9f0e2127a0e7855ceea8094",
+    "models/tilelang_matmul.py": "052acb72799fa594ac5ec2f1d4615be467621dca94d88c29cdae58ab8cf986ae",
+    "models/tilelang_mlp.py": "11ae931d4a46e04e72edb23b674ba5f2b1262b3096a588d433501d770cc73fb2",
+    "python/rknpu_backend/model_reference.py": "a2ac5436796d5e7662a92fc4d3575dcbc4b5ecd879b667e7ee265a6e5bfadd24",
+    "python/rknpu_backend/models.py": "7b4622ce14b8e539409aba221e338e22a4bcffadc0c2e1033ad389f7636a1426",
+    "tools/train_mnist_models.py": "c85c40b465a3a9ad8c40b37336db344c44922daba93d52d91cbe4087bdc45cda"
+  },
+  "models": [
+    {
+      "architecture": "Flatten(784)->Linear(784,256)->ReLU->Linear(256,128)->ReLU->Linear(128,10)",
+      "batch_size": 128,
+      "file": "models/mnist_mlp.npz",
+      "input": "[N,1,28,28] float32 normalized",
+      "lr": 0.0015,
+      "name": "mnist_mlp",
+      "optimizer": "AdamW",
+      "output": "[N,10] logits; argmax application postprocess",
+      "test_accuracy": 0.9831,
+      "test_nll": 0.06865618472099304,
+      "train_epochs": 12,
+      "weights": [
+        "W1[784,256]",
+        "b1[256]",
+        "W2[256,128]",
+        "b2[128]",
+        "W3[128,10]",
+        "b3[10]"
+      ],
+      "weights_sha256": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e"
+    },
+    {
+      "architecture": "16x7x7 patch -> D64; 1 pre-RMSNorm attention layer (4 heads); pre-RMSNorm SwiGLU FFN(128); mean pool; linear 10",
+      "batch_size": 128,
+      "eps": 1e-06,
+      "file": "models/tiny_vit.npz",
+      "input": "[N,1,28,28] float32 normalized",
+      "lr": 0.003,
+      "name": "tiny_vit",
+      "optimizer": "AdamW",
+      "output": "[N,10] logits; mean-pooled 16 tokens",
+      "test_accuracy": 0.9821,
+      "test_nll": 0.09417818460464478,
+      "train_epochs": 30,
+      "weights": [
+        "patch_w[49,64]",
+        "pos[16,64]",
+        "norm1_gamma[64]",
+        "qkv_w[64,192]",
+        "attn_out_w[64,64]",
+        "norm2_gamma[64]",
+        "ffn_gate_w[64,128]",
+        "ffn_up_w[64,128]",
+        "ffn_down_w[128,64]",
+        "class_w[64,10]"
+      ],
+      "weights_sha256": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+    }
+  ],
+  "npu_plans": {
+    "manifest": "models/compiled/manifest.json",
+    "plans": {
+      "mnist_mlp_b1": {
+        "batch": 1,
+        "path": "mnist_mlp_b1.rkplan.json",
+        "plan_hash": "55a14e68eaf573e01915f8d13e9e157946542a8e40679ad128ba04321cd79d4e",
+        "sha256": "f731d7f2a93c28de2685ade8a4bd254a249c4afb3757d7bc93ef1ea5b1e01208",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1387f6f0), 22, 22, 1, 1048576)"
+      },
+      "mnist_mlp_b32": {
+        "batch": 32,
+        "path": "mnist_mlp_b32.rkplan.json",
+        "plan_hash": "6e65edf11aa25a226e3fe0d7fd3748fa6dd55d5cb97c1e66b4c021bd1a78cbbf",
+        "sha256": "262b0adebb480d8e41ed0382bed1724819f60501d52434fa41541beda9a0aeac",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1387f6f0), 22, 22, 1, 1048576)"
+      },
+      "mnist_mlp_b8": {
+        "batch": 8,
+        "path": "mnist_mlp_b8.rkplan.json",
+        "plan_hash": "d184dc7f902998fe996d5a948b2d317f0382e13ce60933b12db9ffe4dde42c9d",
+        "sha256": "a03c01cd64c8cf9c29daac3db8e550b871c94d4333d7f1a60c1b95f5329e62b1",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1387f6f0), 22, 22, 1, 1048576)"
+      },
+      "tiny_vit_b1_attn_out": {
+        "batch": 16,
+        "path": "tiny_vit_b1_attn_out.rkplan.json",
+        "plan_hash": "5a3ea6725c2e192979bad1f73f94e3720aaa12e2a9dcbedf8db3746bdba9ada3",
+        "sha256": "ee22a51076f1a5c9abcccc2cc752cdc00d14b77cc83d7ac173ef961fafcc65ce",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b1_classifier": {
+        "batch": 1,
+        "path": "tiny_vit_b1_classifier.rkplan.json",
+        "plan_hash": "2415fd695eb73672a33ba02e7e5566af4787dd1ce9fb85d735b520109b0ec149",
+        "sha256": "d8ec6ad43bd6161bf9ed83708590ed244d1f9ce68a8d2fa7dbd8acdf936d10dd",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b1_down": {
+        "batch": 16,
+        "path": "tiny_vit_b1_down.rkplan.json",
+        "plan_hash": "d07aaf4c2af4c64c0f26bdcedcbeca4f8287796e239225f40f59ad7edecd7ed8",
+        "sha256": "d810beeb9d5535795628d46126b385dc29df1d2d4cf8868bc488e47a587f03b2",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b1_gate": {
+        "batch": 16,
+        "path": "tiny_vit_b1_gate.rkplan.json",
+        "plan_hash": "04f271a00e6f426fb56dbcf39341ad63740d70c5367239e740eb84560b520afa",
+        "sha256": "80b6154cb0b535ce4b8359adf0b54e8e1d16bdf378768d0304f9ecaa98086df3",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b1_patch": {
+        "batch": 16,
+        "path": "tiny_vit_b1_patch.rkplan.json",
+        "plan_hash": "5a3ea6725c2e192979bad1f73f94e3720aaa12e2a9dcbedf8db3746bdba9ada3",
+        "sha256": "ee22a51076f1a5c9abcccc2cc752cdc00d14b77cc83d7ac173ef961fafcc65ce",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b1_pv": {
+        "batch": 16,
+        "path": "tiny_vit_b1_pv.rkplan.json",
+        "plan_hash": "ac83ff7dc24d54a0d3b9f600619d1c863912c77725eafe04d8e15fd89d431ada",
+        "sha256": "b3b58e34fe75521e366a1c3d4037e67ce07dc65e37d3ca25b6543c349c44f226",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b1_qk": {
+        "batch": 16,
+        "path": "tiny_vit_b1_qk.rkplan.json",
+        "plan_hash": "ac83ff7dc24d54a0d3b9f600619d1c863912c77725eafe04d8e15fd89d431ada",
+        "sha256": "b3b58e34fe75521e366a1c3d4037e67ce07dc65e37d3ca25b6543c349c44f226",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b1_qkv": {
+        "batch": 16,
+        "path": "tiny_vit_b1_qkv.rkplan.json",
+        "plan_hash": "383621abc18b50a028eabfb0ffcc2cb047798658cdee2d508dc694c3519682aa",
+        "sha256": "8a2130680e9959e202e0abadfcb8fd87b6ad4792cc5a104ac9d2d70b111a5c01",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b1_up": {
+        "batch": 16,
+        "path": "tiny_vit_b1_up.rkplan.json",
+        "plan_hash": "04f271a00e6f426fb56dbcf39341ad63740d70c5367239e740eb84560b520afa",
+        "sha256": "80b6154cb0b535ce4b8359adf0b54e8e1d16bdf378768d0304f9ecaa98086df3",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_attn_out": {
+        "batch": 128,
+        "path": "tiny_vit_b8_attn_out.rkplan.json",
+        "plan_hash": "6e94e3a89172708d7465a28ff644e2f49e87186cadea06ac69e36697b1250c0a",
+        "sha256": "9fefd2dbab645a434513a3ed6d77e9247c9bc9355e65544934b4f5fe48fd0c1e",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_classifier": {
+        "batch": 8,
+        "path": "tiny_vit_b8_classifier.rkplan.json",
+        "plan_hash": "d940cab37287498d471861e3b565e2b1a606fcb70675f4a029a6dc96f19c3044",
+        "sha256": "68bcd5e34cdbba09bec14d4c7b62721403f3d468cdf84c85e483edecde58172d",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_down": {
+        "batch": 128,
+        "path": "tiny_vit_b8_down.rkplan.json",
+        "plan_hash": "fe7cc03d48e196307aff259e7e35499f08362c3828eccf2f9f5487140907640f",
+        "sha256": "a4ade12f9e3fd9749c019a8bd08aa2c7424ae97bba303fd5c5eff8c027b375b0",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_gate": {
+        "batch": 128,
+        "path": "tiny_vit_b8_gate.rkplan.json",
+        "plan_hash": "749c73325dc36331214b599bdc916213115ed62e7ab6cccf316b6589ac8da425",
+        "sha256": "d2494b2a12cf166eab0e8ea90a6b1e2613884aabea7831d51526437319382525",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_patch": {
+        "batch": 128,
+        "path": "tiny_vit_b8_patch.rkplan.json",
+        "plan_hash": "6e94e3a89172708d7465a28ff644e2f49e87186cadea06ac69e36697b1250c0a",
+        "sha256": "9fefd2dbab645a434513a3ed6d77e9247c9bc9355e65544934b4f5fe48fd0c1e",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_pv": {
+        "batch": 16,
+        "path": "tiny_vit_b8_pv.rkplan.json",
+        "plan_hash": "ac83ff7dc24d54a0d3b9f600619d1c863912c77725eafe04d8e15fd89d431ada",
+        "sha256": "b3b58e34fe75521e366a1c3d4037e67ce07dc65e37d3ca25b6543c349c44f226",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_qk": {
+        "batch": 16,
+        "path": "tiny_vit_b8_qk.rkplan.json",
+        "plan_hash": "ac83ff7dc24d54a0d3b9f600619d1c863912c77725eafe04d8e15fd89d431ada",
+        "sha256": "b3b58e34fe75521e366a1c3d4037e67ce07dc65e37d3ca25b6543c349c44f226",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_qkv": {
+        "batch": 128,
+        "path": "tiny_vit_b8_qkv.rkplan.json",
+        "plan_hash": "aafffd56c6586b8d1ef6eee6944843b235862c2de5c671694909e2db112c0cf4",
+        "sha256": "94c7ad228f24533d4038306bc84266d2b90bb3c6c6060bfb74f38ac7c2b58b6d",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      },
+      "tiny_vit_b8_up": {
+        "batch": 128,
+        "path": "tiny_vit_b8_up.rkplan.json",
+        "plan_hash": "749c73325dc36331214b599bdc916213115ed62e7ab6cccf316b6589ac8da425",
+        "sha256": "d2494b2a12cf166eab0e8ea90a6b1e2613884aabea7831d51526437319382525",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x13a6e010), 13, 13, 1, 1048576)"
+      }
+    },
+    "profile_hash": "50fa71281ad979ade1543d5350cd7ac584568fddb57412e39e4d4d9f2a3f2d79"
+  },
+  "numeric_policy": {
+    "activation": "explicit Host SiLU/SwiGLU first-round bridge",
+    "fallback": "error; no implicit CPU matrix fallback",
+    "matmul": "ordered 256-wide K tiles with explicit FP16 writeback",
+    "relu": "exact NPU elementwise MAX against zero, no LUT approximation",
+    "softmax": "stable Max/Exp/Sum Host computation on FP32 scores"
+  },
+  "package": {
+    "format": "npz_no_pickle_safe_arrays",
+    "input_preprocessing": "MNIST mean=0.1307 std=0.3081; 784 values zero-padded to 1024 for ordered-K NPU primitive; TinyViT uses 16 raster 7x7 patches",
+    "logical_weight_dtype": "float32",
+    "npu_weight_dtype": "float16",
+    "output_postprocessing": "argmax on first 10 logits; no threshold tuning",
+    "random_operator_demo": false,
+    "weights_are_learned": true
+  },
+  "schema_version": 1,
+  "seed": 20261024
+}

@@ -18,13 +18,13 @@
 #include "mock_npu.h"   /* the single source of the test-only seam API */
 
 enum { MOCK_TAG_LUT = 1, MOCK_TAG_EW = 2, MOCK_TAG_MM = 3,
-       MOCK_TAG_MM_ACC = 4 };
+       MOCK_TAG_MM_ACC = 4, MOCK_TAG_EW_MAX = 5 };
 static struct {
     const co_program *prog;   /* emission-time address (the slot key) */
     co_program *snapshot;    /* full copy of what that emission produced */
     unsigned tag;
     unsigned arg;
-} mock_tags[256];
+} mock_tags[4096];
 static unsigned mock_tag_count;
 static unsigned mock_tag_overflow;
 static unsigned mock_untracked;
@@ -64,6 +64,14 @@ void rk_mock_corrupt_guard_at(unsigned exec_index) {
 void rk_mock_delay_us(unsigned us) { mock_delay_us = us; }
 void rk_mock_fail_prep_at(unsigned index) { mock_fail_prep_at = index; }
 unsigned rk_mock_prep_calls(void) { return mock_prep_count; }
+void rk_mock_reset_tags(void) {
+    for (unsigned i = 0; i < mock_tag_count; i++) {
+        free(mock_tags[i].snapshot);
+        mock_tags[i].snapshot = NULL;
+    }
+    mock_tag_count = 0;
+    mock_tag_overflow = 0;
+}
 void rk_mock_context_fault(unsigned fd, unsigned on) {
     if (fd < MOCK_CONTEXT_FDS)
         atomic_store_explicit(&mock_context_faulted[fd], on ? 1 : 0,
@@ -269,6 +277,13 @@ int __wrap_co_emit_ew(co_program *p, co_view x, co_view a, co_view w, co_view y,
     if (!rc) mock_tag(p, MOCK_TAG_EW, (unsigned)mul);
     return rc;
 }
+int __real_co_emit_ew_max(co_program *, co_view, co_view, co_view, co_view);
+int __wrap_co_emit_ew_max(co_program *p, co_view x, co_view a, co_view w,
+                          co_view y) {
+    int rc = __real_co_emit_ew_max(p, x, a, w, y);
+    if (!rc) mock_tag(p, MOCK_TAG_EW_MAX, 0);
+    return rc;
+}
 
 static _Float16 *mock_data(co_view v) {
     return (_Float16 *)((char *)v.buffer->bo.ptr + v.offset);
@@ -376,6 +391,36 @@ int __wrap_co_execute_profiled(int fd, const co_program *p, unsigned count,
                     double b = (double)rhs[co_index(&op.tensor, r, c)];
                     dst[co_index(&y.tensor, r, c)] =
                         (_Float16)(mul ? pass * b : pass + b);
+                }
+            if (mock_inject_nan) dst[0] = (_Float16)NAN;
+            mock_maybe_corrupt_guard(&p[i]);
+            continue;
+        }
+        if (tag == MOCK_TAG_EW_MAX) {
+            if (p[i].nreads != 3) return ROCKET_E_SHAPE;
+            co_view id = p[i].reads[1];
+            co_view op = p[i].reads[2];
+            if (!id.buffer || !id.buffer->bo.ptr || !op.buffer || !op.buffer->bo.ptr)
+                return ROCKET_E_SHAPE;
+            if (id.tensor.rows != x.tensor.physical_cols ||
+                id.tensor.cols != x.tensor.physical_cols)
+                return ROCKET_E_SHAPE;
+            if (op.tensor.rows != x.tensor.rows ||
+                op.tensor.physical_rows != x.tensor.physical_rows ||
+                op.tensor.physical_cols != x.tensor.physical_cols)
+                return ROCKET_E_SHAPE;
+            _Float16 *lhs = mock_data(x);
+            _Float16 *rhs = mock_data(op);
+            _Float16 *ident = mock_data(id);
+            for (unsigned r = 0; r < y.tensor.physical_rows; r++)
+                for (unsigned c = 0; c < y.tensor.physical_cols; c++) {
+                    double pass = 0;
+                    for (unsigned q = 0; q < x.tensor.physical_cols; q++)
+                        pass += (double)lhs[co_index(&x.tensor, r, q)] *
+                                (double)ident[co_index(&id.tensor, c, q)];
+                    double b = (double)rhs[co_index(&op.tensor, r, c)];
+                    dst[co_index(&y.tensor, r, c)] =
+                        (_Float16)fmax(pass, b);
                 }
             if (mock_inject_nan) dst[0] = (_Float16)NAN;
             mock_maybe_corrupt_guard(&p[i]);
