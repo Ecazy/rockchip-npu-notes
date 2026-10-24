@@ -1,5 +1,7 @@
 # tilelang-rknpu
 
+下一阶段目标：[完整 MLP 与 hybrid Tiny Transformer 模型推理](NEXT-MILESTONE.md)；以真实模型补齐能力，保持已完成 MVP 的验收边界。
+
 **Experimental checkpoint; declared MVP scope complete.  Not approved as a general release or for
 unbounded device execution.**  Review blockers 1-4 and their follow-ups are fixed on
 the Host with negative tests.  P0 is `complete`: the locked TileLang/TVM sources
