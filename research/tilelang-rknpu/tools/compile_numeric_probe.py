@@ -52,6 +52,40 @@ def main() -> int:
         "templates": templates,
         "constant_inputs": ["X", "B"],
     }
+    from models import tilelang_mlp as tmlp
+    diag_specs = [
+        ("mnist_mlp_diag_l1_bias", tmlp.make_mlp_layer1_bias_prim,
+         "layer1-pre-relu-bias"),
+        ("mnist_mlp_diag_l1_relu", tmlp.make_mlp_layer1_relu_prim,
+         "layer1-exact-relu"),
+        ("mnist_mlp_diag_l2_bias", tmlp.make_mlp_layer2_bias_prim,
+         "layer2-pre-relu-bias"),
+        ("mnist_mlp_diag_l2_relu", tmlp.make_mlp_layer2_relu_prim,
+         "layer2-exact-relu"),
+        ("mnist_mlp_diag_l3_bias", tmlp.make_mlp_layer3_bias_prim,
+         "layer3-final-preactivation-bias"),
+    ]
+    manifest["mlp_hidden_diagnostics"] = {}
+    for name, factory, role in diag_specs:
+        diag = compile_tilelang(factory(), profile=profile,
+                                options=options).plan
+        diag_path = out / f"{name}.rkplan.json"
+        save_plan(diag, str(diag_path))
+        diag_templates = [a.template_id for a in diag.actions
+                          if a.kind == "npu_task"]
+        manifest["plans"][name] = {
+            "path": diag_path.name, "plan_hash": diag.plan_hash,
+            "source_hash": diag.source_hash, "batch": 8,
+            "role": f"numeric-acceptance-mlp-{role}",
+            "templates": diag_templates,
+        }
+        manifest["mlp_hidden_diagnostics"][name] = {
+            "role": role,
+            "plan_hash": diag.plan_hash,
+            "templates": diag_templates,
+            "output_binding": "Y",
+        }
+        print("wrote", name, diag.plan_hash, diag_templates, flush=True)
     manifest["source_files"]["models/tilelang_mlp.py"] = sha256(
         ROOT / "models" / "tilelang_mlp.py")
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")

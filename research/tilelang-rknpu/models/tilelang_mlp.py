@@ -158,3 +158,209 @@ def make_relu_probe_prim(m: int = 2, n: int = 256):
             T.copy(Yl, Y[0, 0])
 
     return mnist_relu_probe
+
+
+def _mlp_layer1_diag_body(m: int, with_relu: bool):
+    """Shared body: X @ W1 + B1, optionally followed by exact ReLU."""
+    bk, bn = 256, 64
+    n1 = 256
+
+    if with_relu:
+        @T.prim_func
+        def mnist_mlp_layer1_relu(
+            X: T.Tensor((m, 1024), "float16"),
+            W1: T.Tensor((1024, n1), "float16"),
+            B1: T.Tensor((m, n1), "float16"),
+            Z1: T.Tensor((m, n1), "float16"),
+            H1: T.Tensor((m, n1), "float16"),
+            Y: T.Tensor((m, n1), "float16"),
+        ):
+            with T.Kernel(T.ceildiv(n1, bn), 1, threads=128) as (bx, by):
+                As = T.alloc_shared((m, bk), "float16")
+                Bs = T.alloc_shared((bk, bn), "float16")
+                Cl = T.alloc_fragment((m, bn), "float32")
+                Acc = T.alloc_fragment((m, bn), "float16")
+                T.clear(Acc)
+                for ko in T.Pipelined(T.ceildiv(1024, bk), num_stages=2):
+                    T.copy(X[0, ko * bk], As)
+                    T.copy(W1[ko * bk, bx * bn], Bs)
+                    T.copy(Acc, Cl)
+                    T.gemm(As, Bs, Cl)
+                    T.copy(Cl, Acc)
+                T.copy(Acc, Z1[0, bx * bn])
+            with T.Kernel(T.ceildiv(n1, bn), 1, threads=128) as (bx, by):
+                Zs = T.alloc_shared((m, bn), "float16")
+                Bl = T.alloc_shared((m, bn), "float16")
+                Hl = T.alloc_fragment((m, bn), "float16")
+                T.copy(Z1[0, bx * bn], Zs)
+                T.copy(B1[0, bx * bn], Bl)
+                for i, j in T.Parallel(m, bn):
+                    Hl[i, j] = T.cast(Zs[i, j] + Bl[i, j], "float16")
+                T.copy(Hl, H1[0, bx * bn])
+            with T.Kernel(T.ceildiv(n1, bn), 1, threads=128) as (bx, by):
+                Hs = T.alloc_shared((m, bn), "float16")
+                Rl = T.alloc_fragment((m, bn), "float16")
+                T.copy(H1[0, bx * bn], Hs)
+                for i, j in T.Parallel(m, bn):
+                    Rl[i, j] = T.cast(T.max(Hs[i, j], T.float16(0.0)),
+                                      "float16")
+                T.copy(Rl, Y[0, bx * bn])
+    else:
+        @T.prim_func
+        def mnist_mlp_layer1_bias(
+            X: T.Tensor((m, 1024), "float16"),
+            W1: T.Tensor((1024, n1), "float16"),
+            B1: T.Tensor((m, n1), "float16"),
+            Z1: T.Tensor((m, n1), "float16"),
+            Y: T.Tensor((m, n1), "float16"),
+        ):
+            with T.Kernel(T.ceildiv(n1, bn), 1, threads=128) as (bx, by):
+                As = T.alloc_shared((m, bk), "float16")
+                Bs = T.alloc_shared((bk, bn), "float16")
+                Cl = T.alloc_fragment((m, bn), "float32")
+                Acc = T.alloc_fragment((m, bn), "float16")
+                T.clear(Acc)
+                for ko in T.Pipelined(T.ceildiv(1024, bk), num_stages=2):
+                    T.copy(X[0, ko * bk], As)
+                    T.copy(W1[ko * bk, bx * bn], Bs)
+                    T.copy(Acc, Cl)
+                    T.gemm(As, Bs, Cl)
+                    T.copy(Cl, Acc)
+                T.copy(Acc, Z1[0, bx * bn])
+            with T.Kernel(T.ceildiv(n1, bn), 1, threads=128) as (bx, by):
+                Zs = T.alloc_shared((m, bn), "float16")
+                Bl = T.alloc_shared((m, bn), "float16")
+                Hl = T.alloc_fragment((m, bn), "float16")
+                T.copy(Z1[0, bx * bn], Zs)
+                T.copy(B1[0, bx * bn], Bl)
+                for i, j in T.Parallel(m, bn):
+                    Hl[i, j] = T.cast(Zs[i, j] + Bl[i, j], "float16")
+                T.copy(Hl, Y[0, bx * bn])
+    return mnist_mlp_layer1_relu if with_relu else mnist_mlp_layer1_bias
+
+
+def make_mlp_layer1_bias_prim(m: int = 8):
+    return _mlp_layer1_diag_body(m, False)
+
+
+def make_mlp_layer1_relu_prim(m: int = 8):
+    return _mlp_layer1_diag_body(m, True)
+
+
+def _mlp_layer2_diag_body(m: int, with_relu: bool):
+    """R1 @ W2 + B2, optionally followed by exact ReLU."""
+    n1, n2, bn = 256, 128, 64
+
+    if with_relu:
+        @T.prim_func
+        def mnist_mlp_layer2_relu(
+            R1: T.Tensor((m, n1), "float16"),
+            W2: T.Tensor((n1, n2), "float16"),
+            B2: T.Tensor((m, n2), "float16"),
+            Z2: T.Tensor((m, n2), "float16"),
+            H2: T.Tensor((m, n2), "float16"),
+            Y: T.Tensor((m, n2), "float16"),
+        ):
+            with T.Kernel(T.ceildiv(n2, bn), 1, threads=128) as (bx, by):
+                As = T.alloc_shared((m, n1), "float16")
+                Bs = T.alloc_shared((n1, bn), "float16")
+                Cl = T.alloc_fragment((m, bn), "float32")
+                C16 = T.alloc_fragment((m, bn), "float16")
+                T.copy(R1[0, 0], As)
+                T.copy(W2[0, bx * bn], Bs)
+                T.clear(Cl)
+                T.gemm(As, Bs, Cl)
+                T.copy(Cl, C16)
+                T.copy(C16, Z2[0, bx * bn])
+            with T.Kernel(T.ceildiv(n2, bn), 1, threads=128) as (bx, by):
+                Zs = T.alloc_shared((m, bn), "float16")
+                Bl = T.alloc_shared((m, bn), "float16")
+                Hl = T.alloc_fragment((m, bn), "float16")
+                T.copy(Z2[0, bx * bn], Zs)
+                T.copy(B2[0, bx * bn], Bl)
+                for i, j in T.Parallel(m, bn):
+                    Hl[i, j] = T.cast(Zs[i, j] + Bl[i, j], "float16")
+                T.copy(Hl, H2[0, bx * bn])
+            with T.Kernel(T.ceildiv(n2, bn), 1, threads=128) as (bx, by):
+                Hs = T.alloc_shared((m, bn), "float16")
+                Rl = T.alloc_fragment((m, bn), "float16")
+                T.copy(H2[0, bx * bn], Hs)
+                for i, j in T.Parallel(m, bn):
+                    Rl[i, j] = T.cast(T.max(Hs[i, j], T.float16(0.0)),
+                                      "float16")
+                T.copy(Rl, Y[0, bx * bn])
+    else:
+        @T.prim_func
+        def mnist_mlp_layer2_bias(
+            R1: T.Tensor((m, n1), "float16"),
+            W2: T.Tensor((n1, n2), "float16"),
+            B2: T.Tensor((m, n2), "float16"),
+            Z2: T.Tensor((m, n2), "float16"),
+            Y: T.Tensor((m, n2), "float16"),
+        ):
+            with T.Kernel(T.ceildiv(n2, bn), 1, threads=128) as (bx, by):
+                As = T.alloc_shared((m, n1), "float16")
+                Bs = T.alloc_shared((n1, bn), "float16")
+                Cl = T.alloc_fragment((m, bn), "float32")
+                C16 = T.alloc_fragment((m, bn), "float16")
+                T.copy(R1[0, 0], As)
+                T.copy(W2[0, bx * bn], Bs)
+                T.clear(Cl)
+                T.gemm(As, Bs, Cl)
+                T.copy(Cl, C16)
+                T.copy(C16, Z2[0, bx * bn])
+            with T.Kernel(T.ceildiv(n2, bn), 1, threads=128) as (bx, by):
+                Zs = T.alloc_shared((m, bn), "float16")
+                Bl = T.alloc_shared((m, bn), "float16")
+                Hl = T.alloc_fragment((m, bn), "float16")
+                T.copy(Z2[0, bx * bn], Zs)
+                T.copy(B2[0, bx * bn], Bl)
+                for i, j in T.Parallel(m, bn):
+                    Hl[i, j] = T.cast(Zs[i, j] + Bl[i, j], "float16")
+                T.copy(Hl, Y[0, bx * bn])
+    return mnist_mlp_layer2_relu if with_relu else mnist_mlp_layer2_bias
+
+
+def make_mlp_layer2_bias_prim(m: int = 8):
+    return _mlp_layer2_diag_body(m, False)
+
+
+def make_mlp_layer2_relu_prim(m: int = 8):
+    return _mlp_layer2_diag_body(m, True)
+
+
+def make_mlp_layer3_bias_prim(m: int = 8):
+    """R2 @ W3 + B3, exporting the final 16-wide pre-softmax logits."""
+
+    n2, n3 = 128, 16
+
+    @T.prim_func
+    def mnist_mlp_layer3_bias(
+        R2: T.Tensor((m, n2), "float16"),
+        W3: T.Tensor((n2, n3), "float16"),
+        B3: T.Tensor((m, n3), "float16"),
+        Z3: T.Tensor((m, n3), "float16"),
+        Y: T.Tensor((m, n3), "float16"),
+    ):
+        with T.Kernel(1, 1, threads=128) as (bx, by):
+            As = T.alloc_shared((m, n2), "float16")
+            Bs = T.alloc_shared((n2, n3), "float16")
+            Cl = T.alloc_fragment((m, n3), "float32")
+            C16 = T.alloc_fragment((m, n3), "float16")
+            T.copy(R2[0, 0], As)
+            T.copy(W3[0, 0], Bs)
+            T.clear(Cl)
+            T.gemm(As, Bs, Cl)
+            T.copy(Cl, C16)
+            T.copy(C16, Z3[0, 0])
+        with T.Kernel(1, 1, threads=128) as (bx, by):
+            Zs = T.alloc_shared((m, n3), "float16")
+            Bl = T.alloc_shared((m, n3), "float16")
+            Yl = T.alloc_fragment((m, n3), "float16")
+            T.copy(Z3[0, 0], Zs)
+            T.copy(B3[0, 0], Bl)
+            for i, j in T.Parallel(m, n3):
+                Yl[i, j] = T.cast(Zs[i, j] + Bl[i, j], "float16")
+            T.copy(Yl, Y[0, 0])
+
+    return mnist_mlp_layer3_bias

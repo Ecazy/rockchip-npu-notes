@@ -96,10 +96,19 @@ def legalize(module: Module, *, profile: TargetProfile,
         any(module.value(vid).role == "constant" and
             module.value(vid).type.rank < 2 for vid in op.inputs)
         for op in ops)
+    # The classic path proves exactly matmul -> optional activation -> optional
+    # binary.  A diagnostic layer can legitimately publish matmul -> bias(add) ->
+    # ReLU; route that order through the same per-node legalizer used by the full
+    # staged MLP instead of rejecting the closed chain at the final op.
+    binary_then_activation = (
+        len(ops) == 3 and ops[0].opcode == "matmul" and
+        ops[1].opcode in BINARY_CAPABILITY and
+        ops[2].opcode in ACTIVATION_CAPABILITY)
     classic_shape = (1 <= len(ops) <= 3 and len(module.outputs) == 1 and
                      sum(op.opcode == "matmul" for op in ops) == 1 and
                      ops[0].opcode == "matmul" and
-                     not has_constant_broadcast)
+                     not has_constant_broadcast and
+                     not binary_then_activation)
     if not classic_shape:
         return _legalize_static_dataflow(module, profile=profile, options=options)
     if not 1 <= len(ops) <= 3:

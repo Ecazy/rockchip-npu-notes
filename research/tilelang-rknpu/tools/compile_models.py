@@ -90,6 +90,37 @@ def main() -> int:
     })
     print("wrote mnist_relu_probe", probe.plan_hash, flush=True)
 
+    diag_specs = [
+        ("mnist_mlp_diag_l1_bias", tmlp.make_mlp_layer1_bias_prim,
+         "layer1-pre-relu-bias"),
+        ("mnist_mlp_diag_l1_relu", tmlp.make_mlp_layer1_relu_prim,
+         "layer1-exact-relu"),
+        ("mnist_mlp_diag_l2_bias", tmlp.make_mlp_layer2_bias_prim,
+         "layer2-pre-relu-bias"),
+        ("mnist_mlp_diag_l2_relu", tmlp.make_mlp_layer2_relu_prim,
+         "layer2-exact-relu"),
+        ("mnist_mlp_diag_l3_bias", tmlp.make_mlp_layer3_bias_prim,
+         "layer3-final-preactivation-bias"),
+    ]
+    manifest["mlp_hidden_diagnostics"] = {}
+    for name, factory, role in diag_specs:
+        diag = compile_tilelang(factory(), profile=profile,
+                                options=options).plan
+        write(diag, name)
+        diag_templates = [a.template_id for a in diag.actions
+                          if a.kind == "npu_task"]
+        manifest["plans"][name].update({
+            "role": f"numeric-acceptance-mlp-{role}",
+            "templates": diag_templates,
+        })
+        manifest["mlp_hidden_diagnostics"][name] = {
+            "role": role,
+            "plan_hash": diag.plan_hash,
+            "templates": diag_templates,
+            "output_binding": "Y",
+        }
+        print("wrote", name, diag.plan_hash, flush=True)
+
     for batch in (1, 8):
         plans = {}
         for name, (m, k, n, binp) in transformer_shapes(batch).items():
