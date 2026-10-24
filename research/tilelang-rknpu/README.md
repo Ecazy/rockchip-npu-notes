@@ -17,8 +17,11 @@ is out of scope and not claimed.  RK1228 remains independent.  See
 [status](IMPLEMENTATION-STATUS.md) and [RK1228-TARGET.md](RK1228-TARGET.md).
 The separate complete-model milestone is also closed: versioned `rkhybrid`
 manifests expose every Host boundary, RKPlan matrix nodes remain the only
-matrix execution path, and deterministic layer/raw-logit gates are checked by an
-independent verifier. See [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md).
+matrix execution path, and numeric limits are frozen from a label-independent
+MNIST train subset before a disjoint test observation.  Real MLP diagnostic plans
+export both hidden layers' linear+bias and exact-ReLU values.  See
+[MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md) and
+[models/NUMERIC-ACCEPTANCE.md](models/NUMERIC-ACCEPTANCE.md).
 
 Minimal vertical slice for the design in [overview.md](overview.md) and
 [specific.md](specific.md):

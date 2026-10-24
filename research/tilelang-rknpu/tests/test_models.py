@@ -251,7 +251,7 @@ class CompleteModelTests(unittest.TestCase):
             PlanCall(fake, plan, {}, fd=0)
         self.assertEqual(fake.plan_creates, 0)
 
-    def test_frozen_numeric_spec_and_mock_layer_tolerances(self):
+    def test_historical_test_envelope_and_mock_layer_tolerances(self):
         import importlib.util
         from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
         from rknpu_backend.models import PlanCall
@@ -303,6 +303,104 @@ class CompleteModelTests(unittest.TestCase):
         with self.assertRaises(BackendError):
             MLPRunner(self.lib, self._plan("mnist_mlp_b1"),
                       self.mlp_weights, 1, fd=0)
+
+    def test_train_calibration_and_test_acceptance_samples_are_disjoint(self):
+        spec = json.loads((WEIGHTS / "numeric_acceptance_train.json").read_text())
+        self.assertEqual(spec["calibration"]["split"], "train")
+        self.assertEqual(spec["acceptance"]["split"], "test")
+        self.assertFalse(spec["calibration"]["labels_read"])
+        self.assertFalse(spec["acceptance"]["labels_read"])
+        cal = set(spec["calibration"]["sample_sha256"])
+        acc = set(spec["acceptance"]["sample_sha256"])
+        self.assertTrue(cal.isdisjoint(acc))
+        self.assertNotEqual(spec["calibration"]["source_sha256"],
+                            spec["acceptance"]["source_sha256"])
+
+    def test_hidden_trace_rejects_while_final_top1_is_unchanged(self):
+        from rknpu_backend.numeric_policy import within_tolerance
+        spec = json.loads((WEIGHTS / "numeric_acceptance_train.json").read_text())
+        expected = np.load(WEIGHTS / "numeric_acceptance_test.npz",
+                           allow_pickle=False)
+        hidden = expected["mlp.h1_pre_relu"]
+        tampered_hidden = hidden.copy()
+        tolerance = spec["layer_tolerances"]["mlp.h1_pre_relu"]
+        tampered_hidden[0, 0] = np.float16(
+            float(tampered_hidden[0, 0]) + 2.0 * float(tolerance["atol"]))
+        logits_before = expected["profile.mnist_mlp.b32.logits"].copy()
+        logits_after = logits_before.copy()  # hidden tamper must not be inferred
+        self.assertTrue(np.array_equal(logits_before.argmax(axis=1),
+                                       logits_after.argmax(axis=1)))
+        hidden_ok, hidden_error = within_tolerance(
+            tampered_hidden, hidden, tolerance)
+        self.assertFalse(hidden_ok)
+        self.assertGreater(hidden_error, float(tolerance["atol"]))
+        # A top-1-only verifier would pass because the final logits are unchanged;
+        # the frozen layer gate must still reject the tampered hidden trace.
+        logits_ok, _ = within_tolerance(logits_after, logits_before, {
+            "atol": spec["task_logit_tolerances"]["mnist_mlp.b32"]["atol"],
+            "rtol": 0.0})
+        self.assertTrue(logits_ok)
+
+    def test_mlp_hidden_diagnostic_plans_match_declared_layers(self):
+        from rknpu_backend.numeric_observation import _run_mlp_diagnostics
+        from rknpu_backend.numeric_policy import within_tolerance
+        spec = json.loads((WEIGHTS / "numeric_acceptance_train.json").read_text())
+        expected = np.load(WEIGHTS / "numeric_calibration_train.npz",
+                           allow_pickle=False)
+        images = expected["images"][:8]
+        manifest = json.loads((PLANS / "manifest.json").read_text())
+        got = _run_mlp_diagnostics(
+            self.lib, manifest, PLANS, self.mlp_weights, images, 0)
+        mapping = {
+            "h1_pre_relu": "mlp.h1_pre_relu",
+            "r1_relu": "mlp.r1_relu",
+            "h2_pre_relu": "mlp.h2_pre_relu",
+            "r2_relu": "mlp.r2_relu",
+            "final_preactivation": "mlp.final_preactivation",
+        }
+        for observed_key, expected_key in mapping.items():
+            ok, error = within_tolerance(
+                got[observed_key], expected[expected_key][:8],
+                spec["layer_tolerances"][expected_key])
+            self.assertTrue(ok, (observed_key, error))
+        templates = {
+            key: [a.template_id for a in self._plan(key).actions
+                  if a.kind == "npu_task"]
+            for key in (
+                "mnist_mlp_diag_l1_bias", "mnist_mlp_diag_l1_relu",
+                "mnist_mlp_diag_l2_bias", "mnist_mlp_diag_l2_relu",
+                "mnist_mlp_diag_l3_bias")
+        }
+        self.assertNotIn("co.ew_max.f16.v1", templates["mnist_mlp_diag_l1_bias"])
+        self.assertIn("co.ew_max.f16.v1", templates["mnist_mlp_diag_l1_relu"])
+        self.assertNotIn("co.ew_max.f16.v1", templates["mnist_mlp_diag_l2_bias"])
+        self.assertIn("co.ew_max.f16.v1", templates["mnist_mlp_diag_l2_relu"])
+        self.assertEqual(sum(a.kind == "download"
+                             for a in self._plan("mnist_mlp_b8").actions), 1)
+
+    def test_train_calibrated_numeric_evidence_replays(self):
+        import importlib.util
+        loader_spec = importlib.util.spec_from_file_location(
+            "verify_numeric_acceptance",
+            ROOT / "tools" / "verify_numeric_acceptance.py")
+        verifier = importlib.util.module_from_spec(loader_spec)
+        loader_spec.loader.exec_module(verifier)
+        evidence = ROOT / "results" / "20261024T091634Z-numeric"
+        summary = verifier.verify(
+            WEIGHTS / "numeric_acceptance_train.json",
+            evidence / "calibration" / "observation.npz",
+            evidence / "acceptance" / "observation.npz")
+        self.assertEqual(summary["status"], "PASS", summary["problems"])
+        self.assertEqual(summary["problems"], [])
+        self.assertTrue(summary["sample_disjoint"]["train_test_splits_distinct"])
+        self.assertTrue(summary["sample_disjoint"]["pixel_hash_sets_disjoint"])
+        self.assertEqual(len(summary["calibration"]["layers"]), 33)
+        self.assertEqual(len(summary["acceptance"]["layers"]), 33)
+        self.assertEqual(len(summary["acceptance"]["profiles"]), 5)
+        for key in ("mlp.h1_pre_relu", "mlp.r1_relu", "mlp.h2_pre_relu",
+                    "mlp.r2_relu", "mlp.final_preactivation"):
+            self.assertIn(key, summary["acceptance"]["layers"])
+            self.assertTrue(summary["acceptance"]["layers"][key]["ok"])
 
     def test_verifier_rejects_same_top1_amplified_logits(self):
         import importlib.util

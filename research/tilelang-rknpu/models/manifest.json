@@ -16,7 +16,8 @@
       "board_campaign": "results/20261024T071144Z-models/",
       "cpu_baseline": "evidence/cpu_benchmark_v2.json",
       "host_mock": "evidence/model_eval_mock_v2.json",
-      "host_verification": "results/20261024T072125Z-host/",
+      "host_verification": "results/20261024T092339Z-host/",
+      "numeric_acceptance_campaign": "results/20261024T091634Z-numeric/",
       "numeric_calibration": "evidence/numeric-calibration/"
     },
     "evidence_sha256": {
@@ -27,7 +28,14 @@
       "board_verify_summary": "4a8e3ac04baf4916da27e9902b0438d061513bfe04498946ab8e896b7185d44d",
       "host_cpu_benchmark": "f0a818e031dc21de8c080a6ac22258e98a9ebc323546acf01c022a837ac8a6ae",
       "host_mock_eval": "dd5b3ee2650f69f3de94f10c8b68d974e3d8c9698f241f03bcd7e90276b8341c",
-      "host_verification_manifest": "4816847484e55bd92654dfbb844567fe7889c3c8ca21a88526ac7088442821c8"
+      "host_verification_manifest": "4cdb7f4c7d31c758c5c40e0d3420feed05878536157125832baf15acdb51b2bc",
+      "numeric_acceptance_metadata": "6e71d98d86681a9d471728cc0d0e99deeb81e310d7c163ae0aef39280876c45a",
+      "numeric_acceptance_observation": "0ee954b6016ed0261dedbc0c52951e562200efe282bed9b8e872102ac89d2cb2",
+      "numeric_calibration_metadata": "983f5b22793117f0431b23f276c294ddcf8515e3b24c71f51ffc79322dc6af3b",
+      "numeric_calibration_observation": "c6f6bcd2722aaa99383baf4375fa83bde7010b4594adcacd8bab371dee6c6131",
+      "numeric_campaign_manifest": "6b802a30c898fdc53cf08aed0bc67bb3d811b0660ca5d2646f91bdc7871fb874",
+      "numeric_frozen_spec": "9a194f890b5b8fcbb032c539b17bae781e1f1ec79b2342e9d64dbaacbf14dbff",
+      "numeric_verify_summary": "9ee0dc3166f4918393500fd7f87d338a2a04965bea801f871e3344da299ac1f4"
     },
     "full_test_images": 10000,
     "mnist_mlp_accuracy_min": 0.97,
@@ -135,54 +143,195 @@
     "schema_version": 1
   },
   "layer_numeric_acceptance": {
-    "calibration_evidence": "evidence/numeric-calibration/",
+    "acceptance_expected": "models/numeric_acceptance_test.npz",
+    "acceptance_expected_sha256": "277a9a0293f9d8f0413b5bd812d07ed0cbbc0f629a36a8663a65dc8fbc8a7ce8",
+    "acceptance_indices": [
+      354,
+      531,
+      622,
+      816,
+      1146,
+      1420,
+      1597,
+      1684,
+      1772,
+      2288,
+      2718,
+      3049,
+      3116,
+      3200,
+      4242,
+      5447,
+      5464,
+      5832,
+      6214,
+      6283,
+      6324,
+      6365,
+      6398,
+      6678,
+      7415,
+      7903,
+      8733,
+      9118,
+      9308,
+      9346,
+      9440,
+      9830
+    ],
+    "acceptance_source_sha256": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+    "acceptance_split": "test",
+    "calibration_expected": "models/numeric_calibration_train.npz",
+    "calibration_expected_sha256": "d1cc5db161e93907a5156c9422a5e610071d8eab4b22fe901dba8395b5bc433e",
+    "calibration_indices": [
+      1244,
+      2363,
+      2999,
+      4556,
+      4891,
+      8580,
+      14022,
+      14891,
+      18780,
+      20214,
+      23747,
+      23823,
+      29431,
+      29453,
+      29495,
+      32891,
+      32984,
+      33660,
+      34481,
+      38748,
+      40912,
+      42965,
+      43746,
+      44188,
+      45480,
+      46056,
+      48201,
+      51374,
+      53224,
+      53271,
+      54801,
+      59181
+    ],
+    "calibration_source_sha256": "440fcabf73cc546fa21475e81ea370265605f56be210a4024d2ca8f203523609",
+    "calibration_split": "train",
     "calibration_status": "frozen",
     "classification_used_for_tolerance": false,
-    "golden": "models/numeric_golden.npz",
-    "golden_sha256": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
-    "layer_tolerance_count": 28,
+    "compiled_manifest_sha256": "039cfaddcffde7e5e8fbcf75a76fb393f3362c1110f1641f6204685634654249",
+    "failure_policy": "acceptance failure must be investigated as a numeric or implementation defect; do not widen limits using test-set maxima",
+    "historical_test_envelope_v1": {
+      "calibration_evidence": "evidence/numeric-calibration/",
+      "golden": "models/numeric_golden.npz",
+      "role": "regression envelope only; calibrated from previously viewed test-split observations and not independent acceptance",
+      "spec": "models/numeric_acceptance.json"
+    },
+    "labels_read_for_acceptance_observation": false,
+    "labels_read_for_calibration": false,
+    "layer_tolerance_count": 33,
+    "mlp_hidden_diagnostics": {
+      "mnist_mlp_diag_l1_bias": {
+        "output_binding": "Y",
+        "plan_hash": "91aa32341f90e16b20961433aad605282563add31d67ed8e59c7e5494ec158b6",
+        "role": "layer1-pre-relu-bias",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add.f16.v1"
+        ]
+      },
+      "mnist_mlp_diag_l1_relu": {
+        "output_binding": "Y",
+        "plan_hash": "9888b60dbb12217c52259a9677c4a8981cc2f204b7db18597ad514965c9b7215",
+        "role": "layer1-exact-relu",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1"
+        ]
+      },
+      "mnist_mlp_diag_l2_bias": {
+        "output_binding": "Y",
+        "plan_hash": "f60f80b7a8338d4316e2a8380e777d97cebbdf60a4cdfd363b0d740f0cb6081d",
+        "role": "layer2-pre-relu-bias",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ]
+      },
+      "mnist_mlp_diag_l2_relu": {
+        "output_binding": "Y",
+        "plan_hash": "1f83c6b177195202e35745f87810800a08cf20457a1acf0fb65e29faf4199e56",
+        "role": "layer2-exact-relu",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1"
+        ]
+      },
+      "mnist_mlp_diag_l3_bias": {
+        "output_binding": "Y",
+        "plan_hash": "36f53d3d5cb575d7a5415f5959b2f889d7fc1f50df9b54f399e017a16fcda584",
+        "role": "layer3-final-preactivation-bias",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ]
+      }
+    },
+    "non_blind_disclosure": "The complete test set and earlier test results were inspected before this train-calibration boundary was introduced. This is a disjoint post-freeze numerical acceptance rerun, not a blind benchmark.",
+    "numeric_campaign": "results/20261024T091634Z-numeric/",
     "profile_logit_tolerance_count": 5,
     "relu_probe_plan": "models/compiled/mnist_relu_probe.rkplan.json",
     "relu_probe_templates": [
       "co.ew_add.f16.v1",
       "co.ew_max.f16.v1"
     ],
-    "sample_indices": [
-      10,
-      73,
-      171,
-      249,
-      279,
-      349,
-      383,
-      405
-    ],
-    "spec": "models/numeric_acceptance.json",
-    "spec_sha256": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f",
+    "scope": "empirical envelope for the frozen model package and execution paths on RK3588; not a theoretical accuracy or error bound",
+    "spec": "models/numeric_acceptance_train.json",
+    "spec_sha256": "9a194f890b5b8fcbb032c539b17bae781e1f1ec79b2342e9d64dbaacbf14dbff",
     "status": "frozen",
-    "tolerance_rule": "atol=ceil_2^-12(2*max_observed_abs_error); rtol=0"
+    "test_data_used_for_tolerance": false,
+    "tolerance_rule": "device f16: atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); exact Host layout: atol=ceil_2^-12(2*observed); rtol=0"
   },
   "milestone": "NEXT-MILESTONE two complete models",
   "model_sources": {
-    "models/compiled/manifest.json": "3a314b989aa90d1ac5345a32cf03131f54fc360b089b92aa7c733ef24a237b6a",
+    "models/compiled/manifest.json": "039cfaddcffde7e5e8fbcf75a76fb393f3362c1110f1641f6204685634654249",
     "models/numeric_acceptance.json": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f",
+    "models/numeric_acceptance_test.npz": "277a9a0293f9d8f0413b5bd812d07ed0cbbc0f629a36a8663a65dc8fbc8a7ce8",
+    "models/numeric_acceptance_train.json": "9a194f890b5b8fcbb032c539b17bae781e1f1ec79b2342e9d64dbaacbf14dbff",
+    "models/numeric_calibration_train.npz": "d1cc5db161e93907a5156c9422a5e610071d8eab4b22fe901dba8395b5bc433e",
     "models/numeric_golden.npz": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
     "models/tilelang_matmul.py": "052acb72799fa594ac5ec2f1d4615be467621dca94d88c29cdae58ab8cf986ae",
-    "models/tilelang_mlp.py": "bb248045f763b574fc146257aa9dcffbd62448ca88755656aac1219a0445f875",
+    "models/tilelang_mlp.py": "a244daf9933972a8c46ccc3921ca3059902a969efb59e33facacf3c83e76d2a3",
     "python/rknpu_backend/hostinfo.py": "6503a7d100ceacf0bfa5012b06536b095f8de5926b42410c074845b66419ca03",
     "python/rknpu_backend/hybrid.py": "e5a566eaea8611e906d553b53049de3cc56b86314f8a4dcd0bcdde5669b15119",
     "python/rknpu_backend/model_reference.py": "395420db9cc0f82a8980fef06bad38293d2eebeefd528d6a52fe390d8d9992d6",
     "python/rknpu_backend/models.py": "2770485d535065e8b35577c46c860c1693387cdaf4385d0351103582924e905c",
-    "python/rknpu_backend/numeric.py": "dbe26260f307422a50ac2ef92e922d5b3c16cb574fc72dc20edf9d4d6a9342cc",
+    "python/rknpu_backend/numeric.py": "428f37a5122203edb886981254fe8d0fd9967ede801a65405bb555b4d9b872d9",
+    "python/rknpu_backend/numeric_observation.py": "094363c8cba8a91ce2f24566e51f927506d3afc15a4a31322ce5e4174f6f613b",
+    "python/rknpu_backend/numeric_policy.py": "c19593c7f1f65771808bf18421876ed4ffcf71e40088b1d9b11cc547df02b654",
     "tools/benchmark_cpu_models.py": "e4c5f3e58705a33be1b66cf375e784b49701f51deaa868116118e233291a2e1f",
     "tools/build_hybrid_manifests.py": "ea81d8d9d295ae2c86b899aa07bbdf8143f6bc80cc57ff9ec2cf518f7666581b",
     "tools/build_numeric_acceptance.py": "5a6aaa9bd8d9c4e23130b9b936df7121f024de4848b004e9ad08481061c50323",
+    "tools/build_numeric_train_acceptance.py": "ee1d14da7fd023062ba737a0de120799e04271d92388ab6cdae6fcd493be8a1a",
     "tools/calibrate_numeric_acceptance.py": "5c3a84513334027e19fbb7f7e4510c8549a2fac01a63ebb5f5421569282b0650",
-    "tools/compile_models.py": "657bd288804b2b76b4aeac2256aca00b39bfca009ea5d8573b678c900fbd6c8e",
-    "tools/compile_numeric_probe.py": "5ad982afb3ba13cb7102edf103244158702e0b486a0b2f8c5b58df454aac046e",
+    "tools/calibrate_numeric_train.py": "807faa002881446117dbe36869d8cbcf830a8e03e47cc2a879acf678145b484f",
+    "tools/compile_models.py": "789929df319032b484ec252464ee947262c52a3c7b36433aa8ec952c7c9507e9",
+    "tools/compile_numeric_probe.py": "e1f8b81b03cb8e04d36fcc9df8889a1392a17ae554db45ab8004471b1a51685c",
     "tools/evaluate_models.py": "0caa14bfa6b4451c4a2431937000adf218646cf6d06b866a780228ad298ce0e3",
+    "tools/run_numeric_observation.py": "85ca8031a20fe001203e201ba820d958ebe857902113898b3ca224e17896f935",
     "tools/train_mnist_models.py": "c85c40b465a3a9ad8c40b37336db344c44922daba93d52d91cbe4087bdc45cda",
-    "tools/verify_model_results.py": "284f3cdca9c404e98cc226f6ccb99269d6dcc569851ebdf36d187224c2c8f018"
+    "tools/verify_model_results.py": "284f3cdca9c404e98cc226f6ccb99269d6dcc569851ebdf36d187224c2c8f018",
+    "tools/verify_numeric_acceptance.py": "856be14948ab7c1162cac3bef1828234ddb45dc31417cbdbb98b0309ad1d7a55"
   },
   "models": [
     {
@@ -291,6 +440,74 @@
         "sha256": "a03c01cd64c8cf9c29daac3db8e550b871c94d4333d7f1a60c1b95f5329e62b1",
         "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1387f6f0), 22, 22, 1, 1048576)"
       },
+      "mnist_mlp_diag_l1_bias": {
+        "batch": 8,
+        "path": "mnist_mlp_diag_l1_bias.rkplan.json",
+        "plan_hash": "91aa32341f90e16b20961433aad605282563add31d67ed8e59c7e5494ec158b6",
+        "role": "numeric-acceptance-mlp-layer1-pre-relu-bias",
+        "sha256": "e6c975dde155006421e417bb909924159c5b9199c12aaaeaff3121d0147f761c",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0xc73ff50), 210, 210, 1, 1048576)",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add.f16.v1"
+        ]
+      },
+      "mnist_mlp_diag_l1_relu": {
+        "batch": 8,
+        "path": "mnist_mlp_diag_l1_relu.rkplan.json",
+        "plan_hash": "9888b60dbb12217c52259a9677c4a8981cc2f204b7db18597ad514965c9b7215",
+        "role": "numeric-acceptance-mlp-layer1-exact-relu",
+        "sha256": "d98da392daa2ca7034fe7863b37c9c833f067a6784725c8045db6331f46f271b",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0xc73ff50), 170, 170, 1, 1048576)",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1"
+        ]
+      },
+      "mnist_mlp_diag_l2_bias": {
+        "batch": 8,
+        "path": "mnist_mlp_diag_l2_bias.rkplan.json",
+        "plan_hash": "f60f80b7a8338d4316e2a8380e777d97cebbdf60a4cdfd363b0d740f0cb6081d",
+        "role": "numeric-acceptance-mlp-layer2-pre-relu-bias",
+        "sha256": "f7f86b81c8b5f869c552f7c637f75c90db781798f357a2cd23be98a4046ab2b4",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0xc73ff50), 294, 294, 1, 1048576)",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ]
+      },
+      "mnist_mlp_diag_l2_relu": {
+        "batch": 8,
+        "path": "mnist_mlp_diag_l2_relu.rkplan.json",
+        "plan_hash": "1f83c6b177195202e35745f87810800a08cf20457a1acf0fb65e29faf4199e56",
+        "role": "numeric-acceptance-mlp-layer2-exact-relu",
+        "sha256": "19b60c56b385ea8623f288e0918a24907ac2af9f28ed9981ec48659662b5017b",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0xc73ff50), 256, 256, 1, 1048576)",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1"
+        ]
+      },
+      "mnist_mlp_diag_l3_bias": {
+        "batch": 8,
+        "path": "mnist_mlp_diag_l3_bias.rkplan.json",
+        "plan_hash": "36f53d3d5cb575d7a5415f5959b2f889d7fc1f50df9b54f399e017a16fcda584",
+        "role": "numeric-acceptance-mlp-layer3-final-preactivation-bias",
+        "sha256": "d8167b1bee53ef0bf8648f35076c9101ce185fbb0d5042321f39112ae17c8405",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0xc73ff50), 338, 338, 1, 1048576)",
+        "templates": [
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ]
+      },
       "mnist_relu_probe": {
         "batch": 2,
         "constant_inputs": [
@@ -298,10 +515,10 @@
           "B"
         ],
         "path": "mnist_relu_probe.rkplan.json",
-        "plan_hash": "00259bc01160f05608999444d49f048ac12e8961bfa04cb88136908a6de03b3d",
+        "plan_hash": "2ac15c5f7f663e8ef5d4592d515e5d53b67b85caa1d4fae281d17b5c372cc445",
         "role": "numeric-acceptance-relu-probe",
-        "sha256": "4fdddd79336dceb47ea1e860780228cb36a129968d4a03d8cdd07d05bcb13f08",
-        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x1aed2f20), 135, 135, 1, 1048576)",
+        "sha256": "7b92d415005fa3e230c35bed644e2cdc7457d2ba7fbe69776a9126f2166a0f20",
+        "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0xc73ff50), 135, 135, 1, 1048576)",
         "templates": [
           "co.ew_add.f16.v1",
           "co.ew_max.f16.v1"
@@ -439,9 +656,11 @@
   "numeric_policy": {
     "activation": "explicit registered Host SiLU/SwiGLU nodes",
     "fallback": "error; no implicit CPU matrix fallback",
-    "layer_gate": "frozen per-layer and per-profile absolute tolerances; top-1 cannot replace the raw-logit/layer checks",
+    "layer_gate": "train-split frozen per-layer and per-profile absolute tolerances; no test-set maximum enters calibration; top-1 cannot replace raw-logit/hidden-layer checks",
     "matmul": "ordered 256-wide K tiles with explicit FP16 writeback",
+    "mlp_hidden_gate": "real-TileLang diagnostic plans export both pre-ReLU linear+bias and exact-ReLU values for both hidden layers plus final preactivation; production plan still downloads only final logits",
     "relu": "exact NPU elementwise MAX against zero; no LUT approximation",
+    "scope": "empirical RK3588 envelope for the frozen package and execution paths, not a theoretical error guarantee",
     "softmax": "stable Max/Exp/Sum Host node on FP32 scores"
   },
   "package": {
@@ -450,7 +669,7 @@
     "input_preprocessing": "MNIST mean=0.1307 std=0.3081; 784 values zero-padded to 1024 for ordered-K NPU primitive; TinyViT uses 16 raster 7x7 patches",
     "logical_weight_dtype": "float32",
     "npu_weight_dtype": "float16",
-    "numeric_acceptance": "deterministic 8-image layer trace + real-TileLang exact-ReLU probe + frozen per-layer/profile limits",
+    "numeric_acceptance": "fixed 32-image train calibration + fixed 32-image disjoint test acceptance; real-TileLang MLP hidden diagnostics; frozen per-layer/profile limits",
     "output_postprocessing": "argmax on first 10 logits; no threshold tuning",
     "random_operator_demo": false,
     "weights_are_learned": true

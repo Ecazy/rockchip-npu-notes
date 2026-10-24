@@ -1,6 +1,6 @@
 # Supported domain and explicit boundaries
 
-Updated for the MVP closure checkpoint, 2026-10-23.
+Updated 2026-10-24 for the MVP and complete-model closure checkpoints.
 
 ## Accepted source forms
 
@@ -46,11 +46,16 @@ Updated for the MVP closure checkpoint, 2026-10-23.
 - Declared FP16 path: staged/ordered FP16 writeback at each K-tile boundary and
   explicit FP16 stores at activation/gated/residual points.
 - Per-plan/operator acceptance remains the declared `NumericContract` allclose
-  policy.  The complete-model milestone adds a separate, frozen layer/task
-  gate: deterministic sample traces, 28 per-layer and 5 per-profile absolute
-  limits (`rtol=0`), calibrated as 2x the maximum observed error over mock and
-  all RK3588 core masks and rounded up to 2^-12.  Top-1 accuracy is reported but
-  is not used to select these limits.
+  policy.  The complete-model milestone adds a separate frozen layer/task gate:
+  deterministic traces, 33 per-layer and 5 per-profile absolute limits
+  (`rtol=0`).  Limits are frozen from a 32-image MNIST **train** calibration
+  subset only, using
+  `max(2*observed_error, 2*FP16-spacing-at-train-reference-scale)` for device
+  outputs and `2*observed_error` for exact Host layouts, rounded to 2^-12.
+  Labels and test maxima are not used.  A disjoint fixed test subset is then
+  observed and verified; a prior test-calibrated envelope is retained only as
+  regression evidence.  This is an empirical RK3588 envelope, not a theoretical
+  error guarantee.
 - An unquantized float64 mathematical reference is stored separately and is
   never the acceptance predicate.
 - Strict FP32 fused/unspecified accumulation is **not supported**.

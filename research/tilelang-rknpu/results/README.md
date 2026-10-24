@@ -7,10 +7,17 @@ payloads needed for independent numerical replay.
 
 ## Current checkpoint (2026-10-24)
 
-- Complete-model final board campaign: `results/20261024T071144Z-models/`.
-- Final Host verification: `results/20261024T072125Z-host/` (231 pytest /
+- Complete-model task/timing campaign: `results/20261024T071144Z-models/`.
+- Train-calibrated numeric campaign:
+  `results/20261024T091634Z-numeric/`; calibration uses 32 unlabeled train images,
+  then a disjoint 32-image test subset is observed after freezing thresholds.
+  The verifier also rechecks existing full-test raw logits under the same limits.
+- Final Host verification: `results/20261024T092339Z-host/` (235 pytest /
   41 subtests, 27/27 ctest, 26 contract + 711 host + 2,400,033 graph C checks,
   explicit ASan/UBSan).
+- Historical test-calibrated numeric envelope:
+  `models/numeric_acceptance.json` and `evidence/numeric-calibration/`; retained
+  only as regression evidence, not independent acceptance.
 - Old model performance fields: see
   `results/20261024T031249Z-models/PERFORMANCE-RETRACTION.md`.
 
@@ -89,9 +96,13 @@ Guarantees encoded in `scripts/run-verification.sh`:
 - **Host/mock evidence:** `evidence/model_eval_mock_v2.json`,
   `evidence/cpu_benchmark_v2.json`, and `evidence/numeric-calibration/`.
   Raw board logits and layer traces are retained with the final campaign.
-- **Final Host checks:** `results/20261024T072125Z-host/` is PASS with
-  **231 pytest / 41 subtests, 27/27 ctest**, 26 contract + 711 host +
+- **Final Host checks:** `results/20261024T092339Z-host/` is PASS with
+  **235 pytest / 41 subtests, 27/27 ctest**, 26 contract + 711 host +
   2,400,033 graph C checks, and explicit ASan/UBSan.
+- **Numeric acceptance:** `results/20261024T091634Z-numeric/` PASS with
+  train-only calibration, disjoint test observation, MLP hidden-layer traces and
+  the existing full-test raw-logit recheck.  The earlier test-calibrated envelope
+  is retained only as regression evidence.
 - **Timing/performance:** schema-v2 timing excludes reference calculation,
   measures all registered Host nodes and uses a matched static batch schedule
   for the explicitly single-threaded CPU baseline.
@@ -178,7 +189,7 @@ stress are extension validation, not P8 blockers.
 
 _The notes below are historical incident records.  The MVP Host run at that time
 was `20261024T032922Z-host` (219 pytest, 27/27 ctest); the final complete-model
-Host verification is `20261024T072125Z-host` (231 pytest / 41 subtests, 27/27
+Host verification is `20261024T092339Z-host` (235 pytest / 41 subtests, 27/27
 ctest, sanitizer enabled)._
 
 **FFN 数值对照已通过**（20261022T130044Z-host）。根因：mock seam 把模板标签写进 `co_program.flags`，而该字段是生产语义（`co_schedule.c:38` 要求为 0，`custom_ops.c:344` 用 `ROCKET_JOB_PPU_DONE`），导致 LUT/EW/MM 误分派（511/512 元素错）。改为 mock 私有旁表（按程序地址记模板与 mul）后，剩余差异仅为参考实现的收窄顺序；按"先 sigmoid→收紧、再乘 gate→收紧 SiLU"修正参考后逐元素严格相等。

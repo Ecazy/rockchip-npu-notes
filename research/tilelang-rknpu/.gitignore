@@ -58,3 +58,11 @@ evidence/*.npy
 !results/20261024T071144Z-models/model-results/core-*/model_eval.layers.npz
 
 !results/20261024T072125Z-host/
+
+# Train-calibrated numeric acceptance campaign: retain board observations,
+# metadata, frozen spec and plans; large regenerated weights/data stay local.
+!results/20261024T091634Z-numeric/
+!results/20261024T091634Z-numeric/calibration/observation.npz
+!results/20261024T091634Z-numeric/acceptance/observation.npz
+
+!results/20261024T092339Z-host/

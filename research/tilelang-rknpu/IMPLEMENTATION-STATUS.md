@@ -396,11 +396,14 @@ P1 批次一（K 循环提取）与顺带发现的 C 校验缺陷：
 完整 MNIST MLP 与 Tiny Transformer 已按 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)
 完整关闭：真实学习权重、真实 TileLang staged 源、RKIR/RKPlan、生产 runtime；
 完整 10,000 张测试集在 core 1 运行，MLP 98.31%、Tiny Transformer 98.21%，CPU/声明路径
-top-1 一致率均为 100%。随后补关了三个缺口：schema-v2 计时边界、版本化 `rkhybrid`
-清单化的已注册 Host action 边界、以及逐层/逐 profile 冻结容差和独立 verifier。
-最终板端证据为 `results/20261024T071144Z-models/`，verifier PASS；旧 campaign 的
-`wall_seconds`/吞吐字段已在 `PERFORMANCE-RETRACTION.md` 标记失效。该阶段独立于已验收
-MVP，不回写上一阶段历史验收，也不宣称纯 NPU Transformer 或性能增益门槛。
+top-1 一致率均为 100%。随后补关了计时、hybrid 计划和模型级清理缺口；数值边界最终
+改为：32 张无标签 train 样本在板端校准、Host 冻结 33 个逐层和 5 个 profile 门禁，
+再运行与 train 逐像素哈希不重叠的 32 张 test 样本。新增真实 TileLang MLP 诊断计划，
+导出两层隐藏层的 linear+bias、ReLU 和最终 preactivation；生产计划仍只下载最终
+logits。最终任务/计时证据为 `results/20261024T071144Z-models/`，train-calibrated
+数值证据为 `results/20261024T091634Z-numeric/`，二者 verifier 均 PASS。此前查看过
+test 结果的事实已记录，不宣称盲测；旧 test-envelope 仅保留为回归证据。该阶段独立于
+已验收 MVP，不回写历史验收，也不宣称纯 NPU Transformer 或性能增益门槛。
 
 ## 2. 工作包状态
 
@@ -430,7 +433,7 @@ rk_plan_host:     711 checks, 0 failures
 Python（`.pydeps` 中 pinned TileLang wheel，最终 Host 验证）：
 
 ```text
-231 passed, 0 failed, 0 skipped, 41 subtests
+235 passed, 0 failed, 0 skipped, 41 subtests
                           (含 ABI 全量偏移、语义守卫、K 循环、M/N、SwiGLU、
                            显式 ragged、常量广播、多输出、campaign host preflight、
                            rkhybrid 图校验、逐层容差、清理不覆盖原异常，
@@ -715,7 +718,7 @@ producer)` lowering、FFI mock 执行与独立 numpy 五收窄点参考、两轮
 保活断言，以及分支接错/收窄缺失/未支持算子的负例。证据：
 `tests/test_frontend_silu_proj.py`、`tests/test_silu_proj_execution.py`、
 历史 MVP Host 记录为 `results/20261024T032922Z-host/`（219 pytest / 27 ctest）；
-完整模型最终 Host 重验为 `results/20261024T072125Z-host/`（231 pytest /
+完整模型最终 Host 重验为 `results/20261024T092339Z-host/`（235 pytest /
 41 subtests、27/27 ctest、sanitizer，evidence_complete=true）。
 
 **已知待补的基础设施**：验证脚本的依赖短路（）与产物哈希；

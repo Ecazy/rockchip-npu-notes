@@ -1,15 +1,15 @@
 # Next milestone: two complete models
 
-Status: **complete, including the timing, hybrid-plan and numeric-acceptance
-closure** (2026-10-24).  This is the independent N0-N3 milestone described in
-[NEXT-MILESTONE.md](NEXT-MILESTONE.md); it does not retroactively change the
-already accepted MVP.
+Status: **complete** (2026-10-24).  This is the independent N0-N3 milestone
+described in [NEXT-MILESTONE.md](NEXT-MILESTONE.md); it does not retroactively
+change the already accepted MVP.
 
-The first checkpoint proved that both learned models run end to end.  This
-checkpoint additionally closes three review findings: model timing boundaries,
-the registered/planized Transformer hybrid boundary, and deterministic
-layer/profile numeric acceptance with an independent verifier.  The previous
-campaign remains archived, but its performance fields are explicitly invalid.
+The first checkpoint proved that both learned models run end to end.  The
+closure then fixed model timing boundaries, introduced the registered/planized
+`rkhybrid` boundary, and separated numeric calibration (train split, no labels)
+from acceptance (disjoint test split).  A previously test-calibrated envelope is
+retained only as historical regression evidence.  The earlier performance
+fields are still explicitly invalid.
 
 ## Delivered models
 
@@ -75,34 +75,112 @@ compiled RKPlan manifest.
 
 ## Numeric acceptance
 
-The full 10,000-image MNIST test split remains the task-accuracy set; training
-never saw it.  Classification accuracy is not used as the numeric tolerance
-selector.
+The current independent boundary is documented in
+[models/NUMERIC-ACCEPTANCE.md](models/NUMERIC-ACCEPTANCE.md).
 
-Deterministic layer evidence:
+### Calibration/acceptance separation
 
-- `models/numeric_golden.npz` stores expected values for eight fixed test images
-  (indices `[10, 73, 171, 249, 279, 349, 383, 405]`) and the exact-ReLU probe.
-- All eight indices lie inside the 512-image admission subset, so each of the
-  three serial core masks executes the identical sample set.
-- The real-TileLang ReLU probe is a 2x256 plan with exactly
-  `co.ew_add.f16.v1 -> co.ew_max.f16.v1`; it is not a LUT/HardSigmoid substitute.
-- Transformer key layers include patch projection, positioned input, both
-  RMSNorms, QKV, per-head Q/K/V, QK scores, softmax probabilities, per-head PV,
-  attention output projection, both residuals, SwiGLU, FFN, mean pool and logits.
-- Dynamic-B QK and PV layer outputs are both included in the trace.
-- `models/numeric_acceptance.json` freezes **28 layer/output tolerances** and
-  **5 static-profile raw-logit tolerances**.  The rule is
-  `atol = ceil_to_2^-12(2 × max observed absolute error)` and `rtol = 0`,
-  observed over mock plus all three RK3588 core masks.  Per-entry observed
-  maxima and basis are recorded in the JSON.
-- Calibration evidence is retained under `evidence/numeric-calibration/`.
-- The verifier independently reloads raw hardware logits, labels, weights and the
-  dataset; it recomputes CPU FP32 and declared references, finite values, the
-  exact profile set, the deterministic sample set, hashes and layer tolerances.
-- A regression test feeds the verifier the same top-1 predictions with logits
-  multiplied by 1.5.  The verifier rejects it because the raw-logit/layer gate is
-  independent of classification output.
+- Calibration uses **32 fixed MNIST train images** selected by seed
+  `20261024`, without reading labels.
+- Acceptance uses **32 fixed MNIST test images** selected by seed `20261025`,
+  also without reading labels during observation.
+- Train and test source-image SHA-256 hashes, selected indices and per-image raw
+  pixel SHA-256 are recorded in `models/numeric_acceptance_train.json`.
+- The verifier requires different official splits, different source-image file
+  hashes and disjoint per-image pixel-hash sets.
+- RK3588 order was: train calibration observation -> Host freeze -> SHA-256 of
+  frozen spec recorded by the acceptance observation -> test observation.
+- **Disclosure:** the full test set and prior task results were seen before this
+  boundary was introduced.  This is a disjoint post-freeze numerical acceptance
+  rerun, **not a blind benchmark**.
+
+### Frozen policy
+
+- `models/numeric_acceptance_train.json` freezes **33 layer gates** and
+  **5 static-profile raw-logit gates** with `rtol = 0`.
+- Device-derived FP16 outputs use:
+
+  ```text
+  atol = ceil_to_2^-12(max(2 * train_observed_max_abs_error,
+                           2 * f16_spacing(train_expected_absmax)))
+  ```
+
+- Host-only exact layout/normalization outputs use only
+  `ceil_to_2^-12(2 * train_observed_max_abs_error)`.
+- No test-set error, maximum, logit, label or top-1 result enters the threshold
+  calculation.
+- The floor is a representational-scale FP16 allowance, not a theoretical
+  end-to-end error bound.  The accepted scope is the frozen package, weights,
+  plans and RK3588 execution paths.
+- If acceptance fails, the policy is to investigate the numeric path or
+  implementation.  Enlarging limits from test maxima is forbidden by the recorded
+  calibration rule.
+
+### Deterministic evidence
+
+- `models/numeric_calibration_train.npz` stores the fixed train images,
+  independent declared expected values and profile logits.
+- `models/numeric_acceptance_test.npz` stores the disjoint test images and
+  independent expected values.
+- `models/compiled/mnist_relu_probe.rkplan.json` is the real-TileLang
+  `co.ew_add.f16.v1 -> co.ew_max.f16.v1` exact-ReLU probe.
+- The Transformer trace covers patch projection, positioned input, both RMSNorms,
+  QKV, per-head Q/K/V, QK scores, softmax, per-head PV, attention projection,
+  residuals, SwiGLU, FFN, pooling and logits.  Dynamic-B QK/PV are included.
+
+### Real MLP hidden-layer diagnostics
+
+Production `mnist_mlp_b*` plans are unchanged and still download only final
+logits.  Separate real-TileLang diagnostics export the actual hidden-layer
+linear+bias and exact-ReLU values:
+
+- `mnist_mlp_diag_l1_bias`: layer-1 `matmul(W1)+b1` -> pre-ReLU;
+- `mnist_mlp_diag_l1_relu`: layer-1 bias + exact ReLU;
+- `mnist_mlp_diag_l2_bias`: layer-2 `matmul(W2)+b2` from the **hardware ReLU1**
+  output -> pre-ReLU;
+- `mnist_mlp_diag_l2_relu`: layer-2 exact ReLU from the hardware ReLU1 path;
+- `mnist_mlp_diag_l3_bias`: layer-3 `matmul(W3)+b3` from the **hardware ReLU2**
+  output -> final 16-wide preactivation+bias.
+
+Observed post-freeze test-subset errors and train-frozen limits:
+
+| MLP trace | max abs error | frozen atol |
+|---|---:|---:|
+| layer-1 pre-ReLU linear+bias | 0.001953125 | 0.03125 |
+| layer-1 exact ReLU | 0.0009765625 | 0.03125 |
+| layer-2 pre-ReLU linear+bias | 0.00390625 | 0.03125 |
+| layer-2 exact ReLU | 0.001953125 | 0.03125 |
+| final preactivation+bias | 0.015625 | 0.0625 |
+| final logits | 0.015625 | 0.0625 |
+| ReLU primitive probe | 0.0 | 0.001953125 |
+
+### Independent checks
+
+`tools/verify_numeric_acceptance.py` checks:
+
+- train/test source hashes, indices, per-image hashes and observation hashes;
+- disjoint calibration/acceptance sample sets;
+- every frozen limit recomputes exactly from train observations;
+- finite values, expected shapes and all 33 hidden/layer traces;
+- all five profile raw-logit arrays;
+- the frozen spec SHA-256 recorded by the post-freeze acceptance run;
+- all used RKPlan hashes and the compiled-manifest hash;
+- the existing full 10,000-image campaign raw logits against the same
+  train-frozen profile limits.
+
+Final numeric campaign:
+`results/20261024T091634Z-numeric/`.
+Its `verify-summary.json` is **PASS / 0 problems**, with 15 existing-campaign raw
+logit rows rechecked.  The negative regression feeds a hidden MLP trace outside
+its frozen limit while leaving the final logits/top-1 unchanged; the layer gate
+still rejects it.
+
+### Historical test envelope v1
+
+`models/numeric_acceptance.json`, `models/numeric_golden.npz` and
+`evidence/numeric-calibration/` are retained for reproduction of the first-round
+run.  They were calibrated from previously viewed test-split observations and are
+therefore labeled **regression envelope only**, not independent acceptance.
 
 ## Full task results
 
@@ -207,13 +285,18 @@ Primary evidence:
   `results/20261024T071144Z-models/` (`verify-summary.json` PASS).
 - Raw board logits and deterministic layer traces:
   `results/20261024T071144Z-models/model-results/core-*/`.
-- Frozen numeric package: `models/numeric_golden.npz`,
-  `models/numeric_acceptance.json`, `models/compiled/mnist_relu_probe.rkplan.json`.
+- Train-calibrated numeric package: `models/numeric_acceptance_train.json`,
+  `models/numeric_calibration_train.npz`, `models/numeric_acceptance_test.npz`,
+  and the five `models/compiled/mnist_mlp_diag_*.rkplan.json` plans.
+- Numeric acceptance campaign:
+  `results/20261024T091634Z-numeric/` (`verify-summary.json` PASS).
+- Historical test-only regression envelope: `models/numeric_acceptance.json`,
+  `models/numeric_golden.npz`, `evidence/numeric-calibration/`.
 - Hybrid manifests: `models/compiled/*.rkhybrid.json`.
 - Host/mock complete split: `evidence/model_eval_mock_v2.json`; matched-batch CPU
   baseline: `evidence/cpu_benchmark_v2.json`.
-- Host C/Python/sanitizer verification: `results/20261024T072125Z-host/`
-  is **PASS**: **231 pytest passed, 0 failed, 0 skipped**; **27/27 ctest**;
+- Host C/Python/sanitizer verification: `results/20261024T092339Z-host/`
+  is **PASS**: **235 pytest passed, 0 failed, 0 skipped**; **27/27 ctest**;
   contract **26** checks, host **711** checks, graph host **2,400,033** checks;
   ASan/UBSan enabled explicitly.
 
@@ -227,8 +310,8 @@ PYTHONPATH=$PWD:$PWD/python:$PWD/.src/p0-build-src/tilelang:$PWD/.src/p0-source-
 LD_LIBRARY_PATH=$PWD/.src/p0-build-tilelang/lib:$PWD/.src/p0-build-tvmffi-python/lib:$PWD/.pydeps-p0/z3/lib \
 python3 tools/compile_models.py
 
-# Rebuild the deterministic golden numeric file
-PYTHONPATH=$PWD/python python3 tools/build_numeric_acceptance.py
+# Rebuild the train-calibrated expected references and initial policy
+PYTHONPATH=$PWD/python python3 tools/build_numeric_train_acceptance.py
 
 # Reproduce the matched-batch host evaluation
 PYTHONPATH=$PWD/python RKNPU_PLAN_LIB=$PWD/../custom-ops/build-host-mvp/librknpu_plan_mock.so \
@@ -236,10 +319,24 @@ python3 tools/evaluate_models.py --backend mock --models both \
   --global-limit 10000 --profile-samples 512 \
   --out evidence/model_eval_mock_v2.json
 
-# Full board campaign (core 1 full split; masks 2/4 fixed 512-image subset)
+# Full model campaign (accuracy/timing; core 1 full split; masks 2/4 512 subset)
 ./scripts/run-model-admission.sh
 
-# Independent verification of the retrieved campaign
+# Train-calibrated numeric evidence: calibration on train, freeze, then a
+# disjoint post-freeze test observation on RK3588 core 1
+./scripts/run-numeric-acceptance.sh
+
+# Verify frozen limits, sample disjointness, MLP hidden traces and existing
+# full-test raw logits under the train-frozen profile limits
+PYTHONPATH=$PWD/python:$PWD \
+python3 tools/verify_numeric_acceptance.py \
+  --spec models/numeric_acceptance_train.json \
+  --calibration-observation results/20261024T091634Z-numeric/calibration/observation.npz \
+  --acceptance-observation results/20261024T091634Z-numeric/acceptance/observation.npz \
+  --campaign-manifest results/20261024T071144Z-models/campaign/manifest.json \
+  --campaign-results results/20261024T071144Z-models/model-results
+
+# Historical-regression-envelope verifier only (not independent numeric proof)
 python3 tools/verify_model_results.py \
   --manifest results/20261024T071144Z-models/campaign/manifest.json \
   --results results/20261024T071144Z-models/model-results

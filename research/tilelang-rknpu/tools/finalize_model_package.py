@@ -30,11 +30,13 @@ def main() -> int:
     d = json.loads(path.read_text())
     compiled_path = ROOT / "models" / "compiled" / "manifest.json"
     compiled = json.loads(compiled_path.read_text())
-    numeric_spec_path = ROOT / "models" / "numeric_acceptance.json"
-    numeric_golden_path = ROOT / "models" / "numeric_golden.npz"
+    numeric_spec_path = ROOT / "models" / "numeric_acceptance_train.json"
+    numeric_cal_path = ROOT / "models" / "numeric_calibration_train.npz"
+    numeric_acc_path = ROOT / "models" / "numeric_acceptance_test.npz"
     numeric_spec = json.loads(numeric_spec_path.read_text())
     board_campaign = latest("-models")
     host_campaign = latest("-host")
+    numeric_campaign = latest("-numeric")
     d["milestone"] = "NEXT-MILESTONE two complete models"
     d["package"] = {
         "format": "npz_no_pickle_safe_arrays",
@@ -48,16 +50,21 @@ def main() -> int:
         "random_operator_demo": False,
         "execution_manifest": "versioned rkhybrid; registered Host actions and "
                               "immutable RKPlan references only",
-        "numeric_acceptance": "deterministic 8-image layer trace + real-TileLang "
-                              "exact-ReLU probe + frozen per-layer/profile limits",
+        "numeric_acceptance": "fixed 32-image train calibration + fixed 32-image "
+                              "disjoint test acceptance; real-TileLang MLP hidden "
+                              "diagnostics; frozen per-layer/profile limits",
     }
     source_files = [
         "tools/train_mnist_models.py",
         "tools/compile_models.py",
         "tools/compile_numeric_probe.py",
         "tools/build_hybrid_manifests.py",
+        "tools/build_numeric_train_acceptance.py",
+        "tools/calibrate_numeric_train.py",
         "tools/build_numeric_acceptance.py",
         "tools/calibrate_numeric_acceptance.py",
+        "tools/run_numeric_observation.py",
+        "tools/verify_numeric_acceptance.py",
         "tools/evaluate_models.py",
         "tools/benchmark_cpu_models.py",
         "tools/verify_model_results.py",
@@ -67,8 +74,13 @@ def main() -> int:
         "python/rknpu_backend/model_reference.py",
         "python/rknpu_backend/hybrid.py",
         "python/rknpu_backend/numeric.py",
+        "python/rknpu_backend/numeric_policy.py",
+        "python/rknpu_backend/numeric_observation.py",
         "python/rknpu_backend/hostinfo.py",
         "models/compiled/manifest.json",
+        "models/numeric_acceptance_train.json",
+        "models/numeric_calibration_train.npz",
+        "models/numeric_acceptance_test.npz",
         "models/numeric_acceptance.json",
         "models/numeric_golden.npz",
     ]
@@ -121,22 +133,46 @@ def main() -> int:
                            "PERFORMANCE-RETRACTION.md",
     }
     d["layer_numeric_acceptance"] = {
-        "spec": "models/numeric_acceptance.json",
+        "spec": "models/numeric_acceptance_train.json",
         "spec_sha256": sha(numeric_spec_path),
-        "golden": "models/numeric_golden.npz",
-        "golden_sha256": sha(numeric_golden_path),
+        "calibration_expected": "models/numeric_calibration_train.npz",
+        "calibration_expected_sha256": sha(numeric_cal_path),
+        "acceptance_expected": "models/numeric_acceptance_test.npz",
+        "acceptance_expected_sha256": sha(numeric_acc_path),
+        "compiled_manifest_sha256": numeric_spec["compiled_manifest_sha256"],
         "status": numeric_spec["status"],
-        "calibration_status": numeric_spec["calibration"]["status"],
-        "sample_indices": numeric_spec["sample_policy"]["indices"],
+        "calibration_status": numeric_spec["calibration_rule"]["status"],
         "layer_tolerance_count": len(numeric_spec["layer_tolerances"]),
         "profile_logit_tolerance_count": len(
             numeric_spec["task_logit_tolerances"]),
-        "tolerance_rule": numeric_spec["calibration"]["rule"],
-        "classification_used_for_tolerance": numeric_spec["calibration"][
-            "uses_classification_metric"],
+        "calibration_split": numeric_spec["calibration"]["split"],
+        "acceptance_split": numeric_spec["acceptance"]["split"],
+        "calibration_indices": numeric_spec["calibration"]["indices"],
+        "acceptance_indices": numeric_spec["acceptance"]["indices"],
+        "calibration_source_sha256": numeric_spec["calibration"][
+            "source_sha256"],
+        "acceptance_source_sha256": numeric_spec["acceptance"]["source_sha256"],
+        "labels_read_for_calibration": numeric_spec["calibration"]["labels_read"],
+        "labels_read_for_acceptance_observation": numeric_spec["acceptance"][
+            "labels_read"],
+        "test_data_used_for_tolerance": numeric_spec["calibration_rule"][
+            "test_data_used"],
+        "tolerance_rule": numeric_spec["calibration_rule"]["formula"],
+        "classification_used_for_tolerance": False,
+        "failure_policy": numeric_spec["calibration_rule"]["failure_policy"],
+        "scope": numeric_spec["calibration_rule"]["scope"],
+        "non_blind_disclosure": numeric_spec.get("non_blind_disclosure"),
         "relu_probe_plan": "models/compiled/mnist_relu_probe.rkplan.json",
         "relu_probe_templates": ["co.ew_add.f16.v1", "co.ew_max.f16.v1"],
-        "calibration_evidence": "evidence/numeric-calibration/",
+        "mlp_hidden_diagnostics": compiled.get("mlp_hidden_diagnostics", {}),
+        "numeric_campaign": numeric_campaign,
+        "historical_test_envelope_v1": {
+            "spec": "models/numeric_acceptance.json",
+            "golden": "models/numeric_golden.npz",
+            "calibration_evidence": "evidence/numeric-calibration/",
+            "role": "regression envelope only; calibrated from previously viewed "
+                    "test-split observations and not independent acceptance",
+        },
     }
     d["host_boundaries"] = {
         "mnist_mlp": [
@@ -187,6 +223,19 @@ def main() -> int:
         ROOT / "evidence" / "model_eval_mock_v2.json")
     evidence_hashes["host_cpu_benchmark"] = sha(
         ROOT / "evidence" / "cpu_benchmark_v2.json")
+    if numeric_campaign:
+        numeric_base = ROOT / numeric_campaign
+        for label, rel in (
+                ("numeric_verify_summary", "verify-summary.json"),
+                ("numeric_calibration_observation", "calibration/observation.npz"),
+                ("numeric_calibration_metadata", "calibration/observation.json"),
+                ("numeric_acceptance_observation", "acceptance/observation.npz"),
+                ("numeric_acceptance_metadata", "acceptance/observation.json"),
+                ("numeric_frozen_spec", "frozen_spec.json"),
+                ("numeric_campaign_manifest", "campaign/run-manifest.json")):
+            evidence_path = numeric_base / rel
+            if evidence_path.is_file():
+                evidence_hashes[label] = sha(evidence_path)
     d["acceptance"] = {
         "full_test_images": 10000,
         "mnist_mlp_accuracy_min": 0.97,
@@ -200,6 +249,7 @@ def main() -> int:
             "board_campaign": board_campaign,
             "host_verification": host_campaign,
             "numeric_calibration": "evidence/numeric-calibration/",
+            "numeric_acceptance_campaign": numeric_campaign,
         },
         "evidence_sha256": evidence_hashes,
     }
@@ -209,8 +259,15 @@ def main() -> int:
         "activation": "explicit registered Host SiLU/SwiGLU nodes",
         "softmax": "stable Max/Exp/Sum Host node on FP32 scores",
         "fallback": "error; no implicit CPU matrix fallback",
-        "layer_gate": "frozen per-layer and per-profile absolute tolerances; "
-                      "top-1 cannot replace the raw-logit/layer checks",
+        "layer_gate": "train-split frozen per-layer and per-profile absolute "
+                      "tolerances; no test-set maximum enters calibration; "
+                      "top-1 cannot replace raw-logit/hidden-layer checks",
+        "mlp_hidden_gate": "real-TileLang diagnostic plans export both pre-ReLU "
+                           "linear+bias and exact-ReLU values for both hidden "
+                           "layers plus final preactivation; production plan "
+                           "still downloads only final logits",
+        "scope": "empirical RK3588 envelope for the frozen package and execution "
+                 "paths, not a theoretical error guarantee",
     }
     path.write_text(json.dumps(d, indent=2, sort_keys=True) + "\n")
     print(path)

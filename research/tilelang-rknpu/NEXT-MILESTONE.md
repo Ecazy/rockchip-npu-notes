@@ -8,9 +8,14 @@
 清单、完整测试集结果、板端成本与精确非声明见
 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)。
 
-关闭证据摘要：板端最终 campaign `results/20261024T071144Z-models/`；独立 verifier
-PASS；逐层 golden/容差在 `models/numeric_golden.npz` 与
-`models/numeric_acceptance.json`；同 top-1 但 logits 放大的负例被 verifier 拒绝。
+关闭证据摘要：板端最终任务 campaign `results/20261024T071144Z-models/`；独立
+train-calibrated 数值 campaign `results/20261024T091634Z-numeric/` 的 verifier PASS。
+当前数值政策在 `models/numeric_acceptance_train.json`：32 张无标签 train 校准样本，
+32 张无标签且不重叠的 test 验收样本，33 个逐层门禁和 5 个 profile logits 门禁。
+真实 TileLang MLP 诊断计划导出两层隐藏层 linear+bias、ReLU 和最终 preactivation；
+生产计划仍只下载最终 logits。
+`models/numeric_acceptance.json` / `numeric_golden.npz` 仅保留为历史
+test-envelope 回归证据，不再作为独立数值验收依据。
 
 ## 1. 总目标
 
@@ -101,11 +106,14 @@ N1通过即可交付“完整MLP推理可用”的阶段成果；完成N2后才�
   注册 action，NPU 节点引用不可变 RKPlan。清单显式记录 tensor shape/axes、输入
   输出、依赖、数值契约、bridge 记账和重复 QK/PV 轴；没有整模型不透明 Python
   节点或 fallback。
-- 数值验收：真实 TileLang ReLU probe（EW ADD + EW MAX）、动态-B QK/PV 和两模型
-  关键层保存确定性子集输出；28 个逐层容差和 5 个 profile logit 容差按“2×观测
-  最大绝对误差、向上取 2^-12、rtol=0”冻结，分类结果不参与选参。verifier 从原始
-  logits、标签、权重和数据独立重算，检查有限值、样本集、profile 集与哈希，并拒绝
-  “top-1 不变但 logits 放大”的篡改。
+- 数值验收：真实 TileLang ReLU probe（EW ADD + EW MAX）、动态-B QK/PV、两模型
+  关键层以及 MLP 两个隐藏层的 linear+bias/ReLU 均有可观测诊断计划。校准只使用固定
+  train 子集；限值在板端 train 观测后冻结，随后才运行与 train 样本逐像素哈希不重叠
+  的固定 test 子集。33 个逐层门禁和 5 个 profile logits 门禁用 `rtol=0`，并结合
+  train 观测与 FP16 表示尺度；test 最大值/标签/top-1 不参与选参。verifier 从原始
+  logits、独立参考、权重、计划和哈希重算，检查无重叠性，并拒绝“隐藏层超容差但最终
+  top-1 不变”以及“top-1 不变但 logits 放大”的篡改。此前已查看 test 结果的事实
+  明确披露，因此不宣称盲测。
 
 ## 6. 范围控制
 
