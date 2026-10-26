@@ -5,6 +5,21 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## QK/PV policy revalidation on packed FFN (2026-10-26, v8)
+
+- `results/20261026T085859Z-policy/`: packed FFN default, QK/PV arms
+  `b1 / separate / chain_shared`, 4 rounds x 32 runs, pinned core 1.
+  b8 p50 14.584 / 22.344 / **11.692 ms** (chain_shared 1.247x vs B1);
+  b1 3.849 / 4.700 / **3.613 ms** (1.065x; one round reversed).
+  b8 submits 70 -> 8 with task/upload/download bytes unchanged.
+- `results/20261026T085820Z-numeric-replay/`: packed frozen policy replayed
+  without recalibration, **PASS / 0 problems**; 33 layer gates and 5 profile
+  logit gates under the actual model inputs.
+- `capture_only` is now enforced at manifest load time: ordinary nodes cannot
+  read its outputs and it cannot be a model output. The trace plan remains
+  diagnostic-only evidence, not a sample of production-plan internals.
+- Host verification for this state: see the final pytest/ctest checkpoint.
+
 ## FFN boundary checkpoint (2026-10-26, v7)
 
 Second optimisation package from

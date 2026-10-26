@@ -109,7 +109,7 @@ RK3588 core 1、CPU 绑核、逐轮交替三臂（packed / device / host），4 
 
 ## 4. 测试
 
-- Host：258 pytest 全通过；30/30 ctest 全通过。
+- Host：259 pytest 全通过；30/30 ctest 全通过。
 - 新增覆盖：
   - 默认 packed 清单 `task_count/submit_count/upload/download` 与
     `weight_concat`；
@@ -128,3 +128,64 @@ RK3588 core 1、CPU 绑核、逐轮交替三臂（packed / device / host），4 
 - 没有改 QK/PV shared group、Softmax、RMSNorm、量化、多核或数值政策之外的参数。
 - b1/b8 的收益分别来自同一 campaign 的合并 p50；不同 campaign 的绝对延迟不可
   直接拼接成新的倍数结论。
+
+## 6. capture-only 生产隔离与 trace 证据边界
+
+本轮补齐了 `capture_only` 的**加载期**隔离，而不再只依赖执行期跳过：
+
+- 普通执行节点读取 `capture_only` 节点的输出时，加载器直接拒绝；
+- `outputs` 将 `capture_only` 节点的输出声明为普通模型输出时，加载器直接拒绝；
+- 现有正例保留：`tiny_vit_bN_deviceffn` 的 `ffn_trace` 仍可在
+  `capture=True` 时执行并导出 `gate/up/act/ffn`；
+- `tiny_vit_b8_deviceffn` 在 `capture=False` 与 `capture=True` 下的最终
+  `logits` 逐位相同，普通运行不会执行 trace 计划。
+
+**证据边界**：trace 计划是同一提取图但单独执行的诊断 sibling，其
+`gate/up/act/ffn` 是**重新执行得到的诊断证据**，不能表述为“被测生产计划内部值的
+直接采样”。生产计划只发布其自身最终输出；冻结层门对 trace 的检查用于回归诊断，
+不能替代对生产计划边界的证明。
+
+## 7. QK/PV shared group 在 packed 默认 FFN 上的复验
+
+保持 QK/PV 清单字段不变：
+
+```json
+{"repeat_submit": "shared_group", "group_plan": "attn_matmul_group"}
+```
+
+runner 提供三条显式策略臂：`separate`、`b1`、`chain_shared`
+（`chain_shared` 强制使用清单声明的 shared group 计划；`manifest` 为默认等价路径）。
+未扩大 C 侧已验证的独立 MM 几何域。
+
+`results/20261026T085859Z-policy/`，packed FFN 默认，core 1、绑核、逐轮交替，
+4 轮 × 32 次合并 128 样本：
+
+| profile | B1 p50 | separate p50 | chain_shared p50 | chain_shared 相对 B1 |
+|---|---:|---:|---:|---:|
+| Tiny ViT b8 | 14.584 ms | 22.344 ms | **11.692 ms** | **1.247×** |
+| Tiny ViT b1 | 3.849 ms | 4.700 ms | **3.613 ms** | **1.065×** |
+
+- b8 逐轮比值：`1.261 / 1.276 / 1.238 / 1.218`；
+  b1：`1.060 / 1.105 / 1.060 / 0.923`。b1 第 4 轮反转，收益较小，不表述为稳定
+  延迟改善；b8 四轮一致。
+- 结构（b8）：B1/separate `task_count=70, submit_count=70`；
+  chain_shared `task_count=70, submit_count=8`。上传/下载次数和字节三臂相同：
+  `134 / 70`、`296 448 / 230 144 B`。
+- 结构（b1）：B1/separate `task_count=14, submit_count=14`；
+  chain_shared `task_count=14, submit_count=8`。上传/下载字节相同：
+  `38 400 / 29 440 B`。
+- 创建成本中位数（4 次采样）：b8 `runner_setup` B1 13.40 ms、separate 13.44 ms、
+  chain_shared 13.67 ms；b1 分别为 7.71 / 7.75 / 7.84 ms。清单加载约 30 ms（b8）
+  和 12.5 ms（b1）。chain_shared 创建成本略高 0.13–0.20 ms（b8）/
+  0.09–0.13 ms（b1），未做显著性检验，不用于解释热路径收益。
+- 默认策略：保留 `shared_group` / `chain_shared`。b8 收益明确；b1 pooled p50
+  小幅领先但逐轮波动较大，按实测保留该策略而不承诺固定延迟收益。
+
+## 8. 数值复验（packed 冻结政策，不重标定）
+
+`results/20261026T085820Z-numeric-replay/`：使用
+`models/numeric_acceptance_packed.json` 与 v1 冻结容差，重新观测 disjoint test
+子集；**PASS / 0 problems**。实际模型输入下检查了 33 个层门和 5 个 profile
+logit 门，例如 `tiny_vit.gate` max error 0.0078125、`tiny_vit.act` 0.015625、
+`tiny_vit.ffn` 0.015625、`tiny_vit.h2` 0.015625、`tiny_vit.logits` 0.015625；
+5 个 profile 均 `same_top1=True`。没有重新校准或放宽阈值。

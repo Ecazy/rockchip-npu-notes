@@ -149,7 +149,9 @@ def run_profile(args) -> dict:
     key = getattr(args, "manifest_key", "") or spec["manifest"].format(
         batch=args.batch)
     manifest = args.plans_dir / (key + ".rkhybrid.json")
+    t_manifest = time.perf_counter()
     program = load_hybrid_program(manifest)
+    manifest_load_us = (time.perf_counter() - t_manifest) * 1e6
     weights = load_weight_npz(args.weights_dir / spec["weights"])
     images = load_images(args.data_dir, max(args.runs + args.warmup, 1) * args.batch)
     needed = (args.runs + args.warmup) * args.batch
@@ -183,7 +185,10 @@ def run_profile(args) -> dict:
     repeat_submit = getattr(args, "repeat_submit", "manifest")
     if repeat_submit != "manifest":
         extra["repeat_submit"] = repeat_submit
+    t_setup = time.perf_counter()
     runner = HybridRunner(lib, program, weights, fd=fd, **extra)
+    runner_setup_us = (time.perf_counter() - t_setup) * 1e6
+    plan_call_count = len(runner.calls)
     per_run = []
     try:
         for i in range(args.warmup):
@@ -218,6 +223,11 @@ def run_profile(args) -> dict:
         "label": getattr(args, "label", ""),
         "plan_entry": getattr(args, "plan_entry", "attributed"),
         "repeat_submit": getattr(args, "repeat_submit", "manifest"),
+        "creation": {
+            "manifest_load_us": manifest_load_us,
+            "runner_setup_us": runner_setup_us,
+            "plan_call_count": plan_call_count,
+        },
         "host": {
             "machine": platform.machine(),
             # The affinity mask actually in force (taskset / sched_setaffinity),
@@ -269,7 +279,8 @@ def main() -> int:
     ap.add_argument("--label", default="",
                     help="free-form arm/round label recorded in the JSON")
     ap.add_argument("--repeat-submit",
-                    choices=("manifest", "separate", "b1", "shared"),
+                    choices=("manifest", "separate", "b1", "shared",
+                             "chain_shared"),
                     default="manifest",
                     help="repeat path for static-repeat nodes: the manifest's "
                          "declared policy, or an explicit control")

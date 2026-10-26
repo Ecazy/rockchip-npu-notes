@@ -162,8 +162,9 @@ class NpuNode:
     repeat_submit: str = "per_repeat_submits"
     group_plan: str | None = None
     # Numeric-observation probes are statically present in the manifest but
-    # execute only when the caller asks for a capture.  They never feed a
-    # production value and are not part of the measured graph.
+    # execute only when the caller asks for a capture.  Their outputs are
+    # diagnostic evidence from a separate plan execution, not a sample of the
+    # production plan's internal state; ordinary nodes may not consume them.
     capture_only: bool = False
 
 
@@ -793,6 +794,7 @@ def load_hybrid_program(path: str | Path, *,
     nodes: list[Node] = []
     node_by_id: dict[str, Node] = {}
     producer: dict[str, str] = {input_spec.name: "$input"}
+    capture_only_tensor: dict[str, bool] = {}
     for name in host_constants:
         producer[name] = "$host_constant"
     plan_constants_by_key: dict[str, dict[str, dict[str, Any]]] = {}
@@ -1002,6 +1004,7 @@ def load_hybrid_program(path: str | Path, *,
 
         # Register producer edges and enforce explicit dependency closure.
         referenced_nodes: set[str] = set()
+        node_capture_only = getattr(node, "capture_only", False)
         for ref in node.inputs.values():
             owner = producer.get(ref.tensor)
             if owner is None:
@@ -1010,6 +1013,11 @@ def load_hybrid_program(path: str | Path, *,
                        "produced", stage="hybrid")
             if owner.startswith("$"):
                 continue
+            if capture_only_tensor.get(ref.tensor) and not node_capture_only:
+                reject(RK_E_SCHEMA,
+                       f"nodes[{index}] reads {ref.tensor!r} produced by "
+                       f"capture-only node {owner!r}; capture-only values may "
+                       "not feed ordinary execution", stage="hybrid")
             referenced_nodes.add(owner)
         if referenced_nodes != set(node.depends_on):
             reject(RK_E_SCHEMA,
@@ -1022,6 +1030,7 @@ def load_hybrid_program(path: str | Path, *,
                        f"nodes[{index}] writes tensor {ref.tensor!r} more than "
                        "once", stage="hybrid")
             producer[ref.tensor] = node_id
+            capture_only_tensor[ref.tensor] = node_capture_only
         node_by_id[node_id] = node
         nodes.append(node)
 
@@ -1039,6 +1048,11 @@ def load_hybrid_program(path: str | Path, *,
     for name in out_map.values():
         if name not in tensors:
             reject(RK_E_SCHEMA, f"output tensor {name!r} is not declared",
+                   stage="hybrid")
+        if capture_only_tensor.get(name):
+            reject(RK_E_SCHEMA,
+                   f"output tensor {name!r} is produced by a capture-only "
+                   "node; capture-only values may not be model outputs",
                    stage="hybrid")
     trace = obj["trace_tensors"]
     if not isinstance(trace, list):
@@ -1208,7 +1222,8 @@ class HybridRunner:
         if plan_entry not in ("attributed", "legacy"):
             reject(RK_E_INVALID, f"unknown plan entry {plan_entry!r}",
                    stage="model")
-        if repeat_submit not in ("manifest", "separate", "b1", "shared"):
+        if repeat_submit not in ("manifest", "separate", "b1", "shared",
+                                 "chain_shared"):
             reject(RK_E_INVALID, f"unknown repeat_submit {repeat_submit!r}",
                    stage="model")
         self.plan_entry = plan_entry
@@ -1362,7 +1377,7 @@ class HybridRunner:
                 mode = "shared_group"
                 flat_inputs = tuple(flat_in)
                 flat_outputs = tuple(flat_out)
-        elif self.repeat_submit == "shared":
+        elif self.repeat_submit in ("shared", "chain_shared") and node.repeat:
             reject(RK_E_UNSUPPORTED,
                    f"node {node.id!r} has no group_plan; the runner cannot force "
                    "the shared repeat path", stage="model")

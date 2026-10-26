@@ -9,7 +9,7 @@
 #
 #   b1       : one native group entry, N submits per repeat set (B1)
 #   separate : one PlanCall per repeat (the original path)
-#   manifest : the manifest's declared policy (shared group for QK/PV)
+#   chain_shared : force the manifest's declared shared group plan (B2)
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/.." && pwd)
 REPO=$(cd -- "$HERE/../.." && pwd)
@@ -20,7 +20,7 @@ if [[ -f "$REPO/.env" ]]; then source "$REPO/.env"; fi
 REMOTE_BASE=${ORANGE_PI_WORKSPACE:-/mnt/ssd/workspace}
 [[ "$REMOTE_BASE" =~ ^/[a-zA-Z0-9_./-]+$ ]] || { echo 'unsafe remote workspace' >&2; exit 2; }
 
-ARMS=${RK_POLICY_ARMS:-b1,separate,manifest}
+ARMS=${RK_POLICY_ARMS:-b1,separate,chain_shared}
 PROFILES=${RK_ENVELOPE_PROFILES:-tiny_vit:8,tiny_vit:1}
 RUNS=${RK_ENVELOPE_RUNS:-32}
 ROUNDS=${RK_ENVELOPE_ROUNDS:-4}

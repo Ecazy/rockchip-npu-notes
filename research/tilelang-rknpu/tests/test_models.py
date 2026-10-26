@@ -138,7 +138,7 @@ class CompleteModelTests(unittest.TestCase):
         program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
         results = {}
         reports = {}
-        for mode in ("manifest", "b1", "separate"):
+        for mode in ("manifest", "b1", "separate", "chain_shared"):
             runner = HybridRunner(self.lib, program, self.vit_weights,
                                   weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
                                   repeat_submit=mode)
@@ -149,7 +149,7 @@ class CompleteModelTests(unittest.TestCase):
                 reports[mode] = (stats.submit_count, stats.task_count)
             finally:
                 runner.close()
-        for mode in ("b1", "separate"):
+        for mode in ("b1", "separate", "chain_shared"):
             self.assertTrue(np.array_equal(results["manifest"], results[mode]),
                             f"{mode} path differs from the manifest path")
         # Structural difference, per batch-8 call: 2 chained QK/PV submits plus
@@ -157,6 +157,7 @@ class CompleteModelTests(unittest.TestCase):
         self.assertEqual(reports["manifest"], (8, 70))
         self.assertEqual(reports["b1"], (70, 70))
         self.assertEqual(reports["separate"], (70, 70))
+        self.assertEqual(reports["chain_shared"], (8, 70))
 
     def test_plan_envelope_attribution_tiles_the_whole_call(self):
         """The C attribution must explain the entire RKPlan dwell.
@@ -360,6 +361,52 @@ class CompleteModelTests(unittest.TestCase):
 
         device_manifest = (PLANS / "tiny_vit_b8_deviceffn.rkhybrid.json").read_text()
         self.assertIn('"capture_only": true', device_manifest)
+
+        # The capture-only plan must not change the production output: it is a
+        # diagnostic sibling, not an extra step in the measured graph.
+        device_program = load_hybrid_program(self._hybrid("tiny_vit_b8_deviceffn"))
+        with HybridRunner(self.lib, device_program, self.vit_weights,
+                          weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+            plain = runner.run(self.x[:8])
+        with HybridRunner(self.lib, device_program, self.vit_weights,
+                          weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+            captured = runner.run(self.x[:8], capture=True)
+        np.testing.assert_array_equal(plain.outputs["logits"],
+                                      captured.outputs["logits"])
+        self.assertNotIn("gate", plain.trace)
+        self.assertIn("gate", captured.trace)
+
+    def test_capture_only_outputs_cannot_enter_ordinary_execution(self):
+        """A capture-only producer is diagnostic-only at load time, not merely
+        skipped at run time. Ordinary consumers and model outputs must fail
+        closed even though the manifest parses structurally."""
+        from rknpu_backend.hybrid import load_hybrid_program
+        from rknpu_backend.errors import BackendError
+        import tempfile
+
+        source = self._hybrid("tiny_vit_b8_deviceffn")
+        base = json.loads(source.read_text())
+
+        consumer = json.loads(json.dumps(base))
+        reshape = next(n for n in consumer["nodes"]
+                       if n["id"] == "reshape_tokens")
+        reshape["inputs"]["x"]["tensor"] = "act"
+        reshape["depends_on"] = ["ffn_trace"]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad_consumer.rkhybrid.json"
+            path.write_text(json.dumps(consumer))
+            with self.assertRaises(BackendError) as ctx:
+                load_hybrid_program(path, plans_dir=PLANS)
+            self.assertIn("capture-only", ctx.exception.diagnostics[0].message)
+
+        exposed = json.loads(json.dumps(base))
+        exposed["outputs"]["leak"] = "gate"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad_output.rkhybrid.json"
+            path.write_text(json.dumps(exposed))
+            with self.assertRaises(BackendError) as ctx:
+                load_hybrid_program(path, plans_dir=PLANS)
+            self.assertIn("capture-only", ctx.exception.diagnostics[0].message)
 
     def test_hybrid_manifest_rejects_unknown_action(self):
         from rknpu_backend.hybrid import load_hybrid_program
