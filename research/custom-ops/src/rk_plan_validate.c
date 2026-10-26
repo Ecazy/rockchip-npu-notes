@@ -408,16 +408,19 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
 
     /* 1. The runtime walks actions in ascending id order and flushes one
      *    blocking submit per task group, so the emission order is the action
-     *    order.  For that to be the plan's order, every submit must own a
-     *    contiguous ascending run of NPU tasks with no host action inside it
-     *    (the design contract: a host action is a hard chain boundary). */
+     *    order.  A submit therefore has to own a *strictly increasing* run of
+     *    NPU task ids (its task list is in emission order), and no other submit's
+     *    task may sit between them.  Contiguity of the ids is not required: a
+     *    static-repeat group plan interleaves each task with its own uploads so
+     *    that every read's nearest producer is a declared dependency, and the
+     *    runtime indexes its emission array through ws->emit_index. */
     for (uint32_t i = 0; i < nactions; i++) seq[i] = i;
     for (uint32_t s = 0; s < desc->nsubmits; s++) {
         const rk_submit_desc *sub = &desc->submits[s];
         for (uint32_t t = 1; t < sub->ntask_ids; t++)
-            if (sub->task_ids[t] != sub->task_ids[t - 1] + 1u) {
+            if (sub->task_ids[t] <= sub->task_ids[t - 1]) {
                 rc = fail(diag, RK_E_SCHEMA, "validate",
-                          "submit tasks must be contiguous and in emission order");
+                          "submit tasks must be listed in ascending emission order");
                 goto done;
             }
         for (uint32_t id = sub->task_ids[0]; id <= sub->task_ids[sub->ntask_ids - 1]; id++) {
@@ -892,6 +895,82 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
          * Every id is known to be in range at this point. */
         {
             uint32_t first_tpl = desc->actions[s->task_ids[0]].template_id;
+            /* A chain that starts with a plain MM task is admitted in two shapes:
+             *   (a) a K-accumulation chain, where later tasks accumulate
+             *       (first MM, then MM_ACC), or
+             *   (b) a static-repeat group of *independent* MM tasks: every task is
+             *       a plain MM and the group is structurally independent, i.e. the
+             *       tasks write pairwise distinct buffers and no task reads a
+             *       buffer written earlier in the same submit.  The independence
+             *       is proven from the descriptor below, not from a recipe name
+             *       (the C ABI carries no recipe string). */
+            int all_plain_mm = (first_tpl == RK_TEMPLATE_MM_F16);
+            for (uint32_t j = 1; j < s->ntask_ids && all_plain_mm; j++)
+                if (desc->actions[s->task_ids[j]].template_id != RK_TEMPLATE_MM_F16)
+                    all_plain_mm = 0;
+            if (all_plain_mm && s->ntask_ids > 1) {
+                /* Each task's written *region* (buffer base + view offset, view
+                 * extent) must be disjoint from every other task's written region
+                 * and from every task's read region.  Shared BOs are legal only
+                 * as disjoint slices, which is what a static-repeat-expanded plan
+                 * produces (one buffer per role, one view per tile). */
+                typedef struct { uint32_t buffer_id; uint64_t start, end; } region;
+                region writes[RK_MAX_SUBMIT_TASKS];
+                region reads[RK_MAX_SUBMIT_TASKS][RK_MAX_ACTION_ARGS];
+                uint32_t nreads[RK_MAX_SUBMIT_TASKS];
+                uint32_t nwritten = 0, j;
+                for (j = 0; j < s->ntask_ids; j++) {
+                    const rk_action_desc *a = &desc->actions[s->task_ids[j]];
+                    if (a->noutputs != 1 || a->ninputs > RK_MAX_ACTION_ARGS) {
+                        all_plain_mm = 0;
+                        break;
+                    }
+                    const rk_view_desc *ov = view_at(desc, a->outputs[0]);
+                    const rk_buffer_desc *ob = ov ? buffer_at(desc, ov->buffer_id) : NULL;
+                    if (!ov || !ob) { all_plain_mm = 0; break; }
+                    writes[nwritten].buffer_id = ov->buffer_id;
+                    writes[nwritten].start = ob->offset + ov->offset_bytes;
+                    writes[nwritten].end = writes[nwritten].start + ov->tensor.bytes;
+                    nwritten++;
+                    nreads[j] = 0;
+                    for (uint32_t ii = 0; ii < a->ninputs; ii++) {
+                        const rk_view_desc *iv = view_at(desc, a->inputs[ii]);
+                        const rk_buffer_desc *ib = iv ? buffer_at(desc, iv->buffer_id) : NULL;
+                        if (!iv || !ib) { all_plain_mm = 0; break; }
+                        reads[j][nreads[j]].buffer_id = iv->buffer_id;
+                        reads[j][nreads[j]].start = ib->offset + iv->offset_bytes;
+                        reads[j][nreads[j]].end =
+                            reads[j][nreads[j]].start + iv->tensor.bytes;
+                        nreads[j]++;
+                    }
+                    if (!all_plain_mm) break;
+                }
+                for (j = 0; j < nwritten && all_plain_mm; j++)
+                    for (uint32_t q = j + 1; q < nwritten; q++)
+                        if (writes[j].buffer_id == writes[q].buffer_id &&
+                            writes[j].start < writes[q].end &&
+                            writes[q].start < writes[j].end) {
+                            all_plain_mm = 0;
+                            break;
+                        }
+                for (j = 0; j < nwritten && all_plain_mm; j++)
+                    for (uint32_t r = 0; r < s->ntask_ids && all_plain_mm; r++)
+                        for (uint32_t q = 0; q < nreads[r]; q++)
+                            if (reads[r][q].buffer_id == writes[j].buffer_id &&
+                                reads[r][q].start < writes[j].end &&
+                                writes[j].start < reads[r][q].end) {
+                                all_plain_mm = 0;
+                                break;
+                            }
+                if (!all_plain_mm) {
+                    free(task_submit);
+                    return fail(diag, RK_E_SCHEMA, "validate",
+                                "independent MM chain has overlapping read/write "
+                                "regions; a shared BO is only legal as disjoint "
+                                "slices");
+                }
+            }
+            if (all_plain_mm && s->ntask_ids > 1) continue;  /* admitted group */
             for (uint32_t j = 1; j < s->ntask_ids; j++) {
                 uint32_t tpl = desc->actions[s->task_ids[j]].template_id;
                 int ok;

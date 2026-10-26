@@ -378,6 +378,16 @@ int rk_workspace_create(int fd, const rk_plan *plan,
     ws->tile_scratch = calloc(1u, ws->tile_scratch_bytes ? ws->tile_scratch_bytes
                                                          : 1u);
     if (!ws->tile_scratch) goto nomem;
+    ws->emit_index = malloc((ws->plan->nactions ? ws->plan->nactions : 1u) *
+                            sizeof(*ws->emit_index));
+    if (!ws->emit_index) goto nomem;
+    for (uint32_t i = 0; i < ws->plan->nactions; i++)
+        ws->emit_index[i] = UINT32_MAX;
+    for (uint32_t i = 0; i < ws->plan->nsubmits; i++) {
+        const rk_submit_desc *s = &ws->plan->submits[i];
+        for (uint32_t j = 0; j < s->ntask_ids; j++)
+            ws->emit_index[s->task_ids[j]] = j;
+    }
 
     /* The plan's declared Host budget must cover the whole resident footprint,
      * not just the binding/staging estimate: the verifier now includes the same
@@ -422,6 +432,7 @@ fail:
     free(ws->batch_scratch);
     free(ws->staging_arena);
     free(ws->tile_scratch);
+    free(ws->emit_index);
     rk_plan_free(ws->plan);
     free(ws);
     return diag && diag->code ? diag->code : RK_E_INVALID;
@@ -795,7 +806,12 @@ static int run_repeat(rk_workspace *ws, const rk_binding *inputs,
                 return RK_E_SCHEMA;
             }
             const rk_submit_desc *submit = &ws->plan->submits[sid];
-            uint32_t index = a->id - submit->task_ids[0];
+            uint32_t index = ws->emit_index[a->id];
+            if (index == UINT32_MAX) {
+                rk_diag_set(diag, RK_E_SCHEMA, "run",
+                            "NPU task has no submit slot", "", a->id, 0);
+                return RK_E_SCHEMA;
+            }
             double e0 = now_us();
             int native = rk_emit_action(ws->plan, ws->views, a->id,
                                         &st->batch[index], diag);
@@ -1171,6 +1187,7 @@ int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag) {
     free(ws->batch_scratch);
     free(ws->staging_arena);
     free(ws->tile_scratch);
+    free(ws->emit_index);
     rk_plan_free(ws->plan);
     free(ws);
     return 0;

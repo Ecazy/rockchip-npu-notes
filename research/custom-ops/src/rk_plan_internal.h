@@ -91,6 +91,12 @@ typedef struct rk_workspace {
      * is enough and the per-download malloc/free disappears. */
     void *tile_scratch;
     size_t tile_scratch_bytes;
+    /* action id -> index inside its submit's task list (UINT32_MAX if none).
+     * The emission array is indexed by this, so tasks do not have to be a
+     * contiguous action range: a static-repeat plan interleaves each task with
+     * its own uploads, which is what makes every read's nearest producer its
+     * own upload. */
+    uint32_t *emit_index;
 } rk_workspace;
 
 #endif

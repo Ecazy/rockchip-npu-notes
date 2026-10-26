@@ -36,6 +36,12 @@ RECIPE_SIGNATURES = {
     # A K chain, or a single accumulating task when submits are split
     "linear_k_acc_v1": [("co.mm.f16.v1", "co.mm_acc.f16.v1", None),
                         ("co.mm_acc.f16.v1", None, None)],
+    # Static-repeat group: N independent plain matmuls, each writing its own
+    # output, chained into one submit.  The C verifier admits this shape by
+    # proving structural independence (pairwise distinct written buffers and no
+    # task reading a buffer written earlier in the same submit); this entry is
+    # the plan-level half of that admission.
+    "independent_mm_v1": [("co.mm.f16.v1", "co.mm.f16.v1", None)],
     # Each SwiGLU stage is its own submit; the recipe names the stage shapes.
     "swiglu_ffn_v1": [
         ("co.mm.f16.v1", None, None),
