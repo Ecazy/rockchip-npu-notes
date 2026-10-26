@@ -59,7 +59,8 @@ def host_node(node_id: str, action: str, inputs: dict, outputs: dict,
 
 def plan_node(node_id: str, plan_key: str, inputs: dict, outputs: dict,
               constants: dict, *, deps, numeric, repeat=None,
-              repeat_submit=None, group_plan=None) -> dict:
+              repeat_submit=None, group_plan=None,
+              capture_only=None) -> dict:
     node = {
         "id": node_id, "kind": "rkplan", "plan": plan_key,
         "inputs": inputs, "outputs": outputs, "constants": constants,
@@ -72,6 +73,8 @@ def plan_node(node_id: str, plan_key: str, inputs: dict, outputs: dict,
         node["repeat_submit"] = repeat_submit
     if group_plan is not None:
         node["group_plan"] = group_plan
+    if capture_only is not None:
+        node["capture_only"] = bool(capture_only)
     return node
 
 
@@ -192,7 +195,10 @@ def mlp_manifest(batch: int, compiled: dict, weights: dict,
 
 
 def vit_manifest(batch: int, compiled: dict, weights: dict,
-                 weights_sha: str, profile_hash: str) -> dict:
+                 weights_sha: str, profile_hash: str, *,
+                 ffn_mode: str = "packed") -> dict:
+    if ffn_mode not in {"device", "packed", "host"}:
+        raise SystemExit(f"unknown FFN mode {ffn_mode!r}")
     b, t, d, h, hd = batch, 16, 64, 4, 16
     m = b * t
     tensors = [
@@ -222,18 +228,31 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         tensor("logits_padded", "float16", (b, 16), ("batch", "padded_class")),
         tensor("logits", "float32", (b, 10), ("batch", "class")),
     ]
+    if ffn_mode == "packed":
+        tensors.insert(16, tensor("gate_up", "float16", (m, 256),
+                                  ("batch_token", "gate_up")))
     patch_plan = load_plan(str(ROOT / "models" / "compiled" /
                                compiled["plans"][f"tiny_vit_b{batch}_patch"]["path"]))
     qkv_plan = load_plan(str(ROOT / "models" / "compiled" /
                              compiled["plans"][f"tiny_vit_b{batch}_qkv"]["path"]))
     attn_plan = load_plan(str(ROOT / "models" / "compiled" /
                               compiled["plans"][f"tiny_vit_b{batch}_attn_out"]["path"]))
-    gate_plan = load_plan(str(ROOT / "models" / "compiled" /
-                              compiled["plans"][f"tiny_vit_b{batch}_gate"]["path"]))
-    up_plan = load_plan(str(ROOT / "models" / "compiled" /
-                            compiled["plans"][f"tiny_vit_b{batch}_up"]["path"]))
-    down_plan = load_plan(str(ROOT / "models" / "compiled" /
-                              compiled["plans"][f"tiny_vit_b{batch}_down"]["path"]))
+    ffn_plan = load_plan(str(ROOT / "models" / "compiled" /
+                             compiled["plans"][f"tiny_vit_b{batch}_ffn"]["path"]))
+    ffn_trace_plan = load_plan(
+        str(ROOT / "models" / "compiled" /
+            compiled["plans"][f"tiny_vit_b{batch}_ffn_trace"]["path"]))
+    if ffn_mode in {"host", "packed"}:
+        gate_up_plan = load_plan(
+            str(ROOT / "models" / "compiled" /
+                compiled["plans"][f"tiny_vit_b{batch}_gate_up"]["path"]))
+        down_plan = load_plan(str(ROOT / "models" / "compiled" /
+                                  compiled["plans"][f"tiny_vit_b{batch}_down"]["path"]))
+    if ffn_mode == "host":
+        gate_plan = load_plan(str(ROOT / "models" / "compiled" /
+                                  compiled["plans"][f"tiny_vit_b{batch}_gate"]["path"]))
+        up_plan = load_plan(str(ROOT / "models" / "compiled" /
+                                compiled["plans"][f"tiny_vit_b{batch}_up"]["path"]))
     cls_plan = load_plan(str(ROOT / "models" / "compiled" /
                              compiled["plans"][f"tiny_vit_b{batch}_classifier"]["path"]))
     dyn_plan = load_plan(str(ROOT / "models" / "compiled" /
@@ -242,9 +261,6 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         "patch": plan_entry(compiled, f"tiny_vit_b{batch}_patch"),
         "qkv": plan_entry(compiled, f"tiny_vit_b{batch}_qkv"),
         "attn_out": plan_entry(compiled, f"tiny_vit_b{batch}_attn_out"),
-        "gate": plan_entry(compiled, f"tiny_vit_b{batch}_gate"),
-        "up": plan_entry(compiled, f"tiny_vit_b{batch}_up"),
-        "down": plan_entry(compiled, f"tiny_vit_b{batch}_down"),
         "classifier": plan_entry(compiled, f"tiny_vit_b{batch}_classifier"),
         "attn_matmul": plan_entry(compiled, f"tiny_vit_b{batch}_qk",
                                   dynamic_operand="B"),
@@ -254,6 +270,22 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         "attn_matmul_group": plan_entry(compiled,
                                         f"tiny_vit_b{batch}_qk_group"),
     }
+    if ffn_mode == "device":
+        plans.update({
+            "ffn": plan_entry(compiled, f"tiny_vit_b{batch}_ffn"),
+            "ffn_trace": plan_entry(compiled, f"tiny_vit_b{batch}_ffn_trace"),
+        })
+    elif ffn_mode == "packed":
+        plans.update({
+            "gate_up": plan_entry(compiled, f"tiny_vit_b{batch}_gate_up"),
+            "down": plan_entry(compiled, f"tiny_vit_b{batch}_down"),
+        })
+    else:
+        plans.update({
+            "gate": plan_entry(compiled, f"tiny_vit_b{batch}_gate"),
+            "up": plan_entry(compiled, f"tiny_vit_b{batch}_up"),
+            "down": plan_entry(compiled, f"tiny_vit_b{batch}_down"),
+        })
     plan_numeric = {
         "storage": "float16", "accumulation": "float32_single_tile",
         "writeback": "float16_after_gemm",
@@ -269,11 +301,96 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         "writeback": "layout_preserving",
         "semantics": "explicit_static_axis_transform",
     }
+    ffn_numeric = {
+        "storage": "float16", "accumulation": "staged_device_f16_per_stage",
+        "writeback": "float16_after_each_stage",
+        "semantics": "device_resident_swiglu_ffn_gate_up_silu_mul_projection_residual",
+    }
     host_norm = {
         "storage": "float16", "accumulation": "float32",
         "writeback": "float16",
         "semantics": "float32_reduction_then_one_float16_store",
     }
+    ffn_weights = {
+        "Wg": {"kind": "weight", "name": "ffn_gate_w"},
+        "Wu": {"kind": "weight", "name": "ffn_up_w"},
+        "Wd": {"kind": "weight", "name": "ffn_down_w"},
+    }
+    ffn_constants = weight_constants(ffn_plan, ffn_weights)
+    ffn_trace_constants = weight_constants(ffn_trace_plan, ffn_weights)
+    if ffn_mode == "device":
+        # One device-resident FFN plan: gate/up -> SiLU -> gated product ->
+        # down -> residual.  The old gate/up/down plans remain on disk as
+        # diagnostics, but the measured graph has one device boundary.
+        ffn_nodes = [
+            plan_node("ffn", "ffn",
+                      {"X": ref("norm2"), "H": ref("h1")}, {"Y": ref("h2")},
+                      ffn_constants,
+                      deps=["rmsnorm2", "residual_attention"],
+                      numeric=ffn_numeric),
+            # Capture-only probes preserve every frozen layer gate without adding
+            # a device round trip to the production path.
+            plan_node("ffn_trace", "ffn_trace",
+                      {"X": ref("norm2"), "H": ref("h1")},
+                      {"gate": ref("gate"), "up": ref("up"),
+                       "act": ref("act"), "ffn": ref("ffn")},
+                      ffn_trace_constants,
+                      deps=["rmsnorm2", "residual_attention"],
+                      numeric=ffn_numeric, capture_only=True),
+        ]
+    elif ffn_mode == "packed":
+        # Packed gate/up GEMM with exact host SwiGLU: one shared input upload and
+        # one N=2H submission replace the two branch plans, while the FP32
+        # activation product still narrows once on Host.
+        packed_constants = weight_constants(gate_up_plan, {
+            "B": {"kind": "weight_concat",
+                  "parts": ["ffn_gate_w", "ffn_up_w"], "axis": 1},
+        })
+        ffn_nodes = [
+            plan_node("gate_up", "gate_up", {"A": ref("norm2")},
+                      {"Y": ref("gate_up")}, packed_constants,
+                      deps=["rmsnorm2"], numeric=plan_numeric),
+            host_node("swiglu", "swiglu.packed_gate_up.v1",
+                      {"gate_up": ref("gate_up")},
+                      {"gate": ref("gate"), "up": ref("up"),
+                       "act": ref("act")},
+                      depends_nodes=["gate_up"], numeric=host_norm),
+            plan_node("down", "down", {"A": ref("act")}, {"Y": ref("ffn")},
+                      weight_constants(down_plan, {
+                          "B": {"kind": "weight", "name": "ffn_down_w"}}),
+                      deps=["swiglu"], numeric=plan_numeric),
+            host_node("residual_ffn", "tensor.add.v1",
+                      {"a": ref("h1"), "b": ref("ffn")}, {"y": ref("h2")},
+                      depends_nodes=["residual_attention", "down"],
+                      numeric=host_norm),
+        ]
+    else:
+        # Exact host-SwiGLU control path: gate/up/down are separate device
+        # boundaries and the FP32 intermediate product narrows once on Host.
+        ffn_nodes = [
+            plan_node("gate", "gate", {"A": ref("norm2")},
+                      {"Y": ref("gate")},
+                      weight_constants(gate_plan, {
+                          "B": {"kind": "weight", "name": "ffn_gate_w"}}),
+                      deps=["rmsnorm2"], numeric=plan_numeric),
+            plan_node("up", "up", {"A": ref("norm2")},
+                      {"Y": ref("up")},
+                      weight_constants(up_plan, {
+                          "B": {"kind": "weight", "name": "ffn_up_w"}}),
+                      deps=["rmsnorm2"], numeric=plan_numeric),
+            host_node("swiglu", "swiglu.gate_up.v1",
+                      {"gate": ref("gate"), "up": ref("up")},
+                      {"y": ref("act")}, depends_nodes=["gate", "up"],
+                      numeric=host_norm),
+            plan_node("down", "down", {"A": ref("act")}, {"Y": ref("ffn")},
+                      weight_constants(down_plan, {
+                          "B": {"kind": "weight", "name": "ffn_down_w"}}),
+                      deps=["swiglu"], numeric=plan_numeric),
+            host_node("residual_ffn", "tensor.add.v1",
+                      {"a": ref("h1"), "b": ref("ffn")}, {"y": ref("h2")},
+                      depends_nodes=["residual_attention", "down"],
+                      numeric=host_norm),
+        ]
     nodes = [
         host_node("patchify", "mnist.patchify_norm.v1",
                   {"raw": ref("raw")}, {"patches": ref("patches")},
@@ -356,27 +473,11 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                   {"x": ref("h1"), "gamma": ref("norm2_gamma")},
                   {"y": ref("norm2")}, depends_nodes=["residual_attention"],
                   attrs={"eps": 1e-6}, numeric=host_norm),
-        plan_node("gate", "gate", {"A": ref("norm2")}, {"Y": ref("gate")},
-                  weight_constants(gate_plan, {
-                      "B": {"kind": "weight", "name": "ffn_gate_w"}}),
-                  deps=["rmsnorm2"], numeric=plan_numeric),
-        plan_node("up", "up", {"A": ref("norm2")}, {"Y": ref("up")},
-                  weight_constants(up_plan, {
-                      "B": {"kind": "weight", "name": "ffn_up_w"}}),
-                  deps=["rmsnorm2"], numeric=plan_numeric),
-        host_node("swiglu", "swiglu.gate_up.v1",
-                  {"gate": ref("gate"), "up": ref("up")}, {"y": ref("act")},
-                  depends_nodes=["gate", "up"], numeric=host_norm),
-        plan_node("down", "down", {"A": ref("act")}, {"Y": ref("ffn")},
-                  weight_constants(down_plan, {
-                      "B": {"kind": "weight", "name": "ffn_down_w"}}),
-                  deps=["swiglu"], numeric=plan_numeric),
-        host_node("residual_ffn", "tensor.add.v1",
-                  {"a": ref("h1"), "b": ref("ffn")}, {"y": ref("h2")},
-                  depends_nodes=["residual_attention", "down"], numeric=host_norm),
+        *ffn_nodes,
         host_node("reshape_tokens", "tensor.reshape.v1",
                   {"x": ref("h2")}, {"y": ref("h2_tokens")},
-                  depends_nodes=["residual_ffn"],
+                  depends_nodes=["ffn" if ffn_mode == "device"
+                                 else "residual_ffn"],
                   attrs={"shape": [b, t, d]}, numeric=layout_numeric),
         host_node("mean_pool", "tensor.mean_axis.v1",
                   {"x": ref("h2_tokens")}, {"y": ref("pooled")},
@@ -416,7 +517,10 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
     exec_policy, bridge_policy = policy()
     return {
         "schema_version": HYBRID_SCHEMA_VERSION, "kind": "rkhybrid",
-        "name": f"tiny_vit_b{batch}", "model": "tiny_vit", "batch": batch,
+        "name": (f"tiny_vit_b{batch}" if ffn_mode == "packed" else
+                 (f"tiny_vit_b{batch}_deviceffn" if ffn_mode == "device"
+                  else f"tiny_vit_b{batch}_hostffn")),
+        "model": "tiny_vit", "batch": batch,
         "profile_hash": profile_hash,
         "execution_policy": exec_policy, "bridge_policy": bridge_policy,
         "input": tensor("raw", "uint8", (b, 28, 28), ("batch", "row", "col")),
@@ -457,13 +561,19 @@ def main() -> int:
                               "batch": batch, "sha256": sha256(path)}
         print("wrote", path, flush=True)
     for batch in (1, 8):
-        path = plans_dir / f"tiny_vit_b{batch}.rkhybrid.json"
-        data = vit_manifest(batch, compiled, weights["tiny_vit"],
-                            weights_sha["tiny_vit"], compiled["profile_hash"])
-        path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
-        written[f"tiny_vit_b{batch}"] = {"path": path.name, "model": "tiny_vit",
-                              "batch": batch, "sha256": sha256(path)}
-        print("wrote", path, flush=True)
+        for mode in ("packed", "device", "host"):
+            suffix = ("" if mode == "packed" else
+                      ("_deviceffn" if mode == "device" else "_hostffn"))
+            key = f"tiny_vit_b{batch}{suffix}"
+            path = plans_dir / f"{key}.rkhybrid.json"
+            data = vit_manifest(batch, compiled, weights["tiny_vit"],
+                                weights_sha["tiny_vit"],
+                                compiled["profile_hash"], ffn_mode=mode)
+            path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+            written[key] = {"path": path.name, "model": "tiny_vit",
+                            "batch": batch, "ffn_mode": mode,
+                            "sha256": sha256(path)}
+            print("wrote", path, flush=True)
     compiled["hybrid_schema_version"] = HYBRID_SCHEMA_VERSION
     compiled["hybrid_manifests"] = written
     compiled["hybrid_policy"] = {

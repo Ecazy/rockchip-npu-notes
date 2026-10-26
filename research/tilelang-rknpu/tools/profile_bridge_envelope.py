@@ -146,8 +146,9 @@ def run_profile(args) -> dict:
     configure_rocket_abi(lib.cdll)
 
     spec = MODEL_SPECS[args.model]
-    manifest = (args.plans_dir /
-                (spec["manifest"].format(batch=args.batch) + ".rkhybrid.json"))
+    key = getattr(args, "manifest_key", "") or spec["manifest"].format(
+        batch=args.batch)
+    manifest = args.plans_dir / (key + ".rkhybrid.json")
     program = load_hybrid_program(manifest)
     weights = load_weight_npz(args.weights_dir / spec["weights"])
     images = load_images(args.data_dir, max(args.runs + args.warmup, 1) * args.batch)
@@ -261,6 +262,9 @@ def main() -> int:
     ap.add_argument("--data-dir", type=Path, default=ROOT / ".data" / "mnist")
     ap.add_argument("--runs", type=int, default=32)
     ap.add_argument("--warmup", type=int, default=4)
+    ap.add_argument("--manifest-key", default="",
+                    help="explicit rkhybrid manifest stem; default is the "
+                         "model/batch profile")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--label", default="",
                     help="free-form arm/round label recorded in the JSON")

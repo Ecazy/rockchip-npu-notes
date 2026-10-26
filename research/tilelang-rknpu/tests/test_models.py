@@ -154,9 +154,9 @@ class CompleteModelTests(unittest.TestCase):
                             f"{mode} path differs from the manifest path")
         # Structural difference, per batch-8 call: 2 chained QK/PV submits plus
         # the 7 other nodes, versus 64 per-repeat submits in the B1 path.
-        self.assertEqual(reports["manifest"], (9, 71))
-        self.assertEqual(reports["b1"], (71, 71))
-        self.assertEqual(reports["separate"], (71, 71))
+        self.assertEqual(reports["manifest"], (8, 70))
+        self.assertEqual(reports["b1"], (70, 70))
+        self.assertEqual(reports["separate"], (70, 70))
 
     def test_plan_envelope_attribution_tiles_the_whole_call(self):
         """The C attribution must explain the entire RKPlan dwell.
@@ -225,14 +225,14 @@ class CompleteModelTests(unittest.TestCase):
         self.assertEqual(program.execution_policy["mode"], "explicit_hybrid")
         self.assertEqual(program.execution_policy["npu_fallback"], "forbidden")
         self.assertEqual(program.execution_policy["host_fallback"], "forbidden")
-        self.assertEqual(len(program.tensors), 25)
+        self.assertEqual(len(program.tensors), 26)
         node_ids = [node.id for node in program.nodes]
         self.assertEqual(node_ids, [
             "patchify", "patch_pad", "patch", "position_add", "rmsnorm1",
             "qkv", "split_heads", "qk", "softmax", "pv", "merge_heads",
-            "attn_out", "residual_attention", "rmsnorm2", "gate", "up",
-            "swiglu", "down", "residual_ffn", "reshape_tokens", "mean_pool",
-            "classifier", "export_logits"])
+            "attn_out", "residual_attention", "rmsnorm2", "gate_up", "swiglu",
+            "down", "residual_ffn", "reshape_tokens", "mean_pool", "classifier",
+            "export_logits"])
         host_ids = [node.id for node in program.nodes
                     if isinstance(node, HostNode)]
         self.assertIn("patchify", host_ids)
@@ -241,6 +241,7 @@ class CompleteModelTests(unittest.TestCase):
         self.assertIn("softmax", host_ids)
         self.assertIn("merge_heads", host_ids)
         self.assertIn("residual_attention", host_ids)
+        self.assertIn("swiglu", host_ids)
         self.assertIn("residual_ffn", host_ids)
         for node in program.nodes:
             if isinstance(node, HostNode):
@@ -248,10 +249,15 @@ class CompleteModelTests(unittest.TestCase):
                 self.assertIsNotNone(action)
                 self.assertEqual(action.version, node.action.version)
         npu = [node for node in program.nodes if isinstance(node, NpuNode)]
-        self.assertEqual(len(npu), 9)
+        self.assertEqual(len(npu), 8)
         # QK/PV share one immutable per-repeat plan, plus one pre-expanded
-        # static-repeat group plan selected by those two nodes.
-        self.assertEqual(len(program.plans), 9)
+        # static-repeat group plan.  The FFN gate/up branches are one packed
+        # N=2H plan, and no capture-only probe enters the production manifest.
+        self.assertEqual(len(program.plans), 8)
+        gate_up = next(n for n in npu if n.id == "gate_up")
+        self.assertEqual(sorted(gate_up.inputs), ["A"])
+        self.assertEqual(gate_up.outputs["Y"].tensor, "gate_up")
+        self.assertFalse(any(n.capture_only for n in npu))
         for node_id in ("qk", "pv"):
             node = next(n for n in program.nodes if n.id == node_id)
             self.assertEqual(node.repeat_submit, "shared_group")
@@ -273,8 +279,7 @@ class CompleteModelTests(unittest.TestCase):
             self.assertEqual(len(spec.shape), len(spec.axes))
         with HybridRunner(self.lib, program, self.vit_weights,
                           weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
-            # 8 per-repeat plans + the shared static-repeat group plan.
-            self.assertEqual(len(runner.calls), 9)
+            self.assertEqual(len(runner.calls), 8)
             stats = __import__("rknpu_backend.models", fromlist=["RunStats"]).RunStats()
             result = runner.run(self.x[:8], stats=stats, capture=True)
             self.assertEqual(result.outputs["logits"].shape, (8, 10))
@@ -297,9 +302,64 @@ class CompleteModelTests(unittest.TestCase):
                 self.assertEqual(plans[name]["calls"], 1)
                 self.assertEqual(plans[name]["task_count"], 32)
                 self.assertEqual(plans[name]["submit_count"], 1)
-            self.assertEqual(stats.task_count, 71)
-            # 2 chained QK/PV submits + 7 per-node submits.
-            self.assertEqual(stats.submit_count, 9)
+            self.assertEqual(stats.task_count, 70)
+            # 2 chained QK/PV submits + patch/qkv/attn_out/classifier +
+            # packed gate/up + down.
+            self.assertEqual(stats.submit_count, 8)
+            self.assertIn("gate_up", plans)
+            self.assertIn("down", plans)
+            self.assertEqual(plans["gate_up"]["task_count"], 1)
+            self.assertEqual(plans["gate_up"]["submit_count"], 1)
+
+    def test_packed_ffn_is_bitwise_host_equivalent_and_device_ffn_is_opt_in(self):
+        """The default FFN packs gate/up into one N=2H GEMM and narrows SwiGLU
+        once on Host, exactly like the old control.  The fully device-resident
+        FFN remains a separate, explicitly calibrated numeric path."""
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.models import RunStats
+
+        packed_plan = self._plan("tiny_vit_b8_gate_up")
+        self.assertEqual([a.template_id for a in packed_plan.actions
+                          if a.kind == "npu_task"], ["co.mm.f16.v1"])
+        self.assertEqual(packed_plan.accounting.task_count, 1)
+        self.assertEqual(packed_plan.accounting.submit_count, 1)
+        self.assertEqual(sum(a.kind == "download"
+                             for a in packed_plan.actions), 1)
+
+        results = {}
+        traces = {}
+        for key in ("tiny_vit_b8", "tiny_vit_b8_hostffn",
+                    "tiny_vit_b8_deviceffn"):
+            program = load_hybrid_program(self._hybrid(key))
+            with HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+                stats = RunStats()
+                result = runner.run(self.x[:8], stats=stats, capture=True)
+                results[key] = result.outputs["logits"]
+                traces[key] = result.trace
+                if key == "tiny_vit_b8":
+                    self.assertEqual((stats.task_count, stats.submit_count),
+                                     (70, 8))
+                elif key == "tiny_vit_b8_hostffn":
+                    self.assertEqual((stats.task_count, stats.submit_count),
+                                     (71, 9))
+                else:
+                    self.assertEqual((stats.task_count, stats.submit_count),
+                                     (81, 17))
+        # The packed path preserves the exact host-SwiGLU output and every
+        # frozen trace tensor bit for bit.
+        for key in ("tiny_vit_b8", "tiny_vit_b8_hostffn"):
+            for name in ("gate", "up", "act", "ffn", "h2"):
+                np.testing.assert_array_equal(traces[key][name],
+                                              traces["tiny_vit_b8_hostffn"][name])
+        np.testing.assert_array_equal(results["tiny_vit_b8"],
+                                      results["tiny_vit_b8_hostffn"])
+        # The fully device-resident FFN is a different numeric policy.
+        self.assertFalse(np.array_equal(results["tiny_vit_b8_deviceffn"],
+                                        results["tiny_vit_b8_hostffn"]))
+
+        device_manifest = (PLANS / "tiny_vit_b8_deviceffn.rkhybrid.json").read_text()
+        self.assertIn('"capture_only": true', device_manifest)
 
     def test_hybrid_manifest_rejects_unknown_action(self):
         from rknpu_backend.hybrid import load_hybrid_program
@@ -490,22 +550,28 @@ class CompleteModelTests(unittest.TestCase):
             ROOT / "tools" / "verify_numeric_acceptance.py")
         verifier = importlib.util.module_from_spec(loader_spec)
         loader_spec.loader.exec_module(verifier)
-        evidence = ROOT / "results" / "20261026T081153Z-numeric"
-        summary = verifier.verify(
-            WEIGHTS / "numeric_acceptance_train.json",
-            evidence / "calibration" / "observation.npz",
-            evidence / "acceptance" / "observation.npz")
-        self.assertEqual(summary["status"], "PASS", summary["problems"])
-        self.assertEqual(summary["problems"], [])
-        self.assertTrue(summary["sample_disjoint"]["train_test_splits_distinct"])
-        self.assertTrue(summary["sample_disjoint"]["pixel_hash_sets_disjoint"])
-        self.assertEqual(len(summary["calibration"]["layers"]), 33)
-        self.assertEqual(len(summary["acceptance"]["layers"]), 33)
-        self.assertEqual(len(summary["acceptance"]["profiles"]), 5)
-        for key in ("mlp.h1_pre_relu", "mlp.r1_relu", "mlp.h2_pre_relu",
-                    "mlp.r2_relu", "mlp.final_preactivation"):
-            self.assertIn(key, summary["acceptance"]["layers"])
-            self.assertTrue(summary["acceptance"]["layers"][key]["ok"])
+        for spec_name, result_name in (
+                ("numeric_acceptance_packed.json",
+                 "20261026T084825Z-numeric"),
+                ("numeric_acceptance_device_ffn.json",
+                 "20261026T084901Z-numeric")):
+            evidence = ROOT / "results" / result_name
+            summary = verifier.verify(
+                WEIGHTS / spec_name,
+                evidence / "calibration" / "observation.npz",
+                evidence / "acceptance" / "observation.npz")
+            self.assertEqual(summary["status"], "PASS", summary["problems"])
+            self.assertEqual(summary["problems"], [])
+            self.assertTrue(
+                summary["sample_disjoint"]["train_test_splits_distinct"])
+            self.assertTrue(summary["sample_disjoint"]["pixel_hash_sets_disjoint"])
+            self.assertEqual(len(summary["calibration"]["layers"]), 33)
+            self.assertEqual(len(summary["acceptance"]["layers"]), 33)
+            self.assertEqual(len(summary["acceptance"]["profiles"]), 5)
+            for key in ("mlp.h1_pre_relu", "mlp.r1_relu", "mlp.h2_pre_relu",
+                        "mlp.r2_relu", "mlp.final_preactivation"):
+                self.assertIn(key, summary["acceptance"]["layers"])
+                self.assertTrue(summary["acceptance"]["layers"][key]["ok"])
 
     def test_verifier_rejects_same_top1_amplified_logits(self):
         import importlib.util

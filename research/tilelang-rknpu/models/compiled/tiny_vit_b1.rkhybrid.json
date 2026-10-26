@@ -646,14 +646,18 @@
       },
       "constants": {
         "B": {
-          "kind": "weight",
-          "name": "ffn_gate_w"
+          "axis": 1,
+          "kind": "weight_concat",
+          "parts": [
+            "ffn_gate_w",
+            "ffn_up_w"
+          ]
         }
       },
       "depends_on": [
         "rmsnorm2"
       ],
-      "id": "gate",
+      "id": "gate_up",
       "inputs": {
         "A": {
           "tensor": "norm2"
@@ -668,51 +672,15 @@
       },
       "outputs": {
         "Y": {
-          "tensor": "gate"
+          "tensor": "gate_up"
         }
       },
       "phase": "execution",
-      "plan": "gate",
+      "plan": "gate_up",
       "repeat": []
     },
     {
-      "bridge": {
-        "accounting": "runtime_report",
-        "kind": "rkplan_transfer"
-      },
-      "constants": {
-        "B": {
-          "kind": "weight",
-          "name": "ffn_up_w"
-        }
-      },
-      "depends_on": [
-        "rmsnorm2"
-      ],
-      "id": "up",
-      "inputs": {
-        "A": {
-          "tensor": "norm2"
-        }
-      },
-      "kind": "rkplan",
-      "numeric_contract": {
-        "accumulation": "float32_single_tile",
-        "semantics": "real_tilelang_one_tile_matmul_fp32_accumulate_one_fp16_writeback",
-        "storage": "float16",
-        "writeback": "float16_after_gemm"
-      },
-      "outputs": {
-        "Y": {
-          "tensor": "up"
-        }
-      },
-      "phase": "execution",
-      "plan": "up",
-      "repeat": []
-    },
-    {
-      "action": "swiglu.gate_up.v1",
+      "action": "swiglu.packed_gate_up.v1",
       "action_version": 1,
       "attrs": {},
       "bridge": {
@@ -720,16 +688,12 @@
         "kind": "host_tensor_materialization"
       },
       "depends_on": [
-        "gate",
-        "up"
+        "gate_up"
       ],
       "id": "swiglu",
       "inputs": {
-        "gate": {
-          "tensor": "gate"
-        },
-        "up": {
-          "tensor": "up"
+        "gate_up": {
+          "tensor": "gate_up"
         }
       },
       "kind": "host_action",
@@ -740,8 +704,14 @@
         "writeback": "float16"
       },
       "outputs": {
-        "y": {
+        "act": {
           "tensor": "act"
+        },
+        "gate": {
+          "tensor": "gate"
+        },
+        "up": {
+          "tensor": "up"
         }
       },
       "phase": "execution",
@@ -973,56 +943,50 @@
     "attn_matmul": {
       "dynamic_operand": "B",
       "path": "tiny_vit_b1_qk.rkplan.json",
-      "plan_hash": "fb78367cfefc676caffc8e301d1e356905a5de35bb1be03d656b49d667d42b8a",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)"
+      "plan_hash": "19493ca954e8784c4b735735033ad1447d7cc4661d6524047c39bb2b206c395a",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
     },
     "attn_matmul_group": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_qk_group.rkplan.json",
-      "plan_hash": "7f8c1958923c888dea2984dcf00e90bed2c56d67f6bc6e03e1e14db504024141",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)|repeat_expand:n=4"
+      "plan_hash": "3e1b4f93a31dfd56e9513893e3ad28665584ffe1ebb94ab2fe122968b664a613",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)|repeat_expand:n=4"
     },
     "attn_out": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_attn_out.rkplan.json",
-      "plan_hash": "0523ddb248f313314285d2f726b10c2d39878cfce8097984c0dc6090788c79bc",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)"
+      "plan_hash": "ade3bae4997f750a2b27e80047a78bfb8565700c5aa93419d4f710eee5249ff3",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
     },
     "classifier": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_classifier.rkplan.json",
-      "plan_hash": "67b7e6aac9a26eca8c74093a9d31421e7659fa9dfd325c97e51798cf0dab09ee",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)"
+      "plan_hash": "80a6469535f890542d996acb6a6df27fd4de7cab3ecaadfbb20dc231b0320da5",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
     },
     "down": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_down.rkplan.json",
-      "plan_hash": "285a2814bafd19aaec7543a8b4f233571f56a3f2650cb38df74a46c7c828e32d",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)"
+      "plan_hash": "418ed9b553a06f7960289cbce9de7a191daa7223cefe65db5bfbdd803c77351f",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
     },
-    "gate": {
+    "gate_up": {
       "dynamic_operand": null,
-      "path": "tiny_vit_b1_gate.rkplan.json",
-      "plan_hash": "4989024db40c3b6d05fab3fdcd1ab862e20383661ad8e97d4863236e3326bb01",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)"
+      "path": "tiny_vit_b1_gate_up.rkplan.json",
+      "plan_hash": "fbd086649d4b8bc281b9559473ebdd1bee87b8a2229f0784126993c32471cc09",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
     },
     "patch": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_patch.rkplan.json",
-      "plan_hash": "0523ddb248f313314285d2f726b10c2d39878cfce8097984c0dc6090788c79bc",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)"
+      "plan_hash": "ade3bae4997f750a2b27e80047a78bfb8565700c5aa93419d4f710eee5249ff3",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
     },
     "qkv": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_qkv.rkplan.json",
-      "plan_hash": "937e088d3d4fc1a0a152adecf33a3ffd9d1d711c6be2dd3e4bab7b801c1d4b4a",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)"
-    },
-    "up": {
-      "dynamic_operand": null,
-      "path": "tiny_vit_b1_up.rkplan.json",
-      "plan_hash": "4989024db40c3b6d05fab3fdcd1ab862e20383661ad8e97d4863236e3326bb01",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x2392d490), 13, 13, 1, 1048576)"
+      "plan_hash": "951b9882c83fecbfdad5b3288d7c6117f7930874baf43aa76ec0b8a5dc54456c",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
     }
   },
   "profile_hash": "50fa71281ad979ade1543d5350cd7ac584568fddb57412e39e4d4d9f2a3f2d79",
@@ -1244,6 +1208,18 @@
       "shape": [
         16,
         64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "gate_up"
+      ],
+      "dtype": "float16",
+      "name": "gate_up",
+      "shape": [
+        16,
+        256
       ]
     },
     {

@@ -17,8 +17,14 @@
 >
 > 第 5 节 B2 的**设备前提已验证**（修正后的探针：32 个各自持有独立输入/输出 BO 的 MM 任务放入一次
 > chain，逐位相等，chain 侧 16.0 µs/任务 vs 独立提交 105.5 µs/任务），但**产品路径未接通**：需要
-> “静态 repeat 展开为多任务 plan + `independent_mm_v1` 配方 + 清单版本化”。未做：B2 实施、
-> C（设备子图合并）、D（norm/Softmax 下沉）。本文其余分析（含第 2 节的计时表）仍描述**优化前**的状态。
+> “静态 repeat 展开为多任务 plan + `independent_mm_v1` 配方 + 清单版本化”。
+>
+> **实施状态（2026-10-26，v7）**：方案 C 已实施并测量，见
+> [OPTIMIZATION-RESULTS-2.md](OPTIMIZATION-RESULTS-2.md)。默认路径把 FFN gate/up 合并为一次
+> N=2H 打包 GEMM，Host FP32 SwiGLU 与 down/residual 保持原数值路径；b8 12.176 → 11.772 ms
+> （1.034×），b1 3.827 → 3.585 ms（1.067×）。全设备 FFN 作为独立数值政策的显式可选清单
+> （`_deviceffn`）保留，不默认启用。B2 产品化与 D（norm/Softmax 下沉）仍未做。本文其余分析
+> （含第 2 节的计时表）仍描述**优化前**的状态。
 
 ## 1. 优化目标与适用范围
 

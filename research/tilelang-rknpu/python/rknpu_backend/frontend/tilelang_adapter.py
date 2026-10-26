@@ -2462,10 +2462,16 @@ def _extract_ffn_branch(items: list[_Item], params: list[Any], *, tirx: Any,
     x_param = x0
     x_loads = [a for a in y_def.expr.args if a.kind == "load" and
                a.buffer is not None and _param_of(a.buffer, params) is not None]
-    if len(x_loads) != 1 or not _same_buffer(x_loads[0].buffer, x_param):
+    if len(x_loads) != 1:
         reject(RK_E_UNSUPPORTED,
-               "FFN residual add must consume the branch input X",
+               "FFN residual add must consume exactly one external parameter",
                stage="frontend", source=span)
+    residual_param = _param_of(x_loads[0].buffer, params)
+    if residual_param is None:
+        reject(RK_E_UNSUPPORTED,
+               "FFN residual add must consume an external parameter",
+               stage="frontend", source=span)
+    residual_is_x = _same_buffer(residual_param, x_param)
     b0 = _region(g0.b_copy.node.args[0], tirx, "copy source", expect_mask=1)
     b1 = _region(g1.b_copy.node.args[0], tirx, "copy source", expect_mask=1)
     b2 = _region(g2.b_copy.node.args[0], tirx, "copy source", expect_mask=1)
@@ -2477,11 +2483,14 @@ def _extract_ffn_branch(items: list[_Item], params: list[Any], *, tirx: Any,
                "FFN GEMM B operands must be parameter weights",
                stage="frontend", source=span)
     wg, wu = (w0, w1) if gate_n is n0 else (w1, w0)
-    named = [x_param, wg, wu, wd, y_param]
-    if len({id(p) for p in named}) != 5 or len(params) != 5 or \
+    named = ([x_param, wg, wu, wd, y_param] if residual_is_x else
+             [x_param, wg, wu, wd, residual_param, y_param])
+    if len({id(p) for p in named}) != len(named) or \
+            len(params) != len(named) or \
             any(not any(_same_buffer(p, q) for q in named) for p in params):
         reject(RK_E_UNSUPPORTED,
-               "SwiGLU FFN expects exactly X, Wg, Wu, Wd and Y parameters",
+               "SwiGLU FFN expects X, Wg, Wu, Wd, optional residual input H, "
+               "and Y parameters",
                stage="frontend", source=span,
                actual=[_buffer_name(p) for p in params])
 
@@ -2538,6 +2547,11 @@ def _extract_ffn_branch(items: list[_Item], params: list[Any], *, tirx: Any,
         Value(9, _buffer_name(y_param), TensorType("float16", (m, d)),
               5, "output"),
     )
+    if not residual_is_x:
+        values = values + (
+            Value(10, _buffer_name(residual_param),
+                  TensorType("float16", (m, d)), None, "input"),
+        )
     gate_group = g0 if gate_n is n0 else g1
     up_group = g1 if gate_n is n0 else g0
     ops = (
@@ -2549,11 +2563,12 @@ def _extract_ffn_branch(items: list[_Item], params: list[Any], *, tirx: Any,
            {"numeric_contract": mul_contract.to_dict()}, span),
         Op(4, "matmul", (7, 3), (8,),
            mm_attrs(proj_contract, g2), span),
-        Op(5, "add", (8, 0), (9,),
+        Op(5, "add", (8, 0 if residual_is_x else 10), (9,),
            {"numeric_contract": add_contract.to_dict()}, span),
     )
+    inputs = (0,) if residual_is_x else (0, 10)
     return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
-                  ops=ops, inputs=(0,), outputs=(9,),
+                  ops=ops, inputs=inputs, outputs=(9,),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
 

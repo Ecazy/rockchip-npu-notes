@@ -8,9 +8,11 @@ import hashlib
 import json
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
-from rknpu_backend import CompileOptions, compile_tilelang, default_profile, save_plan
+from rknpu_backend import (CompileOptions, compile_rkir, compile_tilelang,
+                           default_profile, save_plan)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,6 +33,9 @@ def transformer_shapes(batch: int):
         "attn_out": (m, 64, 64, False),
         "gate": (m, 64, 128, False),
         "up": (m, 64, 128, False),
+        # One packed N=2H GEMM: Wgu = concat(Wg, Wu) on N, so the shared input
+        # is uploaded and submitted once rather than twice.
+        "gate_up": (m, 64, 256, False),
         "down": (m, 128, 64, False),
         "classifier": (batch, 64, 16, False),
     }
@@ -133,6 +138,53 @@ def main() -> int:
                                        profile=profile, options=options,
                                        b_is_input=True).plan
         plans["pv"] = plans["qk"]
+        # Device-resident SwiGLU FFN: one real TileLang source lowers to the
+        # complete gate/up -> SiLU -> gated product -> down -> residual chain.
+        # The LUT is explicitly approved for this plan; the manifest records the
+        # changed numeric contract separately from the host-swiglu path.
+        ffn_options = CompileOptions(numeric_mode="rk_f16_tiled",
+                                     allow_approx_lut=True)
+        m = batch * 16
+        ffn_kernel = tmm.make_swiglu_ffn_f16(m=m, d=64, h=128)
+        ffn = compile_tilelang(ffn_kernel, profile=profile,
+                               options=ffn_options).plan
+        write(ffn, f"tiny_vit_b{batch}_ffn")
+        manifest["plans"][f"tiny_vit_b{batch}_ffn"].update({
+            "role": "device-resident-swiglu-ffn",
+            "templates": [a.template_id for a in ffn.actions
+                          if a.kind == "npu_task"],
+            "transfers": ffn.accounting.transfers,
+        })
+        # Capture-only trace plan: same extracted graph and primitive tasks, but
+        # exports the intermediates that the frozen numeric layer gates require.
+        # It is never executed in the measured production path.
+        from rknpu_backend.frontend.tilelang_adapter import extract
+        trace_module = extract(ffn_kernel, options=ffn_options,
+                               profile_hash=profile.profile_hash)
+        trace_names = {4: "gate", 5: "up", 7: "act", 8: "ffn"}
+        trace_outputs = tuple(trace_names)
+        # Drop the final residual add/Y from the trace module: the production
+        # plan owns h2, while the frozen FFN layer gates describe the down
+        # projection before that residual add.
+        trace_values = tuple(
+            replace(value,
+                    id=9 if value.id == 10 else value.id,
+                    name=trace_names.get(value.id, value.name),
+                    role="output" if value.id in trace_names else value.role)
+            for value in trace_module.values if value.id != 9)
+        trace_ops = tuple(op for op in trace_module.ops if op.id != 5)
+        trace_module = replace(trace_module,
+                               name=f"{trace_module.name}:trace",
+                               values=trace_values, ops=trace_ops,
+                               inputs=(0, 9), outputs=trace_outputs)
+        trace_plan = compile_rkir(trace_module, profile=profile,
+                                  options=ffn_options).plan
+        write(trace_plan, f"tiny_vit_b{batch}_ffn_trace")
+        manifest["plans"][f"tiny_vit_b{batch}_ffn_trace"].update({
+            "role": "numeric-capture-trace",
+            "source_plan": f"tiny_vit_b{batch}_ffn",
+            "outputs": list(trace_names.values()),
+        })
         for name, plan in plans.items():
             write(plan, f"tiny_vit_b{batch}_{name}")
         # Static-repeat groups: the QK/PV node is declared N = batch * heads

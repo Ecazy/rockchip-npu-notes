@@ -10,6 +10,9 @@ if [[ -f "$REPO/.env" ]]; then source "$REPO/.env"; fi
 : "${ORANGE_PI_PASSWORD:?Set ORANGE_PI_PASSWORD in $REPO/.env}"
 REMOTE_BASE=${ORANGE_PI_WORKSPACE:-/mnt/ssd/workspace}
 [[ "$REMOTE_BASE" =~ ^/[a-zA-Z0-9_./-]+$ ]] || { echo 'unsafe remote workspace' >&2; exit 2; }
+NUMERIC_SPEC=${RK_NUMERIC_SPEC:-numeric_acceptance_train.json}
+[[ "$NUMERIC_SPEC" =~ ^[a-zA-Z0-9_.-]+$ ]] || { echo 'unsafe numeric spec name' >&2; exit 2; }
+[[ -f "$HERE/models/$NUMERIC_SPEC" ]] || { echo "missing numeric spec: $NUMERIC_SPEC" >&2; exit 2; }
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 REMOTE="$REMOTE_BASE/tl-numeric-$STAMP"
 LOCAL="$HERE/results/$STAMP-numeric"
@@ -24,8 +27,8 @@ cp "$HERE"/models/mnist_mlp.npz "$HERE"/models/tiny_vit.npz "$CAMPAIGN/weights/"
 cp "$HERE"/.data/mnist/train-images-idx3-ubyte.gz \
    "$HERE"/.data/mnist/t10k-images-idx3-ubyte.gz "$CAMPAIGN/data/"
 cp "$HERE"/tools/run_numeric_observation.py "$CAMPAIGN/tools/"
-cp "$HERE"/models/numeric_acceptance_train.json "$CAMPAIGN/numeric/"
-python3 - "$HERE" "$CAMPAIGN" <<'PY'
+cp "$HERE/models/$NUMERIC_SPEC" "$CAMPAIGN/numeric/"
+python3 - "$HERE" "$CAMPAIGN" "$NUMERIC_SPEC" <<'PY'
 import hashlib
 import json
 import sys
@@ -57,8 +60,8 @@ report = {
     'weights': {p.name: sha(p) for p in sorted((camp / 'weights').glob('*.npz'))},
     'data': {p.name: sha(p) for p in sorted((camp / 'data').glob('*.gz'))},
     'plans': {p.name: sha(p) for p in sorted((camp / 'plans').glob('*.json'))},
-    'initial_spec': {'file': 'numeric_acceptance_train.json',
-                     'sha256': sha(camp / 'numeric/numeric_acceptance_train.json')},
+    'initial_spec': {'file': sys.argv[3],
+                     'sha256': sha(camp / 'numeric' / sys.argv[3])},
     'claims': {'calibration_split': 'train images only',
                'calibration_labels_read': False,
                'acceptance_split': 'test images only',
@@ -106,18 +109,18 @@ if (( status == 0 )); then
 fi
 if (( status == 0 )); then
   PYTHONPATH="$HERE/python" python3 "$HERE/tools/calibrate_numeric_train.py" \
-    --spec "$CAMPAIGN/numeric/numeric_acceptance_train.json" \
+    --spec "$CAMPAIGN/numeric/$NUMERIC_SPEC" \
     --calibration "$HERE/models/numeric_calibration_train.npz" \
     --observation "$LOCAL/calibration/observation.npz" \
-    --out "$HERE/models/numeric_acceptance_train.json" \
+    --out "$HERE/models/$NUMERIC_SPEC" \
     > "$LOCAL/calibration/freeze.log" 2>&1 || status=1
 fi
 if (( status == 0 )); then
-  cp "$HERE/models/numeric_acceptance_train.json" "$LOCAL/frozen_spec.json"
-  "${SCP[@]}" "$HERE/models/numeric_acceptance_train.json" "$TARGET:$REMOTE/campaign/numeric/numeric_acceptance_train.json" || status=1
+  cp "$HERE/models/$NUMERIC_SPEC" "$LOCAL/frozen_spec.json"
+  "${SCP[@]}" "$HERE/models/$NUMERIC_SPEC" "$TARGET:$REMOTE/campaign/numeric/$NUMERIC_SPEC" || status=1
 fi
 if (( status == 0 )); then
-  "${SSH[@]}" "bash '$REMOTE/tilelang-rknpu/scripts/run-numeric-acceptance-native.sh' acceptance '$REMOTE/campaign' '$REMOTE/build' '$REMOTE/results'" > "$LOCAL/remote-acceptance.log" 2>&1 || status=1
+  "${SSH[@]}" "RK_NUMERIC_SPEC='$NUMERIC_SPEC' bash '$REMOTE/tilelang-rknpu/scripts/run-numeric-acceptance-native.sh' acceptance '$REMOTE/campaign' '$REMOTE/build' '$REMOTE/results'" > "$LOCAL/remote-acceptance.log" 2>&1 || status=1
 fi
 if (( status == 0 )); then
   mkdir -p "$LOCAL/acceptance"
@@ -129,7 +132,7 @@ if (( status == 0 )); then
 fi
 if (( status == 0 )); then
   PYTHONPATH="$HERE/python:$HERE" python3 "$HERE/tools/verify_numeric_acceptance.py" \
-    --spec "$HERE/models/numeric_acceptance_train.json" \
+    --spec "$HERE/models/$NUMERIC_SPEC" \
     --calibration-observation "$LOCAL/calibration/observation.npz" \
     --acceptance-observation "$LOCAL/acceptance/observation.npz" \
     --campaign-manifest "$HERE/results/20261024T071144Z-models/campaign/manifest.json" \

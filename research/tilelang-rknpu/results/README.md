@@ -5,6 +5,29 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## FFN boundary checkpoint (2026-10-26, v7)
+
+Second optimisation package from
+[TRANSFORMER-OPTIMIZATION-PLAN.md](../TRANSFORMER-OPTIMIZATION-PLAN.md) section 6;
+the implementation report is
+[OPTIMIZATION-RESULTS-2.md](../OPTIMIZATION-RESULTS-2.md).
+
+- `results/20261026T085009Z-ffn/`: RK3588 core 1, three interleaved arms
+  (packed / device / host), 4 rounds x 32 runs, pinned CPU.  Default packed FFN:
+  b8 12.176 -> **11.772 ms** (1.034x), b1 3.827 -> **3.585 ms** (1.067x).
+  Per b8 call: tasks 71 -> 70, submits 9 -> 8, upload bytes 312832 -> 296448;
+  downloads stay byte-identical.  Packed logits and all FFN trace tensors are
+  bitwise equal to the old host-SwiGLU path.
+- `results/20261026T084825Z-numeric/`: frozen packed-path numeric acceptance,
+  **PASS / 0 problems**; tolerances are item-for-item identical to v1.
+  `results/20261026T085111Z-numeric-replay/` is the post-freeze replay, also
+  **PASS / 0 problems**.
+- `results/20261026T084901Z-numeric/`: separate fully device-resident FFN policy
+  (explicit opt-in `_deviceffn` manifest), independently recalibrated:
+  `act/ffn/h2/h2_tokens` atol 0.0625 -> 0.125; **PASS / 0 problems**.  This path
+  is not the default and does not inherit the packed bit-exact claim.
+- Host verification for this state: 258 pytest, 30/30 ctest.
+
 ## Bridge-envelope optimisation checkpoint (2026-10-26, v5)
 
 First optimisation package from

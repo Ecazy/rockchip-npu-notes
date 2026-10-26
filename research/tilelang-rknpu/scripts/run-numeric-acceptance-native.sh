@@ -63,7 +63,7 @@ case "$mode" in
     set +e
     python3 "$campaign/tools/run_numeric_observation.py" \
       --mode acceptance \
-      --spec "$campaign/numeric/numeric_acceptance_train.json" \
+      --spec "$campaign/numeric/${RK_NUMERIC_SPEC:-numeric_acceptance_train.json}" \
       --plans-dir "$campaign/plans" --weights-dir "$campaign/weights" \
       --data-dir "$campaign/data" --lib "$build/librknpu_plan.so" \
       --out "$results/acceptance/observation.npz" \

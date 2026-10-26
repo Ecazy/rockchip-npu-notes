@@ -161,6 +161,10 @@ class NpuNode:
     # (3N bindings: A_i, B_i, Y_i) that the shared path submits in one chain.
     repeat_submit: str = "per_repeat_submits"
     group_plan: str | None = None
+    # Numeric-observation probes are statically present in the manifest but
+    # execute only when the caller asks for a capture.  They never feed a
+    # production value and are not part of the measured graph.
+    capture_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -313,6 +317,20 @@ def _parse_constant(obj: Any, where: str) -> dict[str, Any]:
         _keys(obj, {"kind", "name"}, where=where)
         return {"kind": "weight",
                 "name": _string(obj["name"], f"{where}.name")}
+    if kind == "weight_concat":
+        _keys(obj, {"kind", "parts", "axis"}, where=where)
+        parts = obj["parts"]
+        if not isinstance(parts, list) or len(parts) < 2:
+            reject(RK_E_SCHEMA, f"{where}.parts must list at least two weights",
+                   stage="hybrid")
+        axis = _int(obj["axis"], f"{where}.axis")
+        if axis not in (0, 1):
+            reject(RK_E_UNSUPPORTED, f"{where}.axis must be 0 or 1",
+                   stage="hybrid")
+        return {"kind": kind,
+                "parts": [_string(part, f"{where}.parts[{i}]")
+                          for i, part in enumerate(parts)],
+                "axis": axis}
     if kind == "weight_repeat_pad":
         _keys(obj, {"kind", "name", "reshape"},
               {"repeat_rows"}, where=where)
@@ -553,6 +571,31 @@ def _swiglu(inputs: dict[str, np.ndarray],
     return {"y": np.ascontiguousarray(g * sigmoid * u, dtype=np.float16)}
 
 
+def _swiglu_packed(inputs: dict[str, np.ndarray],
+                   attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    """Split a packed [gate|up] GEMM result and apply exact FP32 SwiGLU.
+
+    The device computes the two branches as one N=2H GEMM with concatenated
+    static weights; the host split is a pure layout view.  The activation product
+    is still narrowed exactly once, so this preserves the established host-SwiGLU
+    numeric path.
+    """
+    _action_attrs(attrs, set())
+    packed = inputs["gate_up"]
+    if packed.dtype != _F16 or packed.ndim != 2 or packed.shape[1] % 2:
+        reject(RK_E_SHAPE,
+               "swiglu.packed_gate_up requires FP16 [M,2H] input",
+               stage="host_action", actual=list(packed.shape))
+    half = packed.shape[1] // 2
+    gate = np.ascontiguousarray(packed[:, :half], dtype=np.float16)
+    up = np.ascontiguousarray(packed[:, half:], dtype=np.float16)
+    g = gate.astype(np.float32)
+    u = up.astype(np.float32)
+    sigmoid = np.float32(1.0) / (np.float32(1.0) + np.exp(-g))
+    act = np.ascontiguousarray(g * sigmoid * u, dtype=np.float16)
+    return {"gate": gate, "up": up, "act": act}
+
+
 def _mean_axis(inputs: dict[str, np.ndarray],
                attrs: dict[str, Any]) -> dict[str, np.ndarray]:
     _action_attrs(attrs, {"axis"})
@@ -599,6 +642,8 @@ HOST_ACTIONS: dict[str, HostAction] = {
                    ("heads",), ("y",), _merge_heads),
         HostAction("swiglu.gate_up.v1", HOST_ACTIONS_VERSION,
                    ("gate", "up"), ("y",), _swiglu),
+        HostAction("swiglu.packed_gate_up.v1", HOST_ACTIONS_VERSION,
+                   ("gate_up",), ("gate", "up", "act"), _swiglu_packed),
         HostAction("tensor.mean_axis.v1", HOST_ACTIONS_VERSION,
                    ("x",), ("y",), _mean_axis),
         HostAction("logits.prefix.v1", HOST_ACTIONS_VERSION,
@@ -764,7 +809,8 @@ def load_hybrid_program(path: str | Path, *,
                   "numeric_contract", "bridge", "phase"}
         if kind == "rkplan":
             _keys(raw_node, common | {"plan", "constants"},
-                  {"repeat_submit", "group_plan"}, where=f"nodes[{index}]")
+                  {"repeat_submit", "group_plan", "capture_only"},
+                  where=f"nodes[{index}]")
         else:
             _keys(raw_node, common | {"action", "action_version", "attrs"},
                   where=f"nodes[{index}]")
@@ -813,6 +859,11 @@ def load_hybrid_program(path: str | Path, *,
                 reject(RK_E_SCHEMA, "RKPlan nodes must use execution phase",
                        stage="hybrid")
             plan = plans[plan_key].plan
+            capture_only = raw_node.get("capture_only", False)
+            if not isinstance(capture_only, bool):
+                reject(RK_E_SCHEMA,
+                       f"nodes[{index}].capture_only must be boolean",
+                       stage="hybrid")
             repeat_submit = raw_node.get("repeat_submit", "per_repeat_submits")
             if repeat_submit not in REPEAT_SUBMIT_POLICIES:
                 reject(RK_E_UNSUPPORTED,
@@ -906,7 +957,8 @@ def load_hybrid_program(path: str | Path, *,
                        stage="hybrid")
             node: Node = NpuNode(node_id, plan_key, refs_in, refs_out,
                                  parsed_constants, dep_ids, repeat, numeric,
-                                 bridge, phase, repeat_submit, group_plan_key)
+                                 bridge, phase, repeat_submit, group_plan_key,
+                                 capture_only)
         else:
             action_id = _string(raw_node["action"],
                                 f"nodes[{index}].action")
@@ -1090,6 +1142,24 @@ def _materialize_constant(desc: dict[str, Any], plan_spec: Any,
         if desc["generator"] == "identity":
             return np.eye(target[0], dtype=np.float16)
         return np.zeros(target, dtype=np.float16)
+    if desc["kind"] == "weight_concat":
+        parts = []
+        for part in desc["parts"]:
+            if part not in weights:
+                reject(RK_E_SCHEMA, f"missing weight {part!r}", stage="hybrid")
+            meta = weights_meta["keys"].get(part)
+            value = np.asarray(weights[part])
+            if meta is None or tuple(meta["shape"]) != tuple(value.shape) or \
+                    str(np.dtype(meta["dtype"])) != str(value.dtype):
+                reject(RK_E_SCHEMA, f"weight {part!r} metadata mismatch",
+                       stage="hybrid")
+            parts.append(value.astype(np.float16))
+        arr = np.concatenate(parts, axis=int(desc["axis"]))
+        if arr.shape != target:
+            reject(RK_E_SHAPE, f"concatenated constant {plan_spec.name!r} "
+                   "shape mismatch", stage="hybrid", actual=list(arr.shape),
+                   required=list(target))
+        return np.ascontiguousarray(arr, dtype=np.float16)
     name = desc["name"]
     if name not in weights:
         reject(RK_E_SCHEMA, f"missing weight {name!r}", stage="hybrid")
@@ -1455,6 +1525,8 @@ class HybridRunner:
                            stats.postprocess_us) if stats is not None else 0.0
         t_run = time.perf_counter()
         for node in self.program.nodes:
+            if isinstance(node, NpuNode) and node.capture_only and not capture:
+                continue
             if isinstance(node, HostNode):
                 t0 = time.perf_counter()
                 inputs = {name: self._resolve(
