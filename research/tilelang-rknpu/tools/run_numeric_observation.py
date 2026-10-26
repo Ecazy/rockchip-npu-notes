@@ -57,12 +57,21 @@ def main() -> int:
     ap.add_argument("--lib", default=os.environ.get("RKNPU_PLAN_LIB", ""))
     ap.add_argument("--fd", type=int, default=None)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--manifest-key", action="append", default=[],
+                    metavar="OLD=NEW",
+                    help="override an rkhybrid manifest stem for this observation")
     args = ap.parse_args()
     plans_dir = Path(args.plans_dir).resolve()
     weights_dir = Path(args.weights_dir).resolve()
     data_dir = Path(args.data_dir).resolve()
     mode = args.mode
     split = CALIBRATION_SPLIT if mode == "calibration" else ACCEPTANCE_SPLIT
+    manifest_keys: dict[str, str] = {}
+    for item in args.manifest_key:
+        if "=" not in item or not all(item.split("=", 1)):
+            raise SystemExit(f"invalid --manifest-key {item!r}")
+        old, new = item.split("=", 1)
+        manifest_keys[old] = new
     spec = None
     spec_hash = None
     if mode == "calibration":
@@ -99,7 +108,8 @@ def main() -> int:
             raise RuntimeError(f"rocket_open failed: {fd}")
         own_fd = True
     try:
-        arrays = observe_split(lib, plans_dir, weights_dir, raw, split, fd=fd)
+        arrays = observe_split(lib, plans_dir, weights_dir, raw, split, fd=fd,
+                               manifest_keys=manifest_keys)
         out = Path(args.out).resolve()
         out.parent.mkdir(parents=True, exist_ok=True)
         save_npz_deterministic(out, arrays)

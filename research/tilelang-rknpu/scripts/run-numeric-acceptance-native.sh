@@ -46,11 +46,21 @@ case "$mode" in
     ;;
   calibration)
     mkdir -p "$results/calibration"
+    manifest_args=()
+    if [[ -n "${RK_NUMERIC_MANIFEST_MAP:-}" ]]; then
+      IFS=',' read -r -a manifest_pairs <<< "$RK_NUMERIC_MANIFEST_MAP"
+      for pair in "${manifest_pairs[@]}"; do
+        [[ "$pair" =~ ^[a-zA-Z0-9_.-]+=[a-zA-Z0-9_.-]+$ ]] || {
+          echo "invalid RK_NUMERIC_MANIFEST_MAP entry: $pair" >&2; exit 2; }
+        manifest_args+=(--manifest-key "$pair")
+      done
+    fi
     set +e
     python3 "$campaign/tools/run_numeric_observation.py" \
       --mode calibration \
       --plans-dir "$campaign/plans" --weights-dir "$campaign/weights" \
       --data-dir "$campaign/data" --lib "$build/librknpu_plan.so" \
+      "${manifest_args[@]}" \
       --out "$results/calibration/observation.npz" \
       > "$results/calibration/runner.log" 2>&1
     rc=$?
@@ -60,12 +70,22 @@ case "$mode" in
     ;;
   acceptance)
     mkdir -p "$results/acceptance"
+    manifest_args=()
+    if [[ -n "${RK_NUMERIC_MANIFEST_MAP:-}" ]]; then
+      IFS=',' read -r -a manifest_pairs <<< "$RK_NUMERIC_MANIFEST_MAP"
+      for pair in "${manifest_pairs[@]}"; do
+        [[ "$pair" =~ ^[a-zA-Z0-9_.-]+=[a-zA-Z0-9_.-]+$ ]] || {
+          echo "invalid RK_NUMERIC_MANIFEST_MAP entry: $pair" >&2; exit 2; }
+        manifest_args+=(--manifest-key "$pair")
+      done
+    fi
     set +e
     python3 "$campaign/tools/run_numeric_observation.py" \
       --mode acceptance \
       --spec "$campaign/numeric/${RK_NUMERIC_SPEC:-numeric_acceptance_train.json}" \
       --plans-dir "$campaign/plans" --weights-dir "$campaign/weights" \
       --data-dir "$campaign/data" --lib "$build/librknpu_plan.so" \
+      "${manifest_args[@]}" \
       --out "$results/acceptance/observation.npz" \
       > "$results/acceptance/runner.log" 2>&1
     rc=$?

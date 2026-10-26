@@ -25,6 +25,7 @@
       "ffn_mode": "packed",
       "model": "tiny_vit",
       "path": "tiny_vit_b1.rkhybrid.json",
+      "rmsnorm_mode": "host",
       "sha256": "cc4082177a4a4a98f52ce3f7f90ed178a9259d8ee7df7703c96e67d8e076b4fd"
     },
     "tiny_vit_b1_deviceffn": {
@@ -32,6 +33,7 @@
       "ffn_mode": "device",
       "model": "tiny_vit",
       "path": "tiny_vit_b1_deviceffn.rkhybrid.json",
+      "rmsnorm_mode": "host",
       "sha256": "eb812461f8be517e825a99e1eba0f5552d4fadeb548fb7f160451096b177ab07"
     },
     "tiny_vit_b1_hostffn": {
@@ -39,13 +41,23 @@
       "ffn_mode": "host",
       "model": "tiny_vit",
       "path": "tiny_vit_b1_hostffn.rkhybrid.json",
+      "rmsnorm_mode": "host",
       "sha256": "fade7bbc961367e46fd0fdb845eb13c29ecfe5d7848abb3c23b1ee7be0c0acb1"
+    },
+    "tiny_vit_b1_rmsnorm": {
+      "batch": 1,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1_rmsnorm.rkhybrid.json",
+      "rmsnorm_mode": "fused",
+      "sha256": "13e2dc679bf000bb572d1444d076c1e9ae8c7787c379b01266c8b6193c973819"
     },
     "tiny_vit_b8": {
       "batch": 8,
       "ffn_mode": "packed",
       "model": "tiny_vit",
       "path": "tiny_vit_b8.rkhybrid.json",
+      "rmsnorm_mode": "host",
       "sha256": "7136b4322d37d5c342bf8fc3a9320d1a02d1bde825484130aea5d8fc005c6ca4"
     },
     "tiny_vit_b8_deviceffn": {
@@ -53,6 +65,7 @@
       "ffn_mode": "device",
       "model": "tiny_vit",
       "path": "tiny_vit_b8_deviceffn.rkhybrid.json",
+      "rmsnorm_mode": "host",
       "sha256": "b587a5b597873bbc76c2ac065a530e23a57b0b34dc5a5a82b8b2c341babdeefe"
     },
     "tiny_vit_b8_hostffn": {
@@ -60,7 +73,16 @@
       "ffn_mode": "host",
       "model": "tiny_vit",
       "path": "tiny_vit_b8_hostffn.rkhybrid.json",
+      "rmsnorm_mode": "host",
       "sha256": "ea91f826a1f8e9dd185304ebf7d4e46da69ad59ac0be109f51868226b70f3a3d"
+    },
+    "tiny_vit_b8_rmsnorm": {
+      "batch": 8,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8_rmsnorm.rkhybrid.json",
+      "rmsnorm_mode": "fused",
+      "sha256": "17a5594811c299b12e94bc15d45b27f8f9bea540d2918ee1150fa1fb807381dd"
     }
   },
   "hybrid_policy": {

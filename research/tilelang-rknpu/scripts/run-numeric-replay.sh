@@ -117,8 +117,16 @@ sha256sum "$LOCAL/source-bundle.tgz" > "$LOCAL/source-bundle.sha256"
 
 status=0
 "${SSH[@]}" "bash '$REMOTE/tilelang-rknpu/scripts/run-numeric-acceptance-native.sh' build '$REMOTE/campaign' '$REMOTE/build' '$REMOTE/results'" > "$LOCAL/remote-build.log" 2>&1 || status=1
+if (( status == 0 )) && [[ "${RK_REOBSERVE_CALIBRATION:-0}" == "1" ]]; then
+  "${SSH[@]}" "bash '$REMOTE/tilelang-rknpu/scripts/run-numeric-acceptance-native.sh' calibration '$REMOTE/campaign' '$REMOTE/build' '$REMOTE/results'" > "$LOCAL/remote-calibration.log" 2>&1 || status=1
+  if (( status == 0 )); then
+    mkdir -p "$LOCAL/calibration"
+    "${SCP[@]}" -r "$TARGET:$REMOTE/results/calibration/." "$LOCAL/calibration/" || status=1
+    CALIBRATION_OBS="$LOCAL/calibration/observation.npz"
+  fi
+fi
 if (( status == 0 )); then
-  "${SSH[@]}" "bash '$REMOTE/tilelang-rknpu/scripts/run-numeric-acceptance-native.sh' acceptance '$REMOTE/campaign' '$REMOTE/build' '$REMOTE/results'" > "$LOCAL/remote-acceptance.log" 2>&1 || status=1
+  "${SSH[@]}" "RK_NUMERIC_MANIFEST_MAP='${RK_NUMERIC_MANIFEST_MAP:-}' bash '$REMOTE/tilelang-rknpu/scripts/run-numeric-acceptance-native.sh' acceptance '$REMOTE/campaign' '$REMOTE/build' '$REMOTE/results'" > "$LOCAL/remote-acceptance.log" 2>&1 || status=1
 fi
 if (( status == 0 )); then
   mkdir -p "$LOCAL/acceptance" "$LOCAL/board"

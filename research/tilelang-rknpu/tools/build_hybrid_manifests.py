@@ -196,9 +196,12 @@ def mlp_manifest(batch: int, compiled: dict, weights: dict,
 
 def vit_manifest(batch: int, compiled: dict, weights: dict,
                  weights_sha: str, profile_hash: str, *,
-                 ffn_mode: str = "packed") -> dict:
+                 ffn_mode: str = "packed",
+                 rmsnorm_mode: str = "host") -> dict:
     if ffn_mode not in {"device", "packed", "host"}:
         raise SystemExit(f"unknown FFN mode {ffn_mode!r}")
+    if rmsnorm_mode not in {"host", "fused"}:
+        raise SystemExit(f"unknown RMSNorm mode {rmsnorm_mode!r}")
     b, t, d, h, hd = batch, 16, 64, 4, 16
     m = b * t
     tensors = [
@@ -318,6 +321,10 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
     }
     ffn_constants = weight_constants(ffn_plan, ffn_weights)
     ffn_trace_constants = weight_constants(ffn_trace_plan, ffn_weights)
+    norm2_node = ("residual_rmsnorm2" if rmsnorm_mode == "fused"
+                  else "rmsnorm2")
+    h1_node = ("residual_rmsnorm2" if rmsnorm_mode == "fused"
+               else "residual_attention")
     if ffn_mode == "device":
         # One device-resident FFN plan: gate/up -> SiLU -> gated product ->
         # down -> residual.  The old gate/up/down plans remain on disk as
@@ -326,7 +333,7 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
             plan_node("ffn", "ffn",
                       {"X": ref("norm2"), "H": ref("h1")}, {"Y": ref("h2")},
                       ffn_constants,
-                      deps=["rmsnorm2", "residual_attention"],
+                      deps=[norm2_node, h1_node],
                       numeric=ffn_numeric),
             # Capture-only probes preserve every frozen layer gate without adding
             # a device round trip to the production path.
@@ -335,7 +342,7 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                       {"gate": ref("gate"), "up": ref("up"),
                        "act": ref("act"), "ffn": ref("ffn")},
                       ffn_trace_constants,
-                      deps=["rmsnorm2", "residual_attention"],
+                      deps=[norm2_node, h1_node],
                       numeric=ffn_numeric, capture_only=True),
         ]
     elif ffn_mode == "packed":
@@ -349,7 +356,7 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         ffn_nodes = [
             plan_node("gate_up", "gate_up", {"A": ref("norm2")},
                       {"Y": ref("gate_up")}, packed_constants,
-                      deps=["rmsnorm2"], numeric=plan_numeric),
+                      deps=[norm2_node], numeric=plan_numeric),
             host_node("swiglu", "swiglu.packed_gate_up.v1",
                       {"gate_up": ref("gate_up")},
                       {"gate": ref("gate"), "up": ref("up"),
@@ -361,7 +368,7 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                       deps=["swiglu"], numeric=plan_numeric),
             host_node("residual_ffn", "tensor.add.v1",
                       {"a": ref("h1"), "b": ref("ffn")}, {"y": ref("h2")},
-                      depends_nodes=["residual_attention", "down"],
+                      depends_nodes=[h1_node, "down"],
                       numeric=host_norm),
         ]
     else:
@@ -372,12 +379,12 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                       {"Y": ref("gate")},
                       weight_constants(gate_plan, {
                           "B": {"kind": "weight", "name": "ffn_gate_w"}}),
-                      deps=["rmsnorm2"], numeric=plan_numeric),
+                      deps=[norm2_node], numeric=plan_numeric),
             plan_node("up", "up", {"A": ref("norm2")},
                       {"Y": ref("up")},
                       weight_constants(up_plan, {
                           "B": {"kind": "weight", "name": "ffn_up_w"}}),
-                      deps=["rmsnorm2"], numeric=plan_numeric),
+                      deps=[norm2_node], numeric=plan_numeric),
             host_node("swiglu", "swiglu.gate_up.v1",
                       {"gate": ref("gate"), "up": ref("up")},
                       {"y": ref("act")}, depends_nodes=["gate", "up"],
@@ -388,8 +395,36 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                       deps=["swiglu"], numeric=plan_numeric),
             host_node("residual_ffn", "tensor.add.v1",
                       {"a": ref("h1"), "b": ref("ffn")}, {"y": ref("h2")},
-                      depends_nodes=["residual_attention", "down"],
+                      depends_nodes=[h1_node, "down"],
                       numeric=host_norm),
+        ]
+    if rmsnorm_mode == "fused":
+        # The residual sum is still narrowed to FP16 before RMSNorm reads it;
+        # only the Host action boundary is removed.  h1 remains exported for the
+        # frozen trace and for the later FFN residual.
+        norm2_nodes = [
+            host_node("residual_rmsnorm2",
+                      "tensor.add_rmsnorm.last_axis.v1",
+                      {"a": ref("positioned"),
+                       "b": ref("attn_projection"),
+                       "gamma": ref("norm2_gamma")},
+                      {"h": ref("h1"), "y": ref("norm2")},
+                      depends_nodes=["position_add", "attn_out"],
+                      attrs={"eps": 1e-6}, numeric=host_norm),
+        ]
+    else:
+        norm2_nodes = [
+            host_node("residual_attention", "tensor.add.v1",
+                      {"a": ref("positioned"),
+                       "b": ref("attn_projection")},
+                      {"y": ref("h1")},
+                      depends_nodes=["position_add", "attn_out"],
+                      numeric=host_norm),
+            host_node("rmsnorm2", "rmsnorm.last_axis.v1",
+                      {"x": ref("h1"), "gamma": ref("norm2_gamma")},
+                      {"y": ref("norm2")},
+                      depends_nodes=["residual_attention"],
+                      attrs={"eps": 1e-6}, numeric=host_norm),
         ]
     nodes = [
         host_node("patchify", "mnist.patchify_norm.v1",
@@ -465,14 +500,7 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                   weight_constants(attn_plan, {
                       "B": {"kind": "weight", "name": "attn_out_w"}}),
                   deps=["merge_heads"], numeric=plan_numeric),
-        host_node("residual_attention", "tensor.add.v1",
-                  {"a": ref("positioned"), "b": ref("attn_projection")},
-                  {"y": ref("h1")},
-                  depends_nodes=["position_add", "attn_out"], numeric=host_norm),
-        host_node("rmsnorm2", "rmsnorm.last_axis.v1",
-                  {"x": ref("h1"), "gamma": ref("norm2_gamma")},
-                  {"y": ref("norm2")}, depends_nodes=["residual_attention"],
-                  attrs={"eps": 1e-6}, numeric=host_norm),
+        *norm2_nodes,
         *ffn_nodes,
         host_node("reshape_tokens", "tensor.reshape.v1",
                   {"x": ref("h2")}, {"y": ref("h2_tokens")},
@@ -517,9 +545,12 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
     exec_policy, bridge_policy = policy()
     return {
         "schema_version": HYBRID_SCHEMA_VERSION, "kind": "rkhybrid",
-        "name": (f"tiny_vit_b{batch}" if ffn_mode == "packed" else
-                 (f"tiny_vit_b{batch}_deviceffn" if ffn_mode == "device"
-                  else f"tiny_vit_b{batch}_hostffn")),
+        "name": (f"tiny_vit_b{batch}" if
+                 (ffn_mode == "packed" and rmsnorm_mode == "host") else
+                 (f"tiny_vit_b{batch}_rmsnorm" if
+                  (ffn_mode == "packed" and rmsnorm_mode == "fused") else
+                  (f"tiny_vit_b{batch}_deviceffn" if ffn_mode == "device"
+                   else f"tiny_vit_b{batch}_hostffn"))),
         "model": "tiny_vit", "batch": batch,
         "profile_hash": profile_hash,
         "execution_policy": exec_policy, "bridge_policy": bridge_policy,
@@ -572,8 +603,23 @@ def main() -> int:
             path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
             written[key] = {"path": path.name, "model": "tiny_vit",
                             "batch": batch, "ffn_mode": mode,
+                            "rmsnorm_mode": "host",
                             "sha256": sha256(path)}
             print("wrote", path, flush=True)
+        # Fused residual+RMSNorm control: same packed FFN, same FP16 residual
+        # narrowing point, one fewer Host action.
+        key = f"tiny_vit_b{batch}_rmsnorm"
+        path = plans_dir / f"{key}.rkhybrid.json"
+        data = vit_manifest(batch, compiled, weights["tiny_vit"],
+                            weights_sha["tiny_vit"],
+                            compiled["profile_hash"], ffn_mode="packed",
+                            rmsnorm_mode="fused")
+        path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+        written[key] = {"path": path.name, "model": "tiny_vit",
+                        "batch": batch, "ffn_mode": "packed",
+                        "rmsnorm_mode": "fused",
+                        "sha256": sha256(path)}
+        print("wrote", path, flush=True)
     compiled["hybrid_schema_version"] = HYBRID_SCHEMA_VERSION
     compiled["hybrid_manifests"] = written
     compiled["hybrid_policy"] = {

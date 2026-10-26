@@ -5,6 +5,25 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## RMSNorm-boundary checkpoint (2026-10-26, v9)
+
+Third optimisation package, RMSNorm portion of plan section 6/7 D; report:
+[OPTIMIZATION-RESULTS-3.md](../OPTIMIZATION-RESULTS-3.md).
+
+- `results/20261026T091322Z-rmsnorm/`: default packed FFN + chain_shared,
+  `control` vs fused residual+RMSNorm Host action, 4 rounds x 32 runs.
+  b8 11.885 -> 11.921 ms (0.997x), b1 3.587 -> 3.628 ms (0.989x); structure and
+  transfers identical.  Default retained.
+- `results/20261026T091548Z-numeric-replay/` and
+  `...T091612Z-numeric-replay/`: default and fused-manifest replays under the
+  existing packed tolerances, both **PASS / 0 problems**, no recalibration.
+- `results/20261026T091954Z-numeric/`: separately mapped `_deviceffn` acceptance,
+  **PASS / 0 problems** under its independent `atol=0.125` policy.
+- Existing `co_row_ops` RMSNorm probe: 0.854 ms/run (b8) and 0.266 ms/run (b1)
+  with 2 submits / 3 tasks / 2 uploads / 2 downloads, slower than the current
+  Host RMSNorm + adjacent upload.  No device RMSNorm task was added.
+- Host verification for this state: 260 pytest, 30/30 ctest.
+
 ## QK/PV policy revalidation on packed FFN (2026-10-26, v8)
 
 - `results/20261026T085859Z-policy/`: packed FFN default, QK/PV arms

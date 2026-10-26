@@ -1,30 +1,17 @@
 # Transformer 后端优化方案（分析稿）
 
-日期：2026-10-24。
+原分析日期：2026-10-24；状态导航整理：2026-10-26。
 
-本文只分析候选方案、依赖、风险与后续验收方法，不授权或执行代码修改、编译、设备实验、重训练或性能参数调整。它不改变主线里程碑的验收状态。数值门禁的校准/验收独立性及隐藏层覆盖等主线未关闭问题，仍由主线单独处理。
+本文保留方案 A–D 的设计理由、依赖与验收方法；正文中的成本表和预测按原分析时点解释。实际完成状态与数字统一查以下结果报告，避免将旧基线与新测量混用。
 
-> **实施状态（2026-10-26，v5）**：本文第 10 节的“首个优化包”已按下述边界实施并在 RK3588 上测量，
-> 见 [OPTIMIZATION-RESULTS-1.md](OPTIMIZATION-RESULTS-1.md)。已完成：A1（包络归因；扩展字段走新结构
-> `rk_run_attribution` + 新入口 `rk_workspace_run_ex`，旧 `rk_run_report` 冻结为 88 字节）、
-> A2（静态解析、预分配、下载路径瘦身）、B1（静态 repeat 成组入口；锁作用域、总占用 Host 预算、
-> 创建时检查均已收紧）、A4 允许范围内的 guard 精确扫描，以及 **Host 预算闭环**（planner 与 C 校验器
-> 公式计入运行时常驻 scratch，plan 包据此重新生成）。
-> 绑核 + 逐轮交替测量（baseline / candidate / noprobe 三臂，4 轮 × 32 次合并 128 样本）：
-> b8 33.844 → 14.768 ms（2.292×，236.4 → 541.7 img/s），b1 7.199 → 4.139 ms（1.739×），
-> MLP b32 2.832 → 2.198 ms（1.289×）；submit/task/传输数量逐臂不变。
-> 重新生成的 plan 包按**原有冻结数值政策**重新验收：逐项容差与 v1 相同，验证 PASS / 0 problems。
->
-> 第 5 节 B2 的**设备前提已验证**（修正后的探针：32 个各自持有独立输入/输出 BO 的 MM 任务放入一次
-> chain，逐位相等，chain 侧 16.0 µs/任务 vs 独立提交 105.5 µs/任务），但**产品路径未接通**：需要
-> “静态 repeat 展开为多任务 plan + `independent_mm_v1` 配方 + 清单版本化”。
->
-> **实施状态（2026-10-26，v7）**：方案 C 已实施并测量，见
-> [OPTIMIZATION-RESULTS-2.md](OPTIMIZATION-RESULTS-2.md)。默认路径把 FFN gate/up 合并为一次
-> N=2H 打包 GEMM，Host FP32 SwiGLU 与 down/residual 保持原数值路径；b8 12.176 → 11.772 ms
-> （1.034×），b1 3.827 → 3.585 ms（1.067×）。全设备 FFN 作为独立数值政策的显式可选清单
-> （`_deviceffn`）保留，不默认启用。B2 产品化与 D（norm/Softmax 下沉）仍未做。本文其余分析
-> （含第 2 节的计时表）仍描述**优化前**的状态。
+| 阶段 | 结果入口 | 已交付范围 |
+|---|---|---|
+| A 与 B1 | [OPTIMIZATION-RESULTS-1.md](OPTIMIZATION-RESULTS-1.md) | 运行包络归因、静态准备、成组调用与预算闭环 |
+| C | [OPTIMIZATION-RESULTS-2.md](OPTIMIZATION-RESULTS-2.md) | 默认 packed gate/up + Host FP32 SwiGLU；device FFN 为独立数值政策的可选路径 |
+| B2 产品接线与复验 | [OPTIMIZATION-RESULTS-2.md](OPTIMIZATION-RESULTS-2.md) | packed 默认 FFN 上的 QK/PV shared group，separate/B1/chain_shared 对照及冻结政策复放 |
+| D（RMSNorm 部分） | [OPTIMIZATION-RESULTS-3.md](OPTIMIZATION-RESULTS-3.md) | 现有 RKPlan 无合法行归约/rsqrt 能力；`co_row_ops` 复用更慢；residual+RMSNorm Host 融合逐位等价但无实测收益，默认不变 |
+
+完整模型里程碑已独立关闭，见 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)。候选方案本身不构成实施授权、能力声明或验收通过。新一轮工作按具体任务推进，不由本文的历史“下一步”措辞自动启动。
 
 ## 1. 优化目标与适用范围
 

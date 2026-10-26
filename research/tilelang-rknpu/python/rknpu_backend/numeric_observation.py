@@ -54,8 +54,10 @@ def _plan(manifest: dict[str, Any], plans_dir: Path, key: str):
 def _run_profile(lib: LibRKPlan, manifest: dict[str, Any], plans_dir: Path,
                  model: str, batch: int, weights: dict[str, np.ndarray],
                  weights_path: Path | None, images: np.ndarray,
-                 fd: int) -> np.ndarray:
+                 fd: int, manifest_keys: dict[str, str] | None = None) -> np.ndarray:
     key = f"{model}_b{batch}"
+    if manifest_keys:
+        key = manifest_keys.get(key, key)
     program = load_hybrid_program(_hybrid_path(manifest, plans_dir, key),
                                   plans_dir=plans_dir)
     out = np.empty((len(images), 10), dtype=np.float32)
@@ -131,9 +133,11 @@ def _run_relu_probe(lib: LibRKPlan, manifest: dict[str, Any], plans_dir: Path,
 
 def _run_vit_trace(lib: LibRKPlan, manifest: dict[str, Any], plans_dir: Path,
                    weights: dict[str, np.ndarray], weights_path: Path,
-                   images: np.ndarray, fd: int) -> dict[str, np.ndarray]:
+                   images: np.ndarray, fd: int,
+                   manifest_keys: dict[str, str] | None = None) -> dict[str, np.ndarray]:
+    key = (manifest_keys or {}).get("tiny_vit_b8", "tiny_vit_b8")
     program = load_hybrid_program(
-        _hybrid_path(manifest, plans_dir, "tiny_vit_b8"),
+        _hybrid_path(manifest, plans_dir, key),
         plans_dir=plans_dir)
     chunks: list[dict[str, np.ndarray]] = []
     with HybridRunner(lib, program, weights, weights_path=weights_path,
@@ -149,7 +153,9 @@ def _run_vit_trace(lib: LibRKPlan, manifest: dict[str, Any], plans_dir: Path,
 
 def observe_split(lib: LibRKPlan, plans_dir: str | Path,
                   weights_dir: str | Path, raw_images: np.ndarray,
-                  split: str, *, fd: int = 0) -> dict[str, np.ndarray]:
+                  split: str, *, fd: int = 0,
+                  manifest_keys: dict[str, str] | None = None
+                  ) -> dict[str, np.ndarray]:
     """Return all fixed observations for one split in one NPZ-like mapping."""
     plans_dir = Path(plans_dir).resolve()
     weights_dir = Path(weights_dir).resolve()
@@ -172,7 +178,7 @@ def observe_split(lib: LibRKPlan, plans_dir: str | Path,
             ("tiny_vit", 1, vit, vit_path)):
         arrays[f"profile.{model}.b{batch}.logits"] = _run_profile(
             lib, manifest, plans_dir, model, batch, weights, weights_path,
-            images, fd)
+            images, fd, manifest_keys)
     mlp_trace = _run_mlp_trace(lib, manifest, plans_dir, mlp, mlp_path,
                                images, fd)
     arrays["mlp.x_padded"] = mlp_trace["x_padded"]
@@ -182,6 +188,6 @@ def observe_split(lib: LibRKPlan, plans_dir: str | Path,
     arrays["relu_probe.output"] = _run_relu_probe(lib, manifest, plans_dir,
                                                   mlp, fd)
     vit_trace = _run_vit_trace(lib, manifest, plans_dir, vit, vit_path,
-                               images, fd)
+                               images, fd, manifest_keys)
     arrays.update({f"tiny_vit.{key}": value for key, value in vit_trace.items()})
     return arrays

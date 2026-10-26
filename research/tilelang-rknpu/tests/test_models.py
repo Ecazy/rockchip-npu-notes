@@ -376,6 +376,37 @@ class CompleteModelTests(unittest.TestCase):
         self.assertNotIn("gate", plain.trace)
         self.assertIn("gate", captured.trace)
 
+    def test_fused_residual_rmsnorm_is_bitwise_control(self):
+        """Fusing residual add + RMSNorm removes a Host action boundary while
+        preserving the FP16 residual narrowing point and every downstream value."""
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.models import RunStats
+
+        outputs = {}
+        traces = {}
+        for key in ("tiny_vit_b8", "tiny_vit_b8_rmsnorm"):
+            program = load_hybrid_program(self._hybrid(key))
+            with HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+                stats = RunStats()
+                result = runner.run(self.x[:8], stats=stats, capture=True)
+                outputs[key] = result.outputs["logits"]
+                traces[key] = result.trace
+                self.assertEqual((stats.task_count, stats.submit_count), (70, 8))
+                actions = [row["name"] for row in stats.host_actions]
+                if key == "tiny_vit_b8":
+                    self.assertIn("residual_attention", actions)
+                    self.assertIn("rmsnorm2", actions)
+                else:
+                    self.assertIn("residual_rmsnorm2", actions)
+                    self.assertNotIn("residual_attention", actions)
+                    self.assertNotIn("rmsnorm2", actions)
+        np.testing.assert_array_equal(outputs["tiny_vit_b8"],
+                                      outputs["tiny_vit_b8_rmsnorm"])
+        for name in ("h1", "norm2", "gate", "up", "act", "ffn", "h2", "logits"):
+            np.testing.assert_array_equal(traces["tiny_vit_b8"][name],
+                                          traces["tiny_vit_b8_rmsnorm"][name])
+
     def test_capture_only_outputs_cannot_enter_ordinary_execution(self):
         """A capture-only producer is diagnostic-only at load time, not merely
         skipped at run time. Ordinary consumers and model outputs must fail
@@ -599,9 +630,11 @@ class CompleteModelTests(unittest.TestCase):
         loader_spec.loader.exec_module(verifier)
         for spec_name, result_name in (
                 ("numeric_acceptance_packed.json",
-                 "20261026T084825Z-numeric"),
+                 "20261026T091548Z-numeric-replay"),
+                ("numeric_acceptance_packed.json",
+                 "20261026T091612Z-numeric-replay"),
                 ("numeric_acceptance_device_ffn.json",
-                 "20261026T084901Z-numeric")):
+                 "20261026T091954Z-numeric")):
             evidence = ROOT / "results" / result_name
             summary = verifier.verify(
                 WEIGHTS / spec_name,

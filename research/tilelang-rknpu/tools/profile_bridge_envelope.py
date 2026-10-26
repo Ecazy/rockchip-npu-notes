@@ -45,6 +45,22 @@ from rknpu_backend.runtime.ffi import LibRKPlan, configure_rocket_abi
 ROOT = Path(__file__).resolve().parents[1]
 ENVELOPE_SCHEMA_VERSION = 1
 
+def _summary(values: list[float]) -> dict:
+    if not values:
+        return {"n": 0}
+    ordered = sorted(float(v) for v in values)
+    return {
+        "n": len(ordered),
+        "mean": float(statistics.fmean(ordered)),
+        "p10": ordered[max(0, int(0.1 * (len(ordered) - 1)))],
+        "p50": statistics.median(ordered),
+        "p90": ordered[min(len(ordered) - 1,
+                           int(0.9 * (len(ordered) - 1)))],
+        "min": ordered[0],
+        "max": ordered[-1],
+    }
+
+
 MODEL_SPECS = {
     "tiny_vit": {"weights": "tiny_vit.npz", "manifest": "tiny_vit_b{batch}"},
     "mnist_mlp": {"weights": "mnist_mlp.npz", "manifest": "mnist_mlp_b{batch}"},
@@ -190,6 +206,8 @@ def run_profile(args) -> dict:
     runner_setup_us = (time.perf_counter() - t_setup) * 1e6
     plan_call_count = len(runner.calls)
     per_run = []
+    host_samples: dict[str, dict[str, list[float]]] = {}
+    plan_samples: dict[str, dict[str, list[float]]] = {}
     try:
         for i in range(args.warmup):
             start = i * args.batch
@@ -201,6 +219,18 @@ def run_profile(args) -> dict:
             runner.run(images[start:start + args.batch], stats=stats)
             wall_us = (time.perf_counter() - t0) * 1e6
             per_run.append((stats, wall_us))
+            for row in stats.host_actions:
+                bucket = host_samples.setdefault(row["name"], {})
+                bucket.setdefault("elapsed_us", []).append(row["elapsed_us"])
+                bucket.setdefault("host_bytes", []).append(row["host_bytes"])
+            for row in stats.plans:
+                bucket = plan_samples.setdefault(row["name"], {})
+                for field in ("workspace_us", "validate_us", "pack_us",
+                              "emit_us", "command_us", "submit_wait_us",
+                              "output_sync_us", "download_us", "guard_us",
+                              "publish_us"):
+                    if field in row:
+                        bucket.setdefault(field, []).append(float(row[field]))
     finally:
         runner.close()
         if args.backend == "board" and not args.fd:
@@ -255,6 +285,14 @@ def run_profile(args) -> dict:
         "envelope": envelope_row(representative),
         "plans": representative.plans,
         "host_actions": representative.host_actions,
+        "host_actions_pooled": {
+            name: {field: _summary(values) for field, values in fields.items()}
+            for name, fields in sorted(host_samples.items())
+        },
+        "plans_pooled": {
+            name: {field: _summary(values) for field, values in fields.items()}
+            for name, fields in sorted(plan_samples.items())
+        },
     }
 
 

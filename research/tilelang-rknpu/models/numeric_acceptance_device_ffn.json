@@ -165,16 +165,16 @@
     "data_split": "train",
     "failure_policy": "acceptance failure must be investigated as a numeric or implementation defect; do not widen limits using test-set maxima",
     "formula": "device f16: atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); exact Host layout: atol=ceil_2^-12(2*observed); rtol=0",
-    "frozen_utc": "2026-10-26T08:49:18Z",
+    "frozen_utc": "2026-10-26T09:20:10Z",
     "labels_read": false,
     "observation_file": "observation.npz",
-    "observation_metadata_sha256": "041bd94c857f8eb74a33bd9c864f6dccf572425ea87b951a0110d634928734bd",
-    "observation_sha256": "c6f6bcd2722aaa99383baf4375fa83bde7010b4594adcacd8bab371dee6c6131",
+    "observation_metadata_sha256": "54d00c0c4cb187b1abcda2be6843e9e1911a1ba2ddcca89647f4c362be1da128",
+    "observation_sha256": "bbbe2d9554aa59afc8d5f7f252595260efe2f01e14fc7ca833588c89d9236a32",
     "scope": "empirical envelope for the frozen model package and execution paths on RK3588; not a theoretical accuracy or error bound",
     "status": "frozen",
     "test_data_used": false
   },
-  "compiled_manifest_sha256": "5038b34374afecccc0380d23c06a669cc91732e780642d67ec617ddec196ac64",
+  "compiled_manifest_sha256": "a0d953d98711fc3d952b10637df84f6d3ce94677d72e150fbda2bb7f38afdcf2",
   "kind": "train-calibrated-model-numeric-acceptance",
   "layer_tolerances": {
     "mlp.final_preactivation": {
@@ -242,11 +242,11 @@
       "rtol": 0.0
     },
     "tiny_vit.act": {
-      "atol": 0.0625,
+      "atol": 0.125,
       "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
       "expected_absmax_train": 44.59375,
       "f16_rounding_floor": 0.0625,
-      "observed_max_abs": 0.03125,
+      "observed_max_abs": 0.0625,
       "rtol": 0.0
     },
     "tiny_vit.attn_heads": {
@@ -274,11 +274,11 @@
       "rtol": 0.0
     },
     "tiny_vit.ffn": {
-      "atol": 0.0625,
+      "atol": 0.125,
       "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
       "expected_absmax_train": 50.96875,
       "f16_rounding_floor": 0.0625,
-      "observed_max_abs": 0.015625,
+      "observed_max_abs": 0.0625,
       "rtol": 0.0
     },
     "tiny_vit.gate": {
@@ -298,19 +298,19 @@
       "rtol": 0.0
     },
     "tiny_vit.h2": {
-      "atol": 0.0625,
+      "atol": 0.125,
       "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
       "expected_absmax_train": 51.0625,
       "f16_rounding_floor": 0.0625,
-      "observed_max_abs": 0.015625,
+      "observed_max_abs": 0.0625,
       "rtol": 0.0
     },
     "tiny_vit.h2_tokens": {
-      "atol": 0.0625,
+      "atol": 0.125,
       "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
       "expected_absmax_train": 51.0625,
       "f16_rounding_floor": 0.0625,
-      "observed_max_abs": 0.015625,
+      "observed_max_abs": 0.0625,
       "rtol": 0.0
     },
     "tiny_vit.k_t_heads": {
@@ -382,7 +382,7 @@
       "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
       "expected_absmax_train": 11.140625,
       "f16_rounding_floor": 0.015625,
-      "observed_max_abs": 0.00390625,
+      "observed_max_abs": 0.0078125,
       "rtol": 0.0
     },
     "tiny_vit.positioned": {

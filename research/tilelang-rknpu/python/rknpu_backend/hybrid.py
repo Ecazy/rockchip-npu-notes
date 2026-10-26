@@ -480,6 +480,43 @@ def _tiny_vit_position_add(inputs: dict[str, np.ndarray],
         value.reshape(batch * tokens, x.shape[1]), dtype=np.float16)}
 
 
+def _tensor_add_rmsnorm(inputs: dict[str, np.ndarray],
+                        attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    """Same-shape FP16 residual add followed by last-axis RMSNorm.
+
+    This is the literal composition of ``tensor.add.v1`` and
+    ``rmsnorm.last_axis.v1``: the residual sum is narrowed to FP16 before the
+    RMSNorm input is read, and the RMSNorm reduction/rsqrt/gamma product stays in
+    FP32 with one final FP16 store.  It removes a Host action boundary without
+    changing any arithmetic or narrowing point.
+    """
+    _action_attrs(attrs, {"eps"})
+    eps = float(attrs["eps"])
+    if not math.isfinite(eps) or eps <= 0:
+        reject(RK_E_INVALID, "rmsnorm eps must be finite and positive",
+               stage="host_action")
+    a, b, gamma = inputs["a"], inputs["b"], inputs["gamma"]
+    if a.dtype != _F16 or b.dtype != _F16 or gamma.dtype != _F16 or \
+            a.shape != b.shape:
+        reject(RK_E_SHAPE,
+               "tensor.add_rmsnorm requires equal-shape FP16 a/b and FP16 gamma",
+               stage="host_action",
+               actual={"a": [str(a.dtype), list(a.shape)],
+                       "b": [str(b.dtype), list(b.shape)],
+                       "gamma": [str(gamma.dtype), list(gamma.shape)]})
+    if gamma.shape != (a.shape[-1],):
+        reject(RK_E_SHAPE, "rmsnorm gamma shape mismatch", stage="host_action",
+               actual=list(gamma.shape), required=[a.shape[-1]])
+    h = np.ascontiguousarray(
+        a.astype(np.float32) + b.astype(np.float32), dtype=np.float16)
+    xf = h.astype(np.float32)
+    scale = np.float32(1.0) / np.sqrt(
+        np.mean(xf * xf, axis=-1, keepdims=True) + np.float32(eps))
+    y = np.ascontiguousarray(
+        xf * scale * gamma.astype(np.float32), dtype=np.float16)
+    return {"h": h, "y": y}
+
+
 def _rmsnorm_last_axis(inputs: dict[str, np.ndarray],
                        attrs: dict[str, Any]) -> dict[str, np.ndarray]:
     _action_attrs(attrs, {"eps"})
@@ -635,6 +672,8 @@ HOST_ACTIONS: dict[str, HostAction] = {
                    ("x", "pos"), ("y",), _tiny_vit_position_add),
         HostAction("rmsnorm.last_axis.v1", HOST_ACTIONS_VERSION,
                    ("x", "gamma"), ("y",), _rmsnorm_last_axis),
+        HostAction("tensor.add_rmsnorm.last_axis.v1", HOST_ACTIONS_VERSION,
+                   ("a", "b", "gamma"), ("h", "y"), _tensor_add_rmsnorm),
         HostAction("tiny_vit.qkv_split_heads.v1", HOST_ACTIONS_VERSION,
                    ("qkv",), ("q", "k_t", "v"), _qkv_split_heads),
         HostAction("attention.scaled_softmax.v1", HOST_ACTIONS_VERSION,
