@@ -1,0 +1,542 @@
+{
+  "acceptance": {
+    "count": 32,
+    "expected_file": "numeric_acceptance_test.npz",
+    "expected_sha256": "277a9a0293f9d8f0413b5bd812d07ed0cbbc0f629a36a8663a65dc8fbc8a7ce8",
+    "indices": [
+      354,
+      531,
+      622,
+      816,
+      1146,
+      1420,
+      1597,
+      1684,
+      1772,
+      2288,
+      2718,
+      3049,
+      3116,
+      3200,
+      4242,
+      5447,
+      5464,
+      5832,
+      6214,
+      6283,
+      6324,
+      6365,
+      6398,
+      6678,
+      7415,
+      7903,
+      8733,
+      9118,
+      9308,
+      9346,
+      9440,
+      9830
+    ],
+    "labels_read": false,
+    "labels_read_for_selection": false,
+    "method": "numpy_default_rng_choice_without_replacement",
+    "population": "MNIST test images",
+    "sample_sha256": [
+      "f706a8139ae20d351f47957b84c6ddacdcf07259ef5e38f8eee7e342ce1b414f",
+      "0c7f8325cb867fcd140e975a92ab00c16f4f7336220f3497e468a9a37da32b75",
+      "6cadfa343623c9af382d814b9ca21a4ac7be640e762844c976090d8839bed651",
+      "322e63dce9c13a490f2e49601cbf0d191996df3b704d48189ba63c7dc6ef9f1d",
+      "dca93d3e80df68dc0843a0060534a5172c70b0b9049409f44f3ff1ba794086c8",
+      "9a1a6b09d424cd318ef18cda54f3f1a439bbee02e2e420cb36f19b9aff002313",
+      "43ab87d7ec3aa7a7b35856333e2041ffa1fb3c6020aca73194aadd345ef5fdc7",
+      "d630c9251da6edf70b16f863637aa279bf16ceb93aba9067abe98b38f3f6c5ba",
+      "5fb760c66148cab2d0bb0d6bf303b9f174dac5f65ab152202be0bcf259835bdd",
+      "9bfc221e7a5c0f7bdca2475443fae9e38181664eb6eb406967096d9a5956e0ea",
+      "7d949a8fc745586afa37fef28ba140e7593885a677788d62194554e1d5fade21",
+      "c5a6999999fa3ab0c37de6445a0a4affb4327a12fa3437e21a3ffca8035d5c4c",
+      "ea3b9954d97276abe4e0de5325d2c5f274ab1dbfecb2f61fa44c42a78a5767ad",
+      "dff0c24a83395ef446c660004f7fd77b442e4f400128dd60ce340fe5386d4c49",
+      "22238ad195c6d12540914d9ad49c7205e3a29a5f0d122fd54bebedf9ce8b1c6a",
+      "4dfdc7ccf71629d9d19a530fd1e50ddf57e737e1c317109275b98b81b806360f",
+      "338b2ecbf608027e409ea7958712007b790133fb25441ab8a668fd8016113710",
+      "cf7ab7c42c97f2fb3cf6e131eeedc8181db078932bcdaeed537e44ead8a4e26f",
+      "ea3a1ca61ca7a79acb0cadb1b5cb5bded235df72d60b86c7ed69376a18a6a703",
+      "d561046e06fe5ecb1367a8c0a4d71bfefbbbad55bc805b43ef2940f68b3a1c84",
+      "a286752816fa7207aa799f7b9c1f553b09fc6b5da5fe650745c069e4034c41ac",
+      "733d857d90ff3229d7aa6c6f9ad3bb06dff84f529f9d7a6e9f27f3610d2407b1",
+      "0da01a7600cb4001de393cd366b4fcf035024a318df54c470d324705a68c7f6c",
+      "a987b1ebac47bd3f44a1bbffeb407e96aadf863c1d6575788e449ae9e8b2394e",
+      "0382f79a3cd605608cef519ecc63a58f685258d2b9110610a536de08848a45ff",
+      "61bc57777818a16c0724605ab89a5ddd0f4413518d0a8497888b8033994f71f7",
+      "c1435d0bd193080798410c6e49328df4f0d824582dcbca56aa666bacf9a0ec79",
+      "19937021a4c628b3386cf7810a0d79c6ab5e6a02504e29b18079820dbc2e3c21",
+      "6aa638eb35dd5db5c39d61bc04a92bf5b58cdf2103c8a8a6b8f951de52bb9613",
+      "9162cef1d4beb3eba8a5caa9a4a625eee12266020f26f6434537898fe18acce9",
+      "afb2a179fcbf9a4acca50c5f11274ebb8e21eb2c7b0b3678f12cdb6b5300d9a1",
+      "9776321f349660f7aa539de5fb0000443f22989fa65a1688f47fed6ac7caca07"
+    ],
+    "seed": 20261025,
+    "source_file": "t10k-images-idx3-ubyte.gz",
+    "source_sha256": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+    "split": "test"
+  },
+  "calibration": {
+    "count": 32,
+    "expected_file": "numeric_calibration_train.npz",
+    "expected_sha256": "d1cc5db161e93907a5156c9422a5e610071d8eab4b22fe901dba8395b5bc433e",
+    "indices": [
+      1244,
+      2363,
+      2999,
+      4556,
+      4891,
+      8580,
+      14022,
+      14891,
+      18780,
+      20214,
+      23747,
+      23823,
+      29431,
+      29453,
+      29495,
+      32891,
+      32984,
+      33660,
+      34481,
+      38748,
+      40912,
+      42965,
+      43746,
+      44188,
+      45480,
+      46056,
+      48201,
+      51374,
+      53224,
+      53271,
+      54801,
+      59181
+    ],
+    "labels_read": false,
+    "labels_read_for_selection": false,
+    "method": "numpy_default_rng_choice_without_replacement",
+    "population": "MNIST training images",
+    "sample_sha256": [
+      "bf1c4673be2b6648717dffc298cff16d4968612b48bfec8e8376ba4e84d682e9",
+      "7043b0c4c56d428f712ad18da9cab0fd2aa6abb20ca29a23496942ddecc2f7f9",
+      "afe8678831ab464fd43ba0b1692d6e3f2ce2fbbafe26b8126f55f051fac98eeb",
+      "e4e51b5353624b3b09b07a15afd40457e3376df970899d2f0c70f7a2e22a690d",
+      "f3978e6baf5c1469b4670d19ac94101d3762cbe7f193577eb8a9d71017f5c75d",
+      "cc0fad20dac98d0bfe34b4666b0566923cac864a7b277f1c34ba9c3147272b77",
+      "4ed4e67d8f8c202321a77370f561682ff405cc1882c1ddc1824dcfd71a1b5a04",
+      "8912763556a44413e5780e26067c9633deae25b34c97f0f12356ff977d92adea",
+      "25572fc4ebcae5eb1df885c7dde00a10dbb646d570680880e8f1cd03b05f78a2",
+      "89e5494907025be4c682a8c1ba788593dd1fc1496734b7ac7d91ac5916600e36",
+      "c836712ba78c6ea01e03069d2171d4064ba16cc4248acbf71bdd8b0c9a4ec2a5",
+      "59315124f6cbd63de76976a97eebd0e64ea885ad6ca446908063368036c26dcd",
+      "2d67001eb2061c59c6cb58869d6ad6fa8b23f88aacf78c126ab0369875ff997c",
+      "6ab34dfe1898cc3f2fb7ab01bee04c2e32951464e6d8fbca93b5a7674f97fdef",
+      "04c610d0a35a9b222f778ecd48edf46e512d2b8d5a33ea99767080745b4d2406",
+      "60559d99deffe5ff49e330e6cd459fe900cc793e20f7dc399f3fc480ecddedd0",
+      "7bab681803655d8a0acc0eac093cc2f116a81cb6068c5db4b07e59bc5fad37a0",
+      "c6ca6fcd2d9d7e8a442863665249679be588b4e31bcea39d73aea38ca130da36",
+      "1783b1ee91c2b130460cb0c548f7166ccc2c0fb4f7265b8965cedb36b16a6834",
+      "44ff251ccef58615e963f969d53a62611471b14029b66285412795be09b62398",
+      "b72af14c9956db34dd5f93b8c12c588d5d320bff4ad1a0eb046849e246b75023",
+      "c743bb01b186fcc352dbe91bf553cd0322c3910423791591525fc49f9f9ed2a8",
+      "f407a4d8ed74157ea02a72dbf22aa4099dfcdca8a2e41649dc5328fccc138f50",
+      "74b67184507aa2a05c19f1011476649cecb7fb0f8a265bd423fb4956b9201cb0",
+      "2b06e9548a14c7c99e1ea63515259c6c993369131f5ec2a000b657113dcc5baf",
+      "d1ef9b8a802ad936f0eb9b20fecc97d8d3a14846994451129053d2b023a43ecd",
+      "11086724d2ed305260deb4bdb0f2458586ef9972c4e3e4fa0a8dd57bad594a96",
+      "3437968db00d5e541aec0db5ddf02b2701e77f85257a2eff24f5ae59b9b863f2",
+      "8a6504a0cbf25d86db31bb27decae635478a943a757c50d41320467ea3b4fe72",
+      "921a6caf3c3e13fc9891a15de9957573268520cb2591ef55e28ebbdd59def2e6",
+      "1c3e27faf65a7673bbebe320e18232a52e9a6a836aab2513dd9751b0e2a95469",
+      "862d4ab60d6efbb0f13f118b67986d6782bc4dafd1a5cef036c2006024fe448e"
+    ],
+    "seed": 20261024,
+    "source_file": "train-images-idx3-ubyte.gz",
+    "source_sha256": "440fcabf73cc546fa21475e81ea370265605f56be210a4024d2ca8f203523609",
+    "split": "train"
+  },
+  "calibration_rule": {
+    "data_split": "train",
+    "failure_policy": "acceptance failure must be investigated as a numeric or implementation defect; do not widen limits using test-set maxima",
+    "formula": "device f16: atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); exact Host layout: atol=ceil_2^-12(2*observed); rtol=0",
+    "frozen_utc": "2026-10-26T05:38:35Z",
+    "labels_read": false,
+    "observation_file": "observation.npz",
+    "observation_metadata_sha256": "58c5cbd8a34e492bc454d30124589c58c24a3910cb6c7733a11e48e7d2d0bcf3",
+    "observation_sha256": "c6f6bcd2722aaa99383baf4375fa83bde7010b4594adcacd8bab371dee6c6131",
+    "scope": "empirical envelope for the frozen model package and execution paths on RK3588; not a theoretical accuracy or error bound",
+    "status": "frozen",
+    "test_data_used": false
+  },
+  "compiled_manifest_sha256": "039cfaddcffde7e5e8fbcf75a76fb393f3362c1110f1641f6204685634654249",
+  "kind": "train-calibrated-model-numeric-acceptance",
+  "layer_tolerances": {
+    "mlp.final_preactivation": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 39.0,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.0009765625,
+      "rtol": 0.0
+    },
+    "mlp.h1_pre_relu": {
+      "atol": 0.03125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 27.703125,
+      "f16_rounding_floor": 0.03125,
+      "observed_max_abs": 0.001953125,
+      "rtol": 0.0
+    },
+    "mlp.h2_pre_relu": {
+      "atol": 0.03125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 28.625,
+      "f16_rounding_floor": 0.03125,
+      "observed_max_abs": 0.00390625,
+      "rtol": 0.0
+    },
+    "mlp.logits": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 39.0,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.0009765625,
+      "rtol": 0.0
+    },
+    "mlp.r1_relu": {
+      "atol": 0.03125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 19.71875,
+      "f16_rounding_floor": 0.03125,
+      "observed_max_abs": 0.001953125,
+      "rtol": 0.0
+    },
+    "mlp.r2_relu": {
+      "atol": 0.03125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 21.140625,
+      "f16_rounding_floor": 0.03125,
+      "observed_max_abs": 0.00390625,
+      "rtol": 0.0
+    },
+    "mlp.x_padded": {
+      "atol": 0.0,
+      "basis": "atol=ceil_2^-12(2*observed); train split only; labels never read; test data not used",
+      "expected_absmax_train": 2.822265625,
+      "f16_rounding_floor": 0.0,
+      "observed_max_abs": 0.0,
+      "rtol": 0.0
+    },
+    "relu_probe.output": {
+      "atol": 0.001953125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 1.427734375,
+      "f16_rounding_floor": 0.001953125,
+      "observed_max_abs": 0.0,
+      "rtol": 0.0
+    },
+    "tiny_vit.act": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 44.59375,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.03125,
+      "rtol": 0.0
+    },
+    "tiny_vit.attn_heads": {
+      "atol": 0.00390625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 3.919921875,
+      "f16_rounding_floor": 0.00390625,
+      "observed_max_abs": 0.001953125,
+      "rtol": 0.0
+    },
+    "tiny_vit.attn_merged": {
+      "atol": 0.00390625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 3.919921875,
+      "f16_rounding_floor": 0.00390625,
+      "observed_max_abs": 0.001953125,
+      "rtol": 0.0
+    },
+    "tiny_vit.attn_projection": {
+      "atol": 0.0078125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 6.75390625,
+      "f16_rounding_floor": 0.0078125,
+      "observed_max_abs": 0.001953125,
+      "rtol": 0.0
+    },
+    "tiny_vit.ffn": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 50.96875,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.015625,
+      "rtol": 0.0
+    },
+    "tiny_vit.gate": {
+      "atol": 0.015625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 8.6953125,
+      "f16_rounding_floor": 0.015625,
+      "observed_max_abs": 0.00390625,
+      "rtol": 0.0
+    },
+    "tiny_vit.h1": {
+      "atol": 0.015625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 9.3125,
+      "f16_rounding_floor": 0.015625,
+      "observed_max_abs": 0.00390625,
+      "rtol": 0.0
+    },
+    "tiny_vit.h2": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 51.0625,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.015625,
+      "rtol": 0.0
+    },
+    "tiny_vit.h2_tokens": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 51.0625,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.015625,
+      "rtol": 0.0
+    },
+    "tiny_vit.k_t_heads": {
+      "atol": 0.0078125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 4.46484375,
+      "f16_rounding_floor": 0.0078125,
+      "observed_max_abs": 0.0009765625,
+      "rtol": 0.0
+    },
+    "tiny_vit.logits": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 47.875,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.015625,
+      "rtol": 0.0
+    },
+    "tiny_vit.logits_padded": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 47.875,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.015625,
+      "rtol": 0.0
+    },
+    "tiny_vit.norm1": {
+      "atol": 0.00390625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 3.318359375,
+      "f16_rounding_floor": 0.00390625,
+      "observed_max_abs": 0.000244140625,
+      "rtol": 0.0
+    },
+    "tiny_vit.norm2": {
+      "atol": 0.0078125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 4.1015625,
+      "f16_rounding_floor": 0.0078125,
+      "observed_max_abs": 0.001953125,
+      "rtol": 0.0
+    },
+    "tiny_vit.patch_flat": {
+      "atol": 0.0,
+      "basis": "atol=ceil_2^-12(2*observed); train split only; labels never read; test data not used",
+      "expected_absmax_train": 2.822265625,
+      "f16_rounding_floor": 0.0,
+      "observed_max_abs": 0.0,
+      "rtol": 0.0
+    },
+    "tiny_vit.patch_projection": {
+      "atol": 0.015625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 10.796875,
+      "f16_rounding_floor": 0.015625,
+      "observed_max_abs": 0.0009765625,
+      "rtol": 0.0
+    },
+    "tiny_vit.patches": {
+      "atol": 0.0,
+      "basis": "atol=ceil_2^-12(2*observed); train split only; labels never read; test data not used",
+      "expected_absmax_train": 2.822265625,
+      "f16_rounding_floor": 0.0,
+      "observed_max_abs": 0.0,
+      "rtol": 0.0
+    },
+    "tiny_vit.pooled": {
+      "atol": 0.015625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 11.140625,
+      "f16_rounding_floor": 0.015625,
+      "observed_max_abs": 0.00390625,
+      "rtol": 0.0
+    },
+    "tiny_vit.positioned": {
+      "atol": 0.015625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 11.078125,
+      "f16_rounding_floor": 0.015625,
+      "observed_max_abs": 0.0009765625,
+      "rtol": 0.0
+    },
+    "tiny_vit.probs_heads": {
+      "atol": 0.001953125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 1.0,
+      "f16_rounding_floor": 0.001953125,
+      "observed_max_abs": 0.00048828125,
+      "rtol": 0.0
+    },
+    "tiny_vit.q_heads": {
+      "atol": 0.0078125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 4.8515625,
+      "f16_rounding_floor": 0.0078125,
+      "observed_max_abs": 0.0009765625,
+      "rtol": 0.0
+    },
+    "tiny_vit.qkv": {
+      "atol": 0.0078125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 4.8515625,
+      "f16_rounding_floor": 0.0078125,
+      "observed_max_abs": 0.001953125,
+      "rtol": 0.0
+    },
+    "tiny_vit.scores_heads": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 52.3125,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.015625,
+      "rtol": 0.0
+    },
+    "tiny_vit.up": {
+      "atol": 0.015625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 9.15625,
+      "f16_rounding_floor": 0.015625,
+      "observed_max_abs": 0.00390625,
+      "rtol": 0.0
+    },
+    "tiny_vit.v_heads": {
+      "atol": 0.0078125,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 4.6015625,
+      "f16_rounding_floor": 0.0078125,
+      "observed_max_abs": 0.001953125,
+      "rtol": 0.0
+    }
+  },
+  "non_blind_disclosure": "The complete test set and earlier test results were inspected before this train-calibration boundary was introduced. This is a disjoint post-freeze numerical acceptance rerun, not a blind benchmark.",
+  "schema_version": 2,
+  "status": "frozen",
+  "task_logit_tolerances": {
+    "mnist_mlp.b1": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 39.0,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.0,
+      "rtol": 0.0
+    },
+    "mnist_mlp.b32": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 39.0,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.0009765625,
+      "rtol": 0.0
+    },
+    "mnist_mlp.b8": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 39.0,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.0009765625,
+      "rtol": 0.0
+    },
+    "tiny_vit.b1": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 47.875,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.015625,
+      "rtol": 0.0
+    },
+    "tiny_vit.b8": {
+      "atol": 0.0625,
+      "basis": "atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); train split only; labels never read; test data not used",
+      "expected_absmax_train": 47.875,
+      "f16_rounding_floor": 0.0625,
+      "observed_max_abs": 0.015625,
+      "rtol": 0.0
+    }
+  },
+  "trace_contract": {
+    "mlp_hidden": [
+      "mlp.x_padded",
+      "mlp.h1_pre_relu",
+      "mlp.r1_relu",
+      "mlp.h2_pre_relu",
+      "mlp.r2_relu",
+      "mlp.final_preactivation",
+      "mlp.logits"
+    ],
+    "profiles": [
+      "mnist_mlp.b1",
+      "mnist_mlp.b8",
+      "mnist_mlp.b32",
+      "tiny_vit.b1",
+      "tiny_vit.b8"
+    ],
+    "relu_probe": [
+      "relu_probe.output"
+    ],
+    "tiny_vit": [
+      "tiny_vit.act",
+      "tiny_vit.attn_heads",
+      "tiny_vit.attn_merged",
+      "tiny_vit.attn_projection",
+      "tiny_vit.ffn",
+      "tiny_vit.gate",
+      "tiny_vit.h1",
+      "tiny_vit.h2",
+      "tiny_vit.h2_tokens",
+      "tiny_vit.k_t_heads",
+      "tiny_vit.logits",
+      "tiny_vit.logits_padded",
+      "tiny_vit.norm1",
+      "tiny_vit.norm2",
+      "tiny_vit.patch_flat",
+      "tiny_vit.patch_projection",
+      "tiny_vit.patches",
+      "tiny_vit.pooled",
+      "tiny_vit.positioned",
+      "tiny_vit.probs_heads",
+      "tiny_vit.q_heads",
+      "tiny_vit.qkv",
+      "tiny_vit.scores_heads",
+      "tiny_vit.up",
+      "tiny_vit.v_heads"
+    ]
+  },
+  "weights_sha256": {
+    "mnist_mlp.npz": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+    "tiny_vit.npz": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+  }
+}

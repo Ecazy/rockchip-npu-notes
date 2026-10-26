@@ -1,0 +1,9 @@
+model=tiny_vit batch=8 backend=board runs=128
+  median wall       0.036372 s  219.9 img/s
+  python dwell      0.025903 s
+  C total           0.000000 s
+  attributed        0.000000 s
+  residual          0.025903 s  (100.0% of C total)
+  instrumentation   0.000000 s  (0.0%)
+  tasks/submits    71 / 71
+wrote /mnt/ssd/workspace/tl-envelope-20261026T021229Z/out-baseline/tiny_vit_b8.json

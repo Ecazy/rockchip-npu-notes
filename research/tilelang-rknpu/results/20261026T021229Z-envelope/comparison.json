@@ -1,0 +1,227 @@
+{
+  "baseline_arm": "baseline",
+  "candidate_arm": "candidate",
+  "kind": "bridge-envelope-comparison",
+  "profiles": [
+    {
+      "attribution": {
+        "alloc_us": 0.0,
+        "command_us": 46.95794677734375,
+        "download_us": 18.6669921875,
+        "emit_us": 29.16693115234375,
+        "guard_us": 305.95501708984375,
+        "output_sync_us": 45.78985595703125,
+        "pack_us": 273.580078125,
+        "publish_us": 0.291015625,
+        "submit_alloc_us": 0.8760986328125,
+        "submit_wait_us": 851.9480590820312,
+        "validate_us": 106.16595458984375
+      },
+      "baseline": {
+        "attributed_us": 0.0,
+        "images_per_s": 10916.447661836313,
+        "max_us": 5225.13798205182,
+        "median_us": 2931.3565173652023,
+        "min_us": 2322.218962945044,
+        "residual_fraction": 1.0,
+        "residual_us": 2258.6359991692007,
+        "workspace_us": 2258.6359991692007
+      },
+      "batch": 32,
+      "bytes": {
+        "download_bytes": {
+          "baseline": 2048,
+          "candidate": 2048,
+          "delta": 0
+        },
+        "upload_bytes": {
+          "baseline": 65536,
+          "candidate": 65536,
+          "delta": 0
+        }
+      },
+      "candidate": {
+        "attributed_us": 1679.39794921875,
+        "images_per_s": 12044.102438132142,
+        "max_us": 7788.728980813175,
+        "median_us": 2656.902011949569,
+        "min_us": 1808.6000345647335,
+        "residual_fraction": 0.006725361558170787,
+        "residual_us": 11.37103271484375,
+        "workspace_us": 1714.6859900094569
+      },
+      "profile": "mnist_mlp_b32",
+      "structural": {
+        "download_calls": {
+          "baseline": 1,
+          "candidate": 1,
+          "delta": 0
+        },
+        "submit_count": {
+          "baseline": 8,
+          "candidate": 8,
+          "delta": 0
+        },
+        "task_count": {
+          "baseline": 11,
+          "candidate": 11,
+          "delta": 0
+        },
+        "upload_calls": {
+          "baseline": 4,
+          "candidate": 4,
+          "delta": 0
+        }
+      },
+      "wall_delta_us": -274.4545054156333,
+      "wall_ratio": 1.1032986930572743
+    },
+    {
+      "attribution": {
+        "alloc_us": 0.0,
+        "command_us": 41.416015625,
+        "download_us": 253.45501708984375,
+        "emit_us": 40.541015625,
+        "guard_us": 272.4119873046875,
+        "output_sync_us": 49.87103271484375,
+        "pack_us": 165.0810546875,
+        "publish_us": 2.6240234375,
+        "submit_alloc_us": 2.04296875,
+        "submit_wait_us": 1086.73779296875,
+        "validate_us": 33.24700927734375
+      },
+      "baseline": {
+        "attributed_us": 0.0,
+        "images_per_s": 129.14542247630672,
+        "max_us": 23294.229991734028,
+        "median_us": 7743.209018371999,
+        "min_us": 6319.166044704616,
+        "residual_fraction": 1.0,
+        "residual_us": 4950.393980834633,
+        "workspace_us": 4950.393980834633
+      },
+      "batch": 1,
+      "bytes": {
+        "download_bytes": {
+          "baseline": 29440,
+          "candidate": 29440,
+          "delta": 0
+        },
+        "upload_bytes": {
+          "baseline": 40448,
+          "candidate": 40448,
+          "delta": 0
+        }
+      },
+      "candidate": {
+        "attributed_us": 1947.4279174804688,
+        "images_per_s": 206.46414579796595,
+        "max_us": 6850.40804091841,
+        "median_us": 4843.455972149968,
+        "min_us": 3231.3319970853627,
+        "residual_fraction": 0.011548772815098102,
+        "residual_us": 22.753173828125,
+        "workspace_us": 2221.595961600542
+      },
+      "profile": "tiny_vit_b1",
+      "structural": {
+        "download_calls": {
+          "baseline": 15,
+          "candidate": 15,
+          "delta": 0
+        },
+        "submit_count": {
+          "baseline": 15,
+          "candidate": 15,
+          "delta": 0
+        },
+        "task_count": {
+          "baseline": 15,
+          "candidate": 15,
+          "delta": 0
+        },
+        "upload_calls": {
+          "baseline": 23,
+          "candidate": 23,
+          "delta": 0
+        }
+      },
+      "wall_delta_us": -2899.753046222031,
+      "wall_ratio": 1.5986950357132814
+    },
+    {
+      "attribution": {
+        "alloc_us": 0.0,
+        "command_us": 206.49700927734375,
+        "download_us": 2244.0560913085938,
+        "emit_us": 157.78692626953125,
+        "guard_us": 338.9110107421875,
+        "output_sync_us": 254.9150390625,
+        "pack_us": 1200.1920776367188,
+        "publish_us": 21.28912353515625,
+        "submit_alloc_us": 8.74884033203125,
+        "submit_wait_us": 5627.342956542969,
+        "validate_us": 289.9111328125
+      },
+      "baseline": {
+        "attributed_us": 0.0,
+        "images_per_s": 219.94970800109644,
+        "max_us": 79811.59904738888,
+        "median_us": 36371.95099145174,
+        "min_us": 31705.784960649908,
+        "residual_fraction": 1.0,
+        "residual_us": 25902.863824740052,
+        "workspace_us": 25902.863824740052
+      },
+      "batch": 8,
+      "bytes": {
+        "download_bytes": {
+          "baseline": 230144,
+          "candidate": 230144,
+          "delta": 0
+        },
+        "upload_bytes": {
+          "baseline": 312832,
+          "candidate": 312832,
+          "delta": 0
+        }
+      },
+      "candidate": {
+        "attributed_us": 10349.650207519531,
+        "images_per_s": 450.0716016746269,
+        "max_us": 39809.63403591886,
+        "median_us": 17774.949519662187,
+        "min_us": 11972.00600290671,
+        "residual_fraction": 0.008992888847210067,
+        "residual_us": 93.9178466796875,
+        "workspace_us": 10804.354096762836
+      },
+      "profile": "tiny_vit_b8",
+      "structural": {
+        "download_calls": {
+          "baseline": 71,
+          "candidate": 71,
+          "delta": 0
+        },
+        "submit_count": {
+          "baseline": 71,
+          "candidate": 71,
+          "delta": 0
+        },
+        "task_count": {
+          "baseline": 71,
+          "candidate": 71,
+          "delta": 0
+        },
+        "upload_calls": {
+          "baseline": 135,
+          "candidate": 135,
+          "delta": 0
+        }
+      },
+      "wall_delta_us": -18597.001471789554,
+      "wall_ratio": 2.0462477798442147
+    }
+  ],
+  "schema_version": 1
+}

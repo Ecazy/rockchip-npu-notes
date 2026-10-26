@@ -1,0 +1,9 @@
+model=mnist_mlp batch=32 backend=board runs=128
+  median wall       0.002931 s  10916.4 img/s
+  python dwell      0.002259 s
+  C total           0.000000 s
+  attributed        0.000000 s
+  residual          0.002259 s  (100.0% of C total)
+  instrumentation   0.000000 s  (0.0%)
+  tasks/submits    11 / 8
+wrote /mnt/ssd/workspace/tl-envelope-20261026T021229Z/out-baseline/mnist_mlp_b32.json

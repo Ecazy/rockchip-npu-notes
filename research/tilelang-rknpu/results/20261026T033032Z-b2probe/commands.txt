@@ -1,0 +1,21 @@
+# B2 chain validity probe — final successful round
+#
+# Source: custom-ops/tools/c/independent_mm_chain_probe.c + custom-ops/src/rk_task_ref.h
+# Build (RK3588, Release):
+#   cmake -S custom-ops -B build -DUPSTREAM_ROOT=upstream-components -DCMAKE_BUILD_TYPE=Release
+#   cmake --build build --target independent_mm_chain_probe -j4
+# Run (one core, NPU core mask 1):
+#   ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 taskset -c 6 build/independent_mm_chain_probe <n> <repeats> [shared|sharedin]
+#
+# Argument 3 selects the buffer layout:
+#   (absent)  one input/weight/output BO per task
+#   shared    three BOs total (A, W, Y); each task addresses its own tile by offset
+#             -- this is the layout a static-repeat-expanded plan would use
+#   sharedin  control: all tasks read the same A/W tile, write distinct Y tiles
+#
+# Each run writes an FP16 sentinel into every output BO before the reference pass
+# and again before the chain pass, keeps the per-task references in host memory
+# (one slice per task) and requires: differs from sentinel, matches its OWN
+# reference byte for byte, finite, co_guard_check clean.  A negative control
+# corrupts one reference slice and requires the comparator to notice.  Any failed
+# stage exits non-zero.

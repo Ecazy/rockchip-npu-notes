@@ -1,0 +1,155 @@
+{
+  "backend": "board",
+  "batch": 32,
+  "envelope": {
+    "download_bytes": 2048,
+    "download_calls": 1,
+    "envelope_available": false,
+    "executor_overhead_us": 73.49695079028606,
+    "host_action_us": 384.1210273094475,
+    "plan_call_us": 2354.8860335722566,
+    "plan_clock_us": 0.0,
+    "plan_envelope_attributed_us": 0.0,
+    "plan_envelope_clock_fraction": 0.0,
+    "plan_envelope_residual_fraction": 0.0,
+    "plan_envelope_residual_us": 0.0,
+    "plan_total_us": 0.0,
+    "plan_workspace_us": 2194.4710169918835,
+    "python_plan_node_us": 160.41501658037305,
+    "schema_version": 1,
+    "submit_count": 8,
+    "task_count": 11,
+    "upload_bytes": 65536,
+    "upload_calls": 4
+  },
+  "host": {
+    "cpu_affinity": [
+      6
+    ],
+    "cpu_count": 8,
+    "device_model": "RK3588 OPi 5 Plus",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64",
+    "npu_freq": "1000000000",
+    "npu_load_before": "NPU load:  Core0:  3%, Core1:  0%, Core2:  0%,",
+    "numpy": "1.21.5",
+    "thread_config": {
+      "blas": [],
+      "cpu_affinity": [
+        6
+      ],
+      "cpu_affinity_count": 1,
+      "cpu_count": 8,
+      "cpu_thread_env": {
+        "MKL_NUM_THREADS": null,
+        "OMP_NUM_THREADS": null,
+        "OPENBLAS_NUM_THREADS": null
+      },
+      "cpuinfo": {
+        "max_mhz": 1800.0,
+        "mean_mhz": 1260.0,
+        "min_mhz": 408.0
+      },
+      "numpy": {
+        "blas_name": null,
+        "blas_openblas_configuration": null,
+        "blas_version": null,
+        "numpy_version": "1.21.5"
+      },
+      "process_threads": 1
+    }
+  },
+  "host_actions": [
+    {
+      "calls": 1,
+      "elapsed_us": 319.07897209748626,
+      "host_bytes": 75264,
+      "name": "normalize",
+      "phase": "preprocess"
+    },
+    {
+      "calls": 1,
+      "elapsed_us": 37.04201662912965,
+      "host_bytes": 115712,
+      "name": "pad_k",
+      "phase": "preprocess"
+    },
+    {
+      "calls": 1,
+      "elapsed_us": 28.00003858283162,
+      "host_bytes": 2304,
+      "name": "export_logits",
+      "phase": "postprocess"
+    }
+  ],
+  "kind": "bridge-envelope-profile",
+  "label": "baseline:r4",
+  "library": "/mnt/ssd/workspace/tl-envelope-20261026T055654Z/build-baseline/librknpu_plan.so",
+  "model": "mnist_mlp",
+  "plan_entry": "attributed",
+  "plans": [
+    {
+      "bridge_bytes": 67584,
+      "calls": 1,
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "elapsed_us": 2354.8860335722566,
+      "emit_us": 20.41705322265625,
+      "kind": "rkplan",
+      "name": "mlp",
+      "output_sync_us": 33.8330078125,
+      "pack_us": 210.2889404296875,
+      "phase": "execution",
+      "submit_count": 8,
+      "submit_wait_us": 786.906982421875,
+      "task_count": 11,
+      "upload_bytes": 65536,
+      "upload_calls": 4,
+      "workspace_us": 2194.4710169918835
+    }
+  ],
+  "runs": 32,
+  "schema_version": 1,
+  "wall_images_per_s": 11337.199610317915,
+  "wall_us": {
+    "max": 4599.230946041644,
+    "mean": 2861.5678475034656,
+    "median": 2822.5665155332536,
+    "min": 2475.6339844316244,
+    "samples": [
+      2749.798004515469,
+      2778.089023195207,
+      2826.2120322324336,
+      2813.962986692786,
+      2808.4220248274505,
+      2814.8380224592984,
+      2816.003980115056,
+      2832.920989021659,
+      2817.755041178316,
+      3163.9590160921216,
+      2863.5459602810442,
+      2834.3790327198803,
+      2832.3380392976105,
+      2818.9209988340735,
+      2839.9209841154516,
+      2833.2120273262262,
+      4599.230946041644,
+      2956.003008875996,
+      2770.5049724318087,
+      2498.675021342933,
+      2475.6339844316244,
+      2477.6760255917907,
+      2869.66998828575,
+      2957.4609943665564,
+      2891.5450093336403,
+      3077.9180233366787,
+      2781.297022011131,
+      2764.3810026347637,
+      2787.4219813384116,
+      2859.1699665412307,
+      2868.5039724223316,
+      2490.801038220525
+    ]
+  },
+  "warmup": 8
+}

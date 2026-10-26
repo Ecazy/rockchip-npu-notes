@@ -1,0 +1,527 @@
+{
+  "acceptance": {
+    "layers": {
+      "mlp.final_preactivation": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.h1_pre_relu": {
+        "atol": 0.03125,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.h2_pre_relu": {
+        "atol": 0.03125,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.logits": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.r1_relu": {
+        "atol": 0.03125,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.r2_relu": {
+        "atol": 0.03125,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.x_padded": {
+        "atol": 0.0,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "relu_probe.output": {
+        "atol": 0.001953125,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.act": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.attn_heads": {
+        "atol": 0.00390625,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.attn_merged": {
+        "atol": 0.00390625,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.attn_projection": {
+        "atol": 0.0078125,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.ffn": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.gate": {
+        "atol": 0.015625,
+        "max_abs_error": 0.0078125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.h1": {
+        "atol": 0.015625,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.h2": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.h2_tokens": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.k_t_heads": {
+        "atol": 0.0078125,
+        "max_abs_error": 0.000244140625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.logits": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.logits_padded": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.norm1": {
+        "atol": 0.00390625,
+        "max_abs_error": 4.57763671875e-05,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.norm2": {
+        "atol": 0.0078125,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.patch_flat": {
+        "atol": 0.0,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.patch_projection": {
+        "atol": 0.015625,
+        "max_abs_error": 0.00048828125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.patches": {
+        "atol": 0.0,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.pooled": {
+        "atol": 0.015625,
+        "max_abs_error": 0.0078125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.positioned": {
+        "atol": 0.015625,
+        "max_abs_error": 0.0001220703125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.probs_heads": {
+        "atol": 0.001953125,
+        "max_abs_error": 0.000244140625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.q_heads": {
+        "atol": 0.0078125,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.qkv": {
+        "atol": 0.0078125,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.scores_heads": {
+        "atol": 0.0625,
+        "max_abs_error": 0.0078125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.up": {
+        "atol": 0.015625,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.v_heads": {
+        "atol": 0.0078125,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      }
+    },
+    "profiles": {
+      "mnist_mlp.b1": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      },
+      "mnist_mlp.b32": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      },
+      "mnist_mlp.b8": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      },
+      "tiny_vit.b1": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      },
+      "tiny_vit.b8": {
+        "atol": 0.0625,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      }
+    }
+  },
+  "calibration": {
+    "layers": {
+      "mlp.final_preactivation": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.h1_pre_relu": {
+        "atol": 0.03125,
+        "freeze_ok": true,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.h2_pre_relu": {
+        "atol": 0.03125,
+        "freeze_ok": true,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.logits": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.r1_relu": {
+        "atol": 0.03125,
+        "freeze_ok": true,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.r2_relu": {
+        "atol": 0.03125,
+        "freeze_ok": true,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "mlp.x_padded": {
+        "atol": 0.0,
+        "freeze_ok": true,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "relu_probe.output": {
+        "atol": 0.001953125,
+        "freeze_ok": true,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.act": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.03125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.attn_heads": {
+        "atol": 0.00390625,
+        "freeze_ok": true,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.attn_merged": {
+        "atol": 0.00390625,
+        "freeze_ok": true,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.attn_projection": {
+        "atol": 0.0078125,
+        "freeze_ok": true,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.ffn": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.gate": {
+        "atol": 0.015625,
+        "freeze_ok": true,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.h1": {
+        "atol": 0.015625,
+        "freeze_ok": true,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.h2": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.h2_tokens": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.k_t_heads": {
+        "atol": 0.0078125,
+        "freeze_ok": true,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.logits": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.logits_padded": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.norm1": {
+        "atol": 0.00390625,
+        "freeze_ok": true,
+        "max_abs_error": 0.000244140625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.norm2": {
+        "atol": 0.0078125,
+        "freeze_ok": true,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.patch_flat": {
+        "atol": 0.0,
+        "freeze_ok": true,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.patch_projection": {
+        "atol": 0.015625,
+        "freeze_ok": true,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.patches": {
+        "atol": 0.0,
+        "freeze_ok": true,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.pooled": {
+        "atol": 0.015625,
+        "freeze_ok": true,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.positioned": {
+        "atol": 0.015625,
+        "freeze_ok": true,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.probs_heads": {
+        "atol": 0.001953125,
+        "freeze_ok": true,
+        "max_abs_error": 0.00048828125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.q_heads": {
+        "atol": 0.0078125,
+        "freeze_ok": true,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.qkv": {
+        "atol": 0.0078125,
+        "freeze_ok": true,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.scores_heads": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.up": {
+        "atol": 0.015625,
+        "freeze_ok": true,
+        "max_abs_error": 0.00390625,
+        "ok": true,
+        "rtol": 0.0
+      },
+      "tiny_vit.v_heads": {
+        "atol": 0.0078125,
+        "freeze_ok": true,
+        "max_abs_error": 0.001953125,
+        "ok": true,
+        "rtol": 0.0
+      }
+    },
+    "profiles": {
+      "mnist_mlp.b1": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.0,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      },
+      "mnist_mlp.b32": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      },
+      "mnist_mlp.b8": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.0009765625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      },
+      "tiny_vit.b1": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      },
+      "tiny_vit.b8": {
+        "atol": 0.0625,
+        "freeze_ok": true,
+        "max_abs_error": 0.015625,
+        "ok": true,
+        "rtol": 0.0,
+        "same_top1": true
+      }
+    }
+  },
+  "existing_campaign": null,
+  "non_blind_disclosure": "The complete test set and earlier test results were inspected before this train-calibration boundary was introduced. This is a disjoint post-freeze numerical acceptance rerun, not a blind benchmark.",
+  "problems": [],
+  "sample_disjoint": {
+    "pixel_hash_sets_disjoint": true,
+    "train_test_splits_distinct": true
+  },
+  "spec": "models/numeric_acceptance_train.json",
+  "status": "PASS"
+}

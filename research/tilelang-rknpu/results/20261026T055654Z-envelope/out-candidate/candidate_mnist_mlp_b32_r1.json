@@ -1,0 +1,176 @@
+{
+  "backend": "board",
+  "batch": 32,
+  "envelope": {
+    "alloc_us": 0.0,
+    "command_us": 39.66693115234375,
+    "download_bytes": 2048,
+    "download_calls": 1,
+    "download_us": 10.4990234375,
+    "emit_us": 21.87384033203125,
+    "envelope_available": true,
+    "executor_overhead_us": 133.58087744563818,
+    "guard_us": 268.91302490234375,
+    "host_action_us": 385.579071007669,
+    "output_sync_us": 35.00006103515625,
+    "pack_us": 193.66400146484375,
+    "plan_call_us": 1666.5610019117594,
+    "plan_clock_us": 1.8374564208984376,
+    "plan_envelope_attributed_us": 1446.0629272460938,
+    "plan_envelope_clock_fraction": 0.0012647933593748853,
+    "plan_envelope_residual_fraction": 0.004618141242893467,
+    "plan_envelope_residual_us": 6.7091064453125,
+    "plan_total_us": 1452.7720336914062,
+    "plan_workspace_us": 1473.4810101799667,
+    "publish_us": 0.0,
+    "python_plan_node_us": 193.0799917317927,
+    "schema_version": 1,
+    "submit_alloc_us": 0.87603759765625,
+    "submit_count": 8,
+    "submit_wait_us": 801.4879760742188,
+    "task_count": 11,
+    "upload_bytes": 65536,
+    "upload_calls": 4,
+    "validate_us": 74.08203125
+  },
+  "host": {
+    "cpu_affinity": [
+      6
+    ],
+    "cpu_count": 8,
+    "device_model": "RK3588 OPi 5 Plus",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64",
+    "npu_freq": "1000000000",
+    "npu_load_before": "NPU load:  Core0:  2%, Core1:  0%, Core2:  0%,",
+    "numpy": "1.21.5",
+    "thread_config": {
+      "blas": [],
+      "cpu_affinity": [
+        6
+      ],
+      "cpu_affinity_count": 1,
+      "cpu_count": 8,
+      "cpu_thread_env": {
+        "MKL_NUM_THREADS": null,
+        "OMP_NUM_THREADS": null,
+        "OPENBLAS_NUM_THREADS": null
+      },
+      "cpuinfo": {
+        "max_mhz": 1608.0,
+        "mean_mhz": 1104.0,
+        "min_mhz": 408.0
+      },
+      "numpy": {
+        "blas_name": null,
+        "blas_openblas_configuration": null,
+        "blas_version": null,
+        "numpy_version": "1.21.5"
+      },
+      "process_threads": 1
+    }
+  },
+  "host_actions": [
+    {
+      "calls": 1,
+      "elapsed_us": 309.7460139542818,
+      "host_bytes": 75264,
+      "name": "normalize",
+      "phase": "preprocess"
+    },
+    {
+      "calls": 1,
+      "elapsed_us": 38.79104042425752,
+      "host_bytes": 115712,
+      "name": "pad_k",
+      "phase": "preprocess"
+    },
+    {
+      "calls": 1,
+      "elapsed_us": 37.04201662912965,
+      "host_bytes": 2304,
+      "name": "export_logits",
+      "phase": "postprocess"
+    }
+  ],
+  "kind": "bridge-envelope-profile",
+  "label": "candidate:r1",
+  "library": "/mnt/ssd/workspace/tl-envelope-20261026T055654Z/build-candidate/librknpu_plan.so",
+  "model": "mnist_mlp",
+  "plan_entry": "attributed",
+  "plans": [
+    {
+      "alloc_us": 0.0,
+      "bridge_bytes": 67584,
+      "calls": 1,
+      "clock_us": 1.8374564208984376,
+      "command_us": 39.66693115234375,
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "download_us": 10.4990234375,
+      "elapsed_us": 1666.5610019117594,
+      "emit_us": 21.87384033203125,
+      "guard_us": 268.91302490234375,
+      "kind": "rkplan",
+      "name": "mlp",
+      "output_sync_us": 35.00006103515625,
+      "pack_us": 193.66400146484375,
+      "phase": "execution",
+      "publish_us": 0.0,
+      "repeat_count": 1,
+      "submit_alloc_us": 0.87603759765625,
+      "submit_count": 8,
+      "submit_wait_us": 801.4879760742188,
+      "task_count": 11,
+      "total_us": 1452.7720336914062,
+      "upload_bytes": 65536,
+      "upload_calls": 4,
+      "validate_us": 74.08203125,
+      "workspace_us": 1473.4810101799667
+    }
+  ],
+  "runs": 32,
+  "schema_version": 1,
+  "wall_images_per_s": 14508.823175023446,
+  "wall_us": {
+    "max": 2703.423029743135,
+    "mean": 2205.8250269765267,
+    "median": 2205.554483225569,
+    "min": 1750.2689734101295,
+    "samples": [
+      2203.803975135088,
+      2098.221972119063,
+      2205.5539884604514,
+      2307.0519673638046,
+      2289.844967890531,
+      2327.178022824228,
+      2205.554977990687,
+      2169.9710050597787,
+      2103.4719538874924,
+      2117.1800326555967,
+      2099.6800158172846,
+      2108.4299660287797,
+      2094.7220036759973,
+      1750.2689734101295,
+      1829.0180014446378,
+      2703.423029743135,
+      2249.5960001833737,
+      2486.134006176144,
+      2382.0099886506796,
+      2374.1350159980357,
+      2411.1769744195044,
+      2522.0090174116194,
+      2295.3859879635274,
+      2187.762991525233,
+      2195.6379641778767,
+      2237.053995486349,
+      2241.137030068785,
+      2252.220001537353,
+      2341.0950088873506,
+      1928.4739973954856,
+      1940.4320046305656,
+      1928.7660252302885
+    ]
+  },
+  "warmup": 8
+}

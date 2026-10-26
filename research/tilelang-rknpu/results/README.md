@@ -5,6 +5,51 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Bridge-envelope optimisation checkpoint (2026-10-26, v5)
+
+First optimisation package from
+[TRANSFORMER-OPTIMIZATION-PLAN.md](../TRANSFORMER-OPTIMIZATION-PLAN.md); the
+implementation report (v5, after four read-only reviews) is
+[OPTIMIZATION-RESULTS-1.md](../OPTIMIZATION-RESULTS-1.md).
+
+- `results/20261026T055654Z-envelope/`: RK3588 core 1, three arms measured
+  **round by round** (4 rounds x 32 runs, pooled to 128 samples) on a pinned CPU,
+  against the current plan package: `baseline` (HEAD source tree), `candidate`
+  (working tree) and `noprobe` (same sources, timing probes compiled out).
+  Tiny Transformer b8 33.844 -> **14.768 ms** (2.292x, 236.4 -> 541.7 img/s),
+  b1 7.199 -> **4.139 ms** (1.739x), MNIST MLP b32 2.832 -> **2.198 ms**
+  (1.289x). Throughput is `batch / pooled p50`; the per-arm envelope is a single
+  representative run and is labelled with its round. Tasks and submits are
+  asserted identical per arm (b8: 71/71, 135 uploads, 71 downloads,
+  312832 B up, 230144 B down).
+- `results/20261026T053818Z-numeric/`: the plan package was regenerated with the
+  corrected Host-requirement formula (runtime scratch now counted by the planner
+  and by the C verifier, with a fail-closed check at workspace creation). The
+  numeric acceptance was re-run **under the frozen policy**: layer and logit
+  tolerances are byte-identical to v1 (diffed), only the package hashes moved.
+  Verifier output: **PASS / 0 problems**. The host-only 10,000-image mock
+  evaluation is bit-identical to the milestone record.
+- `results/20261026T033032Z-b2probe/`: corrected B2 chain-validity probe. Two
+  earlier variants were wrong (shared reference buffer; self-comparing negative
+  control); the current one stores one reference per task, compares against its
+  own slice, and its comparison logic has a host test
+  (`tests/c/task_ref_test.c`). With that, every shape passes: 32 independent
+  matmuls in one chained submit are bit-exact at 16.0 us/task versus 105.5 us
+  for 32 separate submits (per-task costs; the separate-side ratios vary a lot
+  between rounds). B2 is device-viable but **not implemented**: it still needs
+  static-repeat plan expansion, an `independent_mm_v1` recipe and manifest
+  versioning.
+- `results/20261026T021229Z-envelope/`, `...T020729Z-envelope/` and
+  `results/20261026T030156Z-numeric-replay/`, `...T033318Z-numeric-replay/`
+  remain as measurement history (sequential-unpinned campaign, intermediate
+  build, and replays against earlier package states).
+- `results/20261026T020845Z-numeric/` (local only) is an aborted attempt to
+  re-run the full train calibration: `tools/calibrate_numeric_train.py` refuses
+  to overwrite an already frozen spec.
+- Host verification for this state: 244 pytest / 41 subtests, 30/30 ctest,
+  787 C host checks, an exhaustive 65536-pattern FP16 scan test, a per-task
+  reference-comparison test, and ASan/UBSan clean host tests.
+
 ## Current checkpoint (2026-10-24)
 
 - Complete-model task/timing campaign: `results/20261024T071144Z-models/`.

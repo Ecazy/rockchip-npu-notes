@@ -1,0 +1,20 @@
+=== per-task BOs, distinct inputs/outputs, n=32 ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","tasks":32,"status":"self_check_failed"}
+{"probe":"independent_mm_chain","status":"incomplete"}
+rc=1
+=== shared BOs, distinct inputs/outputs, n=32 ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos","tasks":32,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":4128.304,"chain_us":532.810,"separate_per_task_us":129.010,"chain_per_task_us":16.650,"speedup":7.7482}
+{"probe":"independent_mm_chain","status":"done"}
+rc=0
+=== shared BOs, distinct inputs/outputs, n=16 ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos","tasks":16,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":2130.289,"chain_us":311.467,"separate_per_task_us":133.143,"chain_per_task_us":19.467,"speedup":6.8395}
+{"probe":"independent_mm_chain","status":"done"}
+rc=0
+=== control: shared inputs, distinct outputs, n=8 ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos_shared_inputs","tasks":8,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":1164.610,"chain_us":276.642,"separate_per_task_us":145.576,"chain_per_task_us":34.580,"speedup":4.2098}
+{"probe":"independent_mm_chain","status":"done"}
+rc=0

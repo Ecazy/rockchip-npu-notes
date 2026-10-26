@@ -1,0 +1,25 @@
+=== per-task BOs: distinct inputs + distinct outputs ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","tasks":32,"status":"mismatch","bitwise_equal":false,"mismatched_tasks":31,"untouched_tasks":0,"nonfinite_tasks":0,"guard_failed_tasks":0,"separate_us":3283.004,"chain_us":501.923,"separate_per_task_us":102.594,"chain_per_task_us":15.685,"speedup":6.5409}
+{"probe":"independent_mm_chain","status":"incomplete"}
+rc=1
+=== shared BOs: distinct inputs + distinct outputs (expanded-plan layout) ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos","tasks":32,"status":"failed","stage":0,"mismatched_tasks":31,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":31,"separate_us":2474.235,"chain_us":356.937,"separate_per_task_us":77.320,"chain_per_task_us":11.154,"speedup":6.9319}
+{"probe":"independent_mm_chain","status":"incomplete"}
+rc=1
+=== shared BOs: SHARED inputs + distinct outputs ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos_shared_inputs","tasks":8,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":1879.052,"chain_us":178.964,"separate_per_task_us":234.881,"chain_per_task_us":22.371,"speedup":10.4996}
+{"probe":"independent_mm_chain","status":"done"}
+rc=0
+=== shared BOs: SHARED inputs + distinct outputs, n=2 ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos_shared_inputs","tasks":2,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":414.891,"chain_us":215.481,"separate_per_task_us":207.445,"chain_per_task_us":107.740,"speedup":1.9254}
+{"probe":"independent_mm_chain","status":"done"}
+rc=0
+=== shared BOs: distinct inputs, n=2 ===
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos","tasks":2,"status":"failed","stage":0,"mismatched_tasks":1,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":1,"separate_us":458.961,"chain_us":276.730,"separate_per_task_us":229.480,"chain_per_task_us":138.365,"speedup":1.6585}
+{"probe":"independent_mm_chain","status":"incomplete"}
+rc=1

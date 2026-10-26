@@ -66,3 +66,106 @@ evidence/*.npy
 !results/20261024T091634Z-numeric/acceptance/observation.npz
 
 !results/20261024T092339Z-host/
+
+# First optimisation package (bridge envelope attribution + static repeat
+# grouping). Keep the measurement records, the per-arm primitive floors and the
+# post-freeze numeric replay; the campaign payload (plans/weights/data), the
+# source bundles and the observation tensors stay local.
+!results/20261026T021229Z-envelope/
+!results/20261026T021229Z-envelope/comparison.json
+!results/20261026T021229Z-envelope/*.log
+!results/20261026T021229Z-envelope/*.exit
+!results/20261026T021229Z-envelope/campaign/manifest.json
+!results/20261026T021229Z-envelope/campaign/SHA256SUMS
+results/20261026T021229Z-envelope/campaign/plans/
+results/20261026T021229Z-envelope/campaign/weights/
+results/20261026T021229Z-envelope/campaign/data/
+!results/20261026T021229Z-envelope/out-baseline/
+!results/20261026T021229Z-envelope/out-baseline/*.json
+!results/20261026T021229Z-envelope/out-baseline/*.jsonl
+!results/20261026T021229Z-envelope/out-baseline/*.log
+!results/20261026T021229Z-envelope/out-baseline/*.exit
+!results/20261026T021229Z-envelope/out-baseline/*.sha256
+!results/20261026T021229Z-envelope/out-baseline/*.before
+!results/20261026T021229Z-envelope/out-baseline/*.after
+!results/20261026T021229Z-envelope/out-candidate/
+!results/20261026T021229Z-envelope/out-candidate/*.json
+!results/20261026T021229Z-envelope/out-candidate/*.jsonl
+!results/20261026T021229Z-envelope/out-candidate/*.log
+!results/20261026T021229Z-envelope/out-candidate/*.exit
+!results/20261026T021229Z-envelope/out-candidate/*.sha256
+!results/20261026T021229Z-envelope/out-candidate/*.before
+!results/20261026T021229Z-envelope/out-candidate/*.after
+
+
+# v2 (post-review) checkpoints: interleaved three-arm campaign and the replay that
+# was re-run against the corrected runtime.  Same policy: keep text records and
+# the acceptance observation, keep campaign payload and bundles local.
+
+
+# v3 checkpoint (after the second review): the interleaved campaign and the replay
+# re-run against the corrected runtime.
+
+
+!results/20261026T033032Z-b2probe/
+!results/20261026T033032Z-b2probe/*
+!results/20261026T055654Z-envelope/
+!results/20261026T055654Z-envelope/comparison.json
+!results/20261026T055654Z-envelope/*.log
+!results/20261026T055654Z-envelope/campaign/manifest.json
+!results/20261026T055654Z-envelope/campaign/SHA256SUMS
+!results/20261026T055654Z-envelope/out-baseline/
+!results/20261026T055654Z-envelope/out-baseline/*.json
+!results/20261026T055654Z-envelope/out-baseline/*.jsonl
+!results/20261026T055654Z-envelope/out-baseline/*.log
+!results/20261026T055654Z-envelope/out-baseline/*.exit
+!results/20261026T055654Z-envelope/out-baseline/*.env
+!results/20261026T055654Z-envelope/out-baseline/*.sha256
+!results/20261026T055654Z-envelope/out-candidate/
+!results/20261026T055654Z-envelope/out-candidate/*.json
+!results/20261026T055654Z-envelope/out-candidate/*.jsonl
+!results/20261026T055654Z-envelope/out-candidate/*.log
+!results/20261026T055654Z-envelope/out-candidate/*.exit
+!results/20261026T055654Z-envelope/out-candidate/*.env
+!results/20261026T055654Z-envelope/out-candidate/*.sha256
+!results/20261026T055654Z-envelope/out-noprobe/
+!results/20261026T055654Z-envelope/out-noprobe/*.json
+!results/20261026T055654Z-envelope/out-noprobe/*.jsonl
+!results/20261026T055654Z-envelope/out-noprobe/*.log
+!results/20261026T055654Z-envelope/out-noprobe/*.exit
+!results/20261026T055654Z-envelope/out-noprobe/*.env
+!results/20261026T055654Z-envelope/out-noprobe/*.sha256
+results/20261026T055654Z-envelope/campaign/plans/
+results/20261026T055654Z-envelope/campaign/weights/
+results/20261026T055654Z-envelope/campaign/data/
+results/20261026T055654Z-envelope/campaign/tools/
+
+!results/20261026T053818Z-numeric/
+!results/20261026T053818Z-numeric/*.log
+!results/20261026T053818Z-numeric/*.json
+!results/20261026T053818Z-numeric/*.sha256
+!results/20261026T053818Z-numeric/board/
+!results/20261026T053818Z-numeric/board/*
+!results/20261026T053818Z-numeric/calibration/
+!results/20261026T053818Z-numeric/calibration/observation.npz
+!results/20261026T053818Z-numeric/calibration/*.log
+!results/20261026T053818Z-numeric/calibration/*.json
+!results/20261026T053818Z-numeric/calibration/exit.txt
+!results/20261026T053818Z-numeric/acceptance/
+!results/20261026T053818Z-numeric/acceptance/observation.npz
+!results/20261026T053818Z-numeric/acceptance/*.log
+!results/20261026T053818Z-numeric/acceptance/*.json
+!results/20261026T053818Z-numeric/acceptance/exit.txt
+!results/20261026T053818Z-numeric/campaign/manifest.json
+!results/20261026T053818Z-numeric/campaign/run-manifest.json
+!results/20261026T053818Z-numeric/campaign/SHA256SUMS
+results/20261026T053818Z-numeric/campaign/plans/
+results/20261026T053818Z-numeric/campaign/weights/
+results/20261026T053818Z-numeric/campaign/data/
+results/20261026T053818Z-numeric/campaign/tools/
+results/20261026T053818Z-numeric/campaign/numeric/
+
+# Per-measurement console logs duplicate the authoritative per-round JSON
+# (wall samples + envelope); keep the arm-level build logs and the JSON records.
+results/20261026T021229Z-envelope/out-*/*_r*.log
+results/20261026T055654Z-envelope/out-*/*_r*.log

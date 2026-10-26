@@ -1,0 +1,176 @@
+{
+  "backend": "board",
+  "batch": 32,
+  "envelope": {
+    "alloc_us": 0.0,
+    "command_us": 41.12408447265625,
+    "download_bytes": 2048,
+    "download_calls": 1,
+    "download_us": 0.0,
+    "emit_us": 0.0,
+    "envelope_available": false,
+    "executor_overhead_us": 112.29090159758925,
+    "guard_us": 0.0,
+    "host_action_us": 413.5770723223686,
+    "output_sync_us": 33.83099365234375,
+    "pack_us": 0.0,
+    "plan_call_us": 1635.6450505554676,
+    "plan_clock_us": 0.0,
+    "plan_envelope_attributed_us": 861.8650512695312,
+    "plan_envelope_clock_fraction": 0.0,
+    "plan_envelope_residual_fraction": 0.0,
+    "plan_envelope_residual_us": 0.0,
+    "plan_total_us": 0.0,
+    "plan_workspace_us": 1467.9390005767345,
+    "publish_us": 0.0,
+    "python_plan_node_us": 167.70604997873306,
+    "schema_version": 1,
+    "submit_alloc_us": 0.8759765625,
+    "submit_count": 8,
+    "submit_wait_us": 786.0339965820312,
+    "task_count": 11,
+    "upload_bytes": 65536,
+    "upload_calls": 4,
+    "validate_us": 0.0
+  },
+  "host": {
+    "cpu_affinity": [
+      6
+    ],
+    "cpu_count": 8,
+    "device_model": "RK3588 OPi 5 Plus",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64",
+    "npu_freq": "1000000000",
+    "npu_load_before": "NPU load:  Core0:  2%, Core1:  0%, Core2:  0%,",
+    "numpy": "1.21.5",
+    "thread_config": {
+      "blas": [],
+      "cpu_affinity": [
+        6
+      ],
+      "cpu_affinity_count": 1,
+      "cpu_count": 8,
+      "cpu_thread_env": {
+        "MKL_NUM_THREADS": null,
+        "OMP_NUM_THREADS": null,
+        "OPENBLAS_NUM_THREADS": null
+      },
+      "cpuinfo": {
+        "max_mhz": 1800.0,
+        "mean_mhz": 1260.0,
+        "min_mhz": 408.0
+      },
+      "numpy": {
+        "blas_name": null,
+        "blas_openblas_configuration": null,
+        "blas_version": null,
+        "numpy_version": "1.21.5"
+      },
+      "process_threads": 1
+    }
+  },
+  "host_actions": [
+    {
+      "calls": 1,
+      "elapsed_us": 342.70400647073984,
+      "host_bytes": 75264,
+      "name": "normalize",
+      "phase": "preprocess"
+    },
+    {
+      "calls": 1,
+      "elapsed_us": 41.41603130847216,
+      "host_bytes": 115712,
+      "name": "pad_k",
+      "phase": "preprocess"
+    },
+    {
+      "calls": 1,
+      "elapsed_us": 29.457034543156624,
+      "host_bytes": 2304,
+      "name": "export_logits",
+      "phase": "postprocess"
+    }
+  ],
+  "kind": "bridge-envelope-profile",
+  "label": "noprobe:r3",
+  "library": "/mnt/ssd/workspace/tl-envelope-20261026T055654Z/build-candidate/librknpu_plan_noprobe.so",
+  "model": "mnist_mlp",
+  "plan_entry": "attributed",
+  "plans": [
+    {
+      "alloc_us": 0.0,
+      "bridge_bytes": 67584,
+      "calls": 1,
+      "clock_us": 0.0,
+      "command_us": 41.12408447265625,
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "download_us": 0.0,
+      "elapsed_us": 1635.6450505554676,
+      "emit_us": 0.0,
+      "guard_us": 0.0,
+      "kind": "rkplan",
+      "name": "mlp",
+      "output_sync_us": 33.83099365234375,
+      "pack_us": 0.0,
+      "phase": "execution",
+      "publish_us": 0.0,
+      "repeat_count": 1,
+      "submit_alloc_us": 0.8759765625,
+      "submit_count": 8,
+      "submit_wait_us": 786.0339965820312,
+      "task_count": 11,
+      "total_us": 0.0,
+      "upload_bytes": 65536,
+      "upload_calls": 4,
+      "validate_us": 0.0,
+      "workspace_us": 1467.9390005767345
+    }
+  ],
+  "runs": 32,
+  "schema_version": 1,
+  "wall_images_per_s": 14707.200036297441,
+  "wall_us": {
+    "max": 2591.5909791365266,
+    "mean": 2206.7717854952207,
+    "median": 2175.8050424978137,
+    "min": 1805.9759750030935,
+    "samples": [
+      2214.8879943415523,
+      2167.930011637509,
+      2137.0129543356597,
+      2169.9710050597787,
+      2214.013016782701,
+      2265.0539758615196,
+      2252.5120293721557,
+      2262.137015350163,
+      2238.8040088117123,
+      2175.2220345661044,
+      2106.097002979368,
+      2202.3459896445274,
+      2173.4709735028446,
+      2132.0550004020333,
+      2307.6360230334103,
+      2575.3829977475107,
+      2322.80301861465,
+      2219.5540368556976,
+      2176.388050429523,
+      2141.389006283134,
+      2113.3890259079635,
+      2099.972974974662,
+      2162.3880020342767,
+      2167.346014175564,
+      2172.012988012284,
+      2183.679025620222,
+      1845.9339626133442,
+      1805.9759750030935,
+      2130.8889845386147,
+      2591.5909791365266,
+      2445.8850384689867,
+      2442.9680197499692
+    ]
+  },
+  "warmup": 8
+}

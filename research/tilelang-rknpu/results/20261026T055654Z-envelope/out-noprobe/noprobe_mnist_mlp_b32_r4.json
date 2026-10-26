@@ -1,0 +1,176 @@
+{
+  "backend": "board",
+  "batch": 32,
+  "envelope": {
+    "alloc_us": 0.0,
+    "command_us": 42.5810546875,
+    "download_bytes": 2048,
+    "download_calls": 1,
+    "download_us": 0.0,
+    "emit_us": 0.0,
+    "envelope_available": false,
+    "executor_overhead_us": 118.4159773401916,
+    "guard_us": 0.0,
+    "host_action_us": 490.160018671304,
+    "output_sync_us": 35.2880859375,
+    "pack_us": 0.0,
+    "plan_call_us": 1706.811017356813,
+    "plan_clock_us": 0.0,
+    "plan_envelope_attributed_us": 906.487060546875,
+    "plan_envelope_clock_fraction": 0.0,
+    "plan_envelope_residual_fraction": 0.0,
+    "plan_envelope_residual_us": 0.0,
+    "plan_total_us": 0.0,
+    "plan_workspace_us": 1532.1049722842872,
+    "publish_us": 0.0,
+    "python_plan_node_us": 174.70604507252574,
+    "schema_version": 1,
+    "submit_alloc_us": 1.4599609375,
+    "submit_count": 8,
+    "submit_wait_us": 827.157958984375,
+    "task_count": 11,
+    "upload_bytes": 65536,
+    "upload_calls": 4,
+    "validate_us": 0.0
+  },
+  "host": {
+    "cpu_affinity": [
+      6
+    ],
+    "cpu_count": 8,
+    "device_model": "RK3588 OPi 5 Plus",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64",
+    "npu_freq": "1000000000",
+    "npu_load_before": "NPU load:  Core0:  2%, Core1:  0%, Core2:  0%,",
+    "numpy": "1.21.5",
+    "thread_config": {
+      "blas": [],
+      "cpu_affinity": [
+        6
+      ],
+      "cpu_affinity_count": 1,
+      "cpu_count": 8,
+      "cpu_thread_env": {
+        "MKL_NUM_THREADS": null,
+        "OMP_NUM_THREADS": null,
+        "OPENBLAS_NUM_THREADS": null
+      },
+      "cpuinfo": {
+        "max_mhz": 1608.0,
+        "mean_mhz": 1212.0,
+        "min_mhz": 408.0
+      },
+      "numpy": {
+        "blas_name": null,
+        "blas_openblas_configuration": null,
+        "blas_version": null,
+        "numpy_version": "1.21.5"
+      },
+      "process_threads": 1
+    }
+  },
+  "host_actions": [
+    {
+      "calls": 1,
+      "elapsed_us": 410.2449747733772,
+      "host_bytes": 75264,
+      "name": "normalize",
+      "phase": "preprocess"
+    },
+    {
+      "calls": 1,
+      "elapsed_us": 46.666013076901436,
+      "host_bytes": 115712,
+      "name": "pad_k",
+      "phase": "preprocess"
+    },
+    {
+      "calls": 1,
+      "elapsed_us": 33.24903082102537,
+      "host_bytes": 2304,
+      "name": "export_logits",
+      "phase": "postprocess"
+    }
+  ],
+  "kind": "bridge-envelope-profile",
+  "label": "noprobe:r4",
+  "library": "/mnt/ssd/workspace/tl-envelope-20261026T055654Z/build-candidate/librknpu_plan_noprobe.so",
+  "model": "mnist_mlp",
+  "plan_entry": "attributed",
+  "plans": [
+    {
+      "alloc_us": 0.0,
+      "bridge_bytes": 67584,
+      "calls": 1,
+      "clock_us": 0.0,
+      "command_us": 42.5810546875,
+      "download_bytes": 2048,
+      "download_calls": 1,
+      "download_us": 0.0,
+      "elapsed_us": 1706.811017356813,
+      "emit_us": 0.0,
+      "guard_us": 0.0,
+      "kind": "rkplan",
+      "name": "mlp",
+      "output_sync_us": 35.2880859375,
+      "pack_us": 0.0,
+      "phase": "execution",
+      "publish_us": 0.0,
+      "repeat_count": 1,
+      "submit_alloc_us": 1.4599609375,
+      "submit_count": 8,
+      "submit_wait_us": 827.157958984375,
+      "task_count": 11,
+      "total_us": 0.0,
+      "upload_bytes": 65536,
+      "upload_calls": 4,
+      "validate_us": 0.0,
+      "workspace_us": 1532.1049722842872
+    }
+  ],
+  "runs": 32,
+  "schema_version": 1,
+  "wall_images_per_s": 13707.120855335243,
+  "wall_us": {
+    "max": 2986.6270488128066,
+    "mean": 2366.3333795411745,
+    "median": 2334.552991669625,
+    "min": 1980.3910399787128,
+    "samples": [
+      2225.9699762798846,
+      2116.0139585845172,
+      2188.638027291745,
+      2374.8850217089057,
+      2449.0919895470142,
+      2591.132011730224,
+      2986.6270488128066,
+      2334.9279654212296,
+      2252.5119711644948,
+      2286.053029820323,
+      2268.2620328851044,
+      2335.927973035723,
+      2514.425024855882,
+      2409.134991466999,
+      2350.802009459585,
+      2632.2570047341287,
+      2334.1780179180205,
+      2368.301968090236,
+      2389.5930498838425,
+      2293.6369641683996,
+      2235.8869900926948,
+      2238.513028714806,
+      2212.553983554244,
+      2245.512034278363,
+      2238.8040088117123,
+      2346.2609970010817,
+      1980.3910399787128,
+      2773.4210016205907,
+      2858.296036720276,
+      2376.0100011713803,
+      2244.928968138993,
+      2269.720018375665
+    ]
+  },
+  "warmup": 8
+}

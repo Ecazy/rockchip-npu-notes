@@ -1,0 +1,46 @@
+BUILD_OK
+### per-task BOs n=2
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","tasks":2,"status":"ok","bitwise_equal":true,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"guard_failed_tasks":0,"separate_us":81.724,"chain_us":48.358,"separate_per_task_us":40.862,"chain_per_task_us":24.179,"speedup":1.6900}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
+### shared BOs n=2
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos","tasks":2,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":240.884,"chain_us":110.774,"separate_per_task_us":120.442,"chain_per_task_us":55.387,"speedup":2.1746}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
+### per-task BOs n=8
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","tasks":8,"status":"ok","bitwise_equal":true,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"guard_failed_tasks":0,"separate_us":352.154,"chain_us":105.874,"separate_per_task_us":44.019,"chain_per_task_us":13.234,"speedup":3.3262}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
+### shared BOs n=8
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos","tasks":8,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":559.976,"chain_us":144.840,"separate_per_task_us":69.997,"chain_per_task_us":18.105,"speedup":3.8662}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
+### per-task BOs n=16
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","tasks":16,"status":"ok","bitwise_equal":true,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"guard_failed_tasks":0,"separate_us":780.498,"chain_us":175.806,"separate_per_task_us":48.781,"chain_per_task_us":10.988,"speedup":4.4395}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
+### shared BOs n=16
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos","tasks":16,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":1856.830,"chain_us":221.285,"separate_per_task_us":116.052,"chain_per_task_us":13.830,"speedup":8.3911}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
+### per-task BOs n=32
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","tasks":32,"status":"ok","bitwise_equal":true,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"guard_failed_tasks":0,"separate_us":1421.565,"chain_us":359.358,"separate_per_task_us":44.424,"chain_per_task_us":11.230,"speedup":3.9558}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
+### shared BOs n=32
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos","tasks":32,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":2578.153,"chain_us":346.699,"separate_per_task_us":80.567,"chain_per_task_us":10.834,"speedup":7.4363}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
+### control: shared inputs, distinct outputs n=8
+{"probe":"independent_mm_chain","geometry":{"m":16,"k":16,"n":16},"repeats":10,"sentinel":32346}
+{"probe":"independent_mm_chain","shape":"shared_bos_shared_inputs","tasks":8,"status":"ok","stage":0,"mismatched_tasks":0,"untouched_tasks":0,"nonfinite_tasks":0,"mismatched_after_20ms":0,"separate_us":1113.335,"chain_us":278.159,"separate_per_task_us":139.167,"chain_per_task_us":34.770,"speedup":4.0025}
+{"probe":"independent_mm_chain","status":"done"}
+exit=0
