@@ -920,7 +920,8 @@ static void lut_segment_case(void) {
         {
             rk_run_attribution env;
             const uint32_t size = (uint32_t)sizeof(env);
-            EXPECT(size == RK_RUN_ATTRIBUTION_V1_SIZE);
+            EXPECT(size == RK_RUN_ATTRIBUTION_V2_SIZE);
+            EXPECT(RK_RUN_ATTRIBUTION_V1_SIZE < size);
             memset(&env, 0, sizeof(env));
             env.struct_size = 0;
             EXPECT(rk_workspace_run_ex(ws3, inputs, 1, outputs, 1, &env, &diag) ==

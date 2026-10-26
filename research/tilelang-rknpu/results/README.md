@@ -5,6 +5,21 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## QK/PV upload-sync checkpoint (2026-10-26, v10)
+
+Fourth optimisation package, shared-group upload preparation; report:
+[OPTIMIZATION-RESULTS-4.md](../OPTIMIZATION-RESULTS-4.md).
+
+- `results/20261026T093305Z-upload/`: coalesced vs per-slice prep/fini,
+  4 rounds x 32 runs.  b8 11.969 -> **11.721 ms** (1.021x), b1 3.718 ->
+  **3.660 ms** (1.016x); tasks/submits and transfer bytes unchanged.
+- b8 pack split: 1122.9 -> 597.6 us; prep 300.4 -> 41.1 us,
+  fini 273.0 -> 56.3 us; prep/fini calls 134 -> 10.  Layout packing unchanged.
+- `results/20261026T093427Z-numeric-replay/`: packed frozen policy replay,
+  **PASS / 0 problems**, no recalibration.
+- Default remains coalesced; `RK_PLAN_UPLOAD_COALESCE=0` is the explicit
+  per-slice control.  Host verification for this state: 261 pytest, 30/30 ctest.
+
 ## RMSNorm-boundary checkpoint (2026-10-26, v9)
 
 Third optimisation package, RMSNorm portion of plan section 6/7 D; report:

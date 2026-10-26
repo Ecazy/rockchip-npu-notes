@@ -40,6 +40,7 @@ from rknpu_backend.models import RunStats, load_weight_npz
 # A baseline library/Python pair predates the envelope tail; the profiler must be
 # able to measure it, so an absent attribution field reads as zero.
 ENVELOPE_FIELDS = getattr(_models, "ENVELOPE_FIELDS", ())
+PACK_BREAKDOWN_FIELDS = getattr(_models, "PACK_BREAKDOWN_FIELDS", ())
 from rknpu_backend.runtime.ffi import LibRKPlan, configure_rocket_abi
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -131,6 +132,8 @@ def envelope_row(stats: RunStats) -> dict:
             c_clock / c_total if available and c_total else 0.0),
         **{field: _stat(stats, f"plan_{field}")
            for field in ENVELOPE_FIELDS},
+        **{field: _stat(stats, f"plan_{field}")
+           for field in PACK_BREAKDOWN_FIELDS},
         "python_plan_node_us": max(
             0.0, float(stats.plan_call_us) - float(stats.plan_workspace_us)),
         "host_action_us": stats.host_action_us,
@@ -228,7 +231,7 @@ def run_profile(args) -> dict:
                 for field in ("workspace_us", "validate_us", "pack_us",
                               "emit_us", "command_us", "submit_wait_us",
                               "output_sync_us", "download_us", "guard_us",
-                              "publish_us"):
+                              "publish_us", *PACK_BREAKDOWN_FIELDS):
                     if field in row:
                         bucket.setdefault(field, []).append(float(row[field]))
     finally:

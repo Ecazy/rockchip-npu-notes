@@ -80,6 +80,9 @@ ENVELOPE_FIELDS = ("validate_us", "pack_us", "emit_us", "command_us",
                    "download_us", "guard_us", "publish_us", "alloc_us")
 # Self-consistency witnesses reported alongside the attribution intervals.
 ENVELOPE_WITNESS_FIELDS = ("total_us", "clock_us")
+# Sub-breakdowns of pack_us; they are not additional disjoint intervals.
+PACK_BREAKDOWN_FIELDS = ("pack_prep_us", "pack_clear_us", "pack_layout_us",
+                         "pack_fini_us", "pack_prep_calls", "pack_fini_calls")
 
 
 def _nbytes(arrays: tuple[np.ndarray, ...]) -> int:
@@ -122,6 +125,12 @@ class RunStats:
     plan_alloc_us: float = 0.0
     plan_total_us: float = 0.0
     plan_clock_us: float = 0.0
+    plan_pack_prep_us: float = 0.0
+    plan_pack_clear_us: float = 0.0
+    plan_pack_layout_us: float = 0.0
+    plan_pack_fini_us: float = 0.0
+    plan_pack_prep_calls: int = 0
+    plan_pack_fini_calls: int = 0
     upload_calls: int = 0
     upload_bytes: int = 0
     download_calls: int = 0
@@ -179,6 +188,10 @@ class RunStats:
                 setattr(self, f"plan_{field}",
                         getattr(self, f"plan_{field}") + float(
                             getattr(report, field)))
+        for field in PACK_BREAKDOWN_FIELDS:
+            if hasattr(report, field):
+                setattr(self, f"plan_{field}",
+                        getattr(self, f"plan_{field}") + getattr(report, field))
         self.upload_calls += int(report.upload_calls)
         self.upload_bytes += int(report.upload_bytes)
         self.download_calls += int(report.download_calls)
@@ -202,6 +215,7 @@ class RunStats:
                    "submit_alloc_us": 0.0, "download_us": 0.0,
                    "guard_us": 0.0, "publish_us": 0.0, "alloc_us": 0.0,
                    "total_us": 0.0, "clock_us": 0.0,
+                   **{field: 0.0 for field in PACK_BREAKDOWN_FIELDS},
                    "upload_calls": 0, "upload_bytes": 0,
                    "download_calls": 0, "download_bytes": 0,
                    "task_count": 0, "submit_count": 0,
@@ -215,6 +229,9 @@ class RunStats:
         for field in ENVELOPE_FIELDS + ENVELOPE_WITNESS_FIELDS:
             if hasattr(report, field):
                 row[field] = row.get(field, 0.0) + float(getattr(report, field))
+        for field in PACK_BREAKDOWN_FIELDS:
+            if hasattr(report, field):
+                row[field] = row.get(field, 0.0) + getattr(report, field)
         row["upload_calls"] += int(report.upload_calls)
         row["upload_bytes"] += int(report.upload_bytes)
         row["download_calls"] += int(report.download_calls)
@@ -315,6 +332,8 @@ class RunStats:
             "plan_output_sync_us": self.plan_output_sync_us,
             **{f"plan_{field}": float(getattr(self, f"plan_{field}"))
                for field in ENVELOPE_FIELDS + ENVELOPE_WITNESS_FIELDS},
+            **{f"plan_{field}": float(getattr(self, f"plan_{field}"))
+               for field in PACK_BREAKDOWN_FIELDS},
             "plan_envelope_attributed_us": self.plan_envelope_attributed_us,
             "plan_envelope_residual_us": self.plan_envelope_residual_us,
             # Backward-compatible summary name: this is only the RKPlan interval,

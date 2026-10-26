@@ -72,6 +72,8 @@ static const struct { const char *name, *ret, *args; } kSignatures[] = {
     {"rk_mock_delay_us", "void", "unsigned"},
     {"rk_mock_fail_prep_at", "void", "unsigned"},
     {"rk_mock_prep_calls", "unsigned", ""},
+    {"rk_mock_fail_fini_at", "void", "unsigned"},
+    {"rk_mock_fini_calls", "unsigned", ""},
     {"rk_mock_reset_tags", "void", ""},
     {"rk_mock_context_fault", "void", "unsigned,unsigned"},
     {"rk_mock_context_faulted", "int", "int"},

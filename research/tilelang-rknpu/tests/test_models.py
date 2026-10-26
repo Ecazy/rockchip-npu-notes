@@ -376,6 +376,78 @@ class CompleteModelTests(unittest.TestCase):
         self.assertNotIn("gate", plain.trace)
         self.assertIn("gate", captured.trace)
 
+    def test_shared_group_upload_coalescing_and_failure_atomicity(self):
+        """One prep/fini per shared BO must be bitwise equivalent to per-slice
+        sync, and an injected provider failure must not submit consumers."""
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.models import RunStats
+        from rknpu_backend.errors import BackendError
+
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        old = os.environ.get("RK_PLAN_UPLOAD_COALESCE")
+        outputs = {}
+        stats = {}
+        try:
+            for mode in ("1", "0"):
+                os.environ["RK_PLAN_UPLOAD_COALESCE"] = mode
+                with HybridRunner(self.lib, program, self.vit_weights,
+                                  weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+                    first = RunStats()
+                    outputs[mode] = runner.run(self.x[:8], stats=first).outputs["logits"]
+                    stats[mode] = first
+                    second = runner.run(self.x[8:16]).outputs["logits"]
+                if mode == "0":
+                    outputs["changed"] = second
+            np.testing.assert_array_equal(outputs["1"], outputs["0"])
+            self.assertLess(stats["1"].plan_pack_prep_calls,
+                            stats["0"].plan_pack_prep_calls)
+            self.assertEqual(stats["1"].plan_pack_fini_calls,
+                             stats["1"].plan_pack_prep_calls)
+            self.assertEqual(stats["1"].upload_calls,
+                             stats["0"].upload_calls)
+            self.assertEqual(stats["1"].upload_bytes,
+                             stats["0"].upload_bytes)
+
+            # Changed inputs through the coalesced path still re-pack every slice.
+            os.environ["RK_PLAN_UPLOAD_COALESCE"] = "1"
+            with HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+                changed = runner.run(self.x[8:16]).outputs["logits"]
+            np.testing.assert_array_equal(changed, outputs["changed"])
+
+            # Provider failure in the shared-group upload itself: isolate the
+            # qk group plan so there is no preceding unrelated submit.
+            from rknpu_backend import load_plan
+            from rknpu_backend.models import PlanCall
+            group_plan = load_plan(str(PLANS / "tiny_vit_b8_qk_group.rkplan.json"))
+            with PlanCall(self.lib, group_plan, {}, fd=0) as call:
+                in_arrays = [np.zeros(tuple(b.shape), dtype=np.float16)
+                             for b in group_plan.bindings if b.role == "input"]
+                out_arrays = [np.zeros(tuple(b.shape), dtype=np.float16)
+                              for b in group_plan.bindings if b.role == "output"]
+                before = self.lib.cdll.rk_mock_execs()
+                prep = self.lib.cdll.rk_mock_prep_calls()
+                self.lib.cdll.rk_mock_fail_prep_at(prep + 1)
+                with self.assertRaises(BackendError):
+                    call.run_into(in_arrays, out_arrays)
+                self.assertEqual(self.lib.cdll.rk_mock_execs(), before)
+                self.lib.cdll.rk_mock_fail_prep_at(0)
+                _report, _elapsed = call.run_into(in_arrays, out_arrays)
+
+                before = self.lib.cdll.rk_mock_execs()
+                fini = self.lib.cdll.rk_mock_fini_calls()
+                self.lib.cdll.rk_mock_fail_fini_at(fini + 1)
+                with self.assertRaises(BackendError):
+                    call.run_into(in_arrays, out_arrays)
+                self.assertEqual(self.lib.cdll.rk_mock_execs(), before)
+                self.lib.cdll.rk_mock_fail_fini_at(0)
+                _report, _elapsed = call.run_into(in_arrays, out_arrays)
+        finally:
+            if old is None:
+                os.environ.pop("RK_PLAN_UPLOAD_COALESCE", None)
+            else:
+                os.environ["RK_PLAN_UPLOAD_COALESCE"] = old
+
     def test_fused_residual_rmsnorm_is_bitwise_control(self):
         """Fusing residual add + RMSNorm removes a Host action boundary while
         preserving the FP16 residual narrowing point and every downstream value."""
@@ -630,7 +702,7 @@ class CompleteModelTests(unittest.TestCase):
         loader_spec.loader.exec_module(verifier)
         for spec_name, result_name in (
                 ("numeric_acceptance_packed.json",
-                 "20261026T091548Z-numeric-replay"),
+                 "20261026T093427Z-numeric-replay"),
                 ("numeric_acceptance_packed.json",
                  "20261026T091612Z-numeric-replay"),
                 ("numeric_acceptance_device_ffn.json",

@@ -151,28 +151,49 @@ static int refresh_views(rk_workspace *ws, rk_diag *diag) {
     return 0;
 }
 
+typedef struct {
+    double prep_us, clear_us, layout_us, fini_us;
+} rk_pack_times;
+
+static int upload_coalesce_enabled(void) {
+    /* Same process-wide escape hatch style as ROCKET_BUSY_POLL: default on,
+     * explicit 0 keeps the former per-slice prep/fini path for A/B evidence. */
+    const char *v = getenv("RK_PLAN_UPLOAD_COALESCE");
+    if (!v || !*v) return 1;
+    return strcmp(v, "0") != 0;
+}
+
 static int upload_action(rk_workspace *ws, const rk_action_desc *a,
                          const rk_binding *binding, uint64_t *bytes_out,
+                         rk_pack_times *times, int manage_sync,
                          rk_diag *diag) {
     if (!a || a->kind != RK_ACTION_UPLOAD || a->noutputs != 1) return RK_E_INVALID;
     co_view *dst = &ws->views[a->outputs[0]];
     if (!dst->buffer || !dst->buffer->bo.handle) return RK_E_INVALID;
-    int rc = rocket_bo_prep(ws->fd, &dst->buffer->bo, 1, 2000000000ull);
-    if (rc) return fail_native(diag, "upload", "rocket_bo_prep(write) failed",
-                               a->id, rc);
+    int rc = 0;
+    if (manage_sync) {
+        double t0 = now_us();
+        rc = rocket_bo_prep(ws->fd, &dst->buffer->bo, 1, 2000000000ull);
+        if (times) times->prep_us += now_us() - t0;
+        if (rc) return fail_native(diag, "upload", "rocket_bo_prep(write) failed",
+                                   a->id, rc);
+    }
+    double c0 = now_us();
     memset((char *)dst->buffer->bo.ptr + dst->offset, 0, dst->tensor.bytes);
+    if (times) times->clear_us += now_us() - c0;
     const _Float16 *src = (const _Float16 *)binding->data;
     _Float16 *base = (_Float16 *)((char *)dst->buffer->bo.ptr + dst->offset);
     uint32_t transpose = (a->flags & RK_ACTION_FLAG_TRANSPOSE_SOURCE) != 0;
     uint32_t broadcast_scalar = (a->flags & RK_ACTION_FLAG_BROADCAST_SCALAR) != 0;
     uint32_t broadcast_channel = (a->flags & RK_ACTION_FLAG_BROADCAST_CHANNEL) != 0;
     const uint64_t elements = binding->nbytes / 2u;
+    double l0 = now_us();
     for (uint32_t r = 0; r < dst->tensor.rows; r++) {
         for (uint32_t c = 0; c < dst->tensor.cols; c++) {
             _Float16 value;
             if (broadcast_scalar) {
                 if (elements != 1u) {
-                    (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    if (manage_sync) (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
                     rk_diag_set(diag, RK_E_SHAPE, "upload",
                                 "scalar broadcast binding is not one element", "",
                                 a->id, 0);
@@ -182,7 +203,7 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
             } else if (broadcast_channel) {
                 uint64_t source_col = (uint64_t)a->source_col_offset + c;
                 if (source_col >= elements) {
-                    (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    if (manage_sync) (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
                     rk_diag_set(diag, RK_E_SHAPE, "upload",
                                 "channel broadcast binding is shorter than the "
                                 "destination row", "", a->id, 0);
@@ -198,7 +219,7 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
                  * packing loop must never index outside the borrowed binding even if
                  * a future caller bypasses rk_plan_create. */
                 if ((uint64_t)sr * a->source_row_stride + sc >= elements) {
-                    (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    if (manage_sync) (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
                     rk_diag_set(diag, RK_E_SHAPE, "upload",
                                 "packer source index exceeds the binding", "", a->id, 0);
                     return RK_E_SHAPE;
@@ -208,8 +229,14 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
             base[co_index(&dst->tensor, r, c)] = value;
         }
     }
-    rc = rocket_bo_fini(ws->fd, &dst->buffer->bo);
-    if (rc) return fail_native(diag, "upload", "rocket_bo_fini failed", a->id, rc);
+    if (times) times->layout_us += now_us() - l0;
+    if (manage_sync) {
+        double f0 = now_us();
+        rc = rocket_bo_fini(ws->fd, &dst->buffer->bo);
+        if (times) times->fini_us += now_us() - f0;
+        if (rc) return fail_native(diag, "upload", "rocket_bo_fini failed",
+                                   a->id, rc);
+    }
     /* Transfer accounting counts the packed bytes actually written for this
      * action, not the whole borrowing binding once per tile. */
     if (bytes_out) *bytes_out += (uint64_t)dst->tensor.bytes;
@@ -231,7 +258,7 @@ static int upload_role(rk_workspace *ws, uint32_t role,
                         "", a->id, 0);
             return RK_E_SHAPE;
         }
-        int rc = upload_action(ws, a, b, bytes, diag);
+        int rc = upload_action(ws, a, b, bytes, NULL, 1, diag);
         if (rc) return rc;
         if (calls) (*calls)++;
     }
@@ -539,6 +566,9 @@ typedef struct {
     double validate_us, pack_us, emit_us, command_us, submit_alloc_us;
     double submit_wait_us, output_sync_us, download_us, guard_us, publish_us;
     double alloc_us;
+    /* Sub-breakdown of pack_us; these do not add a second time bucket. */
+    double pack_prep_us, pack_clear_us, pack_layout_us, pack_fini_us;
+    uint64_t pack_prep_calls, pack_fini_calls;
     /* Self-consistency witnesses. */
     double total_us;
     double clock_us;
@@ -615,6 +645,12 @@ static void attribution_fill(rk_run_attribution *report, const rk_run_state *st,
     ATTRIBUTION_SET(report, alloc_us, st->alloc_us);
     ATTRIBUTION_SET(report, total_us, st->total_us);
     ATTRIBUTION_SET(report, clock_us, st->clock_us);
+    ATTRIBUTION_SET(report, pack_prep_us, st->pack_prep_us);
+    ATTRIBUTION_SET(report, pack_clear_us, st->pack_clear_us);
+    ATTRIBUTION_SET(report, pack_layout_us, st->pack_layout_us);
+    ATTRIBUTION_SET(report, pack_fini_us, st->pack_fini_us);
+    ATTRIBUTION_SET(report, pack_prep_calls, st->pack_prep_calls);
+    ATTRIBUTION_SET(report, pack_fini_calls, st->pack_fini_calls);
 }
 
 static void group_report_fill(rk_group_report *report, const rk_run_state *st,
@@ -755,6 +791,125 @@ static void assign_staging_offsets(rk_workspace *ws, const rk_binding *outputs,
     }
 }
 
+/* Coalesce a consecutive run of input uploads by destination BO.  Provider
+ * contract: rocket_bo_prep(dir ignored) waits for prior WRITE usage and syncs
+ * the BO for CPU; rocket_bo_fini syncs it back for the NPU.  Therefore one
+ * prep + all disjoint slice writes + one fini is equivalent to per-slice
+ * prep/fini *as long as no consumer action runs in between*.  We only merge a
+ * consecutive upload run, and every consumer follows the whole run. */
+#define RK_MAX_COALESCED_UPLOADS 128u
+
+static int run_upload_run(rk_workspace *ws, uint32_t begin, uint32_t end,
+                          const rk_binding *inputs, uint32_t ninputs,
+                          rk_run_state *st, rk_diag *diag) {
+    const rk_action_desc *acts[RK_MAX_COALESCED_UPLOADS];
+    const rk_binding *bindings[RK_MAX_COALESCED_UPLOADS];
+    uint32_t count = 0;
+    for (uint32_t i = begin; i < end; i++) {
+        const rk_action_desc *a = &ws->plan->actions[i];
+        const rk_value_desc *v = rk_plan_value(ws->plan, a->source_binding);
+        if (!v) {
+            rk_diag_set(diag, RK_E_SCHEMA, "run", "upload binding missing",
+                        "", a->id, 0);
+            return RK_E_SCHEMA;
+        }
+        if (v->role == RK_ROLE_CONSTANT) continue; /* uploaded once at create */
+        if (count >= RK_MAX_COALESCED_UPLOADS) {
+            /* Keep the validated per-slice control path for oversized runs. */
+            return RK_E_UNSUPPORTED;
+        }
+        const rk_binding *b = find_binding(inputs, ninputs, a->source_binding);
+        if (!b) {
+            rk_diag_set(diag, RK_E_SHAPE, "run",
+                        "input binding is absent or duplicated", "", a->id, 0);
+            return RK_E_SHAPE;
+        }
+        acts[count] = a;
+        bindings[count] = b;
+        count++;
+    }
+    if (!count) return 0;
+    double u0 = now_us();
+    rk_pack_times total = {0};
+    int rc = 0;
+    if (count > 1 && upload_coalesce_enabled()) {
+        co_buffer *prepped[RK_MAX_COALESCED_UPLOADS];
+        uint32_t nprepped = 0;
+        for (uint32_t i = 0; i < count && !rc; i++) {
+            co_view *dst = &ws->views[acts[i]->outputs[0]];
+            co_buffer *buf = dst->buffer;
+            if (!buf || !buf->bo.handle) {
+                rc = fail_native(diag, "upload", "upload destination BO missing",
+                                 acts[i]->id, RK_E_INVALID);
+                break;
+            }
+            int seen = 0;
+            for (uint32_t q = 0; q < nprepped; q++)
+                if (prepped[q] == buf) { seen = 1; break; }
+            if (seen) continue;
+            double t0 = now_us();
+            int native = rocket_bo_prep(ws->fd, &buf->bo, 1, 2000000000ull);
+            double prep_us = now_us() - t0;
+            total.prep_us += prep_us;
+            st->pack_prep_us += prep_us;
+            st->pack_prep_calls++;
+            if (native) {
+                rc = fail_native(diag, "upload",
+                                 "rocket_bo_prep(write) failed",
+                                 acts[i]->id, native);
+                break;
+            }
+            prepped[nprepped++] = buf;
+        }
+        for (uint32_t i = 0; i < count && !rc; i++) {
+            uint64_t bytes = 0;
+            rk_pack_times one = {0};
+            int native = upload_action(ws, acts[i], bindings[i], &bytes,
+                                       &one, 0, diag);
+            total.clear_us += one.clear_us;
+            total.layout_us += one.layout_us;
+            st->pack_clear_us += one.clear_us;
+            st->pack_layout_us += one.layout_us;
+            if (native) { rc = native; break; }
+            st->upload_calls++;
+            st->upload_bytes += bytes;
+        }
+        for (uint32_t i = 0; i < nprepped; i++) {
+            double t0 = now_us();
+            int native = rocket_bo_fini(ws->fd, &prepped[i]->bo);
+            double fini_us = now_us() - t0;
+            total.fini_us += fini_us;
+            st->pack_fini_us += fini_us;
+            st->pack_fini_calls++;
+            if (native && !rc)
+                rc = fail_native(diag, "upload", "rocket_bo_fini failed",
+                                 UINT32_MAX, native);
+        }
+    } else {
+        for (uint32_t i = 0; i < count && !rc; i++) {
+            uint64_t bytes = 0;
+            rk_pack_times one = {0};
+            int native = upload_action(ws, acts[i], bindings[i], &bytes,
+                                       &one, 1, diag);
+            total.prep_us += one.prep_us;
+            total.clear_us += one.clear_us;
+            total.layout_us += one.layout_us;
+            total.fini_us += one.fini_us;
+            st->pack_prep_us += one.prep_us;
+            st->pack_clear_us += one.clear_us;
+            st->pack_layout_us += one.layout_us;
+            st->pack_fini_us += one.fini_us;
+            st->pack_prep_calls++;
+            st->pack_fini_calls++;
+            if (native) { rc = native; break; }
+            st->upload_calls++;
+            st->upload_bytes += bytes;
+        }
+    }
+    st->pack_us += now_us() - u0;
+    return rc;
+}
+
 /* ---- Linear schedule for one repeat: host preparation, blocking submits and
  * downloads execute in the verified action order.  A task group is flushed as
  * one blocking submit when its last task is reached.  Downloads are staged; the
@@ -776,26 +931,12 @@ static int run_repeat(rk_workspace *ws, const rk_binding *inputs,
     for (uint32_t i = 0; i < ws->plan->nactions; i++) {
         const rk_action_desc *a = &ws->plan->actions[i];
         if (a->kind == RK_ACTION_UPLOAD) {
-            const rk_value_desc *v = rk_plan_value(ws->plan, a->source_binding);
-            if (!v) {
-                rk_diag_set(diag, RK_E_SCHEMA, "run", "upload binding missing",
-                            "", a->id, 0);
-                return RK_E_SCHEMA;
-            }
-            if (v->role == RK_ROLE_CONSTANT) continue; /* uploaded once at create */
-            const rk_binding *b = find_binding(inputs, ninputs, a->source_binding);
-            if (!b) {
-                rk_diag_set(diag, RK_E_SHAPE, "run",
-                            "input binding is absent or duplicated", "", a->id, 0);
-                return RK_E_SHAPE;
-            }
-            uint64_t bytes = 0;
-            double u0 = now_us();
-            int native = upload_action(ws, a, b, &bytes, diag);
-            st->pack_us += now_us() - u0;
+            uint32_t end = i + 1u;
+            while (end < ws->plan->nactions &&
+                   ws->plan->actions[end].kind == RK_ACTION_UPLOAD) end++;
+            int native = run_upload_run(ws, i, end, inputs, ninputs, st, diag);
             if (native) return native;
-            st->upload_calls++;
-            st->upload_bytes += bytes;
+            i = end - 1u;
             continue;
         }
         if (a->kind == RK_ACTION_NPU_TASK) {

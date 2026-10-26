@@ -193,6 +193,12 @@ static void dump_layout(FILE *out) {
     RK_DUMP_FIELD(rk_run_attribution, alloc_us);
     RK_DUMP_FIELD(rk_run_attribution, total_us);
     RK_DUMP_FIELD(rk_run_attribution, clock_us);
+    RK_DUMP_FIELD(rk_run_attribution, pack_prep_us);
+    RK_DUMP_FIELD(rk_run_attribution, pack_clear_us);
+    RK_DUMP_FIELD(rk_run_attribution, pack_layout_us);
+    RK_DUMP_FIELD(rk_run_attribution, pack_fini_us);
+    RK_DUMP_FIELD(rk_run_attribution, pack_prep_calls);
+    RK_DUMP_FIELD(rk_run_attribution, pack_fini_calls);
     /* Not a ctypes mirror: the emission array size that the Host requirement
      * formula must use.  Python pins its own constant against this value. */
     printf("ABI_CONST %s %zu\n", "co_program", sizeof(co_program));
@@ -241,7 +247,8 @@ int main(void) {
     EXPECT(offsetof(rk_run_report, pack_us) == 56u);
     EXPECT(offsetof(rk_run_report, output_sync_us) == 80u);
     /* The extended declarations must be self-describing and non-empty. */
-    EXPECT(RK_RUN_ATTRIBUTION_V1_SIZE == sizeof(rk_run_attribution));
+    EXPECT(RK_RUN_ATTRIBUTION_V1_SIZE < sizeof(rk_run_attribution));
+    EXPECT(RK_RUN_ATTRIBUTION_V2_SIZE == sizeof(rk_run_attribution));
     EXPECT(RK_GROUP_REPORT_V1_SIZE == sizeof(rk_group_report));
     EXPECT(RK_RUN_ATTRIBUTION_V1_SIZE > sizeof(rk_run_report));
     EXPECT(RK_SCHEMA_VERSION == 2u);

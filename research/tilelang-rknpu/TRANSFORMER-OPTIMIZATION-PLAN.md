@@ -10,6 +10,7 @@
 | C | [OPTIMIZATION-RESULTS-2.md](OPTIMIZATION-RESULTS-2.md) | 默认 packed gate/up + Host FP32 SwiGLU；device FFN 为独立数值政策的可选路径 |
 | B2 产品接线与复验 | [OPTIMIZATION-RESULTS-2.md](OPTIMIZATION-RESULTS-2.md) | packed 默认 FFN 上的 QK/PV shared group，separate/B1/chain_shared 对照及冻结政策复放 |
 | D（RMSNorm 部分） | [OPTIMIZATION-RESULTS-3.md](OPTIMIZATION-RESULTS-3.md) | 现有 RKPlan 无合法行归约/rsqrt 能力；`co_row_ops` 复用更慢；residual+RMSNorm Host 融合逐位等价但无实测收益，默认不变 |
+| QK/PV 上传同步收口 | [OPTIMIZATION-RESULTS-4.md](OPTIMIZATION-RESULTS-4.md) | shared group 同 BO 连续切片合并为一次 prep/fini；prep/fini calls 134→10 (b8)，默认 coalesced，保留逐切片开关 |
 
 完整模型里程碑已独立关闭，见 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)。候选方案本身不构成实施授权、能力声明或验收通过。新一轮工作按具体任务推进，不由本文的历史“下一步”措辞自动启动。
 

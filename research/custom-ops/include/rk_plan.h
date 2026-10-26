@@ -324,10 +324,21 @@ typedef struct rk_run_attribution {
     double alloc_us;         /* per-call Host scratch allocation/free */
     double total_us;         /* whole C-side dwell of the entry point */
     double clock_us;         /* cost of the timing probes themselves */
+    /* Optional sub-breakdowns of pack_us.  They are not additive with pack_us
+     * (pack_us already contains them); they exist to separate provider sync
+     * calls from CPU clear/layout work.  Older callers that declare the V1
+     * size simply do not receive these fields. */
+    double pack_prep_us;     /* rocket_bo_prep calls in upload actions */
+    double pack_clear_us;    /* destination-tile memset in upload actions */
+    double pack_layout_us;   /* source->destination packing loops */
+    double pack_fini_us;     /* rocket_bo_fini calls in upload actions */
+    uint64_t pack_prep_calls;
+    uint64_t pack_fini_calls;
 } rk_run_attribution;
 
 #define RK_RUN_ATTRIBUTION_V1_SIZE \
     ((uint32_t)(offsetof(rk_run_attribution, clock_us) + sizeof(double)))
+#define RK_RUN_ATTRIBUTION_V2_SIZE ((uint32_t)sizeof(rk_run_attribution))
 
 /* Static-repeat group report.  ``nrepeat`` independent binding sets execute
  * inside one native call.  Submission count is *not* reduced here: every repeat

@@ -48,6 +48,8 @@ static unsigned mock_corrupt_guard_at;
 static unsigned mock_delay_us;
 static unsigned mock_prep_count;
 static unsigned mock_fail_prep_at;
+static unsigned mock_fini_count;
+static unsigned mock_fail_fini_at;
 #define MOCK_CONTEXT_FDS 4096
 static atomic_int mock_context_faulted[MOCK_CONTEXT_FDS];
 static int mock_live_bos;
@@ -65,6 +67,8 @@ void rk_mock_corrupt_guard_at(unsigned exec_index) {
 void rk_mock_delay_us(unsigned us) { mock_delay_us = us; }
 void rk_mock_fail_prep_at(unsigned index) { mock_fail_prep_at = index; }
 unsigned rk_mock_prep_calls(void) { return mock_prep_count; }
+void rk_mock_fail_fini_at(unsigned index) { mock_fail_fini_at = index; }
+unsigned rk_mock_fini_calls(void) { return mock_fini_count; }
 void rk_mock_reset_tags(void) {
     for (unsigned i = 0; i < mock_tag_count; i++) {
         free(mock_tags[i].snapshot);
@@ -95,6 +99,8 @@ void rk_mock_reset(void) {
     mock_delay_us = 0;
     mock_prep_count = 0;
     mock_fail_prep_at = 0;
+    mock_fini_count = 0;
+    mock_fail_fini_at = 0;
     for (unsigned i = 0; i < MOCK_CONTEXT_FDS; i++)
         atomic_store_explicit(&mock_context_faulted[i], 0,
                               memory_order_relaxed);
@@ -203,7 +209,13 @@ int __wrap_rocket_bo_prep(int fd, rocket_bo *bo, int dir, uint64_t ns) {
         return ROCKET_E_DEVICE;
     return 0;
 }
-int __wrap_rocket_bo_fini(int fd, rocket_bo *bo) { (void)fd; (void)bo; return 0; }
+int __wrap_rocket_bo_fini(int fd, rocket_bo *bo) {
+    (void)fd; (void)bo;
+    mock_fini_count++;
+    if (mock_fail_fini_at && mock_fini_count == mock_fail_fini_at)
+        return ROCKET_E_DEVICE;
+    return 0;
+}
 int __wrap_rocket_batched_submit_supported(void) { return 1; }
 
 /* Private side table: the mock remembers which template produced each emitted

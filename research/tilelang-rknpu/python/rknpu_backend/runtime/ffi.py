@@ -263,6 +263,12 @@ class RKAttribution(ctypes.Structure):
         ("guard_us", ctypes.c_double), ("publish_us", ctypes.c_double),
         ("alloc_us", ctypes.c_double), ("total_us", ctypes.c_double),
         ("clock_us", ctypes.c_double),
+        ("pack_prep_us", ctypes.c_double),
+        ("pack_clear_us", ctypes.c_double),
+        ("pack_layout_us", ctypes.c_double),
+        ("pack_fini_us", ctypes.c_double),
+        ("pack_prep_calls", ctypes.c_uint64),
+        ("pack_fini_calls", ctypes.c_uint64),
     ]
 
 
@@ -562,6 +568,8 @@ class LibRKPlan:
         "rk_mock_delay_us": (None, (ctypes.c_uint,)),
         "rk_mock_fail_prep_at": (None, (ctypes.c_uint,)),
         "rk_mock_prep_calls": (ctypes.c_uint, ()),
+        "rk_mock_fail_fini_at": (None, (ctypes.c_uint,)),
+        "rk_mock_fini_calls": (ctypes.c_uint, ()),
         "rk_mock_reset_tags": (None, ()),
         "rk_mock_context_fault": (None, (ctypes.c_uint, ctypes.c_uint)),
         "rk_mock_context_faulted": (ctypes.c_int, (ctypes.c_int,)),
