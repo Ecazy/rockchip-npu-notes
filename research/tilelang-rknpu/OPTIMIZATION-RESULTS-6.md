@@ -45,6 +45,46 @@ ABI 字段。因此**撤回实现**，默认继续使用逐切片下载路径。
 QK/PV shared group 每次分别有 96 个 binding（64 输入 + 32 输出），两次
 group 加上其他 plan，使这部分重复分配成为可独立消除的对象。
 
+### 1.3 residual + reshape + mean Host 尾部融合（未采用，已撤回）
+
+新增候选将 `residual_ffn + reshape_tokens + mean_pool` 合并为
+`tensor.add_reshape_mean_axis.v1`，保留 FP16 residual 收窄、reshape view 和
+FP32 token mean。单独 campaign `results/20261026T110224Z-tail/`：
+
+| profile | split | fused | pooled |
+|---|---:|---:|---:|
+| b8 | 9.970 ms | 9.793 ms | 1.018× |
+| b1 | 3.390 ms | 3.297 ms | 1.028× |
+
+但在三臂累计 campaign `results/20261026T110622Z-cumulative/` 中：
+
+| profile | baseline | binding reuse | binding + tail fuse |
+|---|---:|---:|---:|
+| b8 | 11.679 ms | **9.932 ms** | 9.966 ms |
+| b1 | 3.680 ms | 3.380 ms | **3.310 ms** |
+
+b8 的尾部融合相对只做 binding reuse 反而慢约 0.3%，与单独 campaign 的方向
+矛盾；因此收益不够稳健。实现已撤回，默认保留 `residual_ffn -> reshape ->
+mean_pool` 三步 Host action，不保留额外 action/清单分支。
+
+### 1.4 复用 ctypes binding 数组（未采用，已撤回）
+
+在 descriptor 复用基础上进一步缓存 `RKBinding` ctypes 数组，避免每次把
+binding 复制进新数组。三臂同 campaign `results/20261026T111038Z-pybind/`：
+
+| profile | control | descriptors | prepared arrays |
+|---|---:|---:|---:|
+| b8 | 11.463 ms | **9.856 ms** | 9.884 ms |
+| b1 | 3.519 ms | 3.292 ms | **3.205 ms** |
+
+- descriptors 相对 control：b8 1.163×、b1 1.069×；
+- prepared arrays 相对 control：b8 1.160×、b1 1.098×；
+- prepared 相对 descriptors：b8 基本持平/略慢，b1 有约 2.7% 改善。
+
+由于 b8 没有端到端收益，而新增 prepared-array 分支会扩大 Python/FFI
+生命周期与缓存状态面，因此**撤回该层改动**，只保留已验证的 descriptor 复用；
+默认仍使用原 binding array 构造/复制路径。
+
 ## 2. 实现
 
 `PlanCall.__init__(..., reuse_bindings=True)`：

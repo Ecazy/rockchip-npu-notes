@@ -21,6 +21,15 @@ Sixth optimisation package; report:
 - Download-sync coalescing was measured in
   `results/20261026T095856Z-download/` but showed no stable end-to-end win and
   was reverted; per-slice download remains the default.
+- Residual+reshape+mean tail fusion was measured in
+  `results/20261026T110224Z-tail/` and `results/20261026T110622Z-cumulative/`;
+  b8 contradicted the isolated gain against binding-only, so it was reverted.
+  Default keeps the three original Host actions.
+- `results/20261026T111038Z-pybind/`: three-arm ctypes comparison
+  (control / descriptors / prepared arrays).  Descriptors are the adopted
+  improvement (b8 1.163x, b1 1.069x); caller-owned prepared arrays were neutral
+  on b8 and only helped b1, so that layer was reverted to avoid maintaining a
+  second cache/lifetime path.
 - Host verification for this state: 265 pytest, 30/30 ctest.
 
 ## Upload-policy contract and layout checkpoint (2026-10-26, v11)
