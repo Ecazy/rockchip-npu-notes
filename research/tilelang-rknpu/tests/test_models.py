@@ -627,6 +627,99 @@ class CompleteModelTests(unittest.TestCase):
                 load_hybrid_program(path, plans_dir=PLANS)
             self.assertIn("unregistered Host action", ctx.exception.diagnostics[0].message)
 
+    def test_plan_call_descriptor_mutation_is_busy_atomic(self):
+        """Concurrent users of one PlanCall must not overwrite cached pointers.
+
+        The second caller must fail with the same BUSY code as the C workspace
+        gate, and the first caller's descriptors must remain intact until its
+        synchronous call returns.  Both the single and flat group caches are
+        covered.
+        """
+        import threading
+        from rknpu_backend import load_plan
+        from rknpu_backend.errors import BackendError, RK_E_BUSY
+        from rknpu_backend.models import PlanCall
+
+        plan = load_plan(str(PLANS / "tiny_vit_b1_qk.rkplan.json"))
+        specs_in = [b for b in plan.bindings if b.role == "input"]
+        specs_out = [b for b in plan.bindings if b.role == "output"]
+
+        def arrays(value):
+            return ([np.full(tuple(b.shape), value, dtype=np.float16)
+                     for b in specs_in],
+                    [np.full(tuple(b.shape), 123.0, dtype=np.float16)
+                     for b in specs_out])
+
+        def run_interleaved(method_name, runner_name, group):
+            call = PlanCall(self.lib, plan, {}, fd=0)
+            try:
+                a_in, a_out = arrays(0.25)
+                b_in, b_out = arrays(0.75)
+                entered = threading.Event()
+                release = threading.Event()
+                seen = {}
+                original = getattr(call.workspace, method_name)
+
+                def blocked(*args):
+                    seen["input"] = int(args[0][0].data)
+                    entered.set()
+                    self.assertTrue(release.wait(5.0))
+                    return original(*args)
+
+                setattr(call.workspace, method_name, blocked)
+                result = {}
+
+                def first():
+                    try:
+                        if group:
+                            result["value"] = call.run_group_into(
+                                [a_in, a_in], [[a_out[0]], [a_out[0]]])
+                        else:
+                            result["value"] = call.run_into(a_in, a_out)
+                    except BaseException as exc:  # pragma: no cover - asserted
+                        result["exception"] = exc
+
+                thread = threading.Thread(target=first)
+                thread.start()
+                self.assertTrue(entered.wait(5.0))
+                cache = (call._group_cache[1] if group
+                         else call._input_bind_cache)
+                before = int(cache[0].data)
+                self.assertEqual(before, seen["input"])
+                with self.assertRaises(BackendError) as ctx:
+                    # B uses different pointers; this call must not touch the
+                    # cache while the first synchronous call is paused.
+                    if group:
+                        call.run_group_into([b_in, b_in],
+                                            [[b_out[0]], [b_out[0]]])
+                    else:
+                        call.run_into(b_in, b_out)
+                self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_BUSY)
+                self.assertEqual(int(cache[0].data), before)
+                self.assertTrue(all(np.all(x == np.float16(123.0))
+                                    for x in b_out))
+                release.set()
+                thread.join(5.0)
+                self.assertFalse(thread.is_alive())
+                self.assertNotIn("exception", result)
+                self.assertTrue(any(not np.all(x == np.float16(123.0))
+                                    for x in a_out))
+
+                # After the first call releases the lock, B must rebind and
+                # write its own outputs.
+                if group:
+                    call.run_group_into([b_in, b_in],
+                                        [[b_out[0]], [b_out[0]]])
+                else:
+                    call.run_into(b_in, b_out)
+                self.assertTrue(any(not np.all(x == np.float16(123.0))
+                                    for x in b_out))
+            finally:
+                call.close()
+
+        run_interleaved("run_attributed", "run_into", False)
+        run_interleaved("run_group", "run_group_into", True)
+
     def test_plan_call_creation_failure_cleans_c_plan(self):
         from rknpu_backend.models import PlanCall
         plan = self._plan("tiny_vit_b1_qk")  # no constants
@@ -802,7 +895,7 @@ class CompleteModelTests(unittest.TestCase):
         loader_spec.loader.exec_module(verifier)
         for spec_name, result_name in (
                 ("numeric_acceptance_packed.json",
-                 "20261026T100356Z-numeric-replay"),
+                 "20261026T105527Z-numeric-replay"),
                 ("numeric_acceptance_packed.json",
                  "20261026T091612Z-numeric-replay"),
                 ("numeric_acceptance_device_ffn.json",

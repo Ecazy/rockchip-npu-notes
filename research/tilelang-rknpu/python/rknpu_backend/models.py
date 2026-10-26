@@ -9,6 +9,7 @@ softmax, layout bridge and mean pooling are explicit Host work.
 from __future__ import annotations
 
 import ctypes
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -16,7 +17,8 @@ from typing import Any
 
 import numpy as np
 
-from .errors import RK_E_INVALID, RK_E_SHAPE, RK_E_UNSUPPORTED, reject
+from .errors import (RK_E_BUSY, RK_E_INVALID, RK_E_SHAPE, RK_E_UNSUPPORTED,
+                     reject)
 from .plan import Plan
 from .runtime.ffi import (RK_ABI_VERSION, RK_DTYPE_F16, RKBinding, CWorkspace,
                           LibRKPlan, make_binding, validate_numpy_binding)
@@ -434,6 +436,16 @@ class PlanCall:
         self.outputs = [b for b in plan.bindings if b.role == "output"]
         self._input_bind_cache = [self._binding_slot(b) for b in self.inputs]
         self._output_bind_cache = [self._binding_slot(b) for b in self.outputs]
+        # Shared descriptor arrays are protected from the first pointer update
+        # through the synchronous C call.  Non-blocking acquisition preserves
+        # the established BUSY result for concurrent users of one PlanCall.
+        self._descriptor_lock = threading.Lock()
+
+    def _lock_descriptors(self) -> None:
+        if not self._descriptor_lock.acquire(blocking=False):
+            reject(RK_E_BUSY,
+                   "PlanCall is busy; concurrent use requires separate instances",
+                   stage="model")
 
     @staticmethod
     def _binding_slot(spec: Any) -> RKBinding:
@@ -501,6 +513,14 @@ class PlanCall:
         if self.workspace is None:
             reject(RK_E_INVALID, "model plan workspace is already closed",
                    stage="model")
+        self._lock_descriptors()
+        try:
+            return self._run_into_locked(inputs, outputs)
+        finally:
+            self._descriptor_lock.release()
+
+    def _run_into_locked(self, inputs: list[np.ndarray],
+                         outputs: list[np.ndarray]) -> tuple[Any, float]:
         in_arrays = self._prepare_inputs(inputs)
         out_arrays = self._prepare_outputs(outputs)
         if self.reuse_bindings:
@@ -564,6 +584,15 @@ class PlanCall:
         if self.workspace is None:
             reject(RK_E_INVALID, "model plan workspace is already closed",
                    stage="model")
+        self._lock_descriptors()
+        try:
+            return self._run_group_into_locked(inputs_list, outputs_list)
+        finally:
+            self._descriptor_lock.release()
+
+    def _run_group_into_locked(self, inputs_list: list[list[np.ndarray]],
+                               outputs_list: list[list[np.ndarray]]
+                               ) -> tuple[Any, float]:
         nrepeat = len(inputs_list)
         if nrepeat < 1 or nrepeat != len(outputs_list):
             reject(RK_E_SHAPE, "group entry needs matching, non-empty input and "

@@ -10,16 +10,18 @@ payloads needed for independent numerical replay.
 Sixth optimisation package; report:
 [OPTIMIZATION-RESULTS-6.md](../OPTIMIZATION-RESULTS-6.md).
 
-- `results/20261026T100309Z-pybind/`: ctypes binding descriptor reuse vs
+- `results/20261026T105439Z-pybind/`: ctypes binding descriptor reuse vs
   per-call `make_binding`, 4 rounds x 32 runs, same payload/source.
-  b8 11.565 -> **10.081 ms** (1.147x), b1 3.648 -> **3.312 ms** (1.101x);
+  b8 11.579 -> **10.043 ms** (1.153x), b1 3.785 -> **3.356 ms** (1.128x);
   four-round direction consistent; structure and transfer bytes unchanged.
-- `results/20261026T100356Z-numeric-replay/`: packed frozen replay,
+  The descriptor cache is now protected through the synchronous call by a
+  non-blocking BUSY-preserving lock, covering single and flat group caches.
+- `results/20261026T105527Z-numeric-replay/`: packed frozen replay,
   **PASS / 0 problems**, no recalibration.
 - Download-sync coalescing was measured in
   `results/20261026T095856Z-download/` but showed no stable end-to-end win and
   was reverted; per-slice download remains the default.
-- Host verification for this state: 264 pytest, 30/30 ctest.
+- Host verification for this state: 265 pytest, 30/30 ctest.
 
 ## Upload-policy contract and layout checkpoint (2026-10-26, v11)
 
