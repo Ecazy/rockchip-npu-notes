@@ -1,0 +1,22 @@
+=== tiny_vit_b8_qk ===
+  separate  median    7.203 ms  per task 225.104 us  tasks 1 submits 1  up 2 down 1  create 1.058 ms
+            submit_wait   0.069 ms  pack  0.013  download  0.007  guard  0.032  total   0.134
+  group     median    2.240 ms  per task  69.990 us  tasks 32 submits 32  up 64 down 32  create 1.028 ms
+            submit_wait   0.459 ms  pack  0.337  download  0.167  guard  0.030  total   1.273
+  chain     median    3.378 ms  per task 105.573 us  tasks 32 submits 1  up 64 down 32  create 11.781 ms
+            submit_wait   0.243 ms  pack  0.277  download  0.129  guard  0.853  total   1.744
+  single  device 118976 B  host 84220 B  BOs 3  tasks 1  submits 1
+  group   device 3807232 B  host 647552 B  BOs 96  tasks 32  submits 1
+  bitwise equal to separate: {'separate': True, 'group': True, 'chain': True}
+wrote /mnt/ssd/workspace/tl-b2bench/out-tiny_vit_b8_qk.json
+=== tiny_vit_b8_pv ===
+  separate  median    5.473 ms  per task 171.033 us  tasks 1 submits 1  up 2 down 1  create 0.953 ms
+            submit_wait   0.016 ms  pack  0.010  download  0.004  guard  0.028  total   0.067
+  group     median    4.132 ms  per task 129.134 us  tasks 32 submits 32  up 64 down 32  create 0.927 ms
+            submit_wait   2.943 ms  pack  0.395  download  0.225  guard  0.032  total   3.973
+  chain     median    3.316 ms  per task 103.627 us  tasks 32 submits 1  up 64 down 32  create 12.230 ms
+            submit_wait   0.246 ms  pack  0.272  download  0.127  guard  0.853  total   1.737
+  single  device 118976 B  host 84220 B  BOs 3  tasks 1  submits 1
+  group   device 3807232 B  host 647552 B  BOs 96  tasks 32  submits 1
+  bitwise equal to separate: {'separate': True, 'group': True, 'chain': True}
+wrote /mnt/ssd/workspace/tl-b2bench/out-tiny_vit_b8_pv.json
