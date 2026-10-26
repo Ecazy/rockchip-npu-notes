@@ -43,8 +43,9 @@ def ref(name: str, index=()) -> dict:
 
 def host_node(node_id: str, action: str, inputs: dict, outputs: dict,
               *, deps=(), attrs=None, phase="execution",
-              numeric=None, depends_nodes=None) -> dict:
-    return {
+              numeric=None, depends_nodes=None,
+              capture_only=None) -> dict:
+    node = {
         "id": node_id, "kind": "host_action", "action": action,
         "action_version": 1, "inputs": inputs, "outputs": outputs,
         "attrs": attrs or {}, "depends_on": list(depends_nodes or deps),
@@ -55,12 +56,15 @@ def host_node(node_id: str, action: str, inputs: dict, outputs: dict,
         "bridge": {"kind": "host_tensor_materialization",
                    "accounting": "tensor_bytes"},
     }
+    if capture_only is not None:
+        node["capture_only"] = bool(capture_only)
+    return node
 
 
 def plan_node(node_id: str, plan_key: str, inputs: dict, outputs: dict,
               constants: dict, *, deps, numeric, repeat=None,
               repeat_submit=None, group_plan=None,
-              capture_only=None) -> dict:
+              group_layout=None, capture_only=None) -> dict:
     node = {
         "id": node_id, "kind": "rkplan", "plan": plan_key,
         "inputs": inputs, "outputs": outputs, "constants": constants,
@@ -73,6 +77,8 @@ def plan_node(node_id: str, plan_key: str, inputs: dict, outputs: dict,
         node["repeat_submit"] = repeat_submit
     if group_plan is not None:
         node["group_plan"] = group_plan
+    if group_layout is not None:
+        node["group_layout"] = group_layout
     if capture_only is not None:
         node["capture_only"] = bool(capture_only)
     return node
@@ -197,11 +203,14 @@ def mlp_manifest(batch: int, compiled: dict, weights: dict,
 def vit_manifest(batch: int, compiled: dict, weights: dict,
                  weights_sha: str, profile_hash: str, *,
                  ffn_mode: str = "packed",
-                 rmsnorm_mode: str = "host") -> dict:
+                 rmsnorm_mode: str = "host",
+                 attn_layout: str = "materialized") -> dict:
     if ffn_mode not in {"device", "packed", "host"}:
         raise SystemExit(f"unknown FFN mode {ffn_mode!r}")
     if rmsnorm_mode not in {"host", "fused"}:
         raise SystemExit(f"unknown RMSNorm mode {rmsnorm_mode!r}")
+    if attn_layout not in {"materialized", "qkv"}:
+        raise SystemExit(f"unknown attention input layout {attn_layout!r}")
     b, t, d, h, hd = batch, 16, 64, 4, 16
     m = b * t
     tensors = [
@@ -267,12 +276,20 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         "classifier": plan_entry(compiled, f"tiny_vit_b{batch}_classifier"),
         "attn_matmul": plan_entry(compiled, f"tiny_vit_b{batch}_qk",
                                   dynamic_operand="B"),
+    }
+    if attn_layout == "materialized":
         # Pre-expanded static-repeat group (batch * heads independent tasks in one
         # chained submit).  Selected explicitly by the QK/PV nodes below; the
         # per-repeat plan above stays for the separate and B1 control paths.
-        "attn_matmul_group": plan_entry(compiled,
-                                        f"tiny_vit_b{batch}_qk_group"),
-    }
+        plans["attn_matmul_group"] = plan_entry(
+            compiled, f"tiny_vit_b{batch}_qk_group")
+    else:
+        plans.update({
+            "attn_qk_qkv_group": plan_entry(
+                compiled, f"tiny_vit_b{batch}_qk_qkv_group"),
+            "attn_pv_qkv_group": plan_entry(
+                compiled, f"tiny_vit_b{batch}_pv_qkv_group"),
+        })
     if ffn_mode == "device":
         plans.update({
             "ffn": plan_entry(compiled, f"tiny_vit_b{batch}_ffn"),
@@ -426,6 +443,101 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                       depends_nodes=["residual_attention"],
                       attrs={"eps": 1e-6}, numeric=host_norm),
         ]
+    repeat_attn = [
+        {"name": "bi", "extent": b, "axis": "batch"},
+        {"name": "hi", "extent": h, "axis": "head"},
+    ]
+    if attn_layout == "materialized":
+        split_nodes = [host_node(
+            "split_heads", "tiny_vit.qkv_split_heads.v1",
+            {"qkv": ref("qkv")},
+            {"q": ref("q_heads"), "k_t": ref("k_t_heads"),
+             "v": ref("v_heads")}, depends_nodes=["qkv"],
+            attrs={"batch": b, "tokens": t, "heads": h, "head_dim": hd},
+            numeric=layout_numeric)]
+        qk_node = plan_node(
+            "qk", "attn_matmul",
+            {"A": ref("q_heads", ("bi", "hi")),
+             "B": ref("k_t_heads", ("bi", "hi"))},
+            {"Y": ref("scores_heads", ("bi", "hi"))}, {},
+            deps=["split_heads"], numeric=dynamic_numeric,
+            repeat=repeat_attn, repeat_submit="shared_group",
+            group_plan="attn_matmul_group")
+        pv_node = plan_node(
+            "pv", "attn_matmul",
+            {"A": ref("probs_heads", ("bi", "hi")),
+             "B": ref("v_heads", ("bi", "hi"))},
+            {"Y": ref("attn_heads", ("bi", "hi"))}, {},
+            deps=["softmax", "split_heads"], numeric=dynamic_numeric,
+            repeat=repeat_attn, repeat_submit="shared_group",
+            group_plan="attn_matmul_group")
+    else:
+        # The production graph consumes QKV directly.  q/k/v are materialised
+        # only for capture diagnostics, after the QKV plan and before QK.
+        split_nodes = [host_node(
+            "split_heads", "tiny_vit.qkv_split_heads.v1",
+            {"qkv": ref("qkv")},
+            {"q": ref("q_heads"), "k_t": ref("k_t_heads"),
+             "v": ref("v_heads")}, depends_nodes=["qkv"],
+            attrs={"batch": b, "tokens": t, "heads": h, "head_dim": hd},
+            numeric=layout_numeric, capture_only=True)]
+        qk_layout = {
+            "version": 1,
+            "inputs": {
+                "A": {"tensor": "qkv",
+                      "shape": [16, 192], "axes": ["batch_token", "qkv"],
+                      "row_slice": {"batch_axis": "bi", "row_stride": 16,
+                                    "row_extent": 16},
+                      "transpose": False,
+                      "slice": {"head_axis": "hi", "column_base": 0,
+                                "column_stride": 16, "column_extent": 16}},
+                "B": {"tensor": "qkv",
+                      "shape": [16, 192], "axes": ["batch_token", "qkv"],
+                      "row_slice": {"batch_axis": "bi", "row_stride": 16,
+                                    "row_extent": 16},
+                      "transpose": False,
+                      "slice": {"head_axis": "hi", "column_base": 64,
+                                "column_stride": 16, "column_extent": 16}},
+            },
+            "outputs": {
+                "Y": {"tensor": "scores_heads", "index": ["bi", "hi"],
+                      "shape": [16, 16], "axes": ["query", "key"]},
+            },
+        }
+        qk_node = plan_node(
+            "qk", "attn_matmul",
+            {"A": ref("qkv"), "B": ref("qkv")},
+            {"Y": ref("scores_heads", ("bi", "hi"))}, {},
+            deps=["qkv"], numeric=dynamic_numeric, repeat=repeat_attn,
+            repeat_submit="mapped_group",
+            group_plan="attn_qk_qkv_group", group_layout=qk_layout)
+        pv_layout = {
+            "version": 1,
+            "inputs": {
+                "A": {"tensor": "probs_heads", "index": ["bi", "hi"],
+                      "shape": [16, 16], "axes": ["query", "key"],
+                      "transpose": False},
+                "B": {"tensor": "qkv",
+                      "shape": [16, 192], "axes": ["batch_token", "qkv"],
+                      "row_slice": {"batch_axis": "bi", "row_stride": 16,
+                                    "row_extent": 16},
+                      "transpose": True,
+                      "slice": {"head_axis": "hi", "column_base": 128,
+                                "column_stride": 16, "column_extent": 16}},
+            },
+            "outputs": {
+                "Y": {"tensor": "attn_heads", "index": ["bi", "hi"],
+                      "shape": [16, 16], "axes": ["query", "d"]},
+            },
+        }
+        pv_node = plan_node(
+            "pv", "attn_matmul",
+            {"A": ref("probs_heads", ("bi", "hi")),
+             "B": ref("qkv")},
+            {"Y": ref("attn_heads", ("bi", "hi"))}, {},
+            deps=["softmax", "qkv"], numeric=dynamic_numeric,
+            repeat=repeat_attn, repeat_submit="mapped_group",
+            group_plan="attn_pv_qkv_group", group_layout=pv_layout)
     nodes = [
         host_node("patchify", "mnist.patchify_norm.v1",
                   {"raw": ref("raw")}, {"patches": ref("patches")},
@@ -459,21 +571,8 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                   weight_constants(qkv_plan, {
                       "B": {"kind": "weight", "name": "qkv_w"}}),
                   deps=["rmsnorm1"], numeric=plan_numeric),
-        host_node("split_heads", "tiny_vit.qkv_split_heads.v1",
-                  {"qkv": ref("qkv")},
-                  {"q": ref("q_heads"), "k_t": ref("k_t_heads"),
-                   "v": ref("v_heads")}, depends_nodes=["qkv"],
-                  attrs={"batch": b, "tokens": t, "heads": h,
-                         "head_dim": hd}, numeric=layout_numeric),
-        plan_node("qk", "attn_matmul",
-                  {"A": ref("q_heads", ("bi", "hi")),
-                   "B": ref("k_t_heads", ("bi", "hi"))},
-                  {"Y": ref("scores_heads", ("bi", "hi"))}, {},
-                  deps=["split_heads"], numeric=dynamic_numeric,
-                  repeat=[{"name": "bi", "extent": b, "axis": "batch"},
-                          {"name": "hi", "extent": h, "axis": "head"}],
-                  repeat_submit="shared_group",
-                  group_plan="attn_matmul_group"),
+        *split_nodes,
+        qk_node,
         host_node("softmax", "attention.scaled_softmax.v1",
                   {"scores": ref("scores_heads")}, {"y": ref("probs_heads")},
                   depends_nodes=["qk"], attrs={"scale": 0.25, "axis": -1},
@@ -481,15 +580,7 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                            "writeback": "float16",
                            "scale": 0.25,
                            "semantics": "stable_max_subtract_exp_normalize_float32_then_float16"}),
-        plan_node("pv", "attn_matmul",
-                  {"A": ref("probs_heads", ("bi", "hi")),
-                   "B": ref("v_heads", ("bi", "hi"))},
-                  {"Y": ref("attn_heads", ("bi", "hi"))}, {},
-                  deps=["softmax", "split_heads"], numeric=dynamic_numeric,
-                  repeat=[{"name": "bi", "extent": b, "axis": "batch"},
-                          {"name": "hi", "extent": h, "axis": "head"}],
-                  repeat_submit="shared_group",
-                  group_plan="attn_matmul_group"),
+        pv_node,
         host_node("merge_heads", "tiny_vit.merge_heads.v1",
                   {"heads": ref("attn_heads")}, {"y": ref("attn_merged")},
                   depends_nodes=["pv"],
@@ -546,11 +637,15 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
     return {
         "schema_version": HYBRID_SCHEMA_VERSION, "kind": "rkhybrid",
         "name": (f"tiny_vit_b{batch}" if
-                 (ffn_mode == "packed" and rmsnorm_mode == "host") else
-                 (f"tiny_vit_b{batch}_rmsnorm" if
-                  (ffn_mode == "packed" and rmsnorm_mode == "fused") else
-                  (f"tiny_vit_b{batch}_deviceffn" if ffn_mode == "device"
-                   else f"tiny_vit_b{batch}_hostffn"))),
+                 (ffn_mode == "packed" and rmsnorm_mode == "host" and
+                  attn_layout == "qkv") else
+                 (f"tiny_vit_b{batch}_splitheads" if
+                  (ffn_mode == "packed" and rmsnorm_mode == "host" and
+                   attn_layout == "materialized") else
+                  (f"tiny_vit_b{batch}_rmsnorm" if
+                   (ffn_mode == "packed" and rmsnorm_mode == "fused") else
+                   (f"tiny_vit_b{batch}_deviceffn" if ffn_mode == "device"
+                    else f"tiny_vit_b{batch}_hostffn")))),
         "model": "tiny_vit", "batch": batch,
         "profile_hash": profile_hash,
         "execution_policy": exec_policy, "bridge_policy": bridge_policy,
@@ -592,18 +687,21 @@ def main() -> int:
                               "batch": batch, "sha256": sha256(path)}
         print("wrote", path, flush=True)
     for batch in (1, 8):
-        for mode in ("packed", "device", "host"):
-            suffix = ("" if mode == "packed" else
-                      ("_deviceffn" if mode == "device" else "_hostffn"))
+        for mode, attn, suffix in (
+                ("packed", "qkv", ""),
+                ("packed", "materialized", "_splitheads"),
+                ("device", "materialized", "_deviceffn"),
+                ("host", "materialized", "_hostffn")):
             key = f"tiny_vit_b{batch}{suffix}"
             path = plans_dir / f"{key}.rkhybrid.json"
             data = vit_manifest(batch, compiled, weights["tiny_vit"],
                                 weights_sha["tiny_vit"],
-                                compiled["profile_hash"], ffn_mode=mode)
+                                compiled["profile_hash"], ffn_mode=mode,
+                                attn_layout=attn)
             path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
             written[key] = {"path": path.name, "model": "tiny_vit",
                             "batch": batch, "ffn_mode": mode,
-                            "rmsnorm_mode": "host",
+                            "rmsnorm_mode": "host", "attn_layout": attn,
                             "sha256": sha256(path)}
             print("wrote", path, flush=True)
         # Fused residual+RMSNorm control: same packed FFN, same FP16 residual

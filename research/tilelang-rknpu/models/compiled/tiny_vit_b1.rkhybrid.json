@@ -306,6 +306,7 @@
         "accounting": "tensor_bytes",
         "kind": "host_tensor_materialization"
       },
+      "capture_only": true,
       "depends_on": [
         "qkv"
       ],
@@ -343,24 +344,84 @@
       },
       "constants": {},
       "depends_on": [
-        "split_heads"
+        "qkv"
       ],
-      "group_plan": "attn_matmul_group",
+      "group_layout": {
+        "inputs": {
+          "A": {
+            "axes": [
+              "batch_token",
+              "qkv"
+            ],
+            "row_slice": {
+              "batch_axis": "bi",
+              "row_extent": 16,
+              "row_stride": 16
+            },
+            "shape": [
+              16,
+              192
+            ],
+            "slice": {
+              "column_base": 0,
+              "column_extent": 16,
+              "column_stride": 16,
+              "head_axis": "hi"
+            },
+            "tensor": "qkv",
+            "transpose": false
+          },
+          "B": {
+            "axes": [
+              "batch_token",
+              "qkv"
+            ],
+            "row_slice": {
+              "batch_axis": "bi",
+              "row_extent": 16,
+              "row_stride": 16
+            },
+            "shape": [
+              16,
+              192
+            ],
+            "slice": {
+              "column_base": 64,
+              "column_extent": 16,
+              "column_stride": 16,
+              "head_axis": "hi"
+            },
+            "tensor": "qkv",
+            "transpose": false
+          }
+        },
+        "outputs": {
+          "Y": {
+            "axes": [
+              "query",
+              "key"
+            ],
+            "index": [
+              "bi",
+              "hi"
+            ],
+            "shape": [
+              16,
+              16
+            ],
+            "tensor": "scores_heads"
+          }
+        },
+        "version": 1
+      },
+      "group_plan": "attn_qk_qkv_group",
       "id": "qk",
       "inputs": {
         "A": {
-          "index": [
-            "bi",
-            "hi"
-          ],
-          "tensor": "q_heads"
+          "tensor": "qkv"
         },
         "B": {
-          "index": [
-            "bi",
-            "hi"
-          ],
-          "tensor": "k_t_heads"
+          "tensor": "qkv"
         }
       },
       "kind": "rkplan",
@@ -394,7 +455,7 @@
           "name": "hi"
         }
       ],
-      "repeat_submit": "shared_group"
+      "repeat_submit": "mapped_group"
     },
     {
       "action": "attention.scaled_softmax.v1",
@@ -440,9 +501,70 @@
       "constants": {},
       "depends_on": [
         "softmax",
-        "split_heads"
+        "qkv"
       ],
-      "group_plan": "attn_matmul_group",
+      "group_layout": {
+        "inputs": {
+          "A": {
+            "axes": [
+              "query",
+              "key"
+            ],
+            "index": [
+              "bi",
+              "hi"
+            ],
+            "shape": [
+              16,
+              16
+            ],
+            "tensor": "probs_heads",
+            "transpose": false
+          },
+          "B": {
+            "axes": [
+              "batch_token",
+              "qkv"
+            ],
+            "row_slice": {
+              "batch_axis": "bi",
+              "row_extent": 16,
+              "row_stride": 16
+            },
+            "shape": [
+              16,
+              192
+            ],
+            "slice": {
+              "column_base": 128,
+              "column_extent": 16,
+              "column_stride": 16,
+              "head_axis": "hi"
+            },
+            "tensor": "qkv",
+            "transpose": true
+          }
+        },
+        "outputs": {
+          "Y": {
+            "axes": [
+              "query",
+              "d"
+            ],
+            "index": [
+              "bi",
+              "hi"
+            ],
+            "shape": [
+              16,
+              16
+            ],
+            "tensor": "attn_heads"
+          }
+        },
+        "version": 1
+      },
+      "group_plan": "attn_pv_qkv_group",
       "id": "pv",
       "inputs": {
         "A": {
@@ -453,11 +575,7 @@
           "tensor": "probs_heads"
         },
         "B": {
-          "index": [
-            "bi",
-            "hi"
-          ],
-          "tensor": "v_heads"
+          "tensor": "qkv"
         }
       },
       "kind": "rkplan",
@@ -491,7 +609,7 @@
           "name": "hi"
         }
       ],
-      "repeat_submit": "shared_group"
+      "repeat_submit": "mapped_group"
     },
     {
       "action": "tiny_vit.merge_heads.v1",
@@ -943,50 +1061,56 @@
     "attn_matmul": {
       "dynamic_operand": "B",
       "path": "tiny_vit_b1_qk.rkplan.json",
-      "plan_hash": "19493ca954e8784c4b735735033ad1447d7cc4661d6524047c39bb2b206c395a",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
-    },
-    "attn_matmul_group": {
-      "dynamic_operand": null,
-      "path": "tiny_vit_b1_qk_group.rkplan.json",
-      "plan_hash": "3e1b4f93a31dfd56e9513893e3ad28665584ffe1ebb94ab2fe122968b664a613",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)|repeat_expand:n=4"
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "attn_out": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_attn_out.rkplan.json",
-      "plan_hash": "ade3bae4997f750a2b27e80047a78bfb8565700c5aa93419d4f710eee5249ff3",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
+    },
+    "attn_pv_qkv_group": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b1_pv_qkv_group.rkplan.json",
+      "plan_hash": "24f866289c08d595577f34a2426600cdffcecf4b6faab03fd58c2caa5598dd4e",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)|repeat_expand:n=4"
+    },
+    "attn_qk_qkv_group": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b1_qk_qkv_group.rkplan.json",
+      "plan_hash": "52b9c4dd38611d29b5073a68919733612e705edce23959d1e84198f599e49de6",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)|repeat_expand:n=4"
     },
     "classifier": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_classifier.rkplan.json",
-      "plan_hash": "80a6469535f890542d996acb6a6df27fd4de7cab3ecaadfbb20dc231b0320da5",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "ec780abc31a527f5ce44d2496468e160058aeb6d97197209e5ea8c6b096f48ba",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "down": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_down.rkplan.json",
-      "plan_hash": "418ed9b553a06f7960289cbce9de7a191daa7223cefe65db5bfbdd803c77351f",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "ea43d153c27b4d2896d7dc35ad838510f5e29155e231e732b88420d139871cc3",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "gate_up": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_gate_up.rkplan.json",
-      "plan_hash": "fbd086649d4b8bc281b9559473ebdd1bee87b8a2229f0784126993c32471cc09",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "9f3c55f30c2fdb34e9e78e4b05bb7bf3666d78266db2b61dc3fe6c93cb929477",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "patch": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_patch.rkplan.json",
-      "plan_hash": "ade3bae4997f750a2b27e80047a78bfb8565700c5aa93419d4f710eee5249ff3",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "qkv": {
       "dynamic_operand": null,
       "path": "tiny_vit_b1_qkv.rkplan.json",
-      "plan_hash": "951b9882c83fecbfdad5b3288d7c6117f7930874baf43aa76ec0b8a5dc54456c",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "5f63eaaf615d3e099b28f69c9ad87538c591cb9ee0bfb59d3267cb3658953436",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     }
   },
   "profile_hash": "50fa71281ad979ade1543d5350cd7ac584568fddb57412e39e4d4d9f2a3f2d79",

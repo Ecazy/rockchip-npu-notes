@@ -169,28 +169,41 @@ static int env_flag_enabled(const char *name, int default_on) {
  * authoritative for every other layout/geometry. */
 static int fixed_pack_16x16(const co_tensor *dst, _Float16 *base,
                             const _Float16 *src, uint32_t transpose,
-                            uint32_t stride) {
-    if (stride != 16u || dst->rows != 16u || dst->cols != 16u) return 0;
+                            uint32_t stride, uint32_t col_offset,
+                            uint64_t elements) {
+    if (stride < 16u || col_offset + 16u > stride ||
+        dst->rows != 16u || dst->cols != 16u ||
+        elements < (uint64_t)16u * stride) return 0;
     if (!transpose && dst->layout == CO_CUBE &&
         dst->physical_rows == 16u && dst->physical_cols == 32u &&
         dst->atom == 8u) {
-        /* Two 8-column banks; each source row is contiguous. */
+        /* Two 8-column banks; the selected 16-column window is contiguous. */
         for (unsigned r = 0; r < 16; r++) {
-            memcpy(base + (size_t)r * 8u, src + (size_t)r * 16u,
-                   8u * sizeof(_Float16));
+            const _Float16 *row = src + (size_t)r * stride + col_offset;
+            memcpy(base + (size_t)r * 8u, row, 8u * sizeof(_Float16));
             memcpy(base + 128u + (size_t)r * 8u,
-                   src + (size_t)r * 16u + 8u, 8u * sizeof(_Float16));
+                   row + 8u, 8u * sizeof(_Float16));
         }
         return 1;
     }
-    if (transpose && dst->layout == CO_WEIGHT &&
+    if (dst->layout == CO_WEIGHT &&
         dst->physical_rows == 32u && dst->physical_cols == 32u &&
         dst->atom == 32u) {
-        /* Logical [r,c] -> physical [r, c]; source is [c,r].  The upper
-         * 16 physical rows were already zeroed; padding stays zero. */
-        for (unsigned c = 0; c < 16; c++)
+        if (!transpose) {
+            /* QKV is already [token,depth]; the selected 16-column window
+             * maps directly to the first 16 columns of each weight row. */
             for (unsigned r = 0; r < 16; r++)
-                base[(size_t)r * 32u + c] = src[(size_t)c * 16u + r];
+                memcpy(base + (size_t)r * 32u,
+                       src + (size_t)r * stride + col_offset,
+                       16u * sizeof(_Float16));
+        } else {
+            /* Logical [r,c] -> physical [r,c]; source is [c,r] inside the
+             * explicitly selected column window. */
+            for (unsigned c = 0; c < 16; c++)
+                for (unsigned r = 0; r < 16; r++)
+                    base[(size_t)r * 32u + c] =
+                        src[(size_t)c * stride + col_offset + r];
+        }
         return 1;
     }
     return 0;
@@ -222,10 +235,10 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
     const uint64_t elements = binding->nbytes / 2u;
     double l0 = now_us();
     if (ws->upload_fast_pack && !broadcast_scalar && !broadcast_channel &&
-        a->source_row_offset == 0 && a->source_col_offset == 0 &&
-        elements == 256u &&
+        a->source_row_offset == 0 &&
         fixed_pack_16x16(&dst->tensor, base, src, transpose,
-                         a->source_row_stride)) {
+                         a->source_row_stride, a->source_col_offset,
+                         elements)) {
         if (times) times->layout_us += now_us() - l0;
         if (manage_sync) {
             double f0 = now_us();
@@ -801,6 +814,11 @@ static int validate_repeat_bindings(rk_workspace *ws, const rk_binding *inputs,
                     "", UINT32_MAX, 0);
         return RK_E_SHAPE;
     }
+    /* Exact repeated views of one input buffer (QKV batch blocks reused by
+     * every head, for example) need one finite scan, not one per binding. */
+    const void *finite_data[128];
+    uint64_t finite_bytes[128];
+    uint32_t finite_count = 0;
     for (uint32_t i = 0; i < ws->plan->nvalues; i++) {
         const rk_value_desc *v = &ws->plan->values[i];
         if (v->role != RK_ROLE_INPUT && v->role != RK_ROLE_OUTPUT) continue;
@@ -810,8 +828,19 @@ static int validate_repeat_bindings(rk_workspace *ws, const rk_binding *inputs,
         int rc = binding_matches(v, b, diag, "run");
         if (rc) return rc;
         if (v->role == RK_ROLE_INPUT) {
-            rc = check_finite_binding(b, diag);
-            if (rc) return rc;
+            int seen = 0;
+            for (uint32_t q = 0; q < finite_count; q++)
+                if (finite_data[q] == b->data && finite_bytes[q] == b->nbytes)
+                    { seen = 1; break; }
+            if (!seen) {
+                rc = check_finite_binding(b, diag);
+                if (rc) return rc;
+                if (finite_count < sizeof(finite_data) / sizeof(finite_data[0])) {
+                    finite_data[finite_count] = b->data;
+                    finite_bytes[finite_count] = b->nbytes;
+                    finite_count++;
+                }
+            }
         }
     }
     for (uint32_t i = 0; i < ninputs; i++) {

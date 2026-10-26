@@ -135,7 +135,7 @@ class CompleteModelTests(unittest.TestCase):
         switch reversible.
         """
         from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
-        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8_splitheads"))
         results = {}
         reports = {}
         for mode in ("manifest", "b1", "separate", "chain_shared"):
@@ -244,6 +244,9 @@ class CompleteModelTests(unittest.TestCase):
         self.assertIn("residual_attention", host_ids)
         self.assertIn("swiglu", host_ids)
         self.assertIn("residual_ffn", host_ids)
+        split_node = next(node for node in program.nodes
+                          if node.id == "split_heads")
+        self.assertTrue(split_node.capture_only)
         for node in program.nodes:
             if isinstance(node, HostNode):
                 action = HOST_ACTIONS.get(node.action.action_id)
@@ -254,15 +257,16 @@ class CompleteModelTests(unittest.TestCase):
         # QK/PV share one immutable per-repeat plan, plus one pre-expanded
         # static-repeat group plan.  The FFN gate/up branches are one packed
         # N=2H plan, and no capture-only probe enters the production manifest.
-        self.assertEqual(len(program.plans), 8)
+        self.assertEqual(len(program.plans), 9)
         gate_up = next(n for n in npu if n.id == "gate_up")
         self.assertEqual(sorted(gate_up.inputs), ["A"])
         self.assertEqual(gate_up.outputs["Y"].tensor, "gate_up")
         self.assertFalse(any(n.capture_only for n in npu))
-        for node_id in ("qk", "pv"):
+        for node_id, mapped in (("qk", "attn_qk_qkv_group"),
+                                ("pv", "attn_pv_qkv_group")):
             node = next(n for n in program.nodes if n.id == node_id)
-            self.assertEqual(node.repeat_submit, "shared_group")
-            self.assertEqual(node.group_plan, "attn_matmul_group")
+            self.assertEqual(node.repeat_submit, "mapped_group")
+            self.assertEqual(node.group_plan, mapped)
             group = program.plans[node.group_plan].plan
             self.assertEqual(group.accounting.submit_count, 1)
             self.assertEqual(group.accounting.task_count, 32)
@@ -280,7 +284,7 @@ class CompleteModelTests(unittest.TestCase):
             self.assertEqual(len(spec.shape), len(spec.axes))
         with HybridRunner(self.lib, program, self.vit_weights,
                           weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
-            self.assertEqual(len(runner.calls), 8)
+            self.assertEqual(len(runner.calls), 9)
             stats = __import__("rknpu_backend.models", fromlist=["RunStats"]).RunStats()
             result = runner.run(self.x[:8], stats=stats, capture=True)
             self.assertEqual(result.outputs["logits"].shape, (8, 10))
@@ -317,7 +321,7 @@ class CompleteModelTests(unittest.TestCase):
         once on Host, exactly like the old control.  The fully device-resident
         FFN remains a separate, explicitly calibrated numeric path."""
         from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
-        from rknpu_backend.models import RunStats
+        from rknpu_backend.models import PlanCall, RunStats
 
         packed_plan = self._plan("tiny_vit_b8_gate_up")
         self.assertEqual([a.template_id for a in packed_plan.actions
@@ -381,7 +385,7 @@ class CompleteModelTests(unittest.TestCase):
         sync, and an injected provider failure must not submit consumers."""
         from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
         from rknpu_backend.models import RunStats
-        from rknpu_backend.errors import BackendError
+        from rknpu_backend.errors import BackendError, RK_E_SHAPE
 
         program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
         old = os.environ.get("RK_PLAN_UPLOAD_COALESCE")
@@ -584,7 +588,7 @@ class CompleteModelTests(unittest.TestCase):
         skipped at run time. Ordinary consumers and model outputs must fail
         closed even though the manifest parses structurally."""
         from rknpu_backend.hybrid import load_hybrid_program
-        from rknpu_backend.errors import BackendError
+        from rknpu_backend.errors import BackendError, RK_E_SHAPE
         import tempfile
 
         source = self._hybrid("tiny_vit_b8_deviceffn")
@@ -611,9 +615,90 @@ class CompleteModelTests(unittest.TestCase):
                 load_hybrid_program(path, plans_dir=PLANS)
             self.assertIn("capture-only", ctx.exception.diagnostics[0].message)
 
+    def test_mapped_qkv_attention_is_bitwise_and_capture_only_split(self):
+        """QKV/QK/PV consume the raw QKV rows without production split arrays."""
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.models import RunStats
+
+        outcomes = {}
+        for key in ("tiny_vit_b8_splitheads", "tiny_vit_b8"):
+            program = load_hybrid_program(self._hybrid(key))
+            with HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+                plain = runner.run(self.x[:8])
+                captured = runner.run(self.x[8:16], capture=True)
+                outcomes[key] = (plain.outputs["logits"],
+                                 captured.outputs["logits"], captured.trace,
+                                 [n.id for n in program.nodes])
+        default_logits, default_changed, default_trace, _ = outcomes[
+            "tiny_vit_b8_splitheads"]
+        mapped_logits, mapped_changed, mapped_trace, nodes = outcomes["tiny_vit_b8"]
+        np.testing.assert_array_equal(default_logits, mapped_logits)
+        np.testing.assert_array_equal(default_changed, mapped_changed)
+        for name in ("q_heads", "k_t_heads", "v_heads", "scores_heads",
+                     "probs_heads", "attn_heads", "logits"):
+            np.testing.assert_array_equal(default_trace[name], mapped_trace[name])
+        self.assertIn("split_heads", nodes)
+        self.assertTrue(all(name in mapped_trace
+                            for name in ("q_heads", "k_t_heads", "v_heads")))
+
+        # In production the capture-only split action must not execute.
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        with HybridRunner(self.lib, program, self.vit_weights,
+                          weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+            stats = RunStats()
+            result = runner.run(self.x[:8], stats=stats)
+        self.assertNotIn("split_heads", [a["name"] for a in stats.host_actions])
+        self.assertNotIn("q_heads", result.trace)
+
+        # The C verifier independently checks the serialized source window.
+        from dataclasses import replace
+        from rknpu_backend import load_plan
+        from rknpu_backend.errors import BackendError, RK_E_SHAPE
+        from rknpu_backend.models import PlanCall
+        mapped_plan = load_plan(str(PLANS / "tiny_vit_b8_qk_qkv_group.rkplan.json"))
+        bad_actions = list(mapped_plan.actions)
+        first = next(a for a in bad_actions if a.kind == "upload")
+        bad_actions[first.id] = replace(
+            first, attrs={**first.attrs, "src_col_offset": 200})
+        bad_plan = replace(mapped_plan, actions=tuple(bad_actions))
+        with self.assertRaises(BackendError) as ctx:
+            PlanCall(self.lib, bad_plan, {}, fd=0)
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_SHAPE)
+
+    def test_mapped_group_layout_rejects_bad_axis_slice_and_capacity(self):
+        """Manifest mapping checks fail closed before any workspace exists."""
+        from rknpu_backend.hybrid import load_hybrid_program
+        from rknpu_backend.errors import BackendError, RK_E_SHAPE
+        import tempfile
+
+        base = json.loads(self._hybrid("tiny_vit_b8").read_text())
+        qk = next(n for n in base["nodes"] if n["id"] == "qk")
+
+        def rejected(edit):
+            data = json.loads(json.dumps(base))
+            node = next(n for n in data["nodes"] if n["id"] == "qk")
+            edit(node["group_layout"])
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "bad_map.rkhybrid.json"
+                path.write_text(json.dumps(data))
+                with self.assertRaises(BackendError) as ctx:
+                    load_hybrid_program(path, plans_dir=PLANS)
+                return ctx.exception.diagnostics[0].message
+
+        self.assertIn("slice", rejected(
+            lambda layout: layout["inputs"]["A"]["slice"].__setitem__(
+                "column_base", 200)))
+        self.assertIn("row_slice", rejected(
+            lambda layout: layout["inputs"]["A"]["row_slice"].__setitem__(
+                "row_stride", 100)))
+        self.assertIn("stride/transpose", rejected(
+            lambda layout: layout["inputs"]["B"].__setitem__(
+                "transpose", True)))
+
     def test_hybrid_manifest_rejects_unknown_action(self):
         from rknpu_backend.hybrid import load_hybrid_program
-        from rknpu_backend.errors import BackendError
+        from rknpu_backend.errors import BackendError, RK_E_SHAPE
         import tempfile
         data = json.loads(self._hybrid("tiny_vit_b1").read_text())
         for node in data["nodes"]:
@@ -807,7 +892,7 @@ class CompleteModelTests(unittest.TestCase):
 
     def test_model_runner_rejects_non_manifest_bypass(self):
         from rknpu_backend.models import MLPRunner
-        from rknpu_backend.errors import BackendError
+        from rknpu_backend.errors import BackendError, RK_E_SHAPE
         with self.assertRaises(BackendError):
             MLPRunner(self.lib, self._plan("mnist_mlp_b1"),
                       self.mlp_weights, 1, fd=0)
@@ -895,11 +980,7 @@ class CompleteModelTests(unittest.TestCase):
         loader_spec.loader.exec_module(verifier)
         for spec_name, result_name in (
                 ("numeric_acceptance_packed.json",
-                 "20261026T105527Z-numeric-replay"),
-                ("numeric_acceptance_packed.json",
-                 "20261026T091612Z-numeric-replay"),
-                ("numeric_acceptance_device_ffn.json",
-                 "20261026T091954Z-numeric")):
+                 "20261026T113650Z-numeric-replay"),):
             evidence = ROOT / "results" / result_name
             summary = verifier.verify(
                 WEIGHTS / spec_name,

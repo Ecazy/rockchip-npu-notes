@@ -277,12 +277,12 @@ def _verify_timing(row: dict, row_key: str, n: int, problems: list[str]
     else:
         expected_actions = {
             "patchify", "patch_pad", "position_add", "rmsnorm1",
-            "split_heads", "softmax", "merge_heads", "residual_attention",
-            "rmsnorm2", "swiglu", "residual_ffn", "reshape_tokens",
-            "mean_pool", "export_logits",
+            "softmax", "merge_heads", "residual_attention", "rmsnorm2",
+            "swiglu", "residual_ffn", "reshape_tokens", "mean_pool",
+            "export_logits",
         }
-        expected_plans = {"patch", "qkv", "qk", "pv", "attn_out", "gate",
-                          "up", "down", "classifier"}
+        expected_plans = {"patch", "qkv", "qk", "pv", "attn_out",
+                          "gate_up", "down", "classifier"}
     if not expected_actions <= action_names:
         problems.append(f"{row_key}: missing measured Host action nodes")
     if not expected_plans <= plan_names:

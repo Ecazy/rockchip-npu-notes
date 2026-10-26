@@ -5,6 +5,23 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## QKV mapped-input checkpoint (2026-10-26, v13)
+
+Seventh optimisation package; report:
+[OPTIMIZATION-RESULTS-7.md](../OPTIMIZATION-RESULTS-7.md).
+
+- `results/20261026T113808Z-qkvmap/`: split_heads materialization vs mapped
+  QKV input, 4 rounds x 32 runs.  b8 10.784 -> **10.760 ms** (1.0022x, mixed
+  rounds), b1 3.521 -> **3.428 ms** (1.0270x).  Structure/transfers unchanged.
+  Production removes split_heads and three q/k/v Host arrays; capture still
+  materialises them for diagnostics.
+- `results/20261026T113650Z-numeric-replay/`: packed frozen replay,
+  **PASS / 0 problems**, no recalibration.
+- `models/compiled/tiny_vit_bN_splitheads.rkhybrid.json` remains the explicit
+  materialized control; `group_layout` v1 is checked by Python and C plan
+  validation (source capacity, offsets, transpose, bounds).
+- Host verification for this state: 267 pytest, 30/30 ctest.
+
 ## Python binding-reuse checkpoint (2026-10-26, v12)
 
 Sixth optimisation package; report:

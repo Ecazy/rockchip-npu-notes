@@ -460,7 +460,9 @@ class PlanCall:
             data=None,
             nbytes=spec.nbytes)
 
-    def _prepare_inputs(self, inputs: list[np.ndarray]) -> list[np.ndarray]:
+    def _prepare_inputs(self, inputs: list[np.ndarray],
+                        finite_cache: set[tuple[int, int, str]] | None = None
+                        ) -> list[np.ndarray]:
         if len(inputs) != len(self.inputs):
             reject(RK_E_SHAPE, "model plan input count mismatch", stage="model",
                    actual=len(inputs), required=len(self.inputs))
@@ -477,8 +479,14 @@ class PlanCall:
             if arr.shape != tuple(spec.shape):
                 reject(RK_E_SHAPE, "model plan input shape mismatch", stage="model",
                        actual=list(arr.shape), required=list(spec.shape))
+            check_finite = True
+            if finite_cache is not None:
+                key = (int(arr.ctypes.data), int(arr.nbytes), arr.dtype.str)
+                check_finite = key not in finite_cache
+                finite_cache.add(key)
             prepared.append(validate_numpy_binding(
-                arr, tuple(spec.shape), writable=False, name=spec.name))
+                arr, tuple(spec.shape), writable=False, name=spec.name,
+                check_finite=check_finite))
         return prepared
 
     def _prepare_outputs(self, outputs: list[np.ndarray]) -> list[np.ndarray]:
@@ -521,7 +529,7 @@ class PlanCall:
 
     def _run_into_locked(self, inputs: list[np.ndarray],
                          outputs: list[np.ndarray]) -> tuple[Any, float]:
-        in_arrays = self._prepare_inputs(inputs)
+        in_arrays = self._prepare_inputs(inputs, finite_cache=set())
         out_arrays = self._prepare_outputs(outputs)
         if self.reuse_bindings:
             in_bind = self._input_bind_cache
@@ -600,8 +608,10 @@ class PlanCall:
                    actual={"inputs": nrepeat, "outputs": len(outputs_list)})
         flat = self._group_binding_slots(nrepeat)
         step = len(self.inputs) + len(self.outputs)
+        finite_cache: set[tuple[int, int, str]] = set()
         for r in range(nrepeat):
-            in_arrays = self._prepare_inputs(inputs_list[r])
+            in_arrays = self._prepare_inputs(inputs_list[r],
+                                             finite_cache=finite_cache)
             out_arrays = self._prepare_outputs(outputs_list[r])
             base = r * step
             for k, arr in enumerate(in_arrays):

@@ -145,6 +145,43 @@ class HostAction:
 
 
 @dataclass(frozen=True)
+class LayoutSlice:
+    """Explicit per-repeat column window inside a mapped source binding."""
+    head_axis: str
+    column_base: int
+    column_stride: int
+    column_extent: int
+
+
+@dataclass(frozen=True)
+class LayoutRowSlice:
+    """Restricted batch-row window in a rank-2 source tensor."""
+    batch_axis: str
+    row_stride: int
+    row_extent: int
+
+
+@dataclass(frozen=True)
+class MappedBinding:
+    """Serializable source/target map for one logical binding of a group plan."""
+    tensor: str
+    index: tuple[int | str, ...]
+    shape: tuple[int, ...]
+    axes: tuple[str, ...]
+    transpose: bool = False
+    slice: LayoutSlice | None = None
+    row_slice: LayoutRowSlice | None = None
+
+
+@dataclass(frozen=True)
+class MappedGroupLayout:
+    """Versioned mapped input/output layout for a pre-expanded repeat group."""
+    version: int
+    inputs: dict[str, MappedBinding]
+    outputs: dict[str, MappedBinding]
+
+
+@dataclass(frozen=True)
 class NpuNode:
     id: str
     plan: str
@@ -161,6 +198,7 @@ class NpuNode:
     # (3N bindings: A_i, B_i, Y_i) that the shared path submits in one chain.
     repeat_submit: str = "per_repeat_submits"
     group_plan: str | None = None
+    group_layout: MappedGroupLayout | None = None
     # Numeric-observation probes are statically present in the manifest but
     # execute only when the caller asks for a capture.  Their outputs are
     # diagnostic evidence from a separate plan execution, not a sample of the
@@ -180,6 +218,7 @@ class HostNode:
     numeric_contract: dict[str, Any]
     bridge: dict[str, Any]
     phase: str
+    capture_only: bool = False
 
 
 Node = NpuNode | HostNode
@@ -199,6 +238,8 @@ class _RepeatRef:
     index: tuple[int, ...]
     allocate: tuple[int, ...] | None
     dtype: str
+    row_start: int | None = None
+    row_extent: int | None = None
 
 
 @dataclass(frozen=True)
@@ -267,6 +308,125 @@ def _parse_ref(obj: Any, where: str, repeat_names: set[str]) -> TensorRef:
                    f"{where}.index[{i}] must be a non-negative integer or "
                    "repeat variable", stage="hybrid")
     return TensorRef(tensor, tuple(index))
+
+
+def _parse_layout_slice(obj: Any, where: str,
+                        repeat_names: set[str]) -> LayoutSlice:
+    _keys(obj, {"head_axis", "column_base", "column_stride",
+                "column_extent"}, where=where)
+    head_axis = _string(obj["head_axis"], f"{where}.head_axis")
+    if head_axis not in repeat_names:
+        reject(RK_E_SCHEMA,
+               f"{where}.head_axis uses unknown repeat variable {head_axis!r}",
+               stage="hybrid")
+    base = _int(obj["column_base"], f"{where}.column_base")
+    stride = _int(obj["column_stride"], f"{where}.column_stride")
+    extent = _int(obj["column_extent"], f"{where}.column_extent", minimum=1)
+    return LayoutSlice(head_axis, base, stride, extent)
+
+
+def _parse_row_slice(obj: Any, where: str,
+                     repeat_names: set[str]) -> LayoutRowSlice:
+    _keys(obj, {"batch_axis", "row_stride", "row_extent"}, where=where)
+    axis = _string(obj["batch_axis"], f"{where}.batch_axis")
+    if axis not in repeat_names:
+        reject(RK_E_SCHEMA,
+               f"{where}.batch_axis uses unknown repeat variable {axis!r}",
+               stage="hybrid")
+    stride = _int(obj["row_stride"], f"{where}.row_stride", minimum=1)
+    extent = _int(obj["row_extent"], f"{where}.row_extent", minimum=1)
+    return LayoutRowSlice(axis, stride, extent)
+
+
+def _parse_mapped_binding(obj: Any, where: str, repeat_names: set[str],
+                          *, is_input: bool) -> MappedBinding:
+    _keys(obj, {"tensor", "shape", "axes"},
+          {"index", "transpose", "slice", "row_slice"}, where=where)
+    ref = _parse_ref({"tensor": obj["tensor"], "index": obj.get("index", [])},
+                     where, repeat_names)
+    shape = tuple(_int_tuple(obj["shape"], f"{where}.shape", positive=True))
+    if len(shape) != 2:
+        reject(RK_E_SHAPE, f"{where}.shape must be rank 2", stage="hybrid",
+               actual=list(shape))
+    axes = obj["axes"]
+    if not isinstance(axes, list) or len(axes) != len(shape):
+        reject(RK_E_SCHEMA, f"{where}.axes must match shape rank",
+               stage="hybrid", actual=axes)
+    parsed_axes = tuple(_string(axis, f"{where}.axes[{i}]")
+                        for i, axis in enumerate(axes))
+    if len(set(parsed_axes)) != len(parsed_axes):
+        reject(RK_E_SCHEMA, f"{where}.axes contains duplicates", stage="hybrid")
+    transpose = obj.get("transpose", False)
+    if not isinstance(transpose, bool):
+        reject(RK_E_SCHEMA, f"{where}.transpose must be boolean", stage="hybrid")
+    raw_slice = obj.get("slice")
+    if not is_input and raw_slice is not None:
+        reject(RK_E_UNSUPPORTED, f"{where}.slice is input-only", stage="hybrid")
+    if not is_input and transpose:
+        reject(RK_E_UNSUPPORTED, f"{where}.transpose is input-only",
+               stage="hybrid")
+    sl = (_parse_layout_slice(raw_slice, f"{where}.slice", repeat_names)
+          if raw_slice is not None else None)
+    if sl is not None and sl.column_base + sl.column_extent > shape[1]:
+        reject(RK_E_SHAPE, f"{where}.slice exceeds its source width",
+               stage="hybrid", actual=sl.column_base + sl.column_extent,
+               required=shape[1])
+    raw_row = obj.get("row_slice")
+    if raw_row is not None and not is_input:
+        reject(RK_E_UNSUPPORTED, f"{where}.row_slice is input-only",
+               stage="hybrid")
+    if raw_row is not None and ref.index:
+        reject(RK_E_UNSUPPORTED,
+               f"{where}.row_slice requires an unindexed tensor ref",
+               stage="hybrid")
+    row_slice = (_parse_row_slice(raw_row, f"{where}.row_slice", repeat_names)
+                 if raw_row is not None else None)
+    if row_slice is not None:
+        if row_slice.row_extent != shape[0]:
+            reject(RK_E_SHAPE,
+                   f"{where}.row_slice extent must equal mapped rows",
+                   stage="hybrid", actual=row_slice.row_extent,
+                   required=shape[0])
+    return MappedBinding(ref.tensor, ref.index, shape, parsed_axes,
+                         transpose, sl, row_slice)
+
+
+def _parse_group_layout(obj: Any, where: str,
+                        repeat_names: set[str]) -> MappedGroupLayout:
+    _keys(obj, {"version", "inputs", "outputs"}, where=where)
+    if obj["version"] != 1:
+        reject(RK_E_UNSUPPORTED,
+               f"{where}.version is not the supported mapping version",
+               stage="hybrid", actual=obj["version"], required=1)
+    if not isinstance(obj["inputs"], dict) or not obj["inputs"] or             not isinstance(obj["outputs"], dict) or not obj["outputs"]:
+        reject(RK_E_SCHEMA, f"{where} inputs/outputs must be non-empty objects",
+               stage="hybrid")
+    inputs = {
+        _string(name, f"{where}.inputs key"): _parse_mapped_binding(
+            value, f"{where}.inputs.{name}", repeat_names, is_input=True)
+        for name, value in obj["inputs"].items()}
+    outputs = {
+        _string(name, f"{where}.outputs key"): _parse_mapped_binding(
+            value, f"{where}.outputs.{name}", repeat_names, is_input=False)
+        for name, value in obj["outputs"].items()}
+    return MappedGroupLayout(1, inputs, outputs)
+
+
+def _repeat_axis_values(axes: tuple[RepeatAxis, ...],
+                        ordinal: int) -> dict[str, int]:
+    values: dict[str, int] = {}
+    stride = 1
+    for axis in reversed(axes):
+        values[axis.name] = (ordinal // stride) % axis.extent
+        stride *= axis.extent
+    return values
+
+
+def _repeat_count(axes: tuple[RepeatAxis, ...]) -> int:
+    count = 1
+    for axis in axes:
+        count *= axis.extent
+    return count
 
 
 def _parse_repeat(obj: Any, where: str) -> tuple[RepeatAxis, ...]:
@@ -850,11 +1010,11 @@ def load_hybrid_program(path: str | Path, *,
                   "numeric_contract", "bridge", "phase"}
         if kind == "rkplan":
             _keys(raw_node, common | {"plan", "constants"},
-                  {"repeat_submit", "group_plan", "capture_only"},
-                  where=f"nodes[{index}]")
+                  {"repeat_submit", "group_plan", "capture_only",
+                   "group_layout"}, where=f"nodes[{index}]")
         else:
             _keys(raw_node, common | {"action", "action_version", "attrs"},
-                  where=f"nodes[{index}]")
+                  {"capture_only"}, where=f"nodes[{index}]")
         node_id = _string(raw_node["id"], f"nodes[{index}].id")
         if node_id in node_by_id:
             reject(RK_E_SCHEMA, f"duplicate node id {node_id!r}", stage="hybrid")
@@ -918,7 +1078,26 @@ def load_hybrid_program(path: str | Path, *,
                     reject(RK_E_SCHEMA,
                            f"nodes[{index}] names unknown group plan "
                            f"{group_plan_key!r}", stage="hybrid")
-            if repeat_submit == "shared_group":
+            raw_layout = raw_node.get("group_layout")
+            group_layout = (_parse_group_layout(
+                raw_layout, f"nodes[{index}].group_layout", repeat_names)
+                if raw_layout is not None else None)
+            if repeat_submit == "mapped_group":
+                if group_plan_key is None or not repeat or group_layout is None:
+                    reject(RK_E_SCHEMA,
+                           "repeat_submit=mapped_group requires group_plan, "
+                           "repeat axes and group_layout", stage="hybrid")
+                _validate_mapped_group_layout(
+                    where=f"nodes[{index}]",
+                    group=plans[group_plan_key].plan, layout=group_layout,
+                    repeat=repeat, refs_in=refs_in, refs_out=refs_out,
+                    tensors=tensors, host_constants=host_constants,
+                    input_spec=input_spec)
+            elif repeat_submit == "shared_group":
+                if group_layout is not None:
+                    reject(RK_E_SCHEMA,
+                           "group_layout is only valid for mapped_group",
+                           stage="hybrid")
                 if group_plan_key is None:
                     reject(RK_E_SCHEMA,
                            "repeat_submit=shared_group requires a group_plan",
@@ -930,10 +1109,10 @@ def load_hybrid_program(path: str | Path, *,
                 _validate_group_plan(plan, plans[group_plan_key].plan,
                                      [a.extent for a in repeat],
                                      where=f"nodes[{index}]")
-            elif group_plan_key is not None:
+            elif group_plan_key is not None or group_layout is not None:
                 reject(RK_E_SCHEMA,
-                       "group_plan is only meaningful with "
-                       "repeat_submit=shared_group", stage="hybrid")
+                       "group_plan/group_layout are only meaningful with a "
+                       "group repeat policy", stage="hybrid")
             plan_inputs = [b.name for b in plan.bindings if b.role == "input"]
             plan_outputs = [b.name for b in plan.bindings if b.role == "output"]
             if set(refs_in) != set(plan_inputs):
@@ -954,17 +1133,19 @@ def load_hybrid_program(path: str | Path, *,
                            "all repeat axes", stage="hybrid",
                            actual=list(ref.index),
                            required=list(expected_out_index))
-            for name, ref in refs_in.items():
-                shape = _shape_after_ref_obj(program_input=input_spec,
-                                             host_constants=host_constants,
-                                             tensors=tensors,
-                                             ref=ref, where=f"nodes[{index}].inputs.{name}")
-                binding = next(b for b in plan.bindings if b.name == name)
-                if shape != tuple(binding.shape):
-                    reject(RK_E_SHAPE,
-                           f"nodes[{index}].inputs.{name} shape does not match "
-                           "RKPlan binding", stage="hybrid",
-                           actual=list(shape), required=list(binding.shape))
+            if repeat_submit != "mapped_group":
+                for name, ref in refs_in.items():
+                    shape = _shape_after_ref_obj(
+                        program_input=input_spec,
+                        host_constants=host_constants, tensors=tensors,
+                        ref=ref, where=f"nodes[{index}].inputs.{name}")
+                    binding = next(b for b in plan.bindings if b.name == name)
+                    if shape != tuple(binding.shape):
+                        reject(RK_E_SHAPE,
+                               f"nodes[{index}].inputs.{name} shape does not "
+                               "match RKPlan binding", stage="hybrid",
+                               actual=list(shape),
+                               required=list(binding.shape))
             for name, ref in refs_out.items():
                 shape = _shape_after_ref_obj(program_input=input_spec,
                                              host_constants=host_constants,
@@ -999,7 +1180,7 @@ def load_hybrid_program(path: str | Path, *,
             node: Node = NpuNode(node_id, plan_key, refs_in, refs_out,
                                  parsed_constants, dep_ids, repeat, numeric,
                                  bridge, phase, repeat_submit, group_plan_key,
-                                 capture_only)
+                                 group_layout, capture_only)
         else:
             action_id = _string(raw_node["action"],
                                 f"nodes[{index}].action")
@@ -1038,8 +1219,14 @@ def load_hybrid_program(path: str | Path, *,
             if not isinstance(attrs, dict):
                 reject(RK_E_SCHEMA, f"nodes[{index}].attrs must be an object",
                        stage="hybrid")
+            capture_only = raw_node.get("capture_only", False)
+            if not isinstance(capture_only, bool):
+                reject(RK_E_SCHEMA,
+                       f"nodes[{index}].capture_only must be boolean",
+                       stage="hybrid")
             node = HostNode(node_id, action, refs_in, refs_out, dict(attrs),
-                            dep_ids, repeat, numeric, bridge, phase)
+                            dep_ids, repeat, numeric, bridge, phase,
+                            capture_only)
 
         # Register producer edges and enforce explicit dependency closure.
         referenced_nodes: set[str] = set()
@@ -1113,7 +1300,8 @@ def load_hybrid_program(path: str | Path, *,
                          trace_names, dict(weights))
 
 
-REPEAT_SUBMIT_POLICIES = ("per_repeat_submits", "shared_group")
+REPEAT_SUBMIT_POLICIES = ("per_repeat_submits", "shared_group",
+                           "mapped_group")
 
 
 def _validate_group_plan(single: "Plan", group: "Plan", extents: list[int],
@@ -1156,6 +1344,179 @@ def _validate_group_plan(single: "Plan", group: "Plan", extents: list[int],
                stage="hybrid",
                actual=[group.accounting.task_count,
                        group.accounting.submit_count])
+
+
+def _validate_mapped_group_layout(
+        *, where: str, group: Plan, layout: MappedGroupLayout,
+        repeat: tuple[RepeatAxis, ...], refs_in: dict[str, TensorRef],
+        refs_out: dict[str, TensorRef], tensors: dict[str, TensorSpec],
+        host_constants: dict[str, HostConstant], input_spec: TensorSpec) -> None:
+    """Validate a serialized input/output map against its group plan."""
+    if layout.version != 1:
+        reject(RK_E_UNSUPPORTED, f"{where}.group_layout version is unsupported",
+               stage="hybrid", actual=layout.version)
+    if set(layout.inputs) != set(refs_in):
+        reject(RK_E_SHAPE, f"{where}.group_layout input names mismatch",
+               stage="hybrid", actual=sorted(layout.inputs),
+               required=sorted(refs_in))
+    if set(layout.outputs) != set(refs_out):
+        reject(RK_E_SHAPE, f"{where}.group_layout output names mismatch",
+               stage="hybrid", actual=sorted(layout.outputs),
+               required=sorted(refs_out))
+    nrepeat = _repeat_count(repeat)
+    if nrepeat <= 0:
+        reject(RK_E_SHAPE, f"{where}.group_layout needs a repeat set",
+               stage="hybrid")
+    bases = list(layout.inputs) + list(layout.outputs)
+    expected_names = [f"{base}_{i}" for i in range(nrepeat) for base in bases]
+    got_names = [b.name for b in group.bindings]
+    if got_names != expected_names:
+        reject(RK_E_SHAPE,
+               f"{where}.group_layout bindings are not the declared "
+               "repeat-major expansion", stage="hybrid", actual=got_names[:8],
+               required=expected_names[:8])
+    by_name = {b.name: b for b in group.bindings}
+    repeat_axes = {axis.name: axis for axis in repeat}
+    for i in range(nrepeat):
+        vals = _repeat_axis_values(repeat, i)
+        for name, spec in layout.inputs.items():
+            ref = refs_in[name]
+            if (ref.tensor, tuple(ref.index)) != (spec.tensor, spec.index):
+                reject(RK_E_SCHEMA,
+                       f"{where}.inputs.{name} ref differs from group_layout",
+                       stage="hybrid")
+            tensor = tensors.get(ref.tensor)
+            if spec.row_slice is not None:
+                if ref.index or tensor is None or len(tensor.shape) != 2:
+                    reject(RK_E_SHAPE,
+                           f"{where}.inputs.{name}.row_slice needs a rank-2 "
+                           "unindexed tensor", stage="hybrid")
+                if spec.row_slice.row_extent != spec.shape[0] or \
+                        spec.shape[1] != tensor.shape[1]:
+                    reject(RK_E_SHAPE,
+                           f"{where}.inputs.{name}.row_slice shape mismatch",
+                           stage="hybrid")
+                axis = repeat_axes.get(spec.row_slice.batch_axis)
+                if axis is None:
+                    reject(RK_E_SCHEMA,
+                           f"{where}.inputs.{name}.row_slice batch axis is "
+                           "not in the repeat set", stage="hybrid")
+                end = ((axis.extent - 1) * spec.row_slice.row_stride +
+                       spec.row_slice.row_extent)
+                if end > tensor.shape[0]:
+                    reject(RK_E_SHAPE,
+                           f"{where}.inputs.{name}.row_slice exceeds tensor "
+                           "rows", stage="hybrid", actual=end,
+                           required=tensor.shape[0])
+                shape = spec.shape
+            else:
+                shape = _shape_after_ref_obj(
+                    program_input=input_spec, host_constants=host_constants,
+                    tensors=tensors, ref=ref,
+                    where=f"{where}.inputs.{name}")
+            if tuple(shape) != tuple(spec.shape):
+                reject(RK_E_SHAPE,
+                       f"{where}.inputs.{name} mapped shape mismatch",
+                       stage="hybrid", actual=list(shape),
+                       required=list(spec.shape))
+            binding = by_name[f"{name}_{i}"]
+            if binding.role != "input" or tuple(binding.shape) != spec.shape:
+                reject(RK_E_SHAPE,
+                       f"{where}.group_layout input binding mismatch",
+                       stage="hybrid", actual=[binding.role,
+                                               list(binding.shape)])
+            if spec.slice is not None:
+                axis = repeat_axes.get(spec.slice.head_axis)
+                if axis is None:
+                    reject(RK_E_SCHEMA,
+                           f"{where}.inputs.{name}.slice head axis is not in "
+                           "the repeat set", stage="hybrid")
+                col = (spec.slice.column_base +
+                       vals[spec.slice.head_axis] * spec.slice.column_stride)
+                if col < 0 or col + spec.slice.column_extent > spec.shape[1]:
+                    reject(RK_E_SHAPE,
+                           f"{where}.inputs.{name}.slice column is outside its "
+                           "source width", stage="hybrid", actual=col,
+                           required=spec.shape[1])
+        for name, spec in layout.outputs.items():
+            ref = refs_out[name]
+            if (ref.tensor, tuple(ref.index)) != (spec.tensor, spec.index):
+                reject(RK_E_SCHEMA,
+                       f"{where}.outputs.{name} ref differs from group_layout",
+                       stage="hybrid")
+            shape = _shape_after_ref_obj(
+                program_input=input_spec, host_constants=host_constants,
+                tensors=tensors, ref=ref, where=f"{where}.outputs.{name}")
+            if tuple(shape) != tuple(spec.shape):
+                reject(RK_E_SHAPE,
+                       f"{where}.outputs.{name} mapped shape mismatch",
+                       stage="hybrid", actual=list(shape),
+                       required=list(spec.shape))
+            binding = by_name[f"{name}_{i}"]
+            if binding.role != "output" or tuple(binding.shape) != spec.shape:
+                reject(RK_E_SHAPE,
+                       f"{where}.group_layout output binding mismatch",
+                       stage="hybrid", actual=[binding.role,
+                                               list(binding.shape)])
+    binding_by_id = {b.id: b for b in group.bindings}
+    uploads: dict[str, object] = {}
+    for action in group.actions:
+        if action.kind != "upload":
+            continue
+        sid = int(action.attrs.get("source_binding", -1))
+        binding = binding_by_id.get(sid)
+        if binding is None:
+            reject(RK_E_SCHEMA, "mapped group upload binding is missing",
+                   stage="hybrid")
+        uploads[binding.name] = action
+    for i in range(nrepeat):
+        vals = _repeat_axis_values(repeat, i)
+        for name, spec in layout.inputs.items():
+            action = uploads.get(f"{name}_{i}")
+            if action is None:
+                reject(RK_E_SCHEMA,
+                       f"{where}.inputs.{name} has no upload for repeat {i}",
+                       stage="hybrid")
+            attrs = action.attrs
+            if attrs.get("src_row_stride") != spec.shape[1] or                     attrs.get("transpose_source", False) != spec.transpose:
+                reject(RK_E_SCHEMA,
+                       f"{where}.inputs.{name} upload stride/transpose differs "
+                       "from group_layout", stage="hybrid")
+            col_offset = int(attrs.get("src_col_offset", 0))
+            if spec.slice is not None:
+                expected = (spec.slice.column_base +
+                            vals[spec.slice.head_axis] *
+                            spec.slice.column_stride)
+                if col_offset != expected:
+                    reject(RK_E_SCHEMA,
+                           f"{where}.inputs.{name} upload column differs from "
+                           "group_layout", stage="hybrid",
+                           actual=col_offset, required=expected)
+            elif col_offset != 0:
+                reject(RK_E_SCHEMA,
+                       f"{where}.inputs.{name} upload column is not zero",
+                       stage="hybrid", actual=col_offset)
+            dest = group.views[action.outputs[0]]
+            rows, cols = dest.tensor.rows, dest.tensor.cols
+            sr = cols if spec.transpose else rows
+            sc = rows if spec.transpose else cols
+            if int(attrs.get("src_row_offset", 0)) + sr > spec.shape[0] or                     col_offset + sc > spec.shape[1]:
+                reject(RK_E_SHAPE,
+                       f"{where}.inputs.{name} upload source region exceeds "
+                       "group_layout shape", stage="hybrid")
+            elements = binding_by_id[
+                int(attrs["source_binding"])].nbytes // 2
+            last_row = int(attrs.get("src_row_offset", 0)) + sr - 1
+            last_col = col_offset + sc - 1
+            last_index = last_row * spec.shape[1] + last_col
+            if last_index >= elements:
+                reject(RK_E_SHAPE,
+                       f"{where}.inputs.{name} upload index exceeds source "
+                       "capacity", stage="hybrid")
+            if spec.slice is not None and cols != spec.slice.column_extent:
+                reject(RK_E_SHAPE,
+                       f"{where}.inputs.{name} packed width differs from "
+                       "group_layout slice extent", stage="hybrid")
 
 
 def _shape_after_ref_obj(*, program_input: TensorSpec,
@@ -1326,6 +1687,106 @@ class HybridRunner:
             raise
         self.setup_us = (time.perf_counter() - t0) * 1e6
 
+    def _mapped_binding_plan(self, node: NpuNode) -> _NpuBindingPlan:
+        """Resolve an explicit mapped group layout against this runner's tensors."""
+        if node.group_plan is None or node.group_layout is None:
+            reject(RK_E_SCHEMA, "mapped group node lacks its plan/layout",
+                   stage="hybrid")
+        info = self.program.plans[node.group_plan]
+        layout = node.group_layout
+        nrepeat = _repeat_count(node.repeat)
+        repeat_rows = []
+        output_allocated: set[str] = set()
+        for ordinal in range(nrepeat):
+            repeat_vars = _repeat_axis_values(node.repeat, ordinal)
+            in_refs: list[_RepeatRef] = []
+            out_refs: list[_RepeatRef] = []
+            for name, spec in layout.inputs.items():
+                index = tuple(repeat_vars[token] if isinstance(token, str)
+                              else token for token in spec.index)
+                tensor = self._tensor_spec(spec.tensor)
+                if spec.row_slice is not None:
+                    if index or len(tensor.shape) != 2 or \
+                            spec.shape[1] != tensor.shape[1] or \
+                            spec.shape[0] != spec.row_slice.row_extent:
+                        reject(RK_E_SHAPE,
+                               f"{node.id}.inputs.{name} row-slice mapping "
+                               "differs from its tensor", stage="hybrid")
+                    start = (repeat_vars[spec.row_slice.batch_axis] *
+                             spec.row_slice.row_stride)
+                    if start + spec.row_slice.row_extent > tensor.shape[0]:
+                        reject(RK_E_SHAPE,
+                               f"{node.id}.inputs.{name} row-slice exceeds "
+                               "tensor rows", stage="hybrid")
+                    in_refs.append(_RepeatRef(
+                        spec.tensor, (), None, tensor.dtype,
+                        start, spec.row_slice.row_extent))
+                else:
+                    suffix = tuple(tensor.shape[len(index):])
+                    if suffix != tuple(spec.shape):
+                        reject(RK_E_SHAPE,
+                               f"{node.id}.inputs.{name} mapped source shape "
+                               "differs from its tensor slice", stage="hybrid",
+                               actual=list(suffix), required=list(spec.shape))
+                    in_refs.append(_RepeatRef(spec.tensor, index, None,
+                                              tensor.dtype))
+            for name, spec in layout.outputs.items():
+                index = tuple(repeat_vars[token] if isinstance(token, str)
+                              else token for token in spec.index)
+                tensor = self._tensor_spec(spec.tensor)
+                suffix = tuple(tensor.shape[len(index):])
+                if suffix != tuple(spec.shape):
+                    reject(RK_E_SHAPE,
+                           f"{node.id}.outputs.{name} mapped target shape "
+                           "differs from its tensor slice", stage="hybrid",
+                           actual=list(suffix), required=list(spec.shape))
+                allocate = None
+                if spec.tensor not in output_allocated:
+                    output_allocated.add(spec.tensor)
+                    allocate = tuple(tensor.shape)
+                out_refs.append(_RepeatRef(spec.tensor, index, allocate,
+                                           tensor.dtype))
+            repeat_rows.append((tuple(in_refs), tuple(out_refs)))
+        in_by_repeat = {i: {name: ref for name, ref in zip(layout.inputs, row[0])}
+                        for i, row in enumerate(repeat_rows)}
+        out_by_repeat = {i: {name: ref for name, ref in zip(layout.outputs, row[1])}
+                         for i, row in enumerate(repeat_rows)}
+        flat_in: list[_RepeatRef] = []
+        flat_out: list[_RepeatRef] = []
+        for binding in info.plan.bindings:
+            base, sep, raw_ordinal = binding.name.rpartition("_")
+            if not sep or not raw_ordinal.isdigit():
+                reject(RK_E_SCHEMA,
+                       f"mapped group binding {binding.name!r} is not indexed",
+                       stage="hybrid")
+            ordinal = int(raw_ordinal)
+            if ordinal >= nrepeat:
+                reject(RK_E_SHAPE,
+                       f"mapped group binding {binding.name!r} exceeds repeat "
+                       "count", stage="hybrid")
+            if binding.role == "input":
+                ref = in_by_repeat[ordinal].get(base)
+                if ref is None:
+                    reject(RK_E_SCHEMA,
+                           f"mapped group input binding {binding.name!r} has no "
+                           "layout source", stage="hybrid")
+                flat_in.append(ref)
+            elif binding.role == "output":
+                ref = out_by_repeat[ordinal].get(base)
+                if ref is None:
+                    reject(RK_E_SCHEMA,
+                           f"mapped group output binding {binding.name!r} has no "
+                           "layout target", stage="hybrid")
+                flat_out.append(ref)
+            else:
+                reject(RK_E_SCHEMA, "mapped group has a non-I/O binding",
+                       stage="hybrid")
+        return _NpuBindingPlan(
+            plan=node.group_plan,
+            input_names=tuple(layout.inputs), output_names=tuple(layout.outputs),
+            repeats=tuple(repeat_rows), mode="shared_group",
+            flat_inputs=tuple(flat_in), flat_outputs=tuple(flat_out))
+
     def _static_binding_plan(self, node: NpuNode) -> _NpuBindingPlan:
         """Resolve a repeated RKPlan node once, at construction time.
 
@@ -1334,6 +1795,8 @@ class HybridRunner:
         every call are proven once against the immutable manifest.  Anything that
         depends on the caller's data is still validated for every repeat.
         """
+        if node.repeat_submit == "mapped_group":
+            return self._mapped_binding_plan(node)
         info = self.program.plans[node.plan]
         bindings = {b.name: b for b in info.plan.bindings}
         input_names = tuple(b.name for b in info.plan.bindings
@@ -1501,7 +1964,10 @@ class HybridRunner:
         if value is None:
             reject(RK_E_SCHEMA, f"reads unavailable tensor {ref.tensor!r}",
                    stage="hybrid")
-        return value[ref.index] if ref.index else value
+        value = value[ref.index] if ref.index else value
+        if ref.row_start is not None:
+            value = value[ref.row_start:ref.row_start + ref.row_extent]
+        return value
 
     @staticmethod
     def _write_ref(values: dict[str, np.ndarray],
@@ -1583,7 +2049,7 @@ class HybridRunner:
                            stats.postprocess_us) if stats is not None else 0.0
         t_run = time.perf_counter()
         for node in self.program.nodes:
-            if isinstance(node, NpuNode) and node.capture_only and not capture:
+            if getattr(node, "capture_only", False) and not capture:
                 continue
             if isinstance(node, HostNode):
                 t0 = time.perf_counter()

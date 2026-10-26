@@ -804,7 +804,8 @@ def make_binding(binding_id: int, array: np.ndarray) -> RKBinding:
 
 
 def validate_numpy_binding(array: Any, shape: tuple[int, int], *,
-                           writable: bool, name: str) -> np.ndarray:
+                           writable: bool, name: str,
+                           check_finite: bool = True) -> np.ndarray:
     if not isinstance(array, np.ndarray):
         reject(RK_E_INVALID, f"binding {name!r} must be an exact numpy.ndarray",
                stage="binding")
@@ -820,7 +821,7 @@ def validate_numpy_binding(array: Any, shape: tuple[int, int], *,
                stage="binding")
     if writable and not array.flags.writeable:
         reject(RK_E_INVALID, f"binding {name!r} must be writable", stage="binding")
-    if not writable and not np.isfinite(array).all():
+    if not writable and check_finite and not np.isfinite(array).all():
         from ..errors import RK_E_NUMERIC_CONTRACT
         reject(RK_E_NUMERIC_CONTRACT,
                f"binding {name!r} contains non-finite values", stage="binding")

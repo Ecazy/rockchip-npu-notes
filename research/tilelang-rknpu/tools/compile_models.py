@@ -192,7 +192,8 @@ def main() -> int:
         # tasks (three shared BOs, disjoint slices, one chained submit).  This is
         # the only geometry the admission rules accept, so the expansion cannot
         # silently apply to a different shape.
-        from rknpu_backend.passes.repeat_expand import expand_static_repeat
+        from rknpu_backend.passes.repeat_expand import (expand_static_repeat,
+                                                        remap_group_inputs)
         heads = 4
         nrepeat = batch * heads
         group = expand_static_repeat(plans["qk"], nrepeat, shared_bo=True)
@@ -201,6 +202,37 @@ def main() -> int:
             "role": "static-repeat-group",
             "source_plan": f"tiny_vit_b{batch}_qk",
             "repeat": nrepeat,
+        })
+        # Restricted QKV input mapping: source bindings carry the full
+        # [16,192] per-batch QKV block; each per-head upload action selects a
+        # 16-column window and, for K, transposes it into the weight tile.
+        qk_mapped = remap_group_inputs(group, nrepeat, [
+            {"shape": (16, 192), "row_stride": 192, "col_base": 0,
+             "col_stride": 16, "col_modulus": heads, "transpose": False},
+            {"shape": (16, 192), "row_stride": 192, "col_base": 64,
+             "col_stride": 16, "col_modulus": heads, "transpose": False},
+        ])
+        write(qk_mapped, f"tiny_vit_b{batch}_qk_qkv_group")
+        manifest["plans"][f"tiny_vit_b{batch}_qk_qkv_group"].update({
+            "role": "mapped-qkv-attn-group",
+            "source_plan": f"tiny_vit_b{batch}_qk",
+            "repeat": nrepeat,
+            "input_map_version": 1,
+        })
+        # PV keeps probs as a native [16,16] slice, while V is read directly
+        # from the QKV block's V columns (no precomputed v_heads array).
+        pv_mapped = remap_group_inputs(group, nrepeat, [
+            {"shape": (16, 16), "row_stride": 16, "col_base": 0,
+             "col_stride": 0, "col_modulus": 1, "transpose": False},
+            {"shape": (16, 192), "row_stride": 192, "col_base": 128,
+             "col_stride": 16, "col_modulus": heads, "transpose": True},
+        ])
+        write(pv_mapped, f"tiny_vit_b{batch}_pv_qkv_group")
+        manifest["plans"][f"tiny_vit_b{batch}_pv_qkv_group"].update({
+            "role": "mapped-qkv-attn-group",
+            "source_plan": f"tiny_vit_b{batch}_qk",
+            "repeat": nrepeat,
+            "input_map_version": 1,
         })
         print("wrote", f"tiny_vit_b{batch}_qk_group", group.plan_hash, flush=True)
         print("wrote", f"tiny_vit_b{batch}", flush=True)

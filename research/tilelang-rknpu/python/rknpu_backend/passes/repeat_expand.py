@@ -23,6 +23,8 @@ of the same shape is always kept available by leaving the parent plan untouched.
 """
 from __future__ import annotations
 
+from dataclasses import replace
+
 from .storage import CO_GUARD, CO_MAX_WORDS, CO_PROGRAM_BYTES, CO_SLACK
 from ..errors import RK_E_BUDGET, RK_E_SHAPE, RK_E_UNSUPPORTED, reject
 from ..plan import (Accounting, Action, Binding, Buffer, ConstantSpec, Plan,
@@ -314,3 +316,91 @@ def expand_static_repeat(plan: Plan, nrepeat: int, *,
         bindings=tuple(bindings), constants=tuple(),
         buffers=tuple(buffers), views=tuple(views), actions=tuple(actions),
         submits=submits, publish=publish, accounting=accounting))
+
+
+def remap_group_inputs(group: Plan, nrepeat: int, specs: list[dict]) -> Plan:
+    """Apply an explicit source-view mapping to a shared-BO repeat group.
+
+    ``specs`` has one entry per single-instance input, in binding order, with:
+
+    * ``shape``: full source binding shape seen by the C upload packer;
+    * ``row_stride``: source row length;
+    * ``col_base`` / ``col_stride``: per-repeat column slice;
+    * ``transpose``: source transpose flag.
+
+    The device buffers, task sequence, output slices and submission structure are
+    unchanged.  Every repeat's upload action is rewritten explicitly; the C
+    verifier independently checks the resulting source capacity and index range.
+    """
+    if not isinstance(specs, list) or not specs:
+        reject(RK_E_UNSUPPORTED, "mapped group needs explicit input specs",
+               stage="repeat_expand")
+    expected = 2 * nrepeat
+    uploads = [a for a in group.actions if a.kind == "upload"]
+    if len(uploads) != expected:
+        reject(RK_E_SHAPE, "mapped group upload count mismatch",
+               stage="repeat_expand", actual=len(uploads), required=expected)
+    bindings = list(group.bindings)
+    checked = [False] * expected
+    for action in uploads:
+        origin = action.origin or ""
+        role = 0 if "upload_a:" in origin else 1 if "upload_w:" in origin else -1
+        try:
+            repeat = int(origin.rsplit(":", 1)[1])
+        except (IndexError, ValueError):
+            reject(RK_E_SCHEMA, "mapped group upload origin is not indexed",
+                   stage="repeat_expand", actual=origin)
+        if role < 0 or role >= len(specs) or not 0 <= repeat < nrepeat:
+            reject(RK_E_SHAPE, "mapped group upload origin is outside its map",
+                   stage="repeat_expand", actual=origin)
+        spec = specs[role]
+        shape = tuple(spec["shape"])
+        if len(shape) != 2 or any(not isinstance(v, int) or v <= 0
+                                  for v in shape):
+            reject(RK_E_SHAPE, "mapped source shape must be two positive ints",
+                   stage="repeat_expand", actual=list(shape))
+        if not isinstance(spec.get("row_stride"), int) or \
+                spec["row_stride"] != shape[1]:
+            reject(RK_E_SHAPE, "mapped source row stride must equal its width",
+                   stage="repeat_expand", actual=spec.get("row_stride"))
+        if not isinstance(spec.get("transpose"), bool):
+            reject(RK_E_SCHEMA, "mapped transpose flag must be boolean",
+                   stage="repeat_expand")
+        col_base = int(spec["col_base"])
+        col_stride = int(spec["col_stride"])
+        col_modulus = int(spec.get("col_modulus", 1))
+        if col_modulus <= 0:
+            reject(RK_E_SHAPE, "mapped column modulus must be positive",
+                   stage="repeat_expand", actual=col_modulus)
+        col_offset = col_base + (repeat % col_modulus) * col_stride
+        if col_offset < 0:
+            reject(RK_E_SHAPE, "mapped source column offset is negative",
+                   stage="repeat_expand", actual=col_offset)
+        attrs = dict(action.attrs)
+        attrs.update(src_row_stride=shape[1],
+                     src_col_offset=col_offset,
+                     transpose_source=spec["transpose"])
+        actions = list(group.actions)
+        actions[action.id] = replace(action, attrs=attrs)
+        group = replace(group, actions=tuple(actions))
+        binding_index = 3 * repeat + role
+        bindings[binding_index] = replace(bindings[binding_index],
+                                          shape=shape)
+        checked[2 * repeat + role] = True
+    if not all(checked):
+        reject(RK_E_SCHEMA, "mapped group did not bind every upload",
+               stage="repeat_expand")
+    bindings = tuple(bindings)
+    input_bytes = sum(b.nbytes for b in bindings if b.role == "input")
+    output_bytes = sum(b.nbytes for b in bindings if b.role == "output")
+    largest_output = max((b.nbytes for b in bindings if b.role == "output"),
+                         default=0)
+    output_total = max(output_bytes, HOST_STAGING_FLOOR)
+    runtime_scratch = (nrepeat * CO_PROGRAM_BYTES + largest_output +
+                       nrepeat * (8 + 4))
+    host_bytes = input_bytes + output_bytes + output_total + runtime_scratch
+    acct = replace(group.accounting, host_bytes=host_bytes,
+                   transfers=3 * nrepeat)
+    return with_plan_hash(replace(
+        group, name=f"{group.name}+input_map", bindings=bindings,
+        accounting=acct))

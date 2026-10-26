@@ -973,56 +973,56 @@
     "attn_matmul": {
       "dynamic_operand": "B",
       "path": "tiny_vit_b8_qk.rkplan.json",
-      "plan_hash": "19493ca954e8784c4b735735033ad1447d7cc4661d6524047c39bb2b206c395a",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "attn_matmul_group": {
       "dynamic_operand": null,
       "path": "tiny_vit_b8_qk_group.rkplan.json",
-      "plan_hash": "4e5a6b4426dcbaacffae1add798a974a8ae5b88a096a1cd278e44e4d0fcd5f45",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)|repeat_expand:n=32"
+      "plan_hash": "825e8bb1666a72c01af11ed0930989485459e911ff96c6e5518921a98039839b",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)|repeat_expand:n=32"
     },
     "attn_out": {
       "dynamic_operand": null,
       "path": "tiny_vit_b8_attn_out.rkplan.json",
-      "plan_hash": "54a5b185eb4d37acf6d52d541618dfd98af24033ed36bd3b82a5b43b6df32332",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "classifier": {
       "dynamic_operand": null,
       "path": "tiny_vit_b8_classifier.rkplan.json",
-      "plan_hash": "6fbd8aeb5a09231168885893e7b0f142e88abea62917095dcfd5b7b7ed162e0e",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "f68f9131075631696750442702bd93cbd9319de85934cb81c99269ea6e8bfe4c",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "down": {
       "dynamic_operand": null,
       "path": "tiny_vit_b8_down.rkplan.json",
-      "plan_hash": "dd89cb0e20803b723f8b912b32b22c0665f60daca2996791a85d4ad807382975",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "7af7e79f69fc8eeeedd104fb06a9cacb26632e3d2cc8f9812c5ace53829f6706",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "gate": {
       "dynamic_operand": null,
       "path": "tiny_vit_b8_gate.rkplan.json",
-      "plan_hash": "cfe527748ddb00f603808e041a75fe3ce7222e23722c17b5856954127f3545d5",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "patch": {
       "dynamic_operand": null,
       "path": "tiny_vit_b8_patch.rkplan.json",
-      "plan_hash": "54a5b185eb4d37acf6d52d541618dfd98af24033ed36bd3b82a5b43b6df32332",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "qkv": {
       "dynamic_operand": null,
       "path": "tiny_vit_b8_qkv.rkplan.json",
-      "plan_hash": "be48210972904c68431ed814709c1555ec4b6b0200d8d1c7ff2b950f79085bef",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "05cc9c88dfec4da3ddd302b201981fda023340a38f01235cc028e9c1373e7d53",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     },
     "up": {
       "dynamic_operand": null,
       "path": "tiny_vit_b8_up.rkplan.json",
-      "plan_hash": "cfe527748ddb00f603808e041a75fe3ce7222e23722c17b5856954127f3545d5",
-      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x3fdf7550), 13, 13, 1, 1048576)"
+      "plan_hash": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_matmul.py, 0x35423520), 13, 13, 1, 1048576)"
     }
   },
   "profile_hash": "50fa71281ad979ade1543d5350cd7ac584568fddb57412e39e4d4d9f2a3f2d79",
