@@ -179,6 +179,9 @@ def run_profile(args) -> dict:
     # compares anyway.  Only forward the argument when it is actually non-default
     # so a baseline package is never asked for a keyword it does not have.
     extra = {} if entry == "attributed" else {"plan_entry": entry}
+    repeat_submit = getattr(args, "repeat_submit", "manifest")
+    if repeat_submit != "manifest":
+        extra["repeat_submit"] = repeat_submit
     runner = HybridRunner(lib, program, weights, fd=fd, **extra)
     per_run = []
     try:
@@ -213,6 +216,7 @@ def run_profile(args) -> dict:
         "warmup": args.warmup,
         "label": getattr(args, "label", ""),
         "plan_entry": getattr(args, "plan_entry", "attributed"),
+        "repeat_submit": getattr(args, "repeat_submit", "manifest"),
         "host": {
             "machine": platform.machine(),
             # The affinity mask actually in force (taskset / sched_setaffinity),
@@ -260,6 +264,11 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--label", default="",
                     help="free-form arm/round label recorded in the JSON")
+    ap.add_argument("--repeat-submit",
+                    choices=("manifest", "separate", "b1", "shared"),
+                    default="manifest",
+                    help="repeat path for static-repeat nodes: the manifest's "
+                         "declared policy, or an explicit control")
     ap.add_argument("--plan-entry", choices=("attributed", "legacy"),
                     default="attributed",
                     help="attributed uses rk_workspace_run_ex; legacy uses the "

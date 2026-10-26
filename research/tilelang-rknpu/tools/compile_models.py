@@ -135,6 +135,22 @@ def main() -> int:
         plans["pv"] = plans["qk"]
         for name, plan in plans.items():
             write(plan, f"tiny_vit_b{batch}_{name}")
+        # Static-repeat groups: the QK/PV node is declared N = batch * heads
+        # times, so pre-expand the primitive into one plan with N independent
+        # tasks (three shared BOs, disjoint slices, one chained submit).  This is
+        # the only geometry the admission rules accept, so the expansion cannot
+        # silently apply to a different shape.
+        from rknpu_backend.passes.repeat_expand import expand_static_repeat
+        heads = 4
+        nrepeat = batch * heads
+        group = expand_static_repeat(plans["qk"], nrepeat, shared_bo=True)
+        write(group, f"tiny_vit_b{batch}_qk_group")
+        manifest["plans"][f"tiny_vit_b{batch}_qk_group"].update({
+            "role": "static-repeat-group",
+            "source_plan": f"tiny_vit_b{batch}_qk",
+            "repeat": nrepeat,
+        })
+        print("wrote", f"tiny_vit_b{batch}_qk_group", group.plan_hash, flush=True)
         print("wrote", f"tiny_vit_b{batch}", flush=True)
 
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")

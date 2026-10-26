@@ -1,0 +1,160 @@
+model=tiny_vit batch=8 backend=board runs=32
+  median wall       0.022473 s  356.0 img/s
+  python dwell      0.010964 s
+  C total           0.009886 s
+  attributed        0.009763 s
+  residual          0.000124 s  (1.3% of C total)
+  instrumentation   0.000055 s  (0.6%)
+    validate_us       0.000238 s    2.4%
+    pack_us           0.001118 s   11.3%
+    emit_us           0.000185 s    1.9%
+    command_us        0.000190 s    1.9%
+    submit_alloc_us   0.000007 s    0.1%
+    submit_wait_us    0.004581 s   46.3%
+    output_sync_us    0.000212 s    2.1%
+    download_us       0.001061 s   10.7%
+    guard_us          0.002152 s   21.8%
+    publish_us        0.000020 s    0.2%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    71 / 71
+wrote out-separate/separate_tiny_vit_b8_r1.json
+model=tiny_vit batch=1 backend=board runs=32
+  median wall       0.004802 s  208.2 img/s
+  python dwell      0.002101 s
+  C total           0.001895 s
+  attributed        0.001870 s
+  residual          0.000025 s  (1.3% of C total)
+  instrumentation   0.000011 s  (0.6%)
+    validate_us       0.000034 s    1.8%
+    pack_us           0.000161 s    8.5%
+    emit_us           0.000040 s    2.1%
+    command_us        0.000041 s    2.2%
+    submit_alloc_us   0.000001 s    0.1%
+    submit_wait_us    0.000963 s   50.8%
+    output_sync_us    0.000042 s    2.2%
+    download_us       0.000161 s    8.5%
+    guard_us          0.000425 s   22.4%
+    publish_us        0.000002 s    0.1%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    15 / 15
+wrote out-separate/separate_tiny_vit_b1_r1.json
+model=tiny_vit batch=8 backend=board runs=32
+  median wall       0.022774 s  351.3 img/s
+  python dwell      0.011146 s
+  C total           0.010061 s
+  attributed        0.009938 s
+  residual          0.000123 s  (1.2% of C total)
+  instrumentation   0.000058 s  (0.6%)
+    validate_us       0.000230 s    2.3%
+    pack_us           0.001050 s   10.4%
+    emit_us           0.000174 s    1.7%
+    command_us        0.000187 s    1.9%
+    submit_alloc_us   0.000007 s    0.1%
+    submit_wait_us    0.004844 s   48.1%
+    output_sync_us    0.000206 s    2.0%
+    download_us       0.001079 s   10.7%
+    guard_us          0.002139 s   21.3%
+    publish_us        0.000022 s    0.2%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    71 / 71
+wrote out-separate/separate_tiny_vit_b8_r2.json
+model=tiny_vit batch=1 backend=board runs=32
+  median wall       0.004939 s  202.5 img/s
+  python dwell      0.002224 s
+  C total           0.002005 s
+  attributed        0.001980 s
+  residual          0.000025 s  (1.2% of C total)
+  instrumentation   0.000011 s  (0.6%)
+    validate_us       0.000034 s    1.7%
+    pack_us           0.000164 s    8.2%
+    emit_us           0.000041 s    2.0%
+    command_us        0.000043 s    2.2%
+    submit_alloc_us   0.000001 s    0.1%
+    submit_wait_us    0.001061 s   52.9%
+    output_sync_us    0.000043 s    2.1%
+    download_us       0.000143 s    7.1%
+    guard_us          0.000447 s   22.3%
+    publish_us        0.000003 s    0.1%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    15 / 15
+wrote out-separate/separate_tiny_vit_b1_r2.json
+model=tiny_vit batch=8 backend=board runs=32
+  median wall       0.023207 s  344.7 img/s
+  python dwell      0.011472 s
+  C total           0.010355 s
+  attributed        0.010226 s
+  residual          0.000129 s  (1.2% of C total)
+  instrumentation   0.000055 s  (0.5%)
+    validate_us       0.000257 s    2.5%
+    pack_us           0.001076 s   10.4%
+    emit_us           0.000183 s    1.8%
+    command_us        0.000190 s    1.8%
+    submit_alloc_us   0.000007 s    0.1%
+    submit_wait_us    0.005162 s   49.9%
+    output_sync_us    0.000204 s    2.0%
+    download_us       0.001028 s    9.9%
+    guard_us          0.002096 s   20.2%
+    publish_us        0.000022 s    0.2%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    71 / 71
+wrote out-separate/separate_tiny_vit_b8_r3.json
+model=tiny_vit batch=1 backend=board runs=32
+  median wall       0.004627 s  216.1 img/s
+  python dwell      0.001931 s
+  C total           0.001644 s
+  attributed        0.001614 s
+  residual          0.000030 s  (1.8% of C total)
+  instrumentation   0.000011 s  (0.7%)
+    validate_us       0.000029 s    1.7%
+    pack_us           0.000149 s    9.0%
+    emit_us           0.000049 s    3.0%
+    command_us        0.000041 s    2.5%
+    submit_alloc_us   0.000001 s    0.1%
+    submit_wait_us    0.000759 s   46.2%
+    output_sync_us    0.000035 s    2.1%
+    download_us       0.000127 s    7.7%
+    guard_us          0.000421 s   25.6%
+    publish_us        0.000003 s    0.2%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    15 / 15
+wrote out-separate/separate_tiny_vit_b1_r3.json
+model=tiny_vit batch=8 backend=board runs=32
+  median wall       0.022443 s  356.5 img/s
+  python dwell      0.011099 s
+  C total           0.010047 s
+  attributed        0.009924 s
+  residual          0.000123 s  (1.2% of C total)
+  instrumentation   0.000056 s  (0.6%)
+    validate_us       0.000240 s    2.4%
+    pack_us           0.001079 s   10.7%
+    emit_us           0.000185 s    1.8%
+    command_us        0.000188 s    1.9%
+    submit_alloc_us   0.000008 s    0.1%
+    submit_wait_us    0.004796 s   47.7%
+    output_sync_us    0.000204 s    2.0%
+    download_us       0.001118 s   11.1%
+    guard_us          0.002086 s   20.8%
+    publish_us        0.000021 s    0.2%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    71 / 71
+wrote out-separate/separate_tiny_vit_b8_r4.json
+model=tiny_vit batch=1 backend=board runs=32
+  median wall       0.005161 s  193.8 img/s
+  python dwell      0.002189 s
+  C total           0.001957 s
+  attributed        0.001927 s
+  residual          0.000030 s  (1.5% of C total)
+  instrumentation   0.000011 s  (0.6%)
+    validate_us       0.000033 s    1.7%
+    pack_us           0.000163 s    8.3%
+    emit_us           0.000042 s    2.1%
+    command_us        0.000043 s    2.2%
+    submit_alloc_us   0.000001 s    0.0%
+    submit_wait_us    0.001025 s   52.4%
+    output_sync_us    0.000041 s    2.1%
+    download_us       0.000137 s    7.0%
+    guard_us          0.000439 s   22.4%
+    publish_us        0.000003 s    0.1%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    15 / 15
+wrote out-separate/separate_tiny_vit_b1_r4.json

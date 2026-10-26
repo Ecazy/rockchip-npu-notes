@@ -126,6 +126,38 @@ class CompleteModelTests(unittest.TestCase):
         self.assertIn("export_logits", action_names)
         self.assertNotIn("reference", " ".join(action_names).lower())
 
+    def test_repeat_submit_policies_agree_bitwise(self):
+        """The three declared repeat paths must produce identical logits.
+
+        `manifest` uses the node's declared policy (shared group for QK/PV),
+        `b1` keeps the per-repeat group entry and `separate` issues one call per
+        repeat.  Keeping the controls executable is what makes the default
+        switch reversible.
+        """
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        results = {}
+        reports = {}
+        for mode in ("manifest", "b1", "separate"):
+            runner = HybridRunner(self.lib, program, self.vit_weights,
+                                  weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
+                                  repeat_submit=mode)
+            stats = __import__("rknpu_backend.models",
+                               fromlist=["RunStats"]).RunStats()
+            try:
+                results[mode] = runner.run(self.x[:8], stats=stats).outputs["logits"]
+                reports[mode] = (stats.submit_count, stats.task_count)
+            finally:
+                runner.close()
+        for mode in ("b1", "separate"):
+            self.assertTrue(np.array_equal(results["manifest"], results[mode]),
+                            f"{mode} path differs from the manifest path")
+        # Structural difference, per batch-8 call: 2 chained QK/PV submits plus
+        # the 7 other nodes, versus 64 per-repeat submits in the B1 path.
+        self.assertEqual(reports["manifest"], (9, 71))
+        self.assertEqual(reports["b1"], (71, 71))
+        self.assertEqual(reports["separate"], (71, 71))
+
     def test_plan_envelope_attribution_tiles_the_whole_call(self):
         """The C attribution must explain the entire RKPlan dwell.
 
@@ -217,7 +249,20 @@ class CompleteModelTests(unittest.TestCase):
                 self.assertEqual(action.version, node.action.version)
         npu = [node for node in program.nodes if isinstance(node, NpuNode)]
         self.assertEqual(len(npu), 9)
-        self.assertEqual(len(program.plans), 8)  # QK/PV share one immutable plan
+        # QK/PV share one immutable per-repeat plan, plus one pre-expanded
+        # static-repeat group plan selected by those two nodes.
+        self.assertEqual(len(program.plans), 9)
+        for node_id in ("qk", "pv"):
+            node = next(n for n in program.nodes if n.id == node_id)
+            self.assertEqual(node.repeat_submit, "shared_group")
+            self.assertEqual(node.group_plan, "attn_matmul_group")
+            group = program.plans[node.group_plan].plan
+            self.assertEqual(group.accounting.submit_count, 1)
+            self.assertEqual(group.accounting.task_count, 32)
+            self.assertEqual(len(group.bindings), 96)
+        for node in program.nodes:
+            if getattr(node, "repeat_submit", None) and node.id not in ("qk", "pv"):
+                self.assertEqual(node.repeat_submit, "per_repeat_submits")
         qk = next(node for node in npu if node.id == "qk")
         pv = next(node for node in npu if node.id == "pv")
         self.assertEqual(qk.plan, pv.plan)
@@ -228,7 +273,8 @@ class CompleteModelTests(unittest.TestCase):
             self.assertEqual(len(spec.shape), len(spec.axes))
         with HybridRunner(self.lib, program, self.vit_weights,
                           weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
-            self.assertEqual(len(runner.calls), 8)
+            # 8 per-repeat plans + the shared static-repeat group plan.
+            self.assertEqual(len(runner.calls), 9)
             stats = __import__("rknpu_backend.models", fromlist=["RunStats"]).RunStats()
             result = runner.run(self.x[:8], stats=stats, capture=True)
             self.assertEqual(result.outputs["logits"].shape, (8, 10))
@@ -244,14 +290,16 @@ class CompleteModelTests(unittest.TestCase):
             # QK/PV stay per-(batch,head) work: 32 repeats each, and the device
             # submit count is unchanged.  What changed is that the static repeat
             # set now uses one native group entry instead of 32 calls.
+            # QK/PV now run as one pre-expanded plan with one chained submit:
+            # 32 tasks in a single native call, so the node's task count is
+            # unchanged while its submit count drops from 32 to 1.
             for name in ("qk", "pv"):
-                self.assertEqual(plans[name]["repeat_count"], 32)
-                self.assertEqual(plans[name]["submit_count"], 32)
                 self.assertEqual(plans[name]["calls"], 1)
-            self.assertEqual(stats.plan_group_calls, 2)
-            self.assertEqual(stats.plan_repeats, 2 * 32 + 7)
+                self.assertEqual(plans[name]["task_count"], 32)
+                self.assertEqual(plans[name]["submit_count"], 1)
             self.assertEqual(stats.task_count, 71)
-            self.assertEqual(stats.submit_count, 71)
+            # 2 chained QK/PV submits + 7 per-node submits.
+            self.assertEqual(stats.submit_count, 9)
 
     def test_hybrid_manifest_rejects_unknown_action(self):
         from rknpu_backend.hybrid import load_hybrid_program
@@ -442,7 +490,7 @@ class CompleteModelTests(unittest.TestCase):
             ROOT / "tools" / "verify_numeric_acceptance.py")
         verifier = importlib.util.module_from_spec(loader_spec)
         loader_spec.loader.exec_module(verifier)
-        evidence = ROOT / "results" / "20261026T053818Z-numeric"
+        evidence = ROOT / "results" / "20261026T081153Z-numeric"
         summary = verifier.verify(
             WEIGHTS / "numeric_acceptance_train.json",
             evidence / "calibration" / "observation.npz",

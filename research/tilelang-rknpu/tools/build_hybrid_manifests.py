@@ -58,8 +58,9 @@ def host_node(node_id: str, action: str, inputs: dict, outputs: dict,
 
 
 def plan_node(node_id: str, plan_key: str, inputs: dict, outputs: dict,
-              constants: dict, *, deps, numeric, repeat=None) -> dict:
-    return {
+              constants: dict, *, deps, numeric, repeat=None,
+              repeat_submit=None, group_plan=None) -> dict:
+    node = {
         "id": node_id, "kind": "rkplan", "plan": plan_key,
         "inputs": inputs, "outputs": outputs, "constants": constants,
         "depends_on": list(deps), "repeat": list(repeat or []),
@@ -67,6 +68,11 @@ def plan_node(node_id: str, plan_key: str, inputs: dict, outputs: dict,
         "bridge": {"kind": "rkplan_transfer",
                    "accounting": "runtime_report"},
     }
+    if repeat_submit is not None:
+        node["repeat_submit"] = repeat_submit
+    if group_plan is not None:
+        node["group_plan"] = group_plan
+    return node
 
 
 def plan_entry(compiled: dict, key: str, dynamic_operand=None) -> dict:
@@ -242,6 +248,11 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         "classifier": plan_entry(compiled, f"tiny_vit_b{batch}_classifier"),
         "attn_matmul": plan_entry(compiled, f"tiny_vit_b{batch}_qk",
                                   dynamic_operand="B"),
+        # Pre-expanded static-repeat group (batch * heads independent tasks in one
+        # chained submit).  Selected explicitly by the QK/PV nodes below; the
+        # per-repeat plan above stays for the separate and B1 control paths.
+        "attn_matmul_group": plan_entry(compiled,
+                                        f"tiny_vit_b{batch}_qk_group"),
     }
     plan_numeric = {
         "storage": "float16", "accumulation": "float32_single_tile",
@@ -308,7 +319,9 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                   {"Y": ref("scores_heads", ("bi", "hi"))}, {},
                   deps=["split_heads"], numeric=dynamic_numeric,
                   repeat=[{"name": "bi", "extent": b, "axis": "batch"},
-                          {"name": "hi", "extent": h, "axis": "head"}]),
+                          {"name": "hi", "extent": h, "axis": "head"}],
+                  repeat_submit="shared_group",
+                  group_plan="attn_matmul_group"),
         host_node("softmax", "attention.scaled_softmax.v1",
                   {"scores": ref("scores_heads")}, {"y": ref("probs_heads")},
                   depends_nodes=["qk"], attrs={"scale": 0.25, "axis": -1},
@@ -322,7 +335,9 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                   {"Y": ref("attn_heads", ("bi", "hi"))}, {},
                   deps=["softmax", "split_heads"], numeric=dynamic_numeric,
                   repeat=[{"name": "bi", "extent": b, "axis": "batch"},
-                          {"name": "hi", "extent": h, "axis": "head"}]),
+                          {"name": "hi", "extent": h, "axis": "head"}],
+                  repeat_submit="shared_group",
+                  group_plan="attn_matmul_group"),
         host_node("merge_heads", "tiny_vit.merge_heads.v1",
                   {"heads": ref("attn_heads")}, {"y": ref("attn_merged")},
                   depends_nodes=["pv"],

@@ -156,6 +156,11 @@ class NpuNode:
     numeric_contract: dict[str, Any]
     bridge: dict[str, Any]
     phase: str
+    # Optional static-repeat grouping policy.  ``repeat_submit`` selects how the
+    # declared repeat set is executed; ``group_plan`` names the pre-expanded plan
+    # (3N bindings: A_i, B_i, Y_i) that the shared path submits in one chain.
+    repeat_submit: str = "per_repeat_submits"
+    group_plan: str | None = None
 
 
 @dataclass(frozen=True)
@@ -193,12 +198,22 @@ class _RepeatRef:
 
 @dataclass(frozen=True)
 class _NpuBindingPlan:
-    """Static execution shape of one RKPlan node."""
+    """Static execution shape of one RKPlan node.
+
+    ``mode`` is the effective repeat-submit policy for this node:
+      ``independent_calls`` -- one PlanCall per repeat (the original path)
+      ``per_repeat_submits`` -- one native group entry, N submits (B1)
+      ``shared_group`` -- one pre-expanded plan, one chained submit (B2), with the
+                          flattened binding list in ``flat``.
+    """
 
     plan: str
     input_names: tuple[str, ...]
     output_names: tuple[str, ...]
     repeats: tuple[tuple[tuple[_RepeatRef, ...], tuple[_RepeatRef, ...]], ...]
+    mode: str = "per_repeat_submits"
+    flat_inputs: tuple[_RepeatRef, ...] = ()
+    flat_outputs: tuple[_RepeatRef, ...] = ()
 
 
 @dataclass
@@ -749,7 +764,7 @@ def load_hybrid_program(path: str | Path, *,
                   "numeric_contract", "bridge", "phase"}
         if kind == "rkplan":
             _keys(raw_node, common | {"plan", "constants"},
-                  where=f"nodes[{index}]")
+                  {"repeat_submit", "group_plan"}, where=f"nodes[{index}]")
         else:
             _keys(raw_node, common | {"action", "action_version", "attrs"},
                   where=f"nodes[{index}]")
@@ -798,6 +813,35 @@ def load_hybrid_program(path: str | Path, *,
                 reject(RK_E_SCHEMA, "RKPlan nodes must use execution phase",
                        stage="hybrid")
             plan = plans[plan_key].plan
+            repeat_submit = raw_node.get("repeat_submit", "per_repeat_submits")
+            if repeat_submit not in REPEAT_SUBMIT_POLICIES:
+                reject(RK_E_UNSUPPORTED,
+                       f"nodes[{index}].repeat_submit {repeat_submit!r} is not "
+                       "registered", stage="hybrid", actual=repeat_submit)
+            group_plan_key = raw_node.get("group_plan")
+            if group_plan_key is not None:
+                group_plan_key = _string(group_plan_key,
+                                         f"nodes[{index}].group_plan")
+                if group_plan_key not in plans:
+                    reject(RK_E_SCHEMA,
+                           f"nodes[{index}] names unknown group plan "
+                           f"{group_plan_key!r}", stage="hybrid")
+            if repeat_submit == "shared_group":
+                if group_plan_key is None:
+                    reject(RK_E_SCHEMA,
+                           "repeat_submit=shared_group requires a group_plan",
+                           stage="hybrid")
+                if not repeat:
+                    reject(RK_E_SCHEMA,
+                           "repeat_submit=shared_group requires a repeat axis",
+                           stage="hybrid")
+                _validate_group_plan(plan, plans[group_plan_key].plan,
+                                     [a.extent for a in repeat],
+                                     where=f"nodes[{index}]")
+            elif group_plan_key is not None:
+                reject(RK_E_SCHEMA,
+                       "group_plan is only meaningful with "
+                       "repeat_submit=shared_group", stage="hybrid")
             plan_inputs = [b.name for b in plan.bindings if b.role == "input"]
             plan_outputs = [b.name for b in plan.bindings if b.role == "output"]
             if set(refs_in) != set(plan_inputs):
@@ -862,7 +906,7 @@ def load_hybrid_program(path: str | Path, *,
                        stage="hybrid")
             node: Node = NpuNode(node_id, plan_key, refs_in, refs_out,
                                  parsed_constants, dep_ids, repeat, numeric,
-                                 bridge, phase)
+                                 bridge, phase, repeat_submit, group_plan_key)
         else:
             action_id = _string(raw_node["action"],
                                 f"nodes[{index}].action")
@@ -964,6 +1008,51 @@ def load_hybrid_program(path: str | Path, *,
                          trace_names, dict(weights))
 
 
+REPEAT_SUBMIT_POLICIES = ("per_repeat_submits", "shared_group")
+
+
+def _validate_group_plan(single: "Plan", group: "Plan", extents: list[int],
+                         *, where: str) -> None:
+    """Prove the group plan is the N-way expansion of the single-instance plan.
+
+    The manifest may not name an arbitrary second plan: the group must carry
+    exactly 3N bindings named ``<input>_<i>`` / ``<output>_<i>`` with the same
+    shapes as the single plan's bindings, and N must equal the declared repeat
+    product.  The C verifier independently re-checks the chained task structure.
+    """
+    nrepeat = 1
+    for extent in extents:
+        nrepeat *= int(extent)
+    single_names = [b.name for b in single.bindings]
+    single_shapes = {b.name: tuple(b.shape) for b in single.bindings}
+    expected = []
+    for i in range(nrepeat):
+        for name in single_names:
+            expected.append(f"{name}_{i}")
+    got = [b.name for b in group.bindings]
+    if got != expected:
+        reject(RK_E_SHAPE,
+               f"{where}.group_plan bindings are not the {nrepeat}-way expansion "
+               "of the single plan", stage="hybrid", actual=got[:8],
+               required=expected[:8])
+    for i in range(nrepeat):
+        for name in single_names:
+            binding = next(b for b in group.bindings if b.name == f"{name}_{i}")
+            if tuple(binding.shape) != single_shapes[name]:
+                reject(RK_E_SHAPE,
+                       f"{where}.group_plan tile {name}_{i} shape differs from "
+                       "the single plan", stage="hybrid",
+                       actual=list(binding.shape),
+                       required=list(single_shapes[name]))
+    if group.accounting.task_count != nrepeat or \
+            group.accounting.submit_count != 1:
+        reject(RK_E_SCHEMA,
+               f"{where}.group_plan must be one submit of {nrepeat} tasks",
+               stage="hybrid",
+               actual=[group.accounting.task_count,
+                       group.accounting.submit_count])
+
+
 def _shape_after_ref_obj(*, program_input: TensorSpec,
                          host_constants: dict[str, HostConstant],
                          tensors: dict[str, TensorSpec],
@@ -1044,11 +1133,16 @@ class HybridRunner:
     def __init__(self, lib: LibRKPlan, program: HybridProgram,
                  weights: dict[str, np.ndarray], *,
                  weights_path: str | Path | None = None, fd: int = 0,
-                 plan_entry: str = "attributed"):
+                 plan_entry: str = "attributed",
+                 repeat_submit: str = "manifest"):
         if plan_entry not in ("attributed", "legacy"):
             reject(RK_E_INVALID, f"unknown plan entry {plan_entry!r}",
                    stage="model")
+        if repeat_submit not in ("manifest", "separate", "b1", "shared"):
+            reject(RK_E_INVALID, f"unknown repeat_submit {repeat_submit!r}",
+                   stage="model")
         self.plan_entry = plan_entry
+        self.repeat_submit = repeat_submit
         t0 = time.perf_counter()
         self.lib = lib
         self.program = program
@@ -1062,8 +1156,19 @@ class HybridRunner:
         self._prepare_host_constants()
         try:
             for key, info in program.plans.items():
-                node = next(n for n in program.nodes
-                            if isinstance(n, NpuNode) and n.plan == key)
+                node = next((n for n in program.nodes
+                             if isinstance(n, NpuNode) and n.plan == key), None)
+                if node is None:
+                    # A pre-expanded group plan: no constants (the expansion
+                    # re-slices tiles, it does not invent weights).
+                    if info.plan.constants:
+                        reject(RK_E_UNSUPPORTED,
+                               f"group plan {key!r} carries constants; the shared "
+                               "repeat path does not re-slice them",
+                               stage="model")
+                    self.calls[key] = PlanCall(lib, info.plan, {}, fd=fd,
+                                               entry=self.plan_entry)
+                    continue
                 plan_constants = {}
                 lookup = {spec.name: spec for spec in info.plan.constants}
                 for name, desc in node.constants.items():
@@ -1150,8 +1255,49 @@ class HybridRunner:
                 out_refs.append(_RepeatRef(ref.tensor, index, allocate,
                                            spec.dtype))
             repeats.append((tuple(in_refs), tuple(out_refs)))
+        mode = "per_repeat_submits" if len(repeats) > 1 else "independent_calls"
+        flat_inputs: tuple[_RepeatRef, ...] = ()
+        flat_outputs: tuple[_RepeatRef, ...] = ()
+        if node.repeat_submit == "shared_group":
+            if self.repeat_submit in ("separate", "b1"):
+                mode = ("independent_calls" if self.repeat_submit == "separate"
+                        else "per_repeat_submits")
+            else:
+                info_group = self.program.plans[node.group_plan]
+                # The group plan's binding order is the single plan's binding
+                # order repeated N times (A_0, B_0, Y_0, A_1, ...), which the
+                # manifest loader already proved.  Map each group binding back to
+                # the repeat instance that supplies its ref.
+                per_repeat = []
+                for in_refs, out_refs in repeats:
+                    mapping = {name: ref for name, ref
+                               in zip(input_names, in_refs)}
+                    mapping.update({name: ref
+                                    for name, ref in zip(output_names, out_refs)})
+                    per_repeat.append(mapping)
+                flat_in: list[_RepeatRef] = []
+                flat_out: list[_RepeatRef] = []
+                for binding in info_group.plan.bindings:
+                    name = binding.name
+                    base, _, index = name.rpartition("_")
+                    if not index.isdigit() or int(index) >= len(per_repeat) or \
+                            name != f"{base}_{int(index)}" or \
+                            base not in per_repeat[int(index)]:
+                        reject(RK_E_SHAPE,
+                               f"{node.id}.group_plan binding {name!r} does not "
+                               "correspond to a declared repeat",
+                               stage="hybrid")
+                    (flat_out if binding.role == "output" else flat_in).append(
+                        per_repeat[int(index)][base])
+                mode = "shared_group"
+                flat_inputs = tuple(flat_in)
+                flat_outputs = tuple(flat_out)
+        elif self.repeat_submit == "shared":
+            reject(RK_E_UNSUPPORTED,
+                   f"node {node.id!r} has no group_plan; the runner cannot force "
+                   "the shared repeat path", stage="model")
         return _NpuBindingPlan(node.plan, input_names, output_names,
-                               tuple(repeats))
+                               tuple(repeats), mode, flat_inputs, flat_outputs)
 
     def _tensor_spec(self, name: str) -> TensorSpec:
         spec = self.program.tensors.get(name)
@@ -1346,10 +1492,27 @@ class HybridRunner:
                         node.id, node.phase, elapsed_us,
                         inputs=tuple(inputs.values()), outputs=tuple(produced))
             else:
-                call = self.calls[node.plan]
                 binding_plan = self.node_plans[node.id]
                 repeats = binding_plan.repeats
-                if len(repeats) > 1:
+                if binding_plan.mode == "shared_group":
+                    # One pre-expanded plan, one chained submit.  Bindings are
+                    # flattened in the group plan's order and every tile is still
+                    # validated by PlanCall before the pointer reaches C.
+                    call = self.calls[node.group_plan]
+                    t_node = time.perf_counter()
+                    inputs = [self._read_ref(values, ref)
+                              for ref in binding_plan.flat_inputs]
+                    outputs = [self._write_ref(values, ref)
+                               for ref in binding_plan.flat_outputs]
+                    report, workspace_us = call.run_into(inputs, outputs)
+                    node_us = (time.perf_counter() - t_node) * 1e6
+                    if stats is not None:
+                        stats.add_report(node.id, report, node_us,
+                                         phase=node.phase,
+                                         workspace_us=workspace_us)
+                    continue
+                call = self.calls[node.plan]
+                if binding_plan.mode == "per_repeat_submits" and len(repeats) > 1:
                     # Static repeat grouping: the manifest declared N independent
                     # instances of one immutable plan, so they run through one
                     # native entry.  The device submit count is unchanged and every
@@ -1369,16 +1532,18 @@ class HybridRunner:
                                                phase=node.phase,
                                                workspace_us=workspace_us)
                     continue
-                in_refs, out_refs = repeats[0]
-                t_node = time.perf_counter()
-                inputs = [self._read_ref(values, ref) for ref in in_refs]
-                outputs = [self._write_ref(values, ref) for ref in out_refs]
-                report, workspace_us = call.run_into(inputs, outputs)
-                node_us = (time.perf_counter() - t_node) * 1e6
-                if stats is not None:
-                    stats.add_report(node.id, report, node_us,
-                                     phase=node.phase,
-                                     workspace_us=workspace_us)
+                # independent_calls: one PlanCall per repeat (the original
+                # path, kept as the explicit control for both group policies).
+                for in_refs, out_refs in repeats:
+                    t_node = time.perf_counter()
+                    inputs = [self._read_ref(values, ref) for ref in in_refs]
+                    outputs = [self._write_ref(values, ref) for ref in out_refs]
+                    report, workspace_us = call.run_into(inputs, outputs)
+                    node_us = (time.perf_counter() - t_node) * 1e6
+                    if stats is not None:
+                        stats.add_report(node.id, report, node_us,
+                                         phase=node.phase,
+                                         workspace_us=workspace_us)
         public_outputs: dict[str, np.ndarray] = {}
         for public, tensor in self.program.outputs.items():
             if tensor not in values:

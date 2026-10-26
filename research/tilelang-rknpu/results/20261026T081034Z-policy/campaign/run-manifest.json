@@ -1,0 +1,77 @@
+{
+  "arms": [
+    "b1",
+    "separate",
+    "manifest"
+  ],
+  "core_mask": 1,
+  "cpu_affinity_pin": 6,
+  "data": {
+    "t10k-images-idx3-ubyte.gz": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+    "t10k-labels-idx1-ubyte.gz": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6"
+  },
+  "interleaved": true,
+  "kind": "repeat-policy-campaign",
+  "plans": {
+    "manifest.json": "b90c1bacaa583d915ebca991747ff235f786012df6b111edb3626fdacf5fd45d",
+    "mnist_mlp_b1.rkhybrid.json": "4dda1e591a4f073589cf8edb64231d155d7c0f8e17d18dd461c521abf34670fd",
+    "mnist_mlp_b1.rkplan.json": "fc074c343f32704f71954e1e1c1f5f9b8988fa6bba00edc97d7ef024409ce168",
+    "mnist_mlp_b32.rkhybrid.json": "0a8e644150bdbd54ceab7dcb768a0a17557f9977b5771242708f6d6f5b9a5391",
+    "mnist_mlp_b32.rkplan.json": "93bb4324a3226fce65a8fe4305fdf31912dbcf75730c3ff2a286a222ab78ecc3",
+    "mnist_mlp_b8.rkhybrid.json": "9a64a5240d699c8b498168cf4980002a30778370cb5fd331b823cd1b464ea536",
+    "mnist_mlp_b8.rkplan.json": "b03fd760dc082ed6dbf1b2590a027ac60430b0394da0b233cf2d85f127945aea",
+    "mnist_mlp_diag_l1_bias.rkplan.json": "bf08b3a732b551a3e58cbd8daa8fb3742b8f5d7e2faa9eea3c2afc5e8fa526ca",
+    "mnist_mlp_diag_l1_relu.rkplan.json": "570a6fbb812f719e187cf799953267c1977a91f7ffa56878b2deacbe4d9b7fd0",
+    "mnist_mlp_diag_l2_bias.rkplan.json": "4cea89350b8403f48109919be57f78a6a32f48092cbd94df454da0d7b17112c7",
+    "mnist_mlp_diag_l2_relu.rkplan.json": "257be779fd85766cbdfae4005cee36a452b2107deb00199194c6fc2425ddba5f",
+    "mnist_mlp_diag_l3_bias.rkplan.json": "a67436fb201f29e5a4a91ff222d6c74ce591699fe5b8421fefda3db9d3aff582",
+    "mnist_relu_probe.rkplan.json": "becc63457697305187b8884a56f2f7b853ea18dfbf5981f1fe527a677087d939",
+    "tiny_vit_b1.rkhybrid.json": "ce6692efd9a283be714ffbaeb8ec8cf35cfd5280e7d50490769d74dc392849d6",
+    "tiny_vit_b1_attn_out.rkplan.json": "d169c56da76b2061144227620b47454d204f5183dc21898f8c9e3aecbcde48f7",
+    "tiny_vit_b1_classifier.rkplan.json": "b19955ae1bf7999aa4f0dbc5d9ebf2fb6e72e394007007f27811ec1a33f4118a",
+    "tiny_vit_b1_down.rkplan.json": "2b07152f64192140045201c03576e3dcfd48db3cbded7175ea7fb7b764ec0142",
+    "tiny_vit_b1_gate.rkplan.json": "0c06d4d7dd9cf6c68998d6bc4914e7941261b46657646f5053c42579cd374321",
+    "tiny_vit_b1_patch.rkplan.json": "d169c56da76b2061144227620b47454d204f5183dc21898f8c9e3aecbcde48f7",
+    "tiny_vit_b1_pv.rkplan.json": "dde466dc114f1eaeadd3de43be845c6a1845d6e6acd5c6e989e8aff7a9bd7796",
+    "tiny_vit_b1_qk.rkplan.json": "dde466dc114f1eaeadd3de43be845c6a1845d6e6acd5c6e989e8aff7a9bd7796",
+    "tiny_vit_b1_qk_group.rkplan.json": "d285b87de1477e96cc9fa2b5ad0d57df2167f545329826bbd65f316a9f4afae0",
+    "tiny_vit_b1_qkv.rkplan.json": "a611e4c6b6c21b0ae117b2752a50a65a6ed8ef49ac0d681734c6e1ad95697023",
+    "tiny_vit_b1_up.rkplan.json": "0c06d4d7dd9cf6c68998d6bc4914e7941261b46657646f5053c42579cd374321",
+    "tiny_vit_b8.rkhybrid.json": "f3007e12741124d8668e3f900a6dfdbd451f140367911b4e1c5c7c6989e3027e",
+    "tiny_vit_b8_attn_out.rkplan.json": "9b103e6c780a92cbd4e7375e4e835cf89cf8944fc4b38d8cb49af179706259ce",
+    "tiny_vit_b8_classifier.rkplan.json": "e0acfe598ccb67f050fdc72bd0219f2d83a6126bbfd6140ff55e31619adf3021",
+    "tiny_vit_b8_down.rkplan.json": "26cf834e209c0e89db17456c2b1ba48907630016771e4f17d2a730e94de6371d",
+    "tiny_vit_b8_gate.rkplan.json": "b54973187fca728a4b4b7bdbb77e36e5fa6c670d9515542f5580c0fbbe3afc16",
+    "tiny_vit_b8_patch.rkplan.json": "9b103e6c780a92cbd4e7375e4e835cf89cf8944fc4b38d8cb49af179706259ce",
+    "tiny_vit_b8_pv.rkplan.json": "dde466dc114f1eaeadd3de43be845c6a1845d6e6acd5c6e989e8aff7a9bd7796",
+    "tiny_vit_b8_qk.rkplan.json": "dde466dc114f1eaeadd3de43be845c6a1845d6e6acd5c6e989e8aff7a9bd7796",
+    "tiny_vit_b8_qk_group.rkplan.json": "ec47030330d998b51fc1927e10f7a0c280bba9804a74eaef15216b53413ae9df",
+    "tiny_vit_b8_qkv.rkplan.json": "77f07871c2fe3593d1ecad4b9f5deefa27697ff1e526aec96ccbc1c84a030f96",
+    "tiny_vit_b8_up.rkplan.json": "b54973187fca728a4b4b7bdbb77e36e5fa6c670d9515542f5580c0fbbe3afc16"
+  },
+  "profiles": [
+    {
+      "batch": 8,
+      "model": "tiny_vit"
+    },
+    {
+      "batch": 1,
+      "model": "tiny_vit"
+    }
+  ],
+  "rounds": 4,
+  "runs_per_round": 32,
+  "schema_version": 1,
+  "source_hashes": {
+    "custom-ops/src/rk_plan_validate.c": "c8c6f844f032d461065466bceb7dd856fe63086d145c55a19e3ac24b5b679f86",
+    "models/compiled/manifest.json": "b90c1bacaa583d915ebca991747ff235f786012df6b111edb3626fdacf5fd45d",
+    "python/rknpu_backend/hybrid.py": "f8a193fe4d04e4f9da40e7566795c9d73d9567518c249b12d78c38bce7c952a0",
+    "python/rknpu_backend/passes/repeat_expand.py": "91ced1c91e77a38108c8ad6509aef17e9d1ed0bfbabc0d5ff159c88775cfd213",
+    "tools/profile_bridge_envelope.py": "7a43036deb8de5f2598d0ccb2b2ca164ffb1a63780cacfe5316153e7ef07aa29"
+  },
+  "warmup": 8,
+  "weights": {
+    "mnist_mlp.npz": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+    "tiny_vit.npz": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+  }
+}

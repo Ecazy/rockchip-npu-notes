@@ -165,16 +165,16 @@
     "data_split": "train",
     "failure_policy": "acceptance failure must be investigated as a numeric or implementation defect; do not widen limits using test-set maxima",
     "formula": "device f16: atol=ceil_2^-12(max(2*observed,2*f16_spacing(train_expected_absmax))); exact Host layout: atol=ceil_2^-12(2*observed); rtol=0",
-    "frozen_utc": "2026-10-26T05:42:19Z",
+    "frozen_utc": "2026-10-26T08:12:09Z",
     "labels_read": false,
     "observation_file": "observation.npz",
-    "observation_metadata_sha256": "58c5cbd8a34e492bc454d30124589c58c24a3910cb6c7733a11e48e7d2d0bcf3",
+    "observation_metadata_sha256": "168444f481c4c25ba995ccf08c478fa6c92732687985f3d2551578bbc1284302",
     "observation_sha256": "c6f6bcd2722aaa99383baf4375fa83bde7010b4594adcacd8bab371dee6c6131",
     "scope": "empirical envelope for the frozen model package and execution paths on RK3588; not a theoretical accuracy or error bound",
     "status": "frozen",
     "test_data_used": false
   },
-  "compiled_manifest_sha256": "a4a3f48545ccf1f22f478fcf18861e2522f3f4bf86b4f8dd647f5fc56e150e3e",
+  "compiled_manifest_sha256": "b90c1bacaa583d915ebca991747ff235f786012df6b111edb3626fdacf5fd45d",
   "kind": "train-calibrated-model-numeric-acceptance",
   "layer_tolerances": {
     "mlp.final_preactivation": {

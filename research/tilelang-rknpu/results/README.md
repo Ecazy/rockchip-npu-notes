@@ -267,3 +267,30 @@ CC/CFLAGS/LDFLAGS 保留编译器选择。恢复后  exit 0。
 Legacy `custom-ops/build-host` and `build-sanitize` trees and Python test caches
 were discarded after verification. The current `build-host-mvp` and
 `build-sanitize-rk` trees and pinned dependency environments remain available.
+
+## Static-repeat policy wiring (2026-10-26, v6)
+
+QK/PV now execute as one pre-expanded plan with a single chained submit, selected
+by an explicit manifest field (`repeat_submit: shared_group` +
+`group_plan: attn_matmul_group`); the `separate` and B1 paths stay available as
+runner controls and are asserted bit-identical.
+
+- `results/20261026T081034Z-policy/`: end-to-end campaign over the three policies
+  (`b1`, `separate`, `manifest`), arms alternated round by round on a pinned CPU.
+  Tiny Transformer b8: b1 14.940 ms, separate 22.622 ms, **manifest (shared group)
+  12.350 ms** -- 1.210x over B1, four rounds 1.20/1.26/1.20/1.22, throughput
+  535.5 -> 647.7 img/s. b1 profile: b1 4.143, separate 4.904, manifest
+  **3.842 ms**. Device structure: submit_count 71 -> 9, task count 71 unchanged,
+  uploads/downloads/bytes unchanged.
+  C-side attribution (single sample, round 1): 8.522 -> 5.207 ms total, with
+  submit_wait 5.008 -> 1.746 ms; guard unchanged (0.321 -> 0.293 ms) because the
+  shared layout keeps three BOs per group.
+- `results/20261026T081153Z-numeric/`: numeric acceptance re-run under the frozen
+  policy after the plan package changed (new `*_qk_group` plans, regenerated
+  manifests). Layer and logit tolerances are byte-identical to v1 (diffed), the
+  verifier reports **PASS / 0 problems**, and the gates include
+  `tiny_vit.scores_heads` (QK output) and `tiny_vit.attn_heads` (PV output), i.e.
+  the QK/PV node outputs themselves were compared under real model inputs.
+- Default policy: `shared_group` for the QK/PV nodes.  It is bit-identical to both
+  controls, passes the numeric gates, and is 1.21x faster than B1 end to end; the
+  controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
