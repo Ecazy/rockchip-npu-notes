@@ -88,58 +88,57 @@ def _attribution(report) -> dict:
     return {f: float(getattr(report, f, 0.0)) for f in fields}
 
 
-def run_variant(*, name: str, lib, plan, group_plan, nrepeat: int,
-                runs: int, warmup: int, fd: int) -> dict:
-    from rknpu_backend.models import PlanCall
+ATTRIBUTION_FIELDS = ("validate_us", "pack_us", "emit_us", "command_us",
+                       "submit_alloc_us", "submit_wait_us", "output_sync_us",
+                       "download_us", "guard_us", "publish_us", "alloc_us",
+                       "total_us", "clock_us")
 
-    inputs = _inputs(plan, nrepeat, 20261026 + nrepeat)
-    created = {}
-    t0 = time.perf_counter()
-    if name == "chain":
-        call = PlanCall(lib, group_plan, {}, fd=fd)
-    else:
-        call = PlanCall(lib, plan, {}, fd=fd)
-    create_us = (time.perf_counter() - t0) * 1e6
-    created["workspace_create_us"] = create_us
-    samples = []
-    report = None
-    try:
-        def once():
-            """One full group; returns the last native report it saw."""
-            outs = _outputs(plan, nrepeat)
-            last = None
-            if name == "separate":
-                for i in range(nrepeat):
-                    last, _ = call.run_into(inputs[i], outs[i])
-            elif name == "group":
-                last, _ = call.run_group_into(inputs, outs)
-            else:
-                last, _ = call.run_into([a for row in inputs for a in row],
-                                        [o for row in outs for o in row])
-            return last
 
-        for _ in range(warmup):
-            once()
-        for _ in range(runs):
-            t = time.perf_counter()
-            report = once()
-            samples.append((time.perf_counter() - t) * 1e6)
-    finally:
-        call.close()
-    med = statistics.median(samples)
-    return {
-        "variant": name,
-        "runs": runs,
-        "wall_us": {"median": med, "min": min(samples), "max": max(samples),
-                    "samples": samples},
-        "per_task_us": med / nrepeat,
-        # ``counts``/``attribution`` are the last native report: one call for
-        # "separate" (per-call cost) and the whole group for "group"/"chain".
-        "counts": _counts(report) if report is not None else {},
-        "attribution": _attribution(report) if report is not None else {},
-        "attribution_scope": "one_call" if name == "separate" else "whole_group",
-        **created,
-    }
+def make_caller(*, name: str, call_for, group_call, plan, group_plans: dict,
+                nrepeat: int, inputs: list, outputs: list):
+    """Return a callable executing one whole group and returning its aggregate.
+
+    ``separate`` sums the N per-call reports, so every variant's attribution
+    describes the *whole group* and the numbers are comparable.  The aggregate is
+    recorded per round (the tool alternates variants round by round), and the
+    reported figures are medians over those per-round aggregates -- not one
+    sampled run.
+    """
+    def call() -> dict:
+        agg = {f: 0.0 for f in ATTRIBUTION_FIELDS}
+        counts = {"task_count": 0, "submit_count": 0, "upload_calls": 0,
+                  "upload_bytes": 0, "download_calls": 0, "download_bytes": 0}
+        if name == "separate":
+            for i in range(nrepeat):
+                report, _ = call_for(inputs[i], outputs[i])
+                for f in ATTRIBUTION_FIELDS:
+                    agg[f] += float(getattr(report, f, 0.0))
+                for k in counts:
+                    counts[k] += int(getattr(report, k, 0))
+        elif name == "group":
+            report, _ = group_call(inputs, outputs)
+            for f in ATTRIBUTION_FIELDS:
+                agg[f] += float(getattr(report, f, 0.0))
+            for k in counts:
+                counts[k] += int(getattr(report, k, 0))
+        else:
+            report, _ = call_for([a for row in inputs for a in row],
+                                 [o for row in outputs for o in row])
+            for f in ATTRIBUTION_FIELDS:
+                agg[f] += float(getattr(report, f, 0.0))
+            for k in counts:
+                counts[k] += int(getattr(report, k, 0))
+        return {"attribution": agg, "counts": counts}
+
+    return call
+
+
+def median_dict(rows: list[dict]) -> dict:
+    out = {}
+    for key in rows[0]:
+        values = [r[key] for r in rows]
+        out[key] = statistics.median(values) if values else 0.0
+    return out
 
 
 def main() -> int:
@@ -176,12 +175,19 @@ def main() -> int:
         opened = True
     try:
         plan = load_plan(str(args.plans_dir / f"{args.plan}.rkplan.json"))
-        group_plan = expand_static_repeat(plan, args.repeat)
+        group_plans = {
+            "chain": expand_static_repeat(plan, args.repeat),
+            "chain_shared": expand_static_repeat(plan, args.repeat, shared_bo=True),
+        }
         result = {
             "schema_version": SCHEMA_VERSION,
             "kind": "repeat-path-benchmark",
             "plan": args.plan,
             "repeat": args.repeat,
+            "rounds": args.runs,
+            "interleaved": True,
+            "attribution_scope": "per-round aggregate over the whole group "
+                                 "(separate sums its N calls)",
             "library": lib_path,
             "host": {"machine": platform.machine(),
                      "device_model": _device_model(),
@@ -192,21 +198,80 @@ def main() -> int:
             "plans": {
                 "single": {"hash": plan.plan_hash,
                            "accounting": plan.accounting.to_dict()},
-                "group": {"hash": group_plan.plan_hash,
-                          "accounting": group_plan.accounting.to_dict()},
+                "chain": {"hash": group_plans["chain"].plan_hash,
+                          "accounting": group_plans["chain"].accounting.to_dict()},
+                "chain_shared": {
+                    "hash": group_plans["chain_shared"].plan_hash,
+                    "accounting": group_plans["chain_shared"].accounting.to_dict()},
             },
             "variants": [],
         }
-        for name in ("separate", "group", "chain"):
-            result["variants"].append(run_variant(
-                name=name, lib=lib, plan=plan, group_plan=group_plan,
-                nrepeat=args.repeat, runs=args.runs, warmup=args.warmup, fd=fd))
+
+        from rknpu_backend.models import PlanCall
+        variants = ("separate", "group", "chain", "chain_shared")
+        inputs = _inputs(plan, args.repeat, 20261026 + args.repeat)
+        callers = {}
+        creation = {}
+        calls = {}
+        try:
+            for name in variants:
+                t0 = time.perf_counter()
+                if name in ("chain", "chain_shared"):
+                    target = group_plans[name]
+                else:
+                    target = plan
+                calls[name] = PlanCall(lib, target, {}, fd=fd)
+                creation[name] = (time.perf_counter() - t0) * 1e6
+                if name in ("separate", "chain", "chain_shared"):
+                    callers[name] = make_caller(
+                        name=name, call_for=calls[name].run_into,
+                        group_call=None, plan=plan, group_plans=group_plans,
+                        nrepeat=args.repeat, inputs=inputs,
+                        outputs=_outputs(plan, args.repeat))
+                else:
+                    callers[name] = make_caller(
+                        name=name, call_for=None,
+                        group_call=calls[name].run_group_into, plan=plan,
+                        group_plans=group_plans, nrepeat=args.repeat,
+                        inputs=inputs, outputs=_outputs(plan, args.repeat))
+            for _ in range(args.warmup):
+                for name in variants:
+                    callers[name]()
+            samples = {name: [] for name in variants}
+            aggregates = {name: [] for name in variants}
+            # Interleaved rounds: every variant sees the same machine state.
+            for _ in range(args.runs):
+                for name in variants:
+                    t0 = time.perf_counter()
+                    aggregate = callers[name]()
+                    samples[name].append((time.perf_counter() - t0) * 1e6)
+                    aggregates[name].append(aggregate)
+        finally:
+            for call in calls.values():
+                call.close()
+        for name in variants:
+            med = statistics.median(samples[name])
+            agg_med = median_dict([a["attribution"] for a in aggregates[name]])
+            counts = median_dict([{k: float(v) for k, v in a["counts"].items()}
+                                  for a in aggregates[name]])
+            result["variants"].append({
+                "variant": name,
+                "rounds_measured": len(samples[name]),
+                "wall_us": {"median": med, "min": min(samples[name]),
+                            "max": max(samples[name]),
+                            "samples": samples[name]},
+                "per_task_us": med / args.repeat,
+                "attribution_median": agg_med,
+                "counts": {k: int(v) for k, v in counts.items()},
+                "workspace_create_us": creation[name],
+            })
+
         # Correctness: the three paths must agree bit for bit.
         from rknpu_backend.models import PlanCall
         inputs = _inputs(plan, args.repeat, 20261026 + args.repeat)
         outs = {}
-        for name in ("separate", "group", "chain"):
-            target = group_plan if name == "chain" else plan
+        for name in ("separate", "group", "chain", "chain_shared"):
+            target = group_plans[name] if name in ("chain", "chain_shared") else plan
             call = PlanCall(lib, target, {}, fd=fd)
             try:
                 produced = _outputs(plan, args.repeat)
@@ -222,7 +287,7 @@ def main() -> int:
             finally:
                 call.close()
         same = {}
-        for name in ("separate", "group", "chain"):
+        for name in ("separate", "group", "chain", "chain_shared"):
             same[name] = all(
                 np.array_equal(outs["separate"][i][0], outs[name][i][0])
                 for i in range(args.repeat))
@@ -239,12 +304,12 @@ def main() -> int:
     print(f"plan={args.plan} repeat={args.repeat} runs={args.runs}")
     for v in result["variants"]:
         c = v["counts"]
-        print(f"  {v['variant']:<9} median {v['wall_us']['median'] / 1e3:8.3f} ms  "
+        print(f"  {v['variant']:<13} median {v['wall_us']['median'] / 1e3:8.3f} ms  "
               f"per task {v['per_task_us']:7.3f} us  "
               f"tasks {c.get('task_count', '?')} submits {c.get('submit_count', '?')}  "
               f"up {c.get('upload_calls', '?')} down {c.get('download_calls', '?')}  "
               f"create {v['workspace_create_us'] / 1e3:.3f} ms")
-        a = v["attribution"]
+        a = v["attribution_median"]
         print(f"            submit_wait {a.get('submit_wait_us', 0) / 1e3:7.3f} ms  "
               f"pack {a.get('pack_us', 0) / 1e3:6.3f}  "
               f"download {a.get('download_us', 0) / 1e3:6.3f}  "

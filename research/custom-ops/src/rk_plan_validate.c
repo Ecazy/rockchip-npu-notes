@@ -494,13 +494,22 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
                     goto done;
                 }
                 uint32_t b = v->buffer_id;
+                uint64_t rd_start = v->offset_bytes;
+                uint64_t rd_end = v->offset_bytes + v->tensor.bytes;
                 uint32_t producer = UINT32_MAX, producer_seq = 0;
                 for (uint32_t j = 0; j < i; j++) {
                     const rk_action_desc *w = &desc->actions[j];
                     if (!w->noutputs) continue;
                     int writes = 0;
-                    for (uint32_t o = 0; o < w->noutputs; o++)
-                        if (view_at(desc, w->outputs[o])->buffer_id == b) writes = 1;
+                    for (uint32_t o = 0; o < w->noutputs; o++) {
+                        const rk_view_desc *wv = view_at(desc, w->outputs[o]);
+                        if (!wv || wv->buffer_id != b) continue;
+                        /* Region, not buffer: one BO may hold several tiles and a
+                         * read only depends on the writes that overlap it. */
+                        if (wv->offset_bytes < rd_end &&
+                            rd_start < wv->offset_bytes + wv->tensor.bytes)
+                            writes = 1;
+                    }
                     if (writes && seq[j] >= producer_seq) {
                         producer = j;
                         producer_seq = seq[j];
@@ -564,30 +573,37 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
      * writes on one buffer, and one buffer may have at most one host upload. */
     for (uint32_t b = 0; b < nbuffers; b++) {
         const uint32_t first_w = group_start[b], count = group_start[b + 1u] - first_w;
-        uint32_t host_writers = 0;
-        for (uint32_t i = 0; i < nactions; i++) {
-            if (desc->actions[i].kind != RK_ACTION_UPLOAD) continue;
-            for (uint32_t o = 0; o < desc->actions[i].noutputs; o++)
-                if (view_at(desc, desc->actions[i].outputs[o])->buffer_id == b)
-                    host_writers++;
-        }
-        if (host_writers > 1) {
-            rc = fail(diag, RK_E_ALIAS, "validate",
-                      "a buffer may only be uploaded by one host action");
-            goto grouped_done;
-        }
-        if (host_writers == 1 && count > 1) {
-            rc = fail(diag, RK_E_ALIAS, "validate",
-                      "a host upload and device writes must not share a buffer");
-            goto grouped_done;
-        }
+        /* Host uploads may share one BO when they write *disjoint slices*: that
+         * is how a static-repeat group packs N tiles of one role into a single
+         * allocation.  Everything else keeps the old contract: an upload may
+         * never overlap another upload or any device write, and overlapping
+         * device writers must agree on physical addressing (K accumulation). */
         for (uint32_t x = 0; x < count; x++) {
             const rk_view_desc *vx = view_at(desc, writer_view[first_w + x]);
+            const int vx_host =
+                desc->actions[writer_view_action[first_w + x]].kind ==
+                RK_ACTION_UPLOAD;
             for (uint32_t y = x + 1; y < count; y++) {
                 const rk_view_desc *vy = view_at(desc, writer_view[first_w + y]);
+                const int vy_host =
+                    desc->actions[writer_view_action[first_w + y]].kind ==
+                    RK_ACTION_UPLOAD;
                 int overlap = vx->offset_bytes < vy->offset_bytes + vy->tensor.bytes &&
                               vy->offset_bytes < vx->offset_bytes + vx->tensor.bytes;
-                if (overlap && !same_addressing(&vx->tensor, &vy->tensor)) {
+                if (!overlap) continue;
+                if (vx_host && vy_host) {
+                    rc = fail(diag, RK_E_ALIAS, "validate",
+                              "overlapping host uploads of one buffer are "
+                              "ambiguous; slices must be disjoint");
+                    goto grouped_done;
+                }
+                if (vx_host || vy_host) {
+                    rc = fail(diag, RK_E_ALIAS, "validate",
+                              "a host upload and a device write must not overlap "
+                              "in one buffer");
+                    goto grouped_done;
+                }
+                if (!same_addressing(&vx->tensor, &vy->tensor)) {
                     rc = fail(diag, RK_E_ALIAS, "validate",
                               "overlapping writers of one buffer use different "
                               "physical addressing");

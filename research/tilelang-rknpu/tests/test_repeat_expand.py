@@ -193,6 +193,94 @@ class RepeatExpandTests(unittest.TestCase):
             self.lib.create_plan(tampered)
         self.assertIn("geometry", str(caught.exception))
 
+    def test_shared_bo_group_is_admitted_and_bitwise_equal(self):
+        """Three BOs (one per role) with disjoint tile slices: the B2 target."""
+        from rknpu_backend.models import PlanCall
+        from rknpu_backend.passes.repeat_expand import expand_static_repeat
+        group = expand_static_repeat(self.parent, REPEATS, shared_bo=True)
+        self.assertEqual(group.accounting.data_bo_count, 3)
+        self.assertEqual(len(group.buffers), 3)
+        self.assertEqual(len(group.views), 3 * REPEATS)
+        cplan = self.lib.create_plan(group)
+        cplan.destroy()
+
+        inputs = self._inputs()
+        single = PlanCall(self.lib, self.parent, {}, fd=0)
+        separate = [[np.zeros((16, 16), dtype=np.float16)] for _ in range(REPEATS)]
+        try:
+            for i in range(REPEATS):
+                single.run_into(inputs[i], separate[i])
+        finally:
+            single.close()
+        grouped = PlanCall(self.lib, group, {}, fd=0)
+        produced = [[np.zeros((16, 16), dtype=np.float16)] for _ in range(REPEATS)]
+        try:
+            report, _ = grouped.run_into(
+                [a for repeat in inputs for a in repeat],
+                [out for repeat in produced for out in repeat])
+        finally:
+            grouped.close()
+        self.assertEqual(int(report.submit_count), 1)
+        self.assertEqual(int(report.task_count), REPEATS)
+        for i in range(REPEATS):
+            self.assertTrue(np.array_equal(separate[i][0], produced[i][0]),
+                            f"task {i} differs from the separate run")
+
+    def _shared_tampered(self, mutate):
+        import dataclasses
+        from rknpu_backend.passes.repeat_expand import expand_static_repeat
+        group = expand_static_repeat(self.parent, 4, shared_bo=True)
+        return mutate(group, dataclasses)
+
+    def test_overlapping_uploads_are_refused(self):
+        """Two uploads writing the same slice of one BO is ambiguous."""
+        from rknpu_backend.errors import BackendError
+
+        def mutate(group, dc):
+            views = list(group.views)
+            views[3] = dc.replace(views[3], offset_bytes=views[0].offset_bytes)
+            return dc.replace(group, views=tuple(views))
+
+        # Refused either by the region-aware producer rule or by the explicit
+        # overlap rule; which one fires depends on rule order, so only the
+        # refusal is asserted.
+        with self.assertRaises(BackendError):
+            self.lib.create_plan(self._shared_tampered(mutate))
+
+    def test_read_spanning_two_tiles_is_refused(self):
+        """A read must be covered by one declared producer, not two slices."""
+        from rknpu_backend.errors import BackendError
+
+        def mutate(group, dc):
+            views = list(group.views)
+            views[0] = dc.replace(views[0], offset_bytes=512)
+            return dc.replace(group, views=tuple(views))
+
+        with self.assertRaises(BackendError):
+            self.lib.create_plan(self._shared_tampered(mutate))
+
+    def test_missing_dependency_is_refused(self):
+        """Dropping the upload dependency must not validate."""
+        from rknpu_backend.errors import BackendError
+
+        def mutate(group, dc):
+            actions = list(group.actions)
+            first_task = 2 * 4
+            actions[first_task] = dc.replace(actions[first_task], deps=(4,))
+            return dc.replace(group, actions=tuple(actions))
+
+        with self.assertRaises(BackendError) as caught:
+            self.lib.create_plan(self._shared_tampered(mutate))
+        self.assertIn("dependency", str(caught.exception))
+
+    def test_k_accumulation_chains_still_validate(self):
+        """The existing K-accumulation recipe is untouched by this change."""
+        from rknpu_backend import load_plan
+        plan = load_plan(str(PLANS / "mnist_mlp_b32.rkplan.json"))
+        self.assertTrue(any(len(s.task_ids) > 1 for s in plan.submits))
+        cplan = self.lib.create_plan(plan)
+        cplan.destroy()
+
     def test_single_repeat_returns_the_parent_unchanged(self):
         from rknpu_backend.passes.repeat_expand import expand_static_repeat
         self.assertIs(expand_static_repeat(self.parent, 1), self.parent)

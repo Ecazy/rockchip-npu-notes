@@ -124,8 +124,17 @@ def _admit(plan: Plan) -> tuple[Action, list[Action]]:
     return task, uploads
 
 
-def expand_static_repeat(plan: Plan, nrepeat: int) -> Plan:
-    """Return a ``GROUP_RECIPE`` plan with ``nrepeat`` independent instances."""
+def expand_static_repeat(plan: Plan, nrepeat: int, *,
+                         shared_bo: bool = False) -> Plan:
+    """Return a ``GROUP_RECIPE`` plan with ``nrepeat`` independent instances.
+
+    ``shared_bo=False`` keeps one BO per task (3N slots) -- the layout the first
+    board probe validated, with the alias contracts of the single-task plan.
+    ``shared_bo=True`` packs the N tiles of each role into one BO as disjoint
+    slices (three BOs total), which the limited region-granular admission now
+    allows; it is the layout that makes the chained submit pay off, because the
+    per-call guard cost scales with the number of BOs.
+    """
     if not isinstance(nrepeat, int) or nrepeat < 1:
         reject(RK_E_SHAPE, "repeat count must be a positive integer",
                stage="repeat_expand", actual=nrepeat)
@@ -147,45 +156,81 @@ def expand_static_repeat(plan: Plan, nrepeat: int) -> Plan:
     pub = plan.publish[0]
     submit = plan.submits[0]
 
-    # First round keeps ONE BO PER TASK (3N slots), exactly the shape the B2
-    # board probe validated.  A shared-BO layout would need the verifier's
-    # buffer-granular writer rules to become region-granular first: today a buffer
-    # may only be uploaded by one host action, so N tiles in one BO are refused.
-    # Per-task BOs keep every existing alias/writer contract intact and pay for it
-    # in device slack (32 KiB per BO), which the accounting below declares and the
-    # campaign measures.
     tiles = (buf_a.capacity, buf_w.capacity, buf_y.capacity)
-    first_task = 2 * nrepeat
-    last_task = 3 * nrepeat - 1
-    last_action = 4 * nrepeat - 1
-
-    bindings: list[Binding] = []
-    for i in range(nrepeat):
-        for src in (in_a, in_b, out_y):
-            bindings.append(Binding(id=len(bindings), name=f"{src.name}_{i}",
-                                    role=src.role, dtype=src.dtype,
-                                    shape=src.shape))
-    buffers: list[Buffer] = []
-    views: list[View] = []
-    for i in range(nrepeat):
-        for role, (src_buf, src_view) in enumerate((
-                (buf_a, view_a), (buf_w, view_w), (buf_y, view_y))):
-            bid = len(buffers)
-            if role == 0:
-                lifetime = (i, first_task + i)
-            elif role == 1:
-                lifetime = (nrepeat + i, first_task + i)
-            else:
-                lifetime = (first_task + i, 3 * nrepeat + i)
-            buffers.append(Buffer(
-                id=bid, role=src_buf.role, slot_id=bid, offset=0,
-                capacity=src_buf.capacity, alignment=src_buf.alignment,
-                layout_id=src_buf.layout_id, lifetime=lifetime,
-                padding_state=src_buf.padding_state,
-                must_not_share_bo=src_buf.must_not_share_bo))
-            views.append(View(id=len(views), buffer_id=bid, offset_bytes=0,
-                              tensor=src_view.tensor,
-                              valid_region=src_view.valid_region))
+    if shared_bo:
+        # Three BOs, one per role; tile i of a role is a view at i * tile bytes.
+        # Uploads of one role therefore write disjoint slices of one buffer, which
+        # the verifier admits by region and rejects on any overlap.
+        first_task = 2 * nrepeat
+        last_task = 3 * nrepeat - 1
+        last_action = 4 * nrepeat - 1
+        bindings: list[Binding] = []
+        for i in range(nrepeat):
+            for src in (in_a, in_b, out_y):
+                bindings.append(Binding(id=len(bindings), name=f"{src.name}_{i}",
+                                        role=src.role, dtype=src.dtype,
+                                        shape=src.shape))
+        buffers = (
+            Buffer(id=0, role=buf_a.role, slot_id=0, offset=0,
+                   capacity=tiles[0] * nrepeat, alignment=buf_a.alignment,
+                   layout_id=buf_a.layout_id, lifetime=(0, last_task),
+                   padding_state=buf_a.padding_state,
+                   must_not_share_bo=buf_a.must_not_share_bo),
+            Buffer(id=1, role=buf_w.role, slot_id=1, offset=0,
+                   capacity=tiles[1] * nrepeat, alignment=buf_w.alignment,
+                   layout_id=buf_w.layout_id, lifetime=(nrepeat, last_task),
+                   padding_state=buf_w.padding_state,
+                   must_not_share_bo=buf_w.must_not_share_bo),
+            Buffer(id=2, role=buf_y.role, slot_id=2, offset=0,
+                   capacity=tiles[2] * nrepeat, alignment=buf_y.alignment,
+                   layout_id=buf_y.layout_id, lifetime=(first_task, last_action),
+                   padding_state=buf_y.padding_state,
+                   must_not_share_bo=buf_y.must_not_share_bo),
+        )
+        views = []
+        for i in range(nrepeat):
+            for slot, (src_view, tile) in enumerate((
+                    (view_a, tiles[0]), (view_w, tiles[1]), (view_y, tiles[2]))):
+                views.append(View(id=len(views), buffer_id=slot,
+                                  offset_bytes=i * tile,
+                                  tensor=src_view.tensor,
+                                  valid_region=src_view.valid_region))
+        data_bo_count = 3
+    else:
+        # First round's layout: ONE BO PER TASK (3N slots).  Every existing alias
+        # and writer contract is untouched, at the cost of 32 KiB slack per BO.
+        first_task = 2 * nrepeat
+        last_task = 3 * nrepeat - 1
+        last_action = 4 * nrepeat - 1
+        bindings = []
+        for i in range(nrepeat):
+            for src in (in_a, in_b, out_y):
+                bindings.append(Binding(id=len(bindings), name=f"{src.name}_{i}",
+                                        role=src.role, dtype=src.dtype,
+                                        shape=src.shape))
+        buffers = []
+        views = []
+        for i in range(nrepeat):
+            for role, (src_buf, src_view) in enumerate((
+                    (buf_a, view_a), (buf_w, view_w), (buf_y, view_y))):
+                bid = len(buffers)
+                if role == 0:
+                    lifetime = (i, first_task + i)
+                elif role == 1:
+                    lifetime = (nrepeat + i, first_task + i)
+                else:
+                    lifetime = (first_task + i, 3 * nrepeat + i)
+                buffers.append(Buffer(
+                    id=bid, role=src_buf.role, slot_id=bid, offset=0,
+                    capacity=src_buf.capacity, alignment=src_buf.alignment,
+                    layout_id=src_buf.layout_id, lifetime=lifetime,
+                    padding_state=src_buf.padding_state,
+                    must_not_share_bo=src_buf.must_not_share_bo))
+                views.append(View(id=len(views), buffer_id=bid, offset_bytes=0,
+                                  tensor=src_view.tensor,
+                                  valid_region=src_view.valid_region))
+        buffers = tuple(buffers)
+        data_bo_count = 3 * nrepeat
     # views[3i], views[3i+1], views[3i+2] are A_i, W_i, Y_i.
 
     # Action order: all uploads, then all tasks, then all downloads.  A host
@@ -238,7 +283,10 @@ def expand_static_repeat(plan: Plan, nrepeat: int) -> Plan:
                       core_policy=submit.core_policy, deps=()),)
 
     # Accounting: same formulas the planner and the C verifier use.
-    slot_caps = [tiles[role] for _ in range(nrepeat) for role in range(3)]
+    if shared_bo:
+        slot_caps = [tiles[0] * nrepeat, tiles[1] * nrepeat, tiles[2] * nrepeat]
+    else:
+        slot_caps = [tiles[role] for _ in range(nrepeat) for role in range(3)]
     peak_payload = sum(slot_caps)
     reserved = sum(cap + CO_SLACK + CO_GUARD for cap in slot_caps)
     command_workspace = nrepeat * CO_MAX_WORDS * 8
@@ -255,12 +303,12 @@ def expand_static_repeat(plan: Plan, nrepeat: int) -> Plan:
                stage="repeat_expand")
     accounting = Accounting(
         peak_payload_bytes=peak_payload, reserved_bytes=reserved,
-        data_bo_count=3 * nrepeat, device_request_bytes=device_request,
+        data_bo_count=data_bo_count, device_request_bytes=device_request,
         command_workspace_bytes=command_workspace, host_bytes=host_bytes,
         task_count=nrepeat, submit_count=1, transfers=3 * nrepeat)
 
     return with_plan_hash(Plan(
-        name=f"{plan.name}+repeat{nrepeat}",
+        name=f"{plan.name}+repeat{nrepeat}" + ("+shared" if shared_bo else ""),
         profile_hash=plan.profile_hash,
         source_hash=f"{plan.source_hash}|repeat_expand:n={nrepeat}",
         bindings=tuple(bindings), constants=tuple(),

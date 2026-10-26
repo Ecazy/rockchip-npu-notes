@@ -1,0 +1,28 @@
+=== tiny_vit_b8_qk ===
+  separate      median    7.569 ms  per task 236.534 us  tasks 32 submits 32  up 64 down 32  create 1.098 ms
+            submit_wait   2.093 ms  pack  0.363  download  0.205  guard  0.976  total   4.067
+  group         median    3.955 ms  per task 123.597 us  tasks 32 submits 32  up 64 down 32  create 0.645 ms
+            submit_wait   1.995 ms  pack  0.348  download  0.188  guard  0.032  total   2.879
+  chain         median    3.918 ms  per task 122.439 us  tasks 32 submits 1  up 64 down 32  create 10.302 ms
+            submit_wait   0.204 ms  pack  0.346  download  0.151  guard  0.971  total   2.006
+  chain_shared  median    2.930 ms  per task  91.573 us  tasks 32 submits 1  up 64 down 32  create 5.221 ms
+            submit_wait   0.213 ms  pack  0.426  download  0.196  guard  0.034  total   1.208
+  single  device 118976 B  host 84220 B  BOs 3  tasks 1  submits 1
+  chain   device 3807232 B  host 647552 B  BOs 96  tasks 32  submits 1
+  chain_shared device 753856 B  host 647552 B  BOs 3  tasks 32  submits 1
+  bitwise equal to separate: {'separate': True, 'group': True, 'chain': True, 'chain_shared': True}
+wrote /mnt/ssd/workspace/tl-b2b2/out-tiny_vit_b8_qk.json
+=== tiny_vit_b8_pv ===
+  separate      median    7.402 ms  per task 231.316 us  tasks 32 submits 32  up 64 down 32  create 0.936 ms
+            submit_wait   2.124 ms  pack  0.356  download  0.196  guard  0.945  total   4.013
+  group         median    3.872 ms  per task 121.008 us  tasks 32 submits 32  up 64 down 32  create 0.465 ms
+            submit_wait   2.009 ms  pack  0.312  download  0.163  guard  0.030  total   2.778
+  chain         median    4.044 ms  per task 126.367 us  tasks 32 submits 1  up 64 down 32  create 10.930 ms
+            submit_wait   0.224 ms  pack  0.346  download  0.153  guard  0.997  total   2.021
+  chain_shared  median    3.090 ms  per task  96.572 us  tasks 32 submits 1  up 64 down 32  create 5.225 ms
+            submit_wait   0.220 ms  pack  0.434  download  0.199  guard  0.034  total   1.235
+  single  device 118976 B  host 84220 B  BOs 3  tasks 1  submits 1
+  chain   device 3807232 B  host 647552 B  BOs 96  tasks 32  submits 1
+  chain_shared device 753856 B  host 647552 B  BOs 3  tasks 32  submits 1
+  bitwise equal to separate: {'separate': True, 'group': True, 'chain': True, 'chain_shared': True}
+wrote /mnt/ssd/workspace/tl-b2b2/out-tiny_vit_b8_pv.json
