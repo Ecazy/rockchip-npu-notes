@@ -194,13 +194,13 @@ def analyze(campaign: Path, results: Path, arms: tuple[str, ...]) -> dict:
                     "download_calls": stats.get("download_calls"),
                     "upload_bytes": stats.get("upload_bytes"),
                     "download_bytes": stats.get("download_bytes"),
-                    "plan_workspace_ms": 1e-3 * float(
-                        stats.get("plan_workspace_us", 0.0)),
-                    "host_action_ms": 1e-3 * float(
-                        stats.get("host_action_us", 0.0)),
-                    "executor_overhead_ms": 1e-3 * float(
-                        stats.get("executor_overhead_us", 0.0)),
                 },
+                "plan_workspace_ms": 1e-3 * float(
+                    stats.get("plan_workspace_us", 0.0)),
+                "host_action_ms": 1e-3 * float(
+                    stats.get("host_action_us", 0.0)),
+                "executor_overhead_ms": 1e-3 * float(
+                    stats.get("executor_overhead_us", 0.0)),
             }
             summary_rows[key] = item
         per_round[(round_no, arm)] = {
@@ -252,6 +252,12 @@ def analyze(campaign: Path, results: Path, arms: tuple[str, ...]) -> dict:
                     row["end_to_end_seconds"] for row in rows),
                 "reference_seconds": rows[0]["reference_seconds"],
                 "structure": rows[0]["structure"],
+                "plan_workspace_ms": _median(
+                    row["plan_workspace_ms"] for row in rows),
+                "host_action_ms": _median(
+                    row["host_action_ms"] for row in rows),
+                "executor_overhead_ms": _median(
+                    row["executor_overhead_ms"] for row in rows),
                 "round_warm_call_ms": [row["warm_call_ms"] for row in rows],
                 "round_warm_throughput_images_s": [
                     row["warm_throughput_images_s"] for row in rows],
