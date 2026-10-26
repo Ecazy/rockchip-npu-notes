@@ -17,7 +17,7 @@ import numpy as np
 
 from .errors import RK_E_INVALID, RK_E_SHAPE, RK_E_UNSUPPORTED, reject
 from .plan import Plan
-from .runtime.ffi import (CWorkspace, LibRKPlan, make_binding,
+from .runtime.ffi import (RKBinding, CWorkspace, LibRKPlan, make_binding,
                           validate_numpy_binding)
 
 MNIST_MEAN = np.float32(0.1307)
@@ -72,6 +72,15 @@ def patchify_mnist(raw: np.ndarray) -> np.ndarray:
 TIMING_SCHEMA_VERSION = 2
 TIMING_PHASES = ("preprocess", "execution", "postprocess")
 
+# Envelope attribution fields reported by the C runtime, in definition order.
+# Each is a disjoint interval inside ``plan_workspace_us``; their sum plus the
+# published residual explains the whole native workspace call.
+ENVELOPE_FIELDS = ("validate_us", "pack_us", "emit_us", "command_us",
+                   "submit_alloc_us", "submit_wait_us", "output_sync_us",
+                   "download_us", "guard_us", "publish_us", "alloc_us")
+# Self-consistency witnesses reported alongside the attribution intervals.
+ENVELOPE_WITNESS_FIELDS = ("total_us", "clock_us")
+
 
 def _nbytes(arrays: tuple[np.ndarray, ...]) -> int:
     return sum(int(np.asarray(a).nbytes) for a in arrays)
@@ -101,12 +110,28 @@ class RunStats:
     plan_emit_us: float = 0.0
     plan_submit_wait_us: float = 0.0
     plan_output_sync_us: float = 0.0
+    # Envelope attribution reported by the C runtime: the RKPlan dwell is
+    # decomposed into these disjoint intervals so the residual is visible
+    # instead of being an unexplained remainder.
+    plan_validate_us: float = 0.0
+    plan_command_us: float = 0.0
+    plan_submit_alloc_us: float = 0.0
+    plan_download_us: float = 0.0
+    plan_guard_us: float = 0.0
+    plan_publish_us: float = 0.0
+    plan_alloc_us: float = 0.0
+    plan_total_us: float = 0.0
+    plan_clock_us: float = 0.0
     upload_calls: int = 0
     upload_bytes: int = 0
     download_calls: int = 0
     download_bytes: int = 0
     task_count: int = 0
     submit_count: int = 0
+    # Static-repeat group entries: one native call covers `plan_repeats`
+    # independent executions of the same immutable plan.
+    plan_group_calls: int = 0
+    plan_repeats: int = 0
     host_action_bytes: int = 0
     plans: list[dict[str, Any]] = field(default_factory=list)
     host_actions: list[dict[str, Any]] = field(default_factory=list)
@@ -140,51 +165,56 @@ class RunStats:
         row["elapsed_us"] += float(elapsed_us)
         row["host_bytes"] += nbytes
 
-    def add_report(self, name: str, report: Any, elapsed_us: float,
-                   *, phase: str = "execution", workspace_us: float | None = None) -> None:
-        """Record one production RKPlan node interval.
-
-        ``elapsed_us`` is the full plan-node dwell (input resolution, binding
-        preparation, C workspace run and output-target handling).  The optional
-        ``workspace_us`` is only the C ``rk_workspace_run`` interval, so callers can
-        separate model-runtime overhead from native execution.
-        """
-        phase = self._phase(phase)
+    def _accumulate(self, name: str, report: Any, elapsed_us: float,
+                    workspace_us: float | None, phase: str, *,
+                    calls: int = 1, repeats: int = 1) -> None:
         self.plan_call_us += float(elapsed_us)
         self.plan_workspace_us += (float(elapsed_us) if workspace_us is None
                                    else float(workspace_us))
-        self.plan_pack_us += float(report.pack_us)
-        self.plan_emit_us += float(report.emit_us)
-        self.plan_submit_wait_us += float(report.submit_wait_us)
-        self.plan_output_sync_us += float(report.output_sync_us)
+        # The four legacy fields are members of ENVELOPE_FIELDS; they are
+        # accumulated once by the loop below.  Adding them here as well would
+        # double-count them and make the envelope residual negative.
+        for field in ENVELOPE_FIELDS + ENVELOPE_WITNESS_FIELDS:
+            if hasattr(report, field):
+                setattr(self, f"plan_{field}",
+                        getattr(self, f"plan_{field}") + float(
+                            getattr(report, field)))
         self.upload_calls += int(report.upload_calls)
         self.upload_bytes += int(report.upload_bytes)
         self.download_calls += int(report.download_calls)
         self.download_bytes += int(report.download_bytes)
         self.task_count += int(report.task_count)
         self.submit_count += int(report.submit_count)
+        self.plan_repeats += int(repeats)
+        if calls and repeats > 1:
+            self.plan_group_calls += int(calls)
         self._phase_add(phase, elapsed_us)
         # Aggregate repeated calls so a full test-set evaluation has a bounded
         # report (one row per logical plan) rather than one row per batch.
         row = next((r for r in self.plans if r["name"] == name), None)
         if row is None:
             row = {"name": name, "kind": "rkplan", "phase": phase, "calls": 0,
+                   "repeat_count": 0,
                    "elapsed_us": 0.0, "workspace_us": 0.0,
                    "pack_us": 0.0, "emit_us": 0.0,
                    "submit_wait_us": 0.0, "output_sync_us": 0.0,
+                   "validate_us": 0.0, "command_us": 0.0,
+                   "submit_alloc_us": 0.0, "download_us": 0.0,
+                   "guard_us": 0.0, "publish_us": 0.0, "alloc_us": 0.0,
+                   "total_us": 0.0, "clock_us": 0.0,
                    "upload_calls": 0, "upload_bytes": 0,
                    "download_calls": 0, "download_bytes": 0,
                    "task_count": 0, "submit_count": 0,
                    "bridge_bytes": 0}
             self.plans.append(row)
-        row["calls"] += 1
+        row["calls"] += int(calls)
+        row["repeat_count"] += int(repeats)
         row["elapsed_us"] += float(elapsed_us)
         row["workspace_us"] += (float(elapsed_us) if workspace_us is None
                                 else float(workspace_us))
-        row["pack_us"] += float(report.pack_us)
-        row["emit_us"] += float(report.emit_us)
-        row["submit_wait_us"] += float(report.submit_wait_us)
-        row["output_sync_us"] += float(report.output_sync_us)
+        for field in ENVELOPE_FIELDS + ENVELOPE_WITNESS_FIELDS:
+            if hasattr(report, field):
+                row[field] = row.get(field, 0.0) + float(getattr(report, field))
         row["upload_calls"] += int(report.upload_calls)
         row["upload_bytes"] += int(report.upload_bytes)
         row["download_calls"] += int(report.download_calls)
@@ -193,6 +223,41 @@ class RunStats:
         row["submit_count"] += int(report.submit_count)
         row["bridge_bytes"] = (int(row["upload_bytes"]) +
                                int(row["download_bytes"]))
+
+    def add_report(self, name: str, report: Any, elapsed_us: float,
+                   *, phase: str = "execution",
+                   workspace_us: float | None = None) -> None:
+        """Record one production RKPlan node interval.
+
+        ``elapsed_us`` is the full plan-node dwell (input resolution, binding
+        preparation, C workspace run and output-target handling).  The optional
+        ``workspace_us`` is only the C ``rk_workspace_run`` interval, so callers can
+        separate model-runtime overhead from native execution.
+        """
+        self._accumulate(name, report, elapsed_us, workspace_us,
+                         self._phase(phase))
+
+    def add_group_report(self, name: str, report: Any, elapsed_us: float,
+                         *, repeats: int, phase: str = "execution",
+                         workspace_us: float | None = None) -> None:
+        """Record one static-repeat group entry covering ``repeats`` runs.
+
+        The C side reports one aggregate row per group call, so the counters and
+        attribution intervals are already summed over the repeats.  Publication
+        is all-or-nothing, therefore a successful return must show every repeat
+        completed and no failing repeat.
+        """
+        if int(report.repeat_count) != int(repeats):
+            reject(RK_E_INVALID, f"group report covers {report.repeat_count} "
+                   f"repeats, expected {repeats}", stage="model")
+        if int(report.repeat_completed) != int(repeats) or \
+                int(report.fail_repeat) != 0xFFFFFFFF:
+            reject(RK_E_INVALID, "group entry reported a partially completed "
+                   "repeat set as success", stage="model",
+                   actual={"completed": int(report.repeat_completed),
+                           "fail_repeat": int(report.fail_repeat)})
+        self._accumulate(name, report, elapsed_us, workspace_us,
+                         self._phase(phase), calls=1, repeats=repeats)
 
     def add_executor_overhead(self, elapsed_us: float) -> None:
         """Attribute graph dispatch/binding overhead that is not a Host action."""
@@ -203,7 +268,27 @@ class RunStats:
         self.run_calls += 1
         self.end_to_end_us += float(end_to_end_us)
 
+    @property
+    def plan_envelope_attributed_us(self) -> float:
+        """Sum of the C-side attributed intervals inside the workspace dwell."""
+        return sum(float(getattr(self, f"plan_{field}"))
+                   for field in ENVELOPE_FIELDS)
+
+    @property
+    def plan_envelope_residual_us(self) -> float:
+        """Workspace dwell not yet attributed by the C runtime.
+
+        The reference interval is the C-side total when the library reports one
+        (it is measured by the same clock as the attribution intervals), and the
+        caller-observed dwell otherwise.  A large residual means some cost inside
+        ``rk_workspace_run`` is still unattributed; it is reported rather than
+        folded into a named bucket.
+        """
+        base = self.plan_total_us or self.plan_workspace_us
+        return base - self.plan_envelope_attributed_us
+
     def _phases(self) -> dict[str, float]:
+
         return {phase: float(getattr(self, f"{phase}_us"))
                 for phase in TIMING_PHASES}
 
@@ -228,6 +313,10 @@ class RunStats:
             "plan_emit_us": self.plan_emit_us,
             "plan_submit_wait_us": self.plan_submit_wait_us,
             "plan_output_sync_us": self.plan_output_sync_us,
+            **{f"plan_{field}": float(getattr(self, f"plan_{field}"))
+               for field in ENVELOPE_FIELDS + ENVELOPE_WITNESS_FIELDS},
+            "plan_envelope_attributed_us": self.plan_envelope_attributed_us,
+            "plan_envelope_residual_us": self.plan_envelope_residual_us,
             # Backward-compatible summary name: this is only the RKPlan interval,
             # never the model wall interval.
             "elapsed_us": self.plan_call_us,
@@ -254,7 +343,10 @@ class PlanCall:
     """
 
     def __init__(self, lib: LibRKPlan, plan: Plan, constants: dict[str, np.ndarray],
-                 *, fd: int = 0):
+                 *, fd: int = 0, entry: str = "attributed"):
+        if entry not in ("attributed", "legacy"):
+            reject(RK_E_INVALID, f"unknown plan entry {entry!r}", stage="model")
+        self.entry = entry
         self.lib = lib
         self.plan = plan
         self.cplan: CPlan | None = None
@@ -349,6 +441,13 @@ class PlanCall:
 
     def run_into(self, inputs: list[np.ndarray],
                  outputs: list[np.ndarray]) -> tuple[Any, float]:
+        """One plan call.
+
+        ``entry="attributed"`` (the default) uses ``rk_workspace_run_ex`` and
+        returns the envelope attribution; ``entry="legacy"`` uses the frozen
+        88-byte ``rk_workspace_run`` report and exists so a campaign can measure
+        what the attribution itself costs on an otherwise identical binary.
+        """
         if self.workspace is None:
             reject(RK_E_INVALID, "model plan workspace is already closed",
                    stage="model")
@@ -363,7 +462,69 @@ class PlanCall:
         if hasattr(self.lib.cdll, "rk_mock_reset_tags"):
             self.lib.mock_control("rk_mock_reset_tags")
         t0 = time.perf_counter()
-        report = self.workspace.run(in_bind, out_bind)
+        if self.entry == "legacy":
+            report = self.workspace.run(in_bind, out_bind)
+        else:
+            report = self.workspace.run_attributed(in_bind, out_bind)
+        elapsed_us = (time.perf_counter() - t0) * 1e6
+        return report, elapsed_us
+
+    def _group_binding_slots(self, nrepeat: int):
+        """Cache one flat binding array for ``nrepeat`` repeats of this plan.
+
+        Only ``data`` differs between repeats; identity, dtype, rank, shape and
+        nbytes come from the immutable plan, so they are written once.  The
+        caller's arrays are still validated per repeat before a pointer is
+        stored, so a wrong dtype/shape/alias cannot reach the C side.
+        """
+        cache = getattr(self, "_group_cache", None)
+        if cache is not None and cache[0] == nrepeat:
+            return cache[1]
+        specs = self.inputs + self.outputs
+        dummy: dict[tuple[int, ...], np.ndarray] = {}
+        arr = (RKBinding * (nrepeat * len(specs)))()
+        for r in range(nrepeat):
+            for i, spec in enumerate(specs):
+                key = tuple(spec.shape)
+                if key not in dummy:
+                    dummy[key] = np.empty(key, dtype=np.float16)
+                arr[r * len(specs) + i] = make_binding(spec.id, dummy[key])
+        self._group_cache = (nrepeat, arr)
+        return arr
+
+    def run_group_into(self, inputs_list: list[list[np.ndarray]],
+                       outputs_list: list[list[np.ndarray]]) -> tuple[Any, float]:
+        """Execute ``n`` independent binding sets inside one native call.
+
+        Every repeat still validates its own inputs and outputs exactly as
+        ``run_into`` does.  The submit count is unchanged: the group entry only
+        removes the per-repeat Host transition, the per-repeat guard pass and the
+        per-repeat scratch allocation.
+        """
+        if self.workspace is None:
+            reject(RK_E_INVALID, "model plan workspace is already closed",
+                   stage="model")
+        nrepeat = len(inputs_list)
+        if nrepeat < 1 or nrepeat != len(outputs_list):
+            reject(RK_E_SHAPE, "group entry needs matching, non-empty input and "
+                   "output repeat lists", stage="model",
+                   actual={"inputs": nrepeat, "outputs": len(outputs_list)})
+        flat = self._group_binding_slots(nrepeat)
+        step = len(self.inputs) + len(self.outputs)
+        for r in range(nrepeat):
+            in_arrays = self._prepare_inputs(inputs_list[r])
+            out_arrays = self._prepare_outputs(outputs_list[r])
+            base = r * step
+            for k, arr in enumerate(in_arrays):
+                flat[base + k].data = arr.ctypes.data
+            for k, arr in enumerate(out_arrays):
+                flat[base + len(self.inputs) + k].data = arr.ctypes.data
+        # The mock harness snapshots each emitted co_program.  Clear that
+        # test-only cache between calls; production builds have no such symbol.
+        if hasattr(self.lib.cdll, "rk_mock_reset_tags"):
+            self.lib.mock_control("rk_mock_reset_tags")
+        t0 = time.perf_counter()
+        report = self.workspace.run_group(flat, nrepeat)
         elapsed_us = (time.perf_counter() - t0) * 1e6
         return report, elapsed_us
 

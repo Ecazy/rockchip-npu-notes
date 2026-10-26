@@ -19,6 +19,8 @@ class FFITests(unittest.TestCase):
             ffi.RKPlanDesc: 168,
             ffi.RKBinding: 48,
             ffi.RKRunReport: 88,
+            ffi.RKAttribution: 160,
+            ffi.RKGroupReport: 176,
             ffi.RKDiag: 760,
         }
         for struct, size in expected.items():
@@ -88,6 +90,8 @@ class FFITests(unittest.TestCase):
             "rk_plan_desc": ffi.RKPlanDesc,
             "rk_binding": ffi.RKBinding,
             "rk_run_report": ffi.RKRunReport,
+            "rk_run_attribution": ffi.RKAttribution,
+            "rk_group_report": ffi.RKGroupReport,
             "rk_diag": ffi.RKDiag,
         }
         self.assertEqual(set(structs), set(c_sizes),
@@ -102,6 +106,35 @@ class FFITests(unittest.TestCase):
                 self.assertEqual(descriptor.offset, offset,
                                  f"{name}.{field} offset")
                 self.assertEqual(descriptor.size, size, f"{name}.{field} size")
+
+    def test_co_program_bytes_matches_the_c_seam(self):
+        """The Host requirement formula mirrors ``sizeof(co_program)``.
+
+        ``passes/storage.py`` uses ``CO_PROGRAM_BYTES`` to size the per-submit
+        emission array in the plan's declared Host requirement, and the C verifier
+        adds the same term when it recomputes that requirement.  The two must
+        agree, so the Python constant is pinned to the C ABI dump here.
+        """
+        import os
+        import subprocess
+        from pathlib import Path
+
+        from rknpu_backend.passes import storage
+
+        binary = os.environ.get("RK_PLAN_CONTRACT_BIN")
+        if not binary:
+            candidate = (Path(__file__).resolve().parents[2] / "custom-ops" /
+                         "build-host-mvp" / "rk_plan_contract_test")
+            binary = str(candidate) if candidate.is_file() else ""
+        if not binary or not Path(binary).is_file():
+            self.skipTest("rk_plan_contract_test binary not built")
+        out = subprocess.run([binary], capture_output=True, text=True, check=True)
+        consts = {}
+        for line in out.stdout.splitlines():
+            parts = line.split()
+            if parts and parts[0] == "ABI_CONST":
+                consts[parts[1]] = int(parts[2])
+        self.assertEqual(consts.get("co_program"), storage.CO_PROGRAM_BYTES)
 
     def test_plan_create_deep_copies_descriptor(self):
         try:

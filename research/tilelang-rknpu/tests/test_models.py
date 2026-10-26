@@ -126,6 +126,54 @@ class CompleteModelTests(unittest.TestCase):
         self.assertIn("export_logits", action_names)
         self.assertNotIn("reference", " ".join(action_names).lower())
 
+    def test_plan_envelope_attribution_tiles_the_whole_call(self):
+        """The C attribution must explain the entire RKPlan dwell.
+
+        This is the invariant the first optimisation package depends on: every
+        named interval is disjoint, their sum plus the reported residual covers
+        the C-side total, and the instrumentation itself is not a hidden cost.
+        It also pins the double-counting regression where the four legacy fields
+        were accumulated both explicitly and through the envelope field list.
+        """
+        from rknpu_backend.models import (ENVELOPE_FIELDS,
+                                          ENVELOPE_WITNESS_FIELDS, RunStats,
+                                          TinyViTRunner)
+        runner = TinyViTRunner(self.lib, self._hybrid("tiny_vit_b8"),
+                               self.vit_weights, 8, fd=0,
+                               weights_path=WEIGHTS / "tiny_vit.npz")
+        stats = RunStats()
+        try:
+            runner.run(self.x[:8], stats=stats)
+        finally:
+            runner.close()
+        self.assertGreater(stats.plan_total_us, 0.0)
+        # Caller-observed dwell and C-side total describe the same interval.
+        self.assertLess(abs(stats.plan_workspace_us - stats.plan_total_us),
+                        0.10 * stats.plan_total_us)
+        attributed = sum(float(getattr(stats, f"plan_{f}"))
+                         for f in ENVELOPE_FIELDS)
+        self.assertAlmostEqual(attributed, stats.plan_envelope_attributed_us,
+                               places=3)
+        residual = stats.plan_envelope_residual_us
+        self.assertGreaterEqual(residual, -0.02 * stats.plan_total_us)
+        self.assertLessEqual(residual, 0.05 * stats.plan_total_us,
+                             "envelope does not tile the RKPlan dwell")
+        for field in ENVELOPE_FIELDS + ENVELOPE_WITNESS_FIELDS:
+            value = float(getattr(stats, f"plan_{field}"))
+            self.assertGreaterEqual(value, 0.0, field)
+            self.assertLessEqual(value, stats.plan_total_us,
+                                 f"{field} exceeds the whole call")
+        # Every attribution row is also present per plan.
+        for row in stats.plans:
+            for field in ENVELOPE_FIELDS:
+                self.assertIn(field, row)
+        data = stats.to_dict()
+        self.assertIn("plan_envelope_residual_us", data)
+        # The legacy keys keep their meaning and are not double-counted.
+        self.assertAlmostEqual(data["plan_submit_wait_us"],
+                               stats.plan_submit_wait_us, places=3)
+        self.assertAlmostEqual(data["plan_pack_us"], stats.plan_pack_us, places=3)
+
     def test_static_batch_schedule_matches_compiled_tails(self):
         spec = importlib.util.spec_from_file_location(
             "evaluate_models", ROOT / "tools" / "evaluate_models.py")
@@ -193,8 +241,17 @@ class CompleteModelTests(unittest.TestCase):
                          "export_logits"):
                 self.assertIn(name, actions)
             plans = {row["name"]: row for row in stats.to_dict()["plans"]}
-            self.assertEqual(plans["qk"]["calls"], 32)
-            self.assertEqual(plans["pv"]["calls"], 32)
+            # QK/PV stay per-(batch,head) work: 32 repeats each, and the device
+            # submit count is unchanged.  What changed is that the static repeat
+            # set now uses one native group entry instead of 32 calls.
+            for name in ("qk", "pv"):
+                self.assertEqual(plans[name]["repeat_count"], 32)
+                self.assertEqual(plans[name]["submit_count"], 32)
+                self.assertEqual(plans[name]["calls"], 1)
+            self.assertEqual(stats.plan_group_calls, 2)
+            self.assertEqual(stats.plan_repeats, 2 * 32 + 7)
+            self.assertEqual(stats.task_count, 71)
+            self.assertEqual(stats.submit_count, 71)
 
     def test_hybrid_manifest_rejects_unknown_action(self):
         from rknpu_backend.hybrid import load_hybrid_program
@@ -385,7 +442,7 @@ class CompleteModelTests(unittest.TestCase):
             ROOT / "tools" / "verify_numeric_acceptance.py")
         verifier = importlib.util.module_from_spec(loader_spec)
         loader_spec.loader.exec_module(verifier)
-        evidence = ROOT / "results" / "20261024T091634Z-numeric"
+        evidence = ROOT / "results" / "20261026T053818Z-numeric"
         summary = verifier.verify(
             WEIGHTS / "numeric_acceptance_train.json",
             evidence / "calibration" / "observation.npz",

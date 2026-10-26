@@ -175,6 +175,32 @@ class HostNode:
 Node = NpuNode | HostNode
 
 
+@dataclass(frozen=True)
+class _RepeatRef:
+    """One resolved binding access for a single repeat instance.
+
+    Everything that depends only on the immutable manifest (which tensor, which
+    repeat indices, whether the whole tensor must be allocated on first write and
+    the exact element shape) is resolved when the runner is created, so the hot
+    loop performs no ref parsing, dict lookup by binding name or shape checks.
+    """
+
+    tensor: str
+    index: tuple[int, ...]
+    allocate: tuple[int, ...] | None
+    dtype: str
+
+
+@dataclass(frozen=True)
+class _NpuBindingPlan:
+    """Static execution shape of one RKPlan node."""
+
+    plan: str
+    input_names: tuple[str, ...]
+    output_names: tuple[str, ...]
+    repeats: tuple[tuple[tuple[_RepeatRef, ...], tuple[_RepeatRef, ...]], ...]
+
+
 @dataclass
 class HybridProgram:
     path: Path
@@ -1017,7 +1043,12 @@ class HybridRunner:
 
     def __init__(self, lib: LibRKPlan, program: HybridProgram,
                  weights: dict[str, np.ndarray], *,
-                 weights_path: str | Path | None = None, fd: int = 0):
+                 weights_path: str | Path | None = None, fd: int = 0,
+                 plan_entry: str = "attributed"):
+        if plan_entry not in ("attributed", "legacy"):
+            reject(RK_E_INVALID, f"unknown plan entry {plan_entry!r}",
+                   stage="model")
+        self.plan_entry = plan_entry
         t0 = time.perf_counter()
         self.lib = lib
         self.program = program
@@ -1039,7 +1070,8 @@ class HybridRunner:
                     plan_constants[name] = _materialize_constant(
                         desc, lookup[name], self.weights, program.weights)
                 self.calls[key] = PlanCall(
-                    lib, info.plan, plan_constants, fd=fd)
+                    lib, info.plan, plan_constants, fd=fd,
+                    entry=self.plan_entry)
         except BaseException as exc:
             cleanup_errors = self._cleanup_calls()
             if cleanup_errors:
@@ -1047,7 +1079,86 @@ class HybridRunner:
                     "HybridRunner construction cleanup also failed: " +
                     "; ".join(repr(e) for e in cleanup_errors))
             raise
+        self.node_plans: dict[str, _NpuBindingPlan] = {}
+        try:
+            for node in program.nodes:
+                if isinstance(node, NpuNode):
+                    self.node_plans[node.id] = self._static_binding_plan(node)
+        except BaseException as exc:
+            cleanup_errors = self._cleanup_calls()
+            if cleanup_errors:
+                exc.add_note(
+                    "HybridRunner static binding-plan cleanup also failed: " +
+                    "; ".join(repr(e) for e in cleanup_errors))
+            raise
         self.setup_us = (time.perf_counter() - t0) * 1e6
+
+    def _static_binding_plan(self, node: NpuNode) -> _NpuBindingPlan:
+        """Resolve a repeated RKPlan node once, at construction time.
+
+        Repeat indices are materialised here instead of being rebuilt every run,
+        and the shape/lifetime rules that ``_target_for_output`` re-derived on
+        every call are proven once against the immutable manifest.  Anything that
+        depends on the caller's data is still validated for every repeat.
+        """
+        info = self.program.plans[node.plan]
+        bindings = {b.name: b for b in info.plan.bindings}
+        input_names = tuple(b.name for b in info.plan.bindings
+                            if b.role == "input")
+        output_names = tuple(b.name for b in info.plan.bindings
+                             if b.role == "output")
+        expected_out_index = tuple(axis.name for axis in node.repeat)
+        repeats = []
+        for ordinal, repeat_vars in enumerate(self._repeat_bindings(node)):
+            in_refs = []
+            for name in input_names:
+                ref = node.inputs[name]
+                index = tuple(repeat_vars[token] if isinstance(token, str)
+                              else token for token in ref.index)
+                spec = self._tensor_spec(ref.tensor)
+                suffix = tuple(spec.shape[len(index):])
+                if suffix != tuple(bindings[name].shape):
+                    reject(RK_E_SHAPE,
+                           f"{node.id}.inputs.{name} slice shape does not match "
+                           "the RKPlan input", stage="hybrid",
+                           actual=list(suffix),
+                           required=list(bindings[name].shape))
+                in_refs.append(_RepeatRef(ref.tensor, index, None, spec.dtype))
+            out_refs = []
+            for name in output_names:
+                ref = node.outputs[name]
+                if ref.index and ref.index != expected_out_index:
+                    reject(RK_E_SHAPE,
+                           f"{node.id}.outputs.{name} index must be all repeat "
+                           "axes", stage="hybrid", actual=list(ref.index),
+                           required=list(expected_out_index))
+                index = tuple(repeat_vars[token] if isinstance(token, str)
+                              else token for token in ref.index)
+                spec = self._tensor_spec(ref.tensor)
+                suffix = tuple(spec.shape[len(index):])
+                if suffix != tuple(bindings[name].shape):
+                    reject(RK_E_SHAPE,
+                           f"{node.id}.outputs.{name} target shape does not "
+                           "match the RKPlan output", stage="hybrid",
+                           actual=list(suffix), required=list(bindings[name].shape))
+                # A sliced write allocates the whole destination on the first
+                # repeat; a whole-tensor write allocates on every repeat so a
+                # second write to the same tensor is still rejected at run time.
+                allocate = None
+                if not index or ordinal == 0:
+                    allocate = tuple(spec.shape)
+                out_refs.append(_RepeatRef(ref.tensor, index, allocate,
+                                           spec.dtype))
+            repeats.append((tuple(in_refs), tuple(out_refs)))
+        return _NpuBindingPlan(node.plan, input_names, output_names,
+                               tuple(repeats))
+
+    def _tensor_spec(self, name: str) -> TensorSpec:
+        spec = self.program.tensors.get(name)
+        if spec is None:
+            reject(RK_E_SCHEMA, f"binding references unknown tensor {name!r}",
+                   stage="hybrid")
+        return spec
 
     def _validate_weights(self, weights_path: str | Path | None) -> None:
         meta = self.program.weights
@@ -1109,6 +1220,34 @@ class HybridRunner:
         if index:
             value = value[index]
         return value
+
+    @staticmethod
+    def _read_ref(values: dict[str, np.ndarray], ref: _RepeatRef) -> np.ndarray:
+        value = values.get(ref.tensor)
+        if value is None:
+            reject(RK_E_SCHEMA, f"reads unavailable tensor {ref.tensor!r}",
+                   stage="hybrid")
+        return value[ref.index] if ref.index else value
+
+    @staticmethod
+    def _write_ref(values: dict[str, np.ndarray],
+                   ref: _RepeatRef) -> np.ndarray:
+        if ref.allocate is not None:
+            if not ref.index:
+                if ref.tensor in values:
+                    reject(RK_E_SCHEMA, f"writes tensor {ref.tensor!r} more "
+                           "than once", stage="hybrid")
+            target = np.empty(ref.allocate, dtype=DTYPES[ref.dtype])
+            if not ref.index:
+                values[ref.tensor] = target
+                return target
+            values[ref.tensor] = target
+            return target[ref.index]
+        holder = values.get(ref.tensor)
+        if holder is None:
+            reject(RK_E_SCHEMA, f"writes unavailable tensor {ref.tensor!r}",
+                   stage="hybrid")
+        return holder[ref.index]
 
     def _target_for_output(self, node: Node, ref: TensorRef,
                            values: dict[str, np.ndarray],
@@ -1207,26 +1346,39 @@ class HybridRunner:
                         node.id, node.phase, elapsed_us,
                         inputs=tuple(inputs.values()), outputs=tuple(produced))
             else:
-                info = self.program.plans[node.plan]
                 call = self.calls[node.plan]
-                for bindings in self._repeat_bindings(node):
+                binding_plan = self.node_plans[node.id]
+                repeats = binding_plan.repeats
+                if len(repeats) > 1:
+                    # Static repeat grouping: the manifest declared N independent
+                    # instances of one immutable plan, so they run through one
+                    # native entry.  The device submit count is unchanged and every
+                    # per-repeat check still runs; only the Host transition, the
+                    # per-repeat guard pass and the per-repeat scratch allocation
+                    # are shared.
                     t_node = time.perf_counter()
-                    inputs = [self._resolve(
-                        node.inputs[name], values, bindings,
-                        f"{node.id}.inputs.{name}")
-                        for name in [b.name for b in info.plan.bindings
-                                     if b.role == "input"]]
-                    outputs = [self._target_for_output(
-                        node, node.outputs[name], values, bindings,
-                        f"{node.id}.outputs.{name}")
-                        for name in [b.name for b in info.plan.bindings
-                                     if b.role == "output"]]
-                    report, workspace_us = call.run_into(inputs, outputs)
+                    inputs = [[self._read_ref(values, ref) for ref in in_refs]
+                              for in_refs, _ in repeats]
+                    outputs = [[self._write_ref(values, ref) for ref in out_refs]
+                               for _, out_refs in repeats]
+                    report, workspace_us = call.run_group_into(inputs, outputs)
                     node_us = (time.perf_counter() - t_node) * 1e6
                     if stats is not None:
-                        stats.add_report(node.id, report, node_us,
-                                         phase=node.phase,
-                                         workspace_us=workspace_us)
+                        stats.add_group_report(node.id, report, node_us,
+                                               repeats=len(repeats),
+                                               phase=node.phase,
+                                               workspace_us=workspace_us)
+                    continue
+                in_refs, out_refs = repeats[0]
+                t_node = time.perf_counter()
+                inputs = [self._read_ref(values, ref) for ref in in_refs]
+                outputs = [self._write_ref(values, ref) for ref in out_refs]
+                report, workspace_us = call.run_into(inputs, outputs)
+                node_us = (time.perf_counter() - t_node) * 1e6
+                if stats is not None:
+                    stats.add_report(node.id, report, node_us,
+                                     phase=node.phase,
+                                     workspace_us=workspace_us)
         public_outputs: dict[str, np.ndarray] = {}
         for public, tensor in self.program.outputs.items():
             if tensor not in values:

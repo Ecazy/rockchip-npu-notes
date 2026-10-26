@@ -222,6 +222,14 @@ class RKBinding(ctypes.Structure):
 
 
 class RKRunReport(ctypes.Structure):
+    """Mirror of ``rk_run_report``: the frozen 88-byte legacy report.
+
+    ``rk_workspace_run`` writes exactly this struct and never consults
+    ``struct_size``, so a caller from before the attribution extension keeps
+    working without initialising anything.  Extended attribution is requested
+    explicitly through ``RKAttribution`` and ``rk_workspace_run_ex``.
+    """
+
     _fields_ = [
         ("abi_version", ctypes.c_uint32), ("struct_size", ctypes.c_uint32),
         ("task_count", ctypes.c_uint32), ("submit_count", ctypes.c_uint32),
@@ -231,6 +239,65 @@ class RKRunReport(ctypes.Structure):
         ("pack_us", ctypes.c_double), ("emit_us", ctypes.c_double),
         ("submit_wait_us", ctypes.c_double), ("output_sync_us", ctypes.c_double),
     ]
+
+
+class RKAttribution(ctypes.Structure):
+    """Mirror of ``rk_run_attribution`` (the ``rk_workspace_run_ex`` report).
+
+    Every interval is disjoint and inside the enclosing call, so their sum plus
+    the residual accounts for the whole dwell.  ``struct_size`` is mandatory and
+    the C side refuses to run when it is not a usable declaration.
+    """
+
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32), ("struct_size", ctypes.c_uint32),
+        ("task_count", ctypes.c_uint32), ("submit_count", ctypes.c_uint32),
+        ("fail_action_id", ctypes.c_uint32), ("numeric_mode", ctypes.c_uint32),
+        ("upload_calls", ctypes.c_uint64), ("upload_bytes", ctypes.c_uint64),
+        ("download_calls", ctypes.c_uint64), ("download_bytes", ctypes.c_uint64),
+        ("validate_us", ctypes.c_double), ("pack_us", ctypes.c_double),
+        ("emit_us", ctypes.c_double), ("command_us", ctypes.c_double),
+        ("submit_alloc_us", ctypes.c_double),
+        ("submit_wait_us", ctypes.c_double),
+        ("output_sync_us", ctypes.c_double), ("download_us", ctypes.c_double),
+        ("guard_us", ctypes.c_double), ("publish_us", ctypes.c_double),
+        ("alloc_us", ctypes.c_double), ("total_us", ctypes.c_double),
+        ("clock_us", ctypes.c_double),
+    ]
+
+
+class RKGroupReport(ctypes.Structure):
+    """Mirror of ``rk_group_report`` for the static-repeat group entry."""
+
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32), ("struct_size", ctypes.c_uint32),
+        ("repeat_count", ctypes.c_uint32), ("repeat_completed", ctypes.c_uint32),
+        ("fail_repeat", ctypes.c_uint32), ("fail_action_id", ctypes.c_uint32),
+        ("task_count", ctypes.c_uint32), ("submit_count", ctypes.c_uint32),
+        ("numeric_mode", ctypes.c_uint32), ("reserved0", ctypes.c_uint32),
+        ("upload_calls", ctypes.c_uint64), ("upload_bytes", ctypes.c_uint64),
+        ("download_calls", ctypes.c_uint64), ("download_bytes", ctypes.c_uint64),
+        ("validate_us", ctypes.c_double), ("pack_us", ctypes.c_double),
+        ("emit_us", ctypes.c_double), ("command_us", ctypes.c_double),
+        ("submit_alloc_us", ctypes.c_double),
+        ("submit_wait_us", ctypes.c_double),
+        ("output_sync_us", ctypes.c_double), ("download_us", ctypes.c_double),
+        ("guard_us", ctypes.c_double), ("publish_us", ctypes.c_double),
+        ("alloc_us", ctypes.c_double), ("total_us", ctypes.c_double),
+        ("clock_us", ctypes.c_double),
+    ]
+
+
+def _new_attribution() -> "RKAttribution":
+    """Zero-initialised attribution with this process's declared size.
+
+    ``struct_size`` is mandatory for ``rk_workspace_run_ex``: the C side
+    validates it and refuses to run rather than guessing, so a wrong value can
+    never overrun the buffer.
+    """
+    report = RKAttribution()
+    report.struct_size = ctypes.sizeof(RKAttribution)
+    return report
 
 
 class RKDiag(ctypes.Structure):
@@ -461,6 +528,15 @@ class LibRKPlan:
             ctypes.POINTER(RKBinding), ctypes.c_uint32,
             ctypes.POINTER(RKRunReport), ctypes.POINTER(RKDiag)]
         fn.rk_workspace_run.restype = ctypes.c_int
+        fn.rk_workspace_run_ex.argtypes = [
+            ctypes.c_void_p, ctypes.POINTER(RKBinding), ctypes.c_uint32,
+            ctypes.POINTER(RKBinding), ctypes.c_uint32,
+            ctypes.POINTER(RKAttribution), ctypes.POINTER(RKDiag)]
+        fn.rk_workspace_run_ex.restype = ctypes.c_int
+        fn.rk_workspace_run_group.argtypes = [
+            ctypes.c_void_p, ctypes.POINTER(RKBinding), ctypes.c_uint32,
+            ctypes.POINTER(RKGroupReport), ctypes.POINTER(RKDiag)]
+        fn.rk_workspace_run_group.restype = ctypes.c_int
         fn.rk_workspace_destroy.argtypes = [ctypes.c_void_p,
                                             ctypes.POINTER(RKDiag)]
         fn.rk_workspace_destroy.restype = ctypes.c_int
@@ -543,13 +619,17 @@ class LibRKPlan:
             raise _diag_to_exception(diag, "workspace_create")
         return CWorkspace(lib=self, handle=handle)
 
+    @staticmethod
+    def _binding_array(bindings: list):
+        arr = (RKBinding * max(len(bindings), 1))()
+        for i, binding in enumerate(bindings):
+            arr[i] = binding
+        return arr
+
     def workspace_run(self, workspace: CWorkspace, inputs: list, outputs: list):
-        in_arr = (RKBinding * max(len(inputs), 1))()
-        for i, binding in enumerate(inputs):
-            in_arr[i] = binding
-        out_arr = (RKBinding * max(len(outputs), 1))()
-        for i, binding in enumerate(outputs):
-            out_arr[i] = binding
+        """Legacy single-run entry: the frozen 88-byte report, no attribution."""
+        in_arr = self._binding_array(inputs)
+        out_arr = self._binding_array(outputs)
         report = RKRunReport()
         diag = RKDiag()
         rc = self.cdll.rk_workspace_run(workspace.handle, in_arr, len(inputs),
@@ -557,6 +637,43 @@ class LibRKPlan:
                                         ctypes.byref(report), ctypes.byref(diag))
         if rc:
             raise _diag_to_exception(diag, "workspace_run")
+        return report
+
+    def workspace_run_attributed(self, workspace: CWorkspace, inputs: list,
+                                 outputs: list):
+        """Single run with envelope attribution (explicit ``_ex`` entry)."""
+        in_arr = self._binding_array(inputs)
+        out_arr = self._binding_array(outputs)
+        report = _new_attribution()
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_run_ex(workspace.handle, in_arr, len(inputs),
+                                           out_arr, len(outputs),
+                                           ctypes.byref(report),
+                                           ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "workspace_run_ex")
+        return report
+
+    def workspace_run_group(self, workspace: CWorkspace, bindings: list,
+                            nrepeat: int):
+        """One native entry for ``nrepeat`` independent binding sets.
+
+        ``bindings`` is repeat-major: repeat 0 inputs then outputs, repeat 1
+        inputs then outputs, ...  The C side performs every per-repeat check and
+        submit, then publishes all repeats only after the shared guard gate.
+        """
+        count = len(bindings)
+        arr = (RKBinding * max(count, 1))()
+        for i, binding in enumerate(bindings):
+            arr[i] = binding
+        report = RKGroupReport()
+        report.struct_size = ctypes.sizeof(RKGroupReport)
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_run_group(workspace.handle, arr, int(nrepeat),
+                                              ctypes.byref(report),
+                                              ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "workspace_run_group")
         return report
 
     def workspace_destroy(self, workspace: CWorkspace) -> None:
@@ -623,7 +740,15 @@ class CWorkspace:
     handle: ctypes.c_void_p
 
     def run(self, inputs, outputs):
+        """Legacy report-only entry (no attribution)."""
         return self.lib.workspace_run(self, inputs, outputs)
+
+    def run_attributed(self, inputs, outputs):
+        """Single run plus envelope attribution."""
+        return self.lib.workspace_run_attributed(self, inputs, outputs)
+
+    def run_group(self, bindings, nrepeat: int):
+        return self.lib.workspace_run_group(self, bindings, nrepeat)
 
     def destroy(self) -> None:
         if not self.handle:
