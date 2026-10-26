@@ -1,6 +1,6 @@
-# 第一个优化包：桥接包络归属 + 静态 repeat 成组（实施报告 v5）
+# 第一个优化包：桥接包络归属 + 静态 repeat 成组（实施报告 v6）
 
-日期：2026-10-26（v5 同日修订，回应第四轮只读复核）。对应
+日期：2026-10-26（v6：完成 QK/PV 接线、数值复验与三臂端到端 campaign）。对应
 [TRANSFORMER-OPTIMIZATION-PLAN.md](TRANSFORMER-OPTIMIZATION-PLAN.md) 第 10 节“首个优化包”。
 
 范围严格限定在方案稿第 10 节的首包三项——解释 QK/PV 运行包络、静态 repeat 批量入口、
@@ -34,6 +34,36 @@ payload（plans/weights/data 同一 SHA-256）：`baseline` = HEAD 源树，`can
 - 数值：本轮 plan 包（accounting 修正后重新生成）按**原有冻结政策**重新验收，
   `results/20261026T053818Z-numeric/` **PASS / 0 problems**，且逐项容差与 v1 相同。
 - 探针代价：candidate 与 noprobe 的差在 ±4% 内（MLP 上 noprobe 反而更慢），不作为“零代价”宣称。
+
+### 0.1 静态 repeat 组已接入 QK/PV（v6）
+
+QK/PV 现在以**一个预展开 plan + 一次链式提交**执行，由清单显式声明
+（`repeat_submit: shared_group` + `group_plan: attn_matmul_group`），`separate` 与 B1
+两条路径保留为 runner 控制项，并有测试断言三者 logits 逐位相同。
+
+三臂端到端 campaign（`results/20261026T081034Z-policy/`，逐轮交替、绑核、同输入/核/计时边界）：
+
+| profile | b1 | separate | **manifest（shared group）** | 相对 b1 |
+|---|---:|---:|---:|---:|
+| Tiny Transformer b8 | 14.940 ms | 22.622 ms | **12.350 ms** | **1.210×** |
+| Tiny Transformer b1 | 4.143 ms | 4.904 ms | **3.842 ms** | **1.078×** |
+
+- b8 四轮比值 `1.20 / 1.26 / 1.20 / 1.22`；吞吐 535.5 → **647.7 img/s**。
+- 设备结构：`submit_count` **71 → 9**，`task_count` 71 不变，上传/下载次数与字节不变
+  （比较工具把 submit 数变化标为 `structure DIFFERS`，这是本次优化的目的，不是退化）。
+- C 侧停留（单次代表运行，第 1 轮）：**8.522 → 5.207 ms**，其中 `submit_wait`
+  **5.008 → 1.746 ms**；`guard` 基本不变（0.321 → 0.293 ms），因为共享布局把每组压到 3 个 BO。
+- 相对优化前基线（33.556 ms，见 §3.2 的三臂 campaign）：**2.72×**。注意两个数字来自不同
+  campaign（基线与 B1 对比在 §3.2，B1 与 shared 对比在 §0.1），各自同轮交替、同板同核。
+
+**数值复验**（`results/20261026T081153Z-numeric/`）：plan 包发生变化后按**原有冻结政策**
+重新验收，`layer_tolerances` 与 `task_logit_tolerances` 与 v1 **逐项相同**，验证
+**PASS / 0 problems**；门禁包含 `tiny_vit.scores_heads`（QK 输出）与
+`tiny_vit.attn_heads`（PV 输出），即 QK/PV 节点输出在真实模型输入下被直接比较。
+
+**默认策略建议**：QK/PV 保持 `shared_group`。它对两条对照路径逐位一致、通过冻结数值门禁、
+端到端比 B1 快 1.21×；如需回退，`HybridRunner(repeat_submit="b1"|"separate")` 一行即可，
+无需改清单。
 
 ## 1. 变更清单
 
@@ -253,6 +283,10 @@ plan 层“静态 repeat 展开为多任务 plan” + `independent_mm_v1` 配方
 | 7b | 上述缺口的根因（planner/C 校验器未把运行时常驻 scratch 计入 `host`） | **已闭环**：`passes/storage.py` 与 `rk_plan_validate.c` 同时加入 `max_tasks × sizeof(co_program)` + 下载 tile + 输出簿记；`rk_workspace_create` 在分配前用同一总量对比预算并 fail closed；`CO_PROGRAM_BYTES` 由 C ABI dump 与 pytest 双向钉住 | 重新生成 plan 包（仅 `accounting.host_bytes` 变化）+ 原有数值政策重新验收：`results/20261026T053818Z-numeric/` **PASS / 0 problems**，且 `layer_tolerances`/`task_logit_tolerances` 与 v1 **逐项相同**；mock 10k 全量评测逐位一致 |
 | 8 | B2 探针把所有任务与最后一个参考值比较（v4 的“设备阻塞”结论由此而来） | 参考值改为 `n × y_bytes` 逐任务切片；比较逻辑抽到 `src/rk_task_ref.h` 并加无设备验证 | `tests/c/task_ref_test.c`（各任务通过 / 交换被检出 / 历史写法必报 n−1 / 单字节破坏被检出）；`results/20261026T033032Z-b2probe/probe_fixed.log` 全部形状 0 失配；§5 结论更新 |
 | 9 | B2 探针负向控制把 buffer 与自身比较，恒失败 | 控制改为“复制正确结果 → 破坏参考切片 → 必须失配” | 同上；探针 `status=ok` 且 `rc=0` |
+| 10 | 测量脚本未交替、归因不是中位运行的分解 | 工具改为四变体**逐轮交替**；每次运行把整组 native report 累加，报告“每轮聚合的中位”，并在 JSON/README/V6 表格中标注口径 | `results/20261026T073654Z-b2bench/`、`results/20261026T081034Z-policy/` |
+| 11 | “B2 稳定输给 B1”结论过宽 | 撤回：PV 的 chain_shared 快于 B1（3.090 vs 3.872 ms）；每任务 BO 的 chain（4.044 ms）确实慢于 B1，但那是布局而不是 chain 本身 | §0.1、§5 与两份 campaign |
+| 12 | 仅按结构独立准入（8×8×8 / 32×32×32 / 64 任务可通过） | Python 与 C 两侧同时限定几何与数量，并用 ABI dump 钉住；补两种“绕过 Python”的拒绝测试 | §6 第 7 行之后的 `repeat_expand` 测试；C 的 `RK_MAX_INDEPENDENT_MM_TASKS` 与 `RK_INDEPENDENT_MM_*` |
+| 13 | QK/PV 尚未接入 + 数值未复验 | 清单显式策略字段接入，保留 separate/B1 对照；plan 包变更后按同一冻结政策重新验收 | `results/20261026T081034Z-policy/`、`results/20261026T081153Z-numeric/`（PASS）|
 
 ## 7. 新的成本排名与下一步候选
 
@@ -260,7 +294,8 @@ plan 层“静态 repeat 展开为多任务 plan” + `independent_mm_v1` 配方
 
 | 排名 | 成本 | 占比 | 性质 | 候选 |
 |---|---|---:|---|---|
-| 1 | submit_wait 5.23 ms | C 侧 60% / 墙钟约 35% | 71 次阻塞 submit；当前**测量支持**优先减少提交次数（原语数据不足以证明绝对下界）| **B2 可做**：链式提交对独立输入/输出已验证数值正确（§5），下一步是 plan 展开 + `independent_mm_v1` 配方 + 清单版本化 |
+| 1 | ~~submit_wait 5.23 ms~~ → **1.75 ms** | C 侧 33.5% | 已由 QK/PV 链式组消除（71 → 9 submits） | 完成（§0.1）|
+| 1' | pack 1.21 ms + download 1.07 ms | C 侧 23.2% + 20.6% | 边界搬运/校验 | **C（设备子图）**：FFN gate/up → SwiGLU → down 驻留，同时消掉这两类边界；需先解决 FP32 中间值的数值路径问题 |
 | 2 | download 1.16 ms | 13% | gate/up/qkv 三个大输出占多数 | **C**：FFN gate/up → SwiGLU → down 设备子图（先证明写回位置与数值路径）|
 | 3 | pack 1.06 ms | 12% | 135 次上传 | 与 C 同源：减少边界次数 |
 | 4 | Python 节点停留 | 约 12% 墙钟 | per-repeat ref 解析与逐次校验 | **A2 续/A3**：per-repeat 地址计算下推到 C |
