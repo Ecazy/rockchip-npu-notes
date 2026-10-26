@@ -269,6 +269,9 @@ class RKAttribution(ctypes.Structure):
         ("pack_fini_us", ctypes.c_double),
         ("pack_prep_calls", ctypes.c_uint64),
         ("pack_fini_calls", ctypes.c_uint64),
+        ("upload_coalesce", ctypes.c_uint32),
+        ("upload_fast_pack", ctypes.c_uint32),
+        ("upload_policy_reserved", ctypes.c_uint32 * 2),
     ]
 
 

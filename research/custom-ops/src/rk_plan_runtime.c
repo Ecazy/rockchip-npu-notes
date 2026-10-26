@@ -155,12 +155,45 @@ typedef struct {
     double prep_us, clear_us, layout_us, fini_us;
 } rk_pack_times;
 
-static int upload_coalesce_enabled(void) {
-    /* Same process-wide escape hatch style as ROCKET_BUSY_POLL: default on,
-     * explicit 0 keeps the former per-slice prep/fini path for A/B evidence. */
-    const char *v = getenv("RK_PLAN_UPLOAD_COALESCE");
-    if (!v || !*v) return 1;
+static int env_flag_enabled(const char *name, int default_on) {
+    const char *v = getenv(name);
+    if (!v || !*v) return default_on;
     return strcmp(v, "0") != 0;
+}
+
+/* Fixed QK/PV tile geometry already admitted by the independent-MM and layout
+ * verifiers:
+ *   A: [16,16] logical -> CUBE physical [16,32], no transpose
+ *   B: [16,16] logical -> WEIGHT physical [32,32], transpose_source
+ * These are exactly the 16x16x16 probe shapes.  The general path below remains
+ * authoritative for every other layout/geometry. */
+static int fixed_pack_16x16(const co_tensor *dst, _Float16 *base,
+                            const _Float16 *src, uint32_t transpose,
+                            uint32_t stride) {
+    if (stride != 16u || dst->rows != 16u || dst->cols != 16u) return 0;
+    if (!transpose && dst->layout == CO_CUBE &&
+        dst->physical_rows == 16u && dst->physical_cols == 32u &&
+        dst->atom == 8u) {
+        /* Two 8-column banks; each source row is contiguous. */
+        for (unsigned r = 0; r < 16; r++) {
+            memcpy(base + (size_t)r * 8u, src + (size_t)r * 16u,
+                   8u * sizeof(_Float16));
+            memcpy(base + 128u + (size_t)r * 8u,
+                   src + (size_t)r * 16u + 8u, 8u * sizeof(_Float16));
+        }
+        return 1;
+    }
+    if (transpose && dst->layout == CO_WEIGHT &&
+        dst->physical_rows == 32u && dst->physical_cols == 32u &&
+        dst->atom == 32u) {
+        /* Logical [r,c] -> physical [r, c]; source is [c,r].  The upper
+         * 16 physical rows were already zeroed; padding stays zero. */
+        for (unsigned c = 0; c < 16; c++)
+            for (unsigned r = 0; r < 16; r++)
+                base[(size_t)r * 32u + c] = src[(size_t)c * 16u + r];
+        return 1;
+    }
+    return 0;
 }
 
 static int upload_action(rk_workspace *ws, const rk_action_desc *a,
@@ -188,6 +221,22 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
     uint32_t broadcast_channel = (a->flags & RK_ACTION_FLAG_BROADCAST_CHANNEL) != 0;
     const uint64_t elements = binding->nbytes / 2u;
     double l0 = now_us();
+    if (ws->upload_fast_pack && !broadcast_scalar && !broadcast_channel &&
+        a->source_row_offset == 0 && a->source_col_offset == 0 &&
+        elements == 256u &&
+        fixed_pack_16x16(&dst->tensor, base, src, transpose,
+                         a->source_row_stride)) {
+        if (times) times->layout_us += now_us() - l0;
+        if (manage_sync) {
+            double f0 = now_us();
+            rc = rocket_bo_fini(ws->fd, &dst->buffer->bo);
+            if (times) times->fini_us += now_us() - f0;
+            if (rc) return fail_native(diag, "upload", "rocket_bo_fini failed",
+                                       a->id, rc);
+        }
+        if (bytes_out) *bytes_out += (uint64_t)dst->tensor.bytes;
+        return 0;
+    }
     for (uint32_t r = 0; r < dst->tensor.rows; r++) {
         for (uint32_t c = 0; c < dst->tensor.cols; c++) {
             _Float16 value;
@@ -297,6 +346,10 @@ int rk_workspace_create(int fd, const rk_plan *plan,
     rk_workspace *ws = calloc(1, sizeof(*ws));
     if (!ws) return RK_E_NOMEM;
     ws->fd = fd;
+    ws->upload_coalesce = (uint32_t)env_flag_enabled(
+        "RK_PLAN_UPLOAD_COALESCE", 1);
+    ws->upload_fast_pack = (uint32_t)env_flag_enabled(
+        "RK_PLAN_UPLOAD_FAST_PACK", 1);
     atomic_init(&ws->busy, 0);
     atomic_init(&ws->poisoned, 0);
     if (rk_plan_clone_plan(plan, &ws->plan, diag)) {
@@ -569,6 +622,7 @@ typedef struct {
     /* Sub-breakdown of pack_us; these do not add a second time bucket. */
     double pack_prep_us, pack_clear_us, pack_layout_us, pack_fini_us;
     uint64_t pack_prep_calls, pack_fini_calls;
+    uint32_t upload_coalesce, upload_fast_pack;
     /* Self-consistency witnesses. */
     double total_us;
     double clock_us;
@@ -651,6 +705,8 @@ static void attribution_fill(rk_run_attribution *report, const rk_run_state *st,
     ATTRIBUTION_SET(report, pack_fini_us, st->pack_fini_us);
     ATTRIBUTION_SET(report, pack_prep_calls, st->pack_prep_calls);
     ATTRIBUTION_SET(report, pack_fini_calls, st->pack_fini_calls);
+    ATTRIBUTION_SET(report, upload_coalesce, st->upload_coalesce);
+    ATTRIBUTION_SET(report, upload_fast_pack, st->upload_fast_pack);
 }
 
 static void group_report_fill(rk_group_report *report, const rk_run_state *st,
@@ -797,6 +853,21 @@ static void assign_staging_offsets(rk_workspace *ws, const rk_binding *outputs,
  * prep + all disjoint slice writes + one fini is equivalent to per-slice
  * prep/fini *as long as no consumer action runs in between*.  We only merge a
  * consecutive upload run, and every consumer follows the whole run. */
+static int plan_is_independent_mm_group(const rk_plan *plan) {
+    if (!plan || plan->nsubmits != 1u) return 0;
+    const rk_submit_desc *s = &plan->submits[0];
+    if (s->ntask_ids <= 1u || s->ntask_ids > RK_MAX_INDEPENDENT_MM_TASKS)
+        return 0;
+    for (uint32_t i = 0; i < s->ntask_ids; i++) {
+        uint32_t id = s->task_ids[i];
+        if (id >= plan->nactions) return 0;
+        const rk_action_desc *a = &plan->actions[id];
+        if (a->kind != RK_ACTION_NPU_TASK ||
+            a->template_id != RK_TEMPLATE_MM_F16) return 0;
+    }
+    return 1;
+}
+
 #define RK_MAX_COALESCED_UPLOADS 128u
 
 static int run_upload_run(rk_workspace *ws, uint32_t begin, uint32_t end,
@@ -805,6 +876,7 @@ static int run_upload_run(rk_workspace *ws, uint32_t begin, uint32_t end,
     const rk_action_desc *acts[RK_MAX_COALESCED_UPLOADS];
     const rk_binding *bindings[RK_MAX_COALESCED_UPLOADS];
     uint32_t count = 0;
+    int too_many = 0;
     for (uint32_t i = begin; i < end; i++) {
         const rk_action_desc *a = &ws->plan->actions[i];
         const rk_value_desc *v = rk_plan_value(ws->plan, a->source_binding);
@@ -815,8 +887,8 @@ static int run_upload_run(rk_workspace *ws, uint32_t begin, uint32_t end,
         }
         if (v->role == RK_ROLE_CONSTANT) continue; /* uploaded once at create */
         if (count >= RK_MAX_COALESCED_UPLOADS) {
-            /* Keep the validated per-slice control path for oversized runs. */
-            return RK_E_UNSUPPORTED;
+            too_many = 1;
+            break;
         }
         const rk_binding *b = find_binding(inputs, ninputs, a->source_binding);
         if (!b) {
@@ -828,11 +900,12 @@ static int run_upload_run(rk_workspace *ws, uint32_t begin, uint32_t end,
         bindings[count] = b;
         count++;
     }
-    if (!count) return 0;
+    if (!count && !too_many) return 0;
     double u0 = now_us();
     rk_pack_times total = {0};
     int rc = 0;
-    if (count > 1 && upload_coalesce_enabled()) {
+    if (!too_many && count > 1 && ws->upload_coalesce &&
+        plan_is_independent_mm_group(ws->plan)) {
         co_buffer *prepped[RK_MAX_COALESCED_UPLOADS];
         uint32_t nprepped = 0;
         for (uint32_t i = 0; i < count && !rc; i++) {
@@ -886,11 +959,31 @@ static int run_upload_run(rk_workspace *ws, uint32_t begin, uint32_t end,
                                  UINT32_MAX, native);
         }
     } else {
-        for (uint32_t i = 0; i < count && !rc; i++) {
+        uint32_t first = too_many ? begin : 0;
+        uint32_t last = too_many ? end : count;
+        for (uint32_t i = first; i < last && !rc; i++) {
+            const rk_action_desc *a;
+            const rk_binding *b;
+            if (too_many) {
+                a = &ws->plan->actions[i];
+                const rk_value_desc *v = rk_plan_value(ws->plan,
+                                                       a->source_binding);
+                if (v && v->role == RK_ROLE_CONSTANT) continue;
+                b = find_binding(inputs, ninputs, a->source_binding);
+                if (!b) {
+                    rk_diag_set(diag, RK_E_SHAPE, "run",
+                                "input binding is absent or duplicated",
+                                "", a->id, 0);
+                    rc = RK_E_SHAPE;
+                    break;
+                }
+            } else {
+                a = acts[i];
+                b = bindings[i];
+            }
             uint64_t bytes = 0;
             rk_pack_times one = {0};
-            int native = upload_action(ws, acts[i], bindings[i], &bytes,
-                                       &one, 1, diag);
+            int native = upload_action(ws, a, b, &bytes, &one, 1, diag);
             total.prep_us += one.prep_us;
             total.clear_us += one.clear_us;
             total.layout_us += one.layout_us;
@@ -1100,6 +1193,8 @@ static int workspace_run_body(rk_workspace *ws,
     int result = run_gate(ws, st, diag);
     if (result) return result;   /* lock not held: nothing to release */
     st->task_count = plan_task_count(ws->plan);
+    st->upload_coalesce = ws->upload_coalesce;
+    st->upload_fast_pack = ws->upload_fast_pack;
     st->staging = ws->staging_arena;
     st->staging_stride = ws->staging_stride;
     st->tile_count = ws->tile_count_scratch;

@@ -920,8 +920,9 @@ static void lut_segment_case(void) {
         {
             rk_run_attribution env;
             const uint32_t size = (uint32_t)sizeof(env);
-            EXPECT(size == RK_RUN_ATTRIBUTION_V2_SIZE);
+            EXPECT(size == RK_RUN_ATTRIBUTION_V3_SIZE);
             EXPECT(RK_RUN_ATTRIBUTION_V1_SIZE < size);
+            EXPECT(RK_RUN_ATTRIBUTION_V2_SIZE < size);
             memset(&env, 0, sizeof(env));
             env.struct_size = 0;
             EXPECT(rk_workspace_run_ex(ws3, inputs, 1, outputs, 1, &env, &diag) ==
@@ -1421,6 +1422,211 @@ static void mock_tag_capacity_case(void) {
     EXPECT(rk_mock_untracked() == 0);
 }
 
+
+/* A legal plan with 130 runtime uploads in one consecutive run.  It is larger
+ * than the coalescing scratch array; the runtime must fall back to the original
+ * per-slice path rather than rejecting a plan the verifier already accepted. */
+static void many_upload_fallback_case(void) {
+    enum { NINPUT = 130, NACTION = NINPUT + 2, NBUFFER = NINPUT + 1,
+           NVIEW = NINPUT + 1 };
+    rk_value_desc *values = calloc(NINPUT + 1, sizeof(*values));
+    rk_buffer_desc *buffers = calloc(NBUFFER, sizeof(*buffers));
+    rk_view_desc *views = calloc(NVIEW, sizeof(*views));
+    rk_action_desc *actions = calloc(NACTION, sizeof(*actions));
+    uint32_t *task_ids = malloc(sizeof(uint32_t));
+    co_tensor cube, weight, out_t;
+    rk_publish_desc *publish = calloc(1, sizeof(*publish));
+    char (*names)[8] = calloc(NINPUT + 1, sizeof(*names));
+    _Float16 *x = calloc((size_t)NINPUT * 256u, sizeof(*x));
+    _Float16 *y = calloc(256u, sizeof(*y));
+    rk_binding *inputs = calloc(NINPUT, sizeof(*inputs));
+    rk_binding *outputs = calloc(1, sizeof(*outputs));
+    rk_diag diag;
+    rk_plan *plan = NULL;
+    rk_workspace *ws = NULL;
+    int ok = values && buffers && views && actions && task_ids && publish &&
+             names && x && y && inputs && outputs &&
+             co_tensor_matrix(&cube, 16, 16, CO_F16) == 0 &&
+             co_tensor_weight(&weight, 16, 16) == 0 &&
+             co_tensor_matrix(&out_t, 16, 16, CO_F16) == 0;
+    EXPECT(ok);
+    if (!ok) goto done;
+    memset(&diag, 0, sizeof(diag));
+    for (uint32_t i = 0; i < NINPUT; i++) {
+        values[i].abi_version = RK_ABI_VERSION;
+        values[i].struct_size = sizeof(rk_value_desc);
+        values[i].id = i;
+        values[i].role = RK_ROLE_INPUT;
+        values[i].dtype = RK_DTYPE_F16;
+        values[i].rank = 2;
+        values[i].shape[0] = 16; values[i].shape[1] = 16;
+        values[i].nbytes = 512;
+        snprintf(names[i], sizeof(names[i]), "A%u", i);
+        values[i].name = names[i];
+        values[i].name_len = (uint32_t)strlen(names[i]);
+        const co_tensor *t = (i == 1) ? &weight : &cube;
+        buffers[i].abi_version = RK_ABI_VERSION;
+        buffers[i].struct_size = sizeof(rk_buffer_desc);
+        buffers[i].id = i;
+        buffers[i].role = (i == 1) ? RK_ROLE_WEIGHT : RK_ROLE_INPUT_SLICE;
+        buffers[i].slot_id = i;
+        buffers[i].alignment = 16;
+        buffers[i].layout_id = (i == 1) ? RK_LAYOUT_WEIGHT_F16 : RK_LAYOUT_CUBE_F16;
+        buffers[i].capacity = t->bytes;
+        buffers[i].lifetime_first = 0;
+        buffers[i].lifetime_last = NACTION - 1;
+        buffers[i].padding_state = 0;
+        views[i].abi_version = RK_ABI_VERSION;
+        views[i].struct_size = sizeof(rk_view_desc);
+        views[i].id = i;
+        views[i].buffer_id = i;
+        views[i].tensor.abi_version = RK_ABI_VERSION;
+        views[i].tensor.struct_size = sizeof(rk_tensor_desc);
+        views[i].tensor.dtype = RK_DTYPE_F16;
+        views[i].tensor.layout = (i == 1) ? RK_LAYOUT_WEIGHT_F16 : RK_LAYOUT_CUBE_F16;
+        views[i].tensor.rows = 16; views[i].tensor.cols = 16;
+        views[i].tensor.physical_rows = t->physical_rows;
+        views[i].tensor.physical_cols = t->physical_cols;
+        views[i].tensor.atom = (i == 1) ? 32u : 8u;
+        views[i].tensor.bytes = t->bytes;
+        views[i].valid_region[1] = 16; views[i].valid_region[3] = 16;
+        actions[i].abi_version = RK_ABI_VERSION;
+        actions[i].struct_size = sizeof(rk_action_desc);
+        actions[i].id = i;
+        actions[i].kind = RK_ACTION_UPLOAD;
+        actions[i].source_binding = i;
+        actions[i].source_row_stride = 16;
+        actions[i].flags = (i == 1) ? RK_ACTION_FLAG_TRANSPOSE_SOURCE : 0;
+        actions[i].noutputs = 1;
+        actions[i].outputs = &views[i].id;
+        snprintf(actions[i].origin, sizeof(actions[i].origin), "many_upload:%u", i);
+    }
+    values[NINPUT].abi_version = RK_ABI_VERSION;
+    values[NINPUT].struct_size = sizeof(rk_value_desc);
+    values[NINPUT].id = NINPUT;
+    values[NINPUT].role = RK_ROLE_OUTPUT;
+    values[NINPUT].dtype = RK_DTYPE_F16;
+    values[NINPUT].rank = 2;
+    values[NINPUT].shape[0] = 16; values[NINPUT].shape[1] = 16;
+    values[NINPUT].nbytes = 512;
+    snprintf(names[NINPUT], sizeof(names[NINPUT]), "Y");
+    values[NINPUT].name = names[NINPUT];
+    values[NINPUT].name_len = (uint32_t)strlen(names[NINPUT]);
+
+    buffers[NINPUT].abi_version = RK_ABI_VERSION;
+    buffers[NINPUT].struct_size = sizeof(rk_buffer_desc);
+    buffers[NINPUT].id = NINPUT;
+    buffers[NINPUT].role = RK_ROLE_OUTPUT;
+    buffers[NINPUT].slot_id = NINPUT;
+    buffers[NINPUT].alignment = 16;
+    buffers[NINPUT].layout_id = RK_LAYOUT_CUBE_F16;
+    buffers[NINPUT].capacity = out_t.bytes;
+    buffers[NINPUT].lifetime_first = 0;
+    buffers[NINPUT].lifetime_last = NACTION - 1;
+    buffers[NINPUT].padding_state = 0;
+    views[NINPUT].abi_version = RK_ABI_VERSION;
+    views[NINPUT].struct_size = sizeof(rk_view_desc);
+    views[NINPUT].id = NINPUT;
+    views[NINPUT].buffer_id = NINPUT;
+    views[NINPUT].tensor.abi_version = RK_ABI_VERSION;
+    views[NINPUT].tensor.struct_size = sizeof(rk_tensor_desc);
+    views[NINPUT].tensor.dtype = RK_DTYPE_F16;
+    views[NINPUT].tensor.layout = RK_LAYOUT_CUBE_F16;
+    views[NINPUT].tensor.rows = 16; views[NINPUT].tensor.cols = 16;
+    views[NINPUT].tensor.physical_rows = out_t.physical_rows;
+    views[NINPUT].tensor.physical_cols = out_t.physical_cols;
+    views[NINPUT].tensor.atom = 8;
+    views[NINPUT].tensor.bytes = out_t.bytes;
+    views[NINPUT].valid_region[1] = 16; views[NINPUT].valid_region[3] = 16;
+
+    uint32_t mm_in[2] = {0, 1};
+    uint32_t mm_dep[2] = {0, 1};
+    uint32_t mm_out = NINPUT;
+    rk_action_desc *mm = &actions[NINPUT];
+    mm->abi_version = RK_ABI_VERSION;
+    mm->struct_size = sizeof(rk_action_desc);
+    mm->id = NINPUT;
+    mm->kind = RK_ACTION_NPU_TASK;
+    mm->template_id = RK_TEMPLATE_MM_F16;
+    mm->ninputs = 2; mm->inputs = mm_in;
+    mm->noutputs = 1; mm->outputs = &mm_out;
+    mm->ndeps = 2; mm->deps = mm_dep;
+    snprintf(mm->origin, sizeof(mm->origin), "many_upload:mm");
+    rk_action_desc *down = &actions[NINPUT + 1];
+    down->abi_version = RK_ABI_VERSION;
+    down->struct_size = sizeof(rk_action_desc);
+    down->id = NINPUT + 1;
+    down->kind = RK_ACTION_DOWNLOAD;
+    down->source_binding = NINPUT;
+    down->ninputs = 1; down->inputs = &mm_out;
+    down->ndeps = 1; down->deps = &mm->id;
+    snprintf(down->origin, sizeof(down->origin), "many_upload:down");
+
+    task_ids[0] = NINPUT;
+    rk_submit_desc submit = {
+        .abi_version = RK_ABI_VERSION, .struct_size = sizeof(rk_submit_desc),
+        .id = 0, .mode = RK_SUBMIT_CHAIN, .core_policy = RK_CORE_SINGLE,
+        .ntask_ids = 1, .task_ids = task_ids};
+    publish[0].abi_version = RK_ABI_VERSION;
+    publish[0].struct_size = sizeof(rk_publish_desc);
+    publish[0].binding_id = NINPUT;
+    publish[0].view_id = NINPUT;
+    publish[0].rows = 16; publish[0].cols = 16;
+
+    rk_plan_desc desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.abi_version = RK_ABI_VERSION;
+    desc.struct_size = sizeof(desc);
+    desc.schema_version = RK_SCHEMA_VERSION;
+    desc.values = values; desc.nvalues = NINPUT + 1;
+    desc.buffers = buffers; desc.nbuffers = NBUFFER;
+    desc.views = views; desc.nviews = NVIEW;
+    desc.actions = actions; desc.nactions = NACTION;
+    desc.submits = &submit; desc.nsubmits = 1;
+    desc.publish = publish; desc.npublish = 1;
+    desc.device_budget_bytes = 64u << 20;
+    desc.host_budget_bytes = 64u << 20;
+    desc.claimed_device_bytes = 64u << 20;
+    desc.claimed_host_bytes = 64u << 20;
+    desc.runtime_abi_version = RK_ABI_VERSION;
+    int plan_rc = rk_plan_create(&desc, &plan, &diag);
+    if (plan_rc) fprintf(stderr, "many_upload plan_create rc=%d: %s\n",
+                         plan_rc, diag.message);
+    EXPECT(plan_rc == 0);
+    if (!plan) goto done;
+    EXPECT(rk_workspace_create(3, plan, NULL, 0, &ws, &diag) == 0);
+    if (!ws) goto done;
+    for (uint32_t i = 0; i < NINPUT; i++) {
+        for (uint32_t q = 0; q < 256; q++) x[(size_t)i * 256u + q] =
+            value((unsigned)(i * 13u + q), 1);
+        inputs[i].abi_version = RK_ABI_VERSION;
+        inputs[i].struct_size = sizeof(rk_binding);
+        inputs[i].id = i;
+        inputs[i].dtype = RK_DTYPE_F16;
+        inputs[i].rank = 2;
+        inputs[i].shape[0] = 16; inputs[i].shape[1] = 16;
+        inputs[i].data = x + (size_t)i * 256u;
+        inputs[i].nbytes = 512;
+    }
+    outputs[0].abi_version = RK_ABI_VERSION;
+    outputs[0].struct_size = sizeof(rk_binding);
+    outputs[0].id = NINPUT;
+    outputs[0].dtype = RK_DTYPE_F16;
+    outputs[0].rank = 2;
+    outputs[0].shape[0] = 16; outputs[0].shape[1] = 16;
+    outputs[0].data = y;
+    outputs[0].nbytes = 512;
+    rk_run_report report;
+    EXPECT(rk_workspace_run(ws, inputs, NINPUT, outputs, 1, &report, &diag) == 0);
+    EXPECT(report.upload_calls == NINPUT);
+    EXPECT(report.task_count == 1u);
+done:
+    if (ws) rk_workspace_destroy(ws, &diag);
+    if (plan) rk_plan_destroy(plan);
+    free(publish); free(inputs); free(outputs); free(x); free(y); free(names);
+    free(actions); free(views); free(buffers); free(values); free(task_ids);
+}
+
 int main(void) {
     enum { M = 32, K = 512, N = 48 };
     const uint32_t slack_guard = CO_SLACK + CO_GUARD;
@@ -1893,6 +2099,7 @@ int main(void) {
     mock_untracked_program_case();
     mock_tag_capacity_case();
     multi_output_budget_case();
+    many_upload_fallback_case();
     printf("RK_PLAN host checks=%u failures=%u\n", checks, failures);
     return failures ? 1 : 0;
 }

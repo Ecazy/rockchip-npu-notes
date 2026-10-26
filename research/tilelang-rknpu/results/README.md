@@ -5,6 +5,21 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Upload-policy contract and layout checkpoint (2026-10-26, v11)
+
+Fifth optimisation package; report:
+[OPTIMIZATION-RESULTS-5.md](../OPTIMIZATION-RESULTS-5.md).
+
+- `results/20261026T094847Z-layout/`: fixed 16x16 CUBE/WEIGHT pack vs generic,
+  coalescing on, 4 rounds x 32 runs.  b8 11.637 -> **11.414 ms** (1.0195x);
+  b1 3.706 -> **3.663 ms** (1.0117x).  b8 layout 439 -> 260 us; b1 56.9 -> 32.1 us.
+- `results/20261026T094941Z-numeric-replay/`: packed frozen replay,
+  **PASS / 0 problems**, no recalibration.
+- Runtime fixes: >128 consecutive uploads safely fall back to per-slice path;
+  upload policies are snapshotted at workspace creation and reported in
+  attribution; coalescing is restricted to the verified independent-MM group.
+- Host verification for this state: 263 pytest, 30/30 ctest.
+
 ## QK/PV upload-sync checkpoint (2026-10-26, v10)
 
 Fourth optimisation package, shared-group upload preparation; report:

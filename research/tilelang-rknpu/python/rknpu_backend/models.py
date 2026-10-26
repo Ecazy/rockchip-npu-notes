@@ -131,6 +131,8 @@ class RunStats:
     plan_pack_fini_us: float = 0.0
     plan_pack_prep_calls: int = 0
     plan_pack_fini_calls: int = 0
+    plan_upload_coalesce: int = 0
+    plan_upload_fast_pack: int = 0
     upload_calls: int = 0
     upload_bytes: int = 0
     download_calls: int = 0
@@ -192,6 +194,9 @@ class RunStats:
             if hasattr(report, field):
                 setattr(self, f"plan_{field}",
                         getattr(self, f"plan_{field}") + getattr(report, field))
+        for field in ("upload_coalesce", "upload_fast_pack"):
+            if hasattr(report, field):
+                setattr(self, f"plan_{field}", int(getattr(report, field)))
         self.upload_calls += int(report.upload_calls)
         self.upload_bytes += int(report.upload_bytes)
         self.download_calls += int(report.download_calls)
@@ -216,6 +221,7 @@ class RunStats:
                    "guard_us": 0.0, "publish_us": 0.0, "alloc_us": 0.0,
                    "total_us": 0.0, "clock_us": 0.0,
                    **{field: 0.0 for field in PACK_BREAKDOWN_FIELDS},
+                   "upload_coalesce": 0, "upload_fast_pack": 0,
                    "upload_calls": 0, "upload_bytes": 0,
                    "download_calls": 0, "download_bytes": 0,
                    "task_count": 0, "submit_count": 0,
@@ -232,6 +238,9 @@ class RunStats:
         for field in PACK_BREAKDOWN_FIELDS:
             if hasattr(report, field):
                 row[field] = row.get(field, 0.0) + getattr(report, field)
+        for field in ("upload_coalesce", "upload_fast_pack"):
+            if hasattr(report, field):
+                row[field] = int(getattr(report, field))
         row["upload_calls"] += int(report.upload_calls)
         row["upload_bytes"] += int(report.upload_bytes)
         row["download_calls"] += int(report.download_calls)
@@ -334,6 +343,8 @@ class RunStats:
                for field in ENVELOPE_FIELDS + ENVELOPE_WITNESS_FIELDS},
             **{f"plan_{field}": float(getattr(self, f"plan_{field}"))
                for field in PACK_BREAKDOWN_FIELDS},
+            "plan_upload_coalesce": int(self.plan_upload_coalesce),
+            "plan_upload_fast_pack": int(self.plan_upload_fast_pack),
             "plan_envelope_attributed_us": self.plan_envelope_attributed_us,
             "plan_envelope_residual_us": self.plan_envelope_residual_us,
             # Backward-compatible summary name: this is only the RKPlan interval,

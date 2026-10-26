@@ -334,11 +334,17 @@ typedef struct rk_run_attribution {
     double pack_fini_us;     /* rocket_bo_fini calls in upload actions */
     uint64_t pack_prep_calls;
     uint64_t pack_fini_calls;
+    /* Snapshot of the workspace's upload execution policy. */
+    uint32_t upload_coalesce;
+    uint32_t upload_fast_pack;
+    uint32_t upload_policy_reserved[2];
 } rk_run_attribution;
 
 #define RK_RUN_ATTRIBUTION_V1_SIZE \
     ((uint32_t)(offsetof(rk_run_attribution, clock_us) + sizeof(double)))
-#define RK_RUN_ATTRIBUTION_V2_SIZE ((uint32_t)sizeof(rk_run_attribution))
+#define RK_RUN_ATTRIBUTION_V2_SIZE \
+    ((uint32_t)(offsetof(rk_run_attribution, upload_coalesce)))
+#define RK_RUN_ATTRIBUTION_V3_SIZE ((uint32_t)sizeof(rk_run_attribution))
 
 /* Static-repeat group report.  ``nrepeat`` independent binding sets execute
  * inside one native call.  Submission count is *not* reduced here: every repeat

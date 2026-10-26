@@ -19,7 +19,7 @@ class FFITests(unittest.TestCase):
             ffi.RKPlanDesc: 168,
             ffi.RKBinding: 48,
             ffi.RKRunReport: 88,
-            ffi.RKAttribution: 208,
+            ffi.RKAttribution: 224,
             ffi.RKGroupReport: 176,
             ffi.RKDiag: 760,
         }

@@ -134,6 +134,8 @@ def envelope_row(stats: RunStats) -> dict:
            for field in ENVELOPE_FIELDS},
         **{field: _stat(stats, f"plan_{field}")
            for field in PACK_BREAKDOWN_FIELDS},
+        "upload_coalesce": int(getattr(stats, "plan_upload_coalesce", 0)),
+        "upload_fast_pack": int(getattr(stats, "plan_upload_fast_pack", 0)),
         "python_plan_node_us": max(
             0.0, float(stats.plan_call_us) - float(stats.plan_workspace_us)),
         "host_action_us": stats.host_action_us,

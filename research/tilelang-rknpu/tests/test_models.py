@@ -448,6 +448,84 @@ class CompleteModelTests(unittest.TestCase):
             else:
                 os.environ["RK_PLAN_UPLOAD_COALESCE"] = old
 
+    def test_workspace_upload_policy_is_a_creation_snapshot(self):
+        """Changing provider/upload environment toggles after construction must
+        not alter an existing workspace's execution policy."""
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.models import RunStats
+
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        old = {k: os.environ.get(k) for k in
+               ("RK_PLAN_UPLOAD_COALESCE", "RK_PLAN_UPLOAD_FAST_PACK")}
+        try:
+            os.environ["RK_PLAN_UPLOAD_COALESCE"] = "1"
+            os.environ["RK_PLAN_UPLOAD_FAST_PACK"] = "0"
+            with HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+                os.environ["RK_PLAN_UPLOAD_COALESCE"] = "0"
+                os.environ["RK_PLAN_UPLOAD_FAST_PACK"] = "1"
+                stats = RunStats()
+                runner.run(self.x[:8], stats=stats)
+                self.assertEqual(stats.plan_upload_coalesce, 1)
+                self.assertEqual(stats.plan_upload_fast_pack, 0)
+                # The snapshot has one prep per shared BO, not 64 per group.
+                self.assertEqual(stats.plan_pack_prep_calls, 10)
+
+            os.environ["RK_PLAN_UPLOAD_COALESCE"] = "0"
+            os.environ["RK_PLAN_UPLOAD_FAST_PACK"] = "1"
+            with HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+                os.environ["RK_PLAN_UPLOAD_COALESCE"] = "1"
+                os.environ["RK_PLAN_UPLOAD_FAST_PACK"] = "0"
+                stats = RunStats()
+                runner.run(self.x[:8], stats=stats)
+                self.assertEqual(stats.plan_upload_coalesce, 0)
+                self.assertEqual(stats.plan_upload_fast_pack, 1)
+                self.assertEqual(stats.plan_pack_prep_calls, 134)
+        finally:
+            for key, value in old.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+    def test_fixed_qk_pv_layout_pack_is_bitwise_general_path(self):
+        """The fixed 16x16 CUBE/WEIGHT pack is a fast path only; outputs and
+        all bytes must equal the generic packing path."""
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.models import RunStats
+
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        old = {k: os.environ.get(k) for k in
+               ("RK_PLAN_UPLOAD_COALESCE", "RK_PLAN_UPLOAD_FAST_PACK")}
+        outputs = {}
+        stats = {}
+        try:
+            for fast in ("1", "0"):
+                os.environ["RK_PLAN_UPLOAD_COALESCE"] = "1"
+                os.environ["RK_PLAN_UPLOAD_FAST_PACK"] = fast
+                with HybridRunner(self.lib, program, self.vit_weights,
+                                  weights_path=WEIGHTS / "tiny_vit.npz", fd=0) as runner:
+                    first = RunStats()
+                    outputs[fast] = runner.run(self.x[:8], stats=first).outputs["logits"]
+                    stats[fast] = first
+                    outputs[f"changed_{fast}"] = runner.run(
+                        self.x[8:16]).outputs["logits"]
+            np.testing.assert_array_equal(outputs["1"], outputs["0"])
+            np.testing.assert_array_equal(outputs["changed_1"],
+                                          outputs["changed_0"])
+            self.assertEqual(stats["1"].plan_upload_fast_pack, 1)
+            self.assertEqual(stats["0"].plan_upload_fast_pack, 0)
+            self.assertLess(stats["1"].plan_pack_layout_us,
+                            stats["0"].plan_pack_layout_us)
+            self.assertEqual(stats["1"].upload_bytes, stats["0"].upload_bytes)
+        finally:
+            for key, value in old.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
     def test_fused_residual_rmsnorm_is_bitwise_control(self):
         """Fusing residual add + RMSNorm removes a Host action boundary while
         preserving the FP16 residual narrowing point and every downstream value."""
@@ -702,7 +780,7 @@ class CompleteModelTests(unittest.TestCase):
         loader_spec.loader.exec_module(verifier)
         for spec_name, result_name in (
                 ("numeric_acceptance_packed.json",
-                 "20261026T093427Z-numeric-replay"),
+                 "20261026T094941Z-numeric-replay"),
                 ("numeric_acceptance_packed.json",
                  "20261026T091612Z-numeric-replay"),
                 ("numeric_acceptance_device_ffn.json",

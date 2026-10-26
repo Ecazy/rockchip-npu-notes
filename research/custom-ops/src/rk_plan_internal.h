@@ -74,6 +74,10 @@ typedef struct rk_workspace {
     atomic_int poisoned;
     int created;
     uint32_t max_submit_tasks;
+    /* Snapshot at workspace creation; changing the environment afterwards does
+     * not change this workspace's execution policy. */
+    uint32_t upload_coalesce;
+    uint32_t upload_fast_pack;
     /* Pre-allocated per-run Host scratch.  The single-run gate gives exclusive
      * ownership of these buffers to whichever entry point runs, so a plan call
      * no longer allocates or frees the emission array, the per-output tile
