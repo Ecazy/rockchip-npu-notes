@@ -11,6 +11,14 @@ from acceptance (disjoint test split).  A previously test-calibrated envelope is
 retained only as historical regression evidence.  The earlier performance
 fields are still explicitly invalid.
 
+Final optimisation delivery re-acceptance (2026-10-26): all five static profiles
+were re-run on the full 10,000-image test split in one baseline/current campaign;
+MLP accuracy 0.98310 and Tiny ViT accuracy 0.98210, top-1 agreement 1.00000, and
+the current build passed the frozen packed numeric replay.  See
+[OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md) and
+`results/20261026T120625Z-final/`.  This does not redefine or add conditions to
+N0-N3.
+
 ## Delivered models
 
 ### MNIST MLP
@@ -41,8 +49,10 @@ fields are still explicitly invalid.
 - NPU matrix subgraphs: patch projection, QKV, QK, PV, attention output
   projection, FFN gate/up/down and classifier.  Every one is a real TileLang
   PrimFunc -> RKIR -> RKPlan -> production runtime.
-- QK/PV use one immutable 16x16 dynamic-B RKPlan and one reused workspace across
-  all batches and heads.
+- QK/PV use the immutable 16x16 dynamic-B primitive plus pre-expanded shared
+  group plans; each group plan has one reused workspace across all batches and
+  heads.  The default mapped-QKV manifest feeds Q/K/V column windows directly;
+  q/k/v materialisation is capture-only/diagnostic.
 - Static profiles: batch 1 and 8.
 - Source: `models/tilelang_matmul.py`; plan compiler: `tools/compile_models.py`.
 
@@ -53,19 +63,20 @@ The Python model runner is now a thin executor over a versioned, closed
 orchestration path.
 
 - MLP profile: 4 nodes = 3 registered Host-action nodes + 1 RKPlan node.
-- Tiny Transformer profile: 23 nodes = 14 registered Host-action nodes + 9
-  RKPlan nodes, referencing 8 immutable RKPlan files.
+- Tiny Transformer default profile: 22 nodes = 14 Host-node declarations
+  (one capture-only) + 8 RKPlan nodes, referencing 9 immutable RKPlan files.
 - Every graph node declares inputs/outputs, static shape and semantic axes,
   dependencies, numeric contract and bridge-accounting policy.
 - NPU nodes name an immutable RKPlan key, hash and source hash.  Host nodes name
   an action in `rknpu_backend.hybrid.HOST_ACTIONS` and its exact version.
-- The QK and PV nodes declare batch/head repeat axes and consume indexed head
-  views; they do not call an opaque all-Transformer node.
+- The QK and PV nodes declare batch/head repeat axes and explicit source
+  view/slice/transpose maps; they do not call an opaque all-Transformer node.
 - Unknown actions, unknown fields, plan-hash mismatches, shape/dtype mismatches,
   fallback policies and dynamic shapes are rejected.
 - Host arithmetic is explicit and timed per node: patch rasterization/padding,
-  position add, RMSNorm, stable softmax, QKV split/merge, residual adds, SwiGLU,
-  reshape, mean pooling and logits export.
+  position add, RMSNorm, stable softmax, merge, residual adds, SwiGLU, reshape,
+  mean pooling and logits export.  QKV split is capture-only in the default
+  mapped manifest.
 - There is no implicit CPU matrix fallback.  A missing/unknown plan or Host
   action is an error.
 

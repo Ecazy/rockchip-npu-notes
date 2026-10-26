@@ -5,6 +5,21 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Final model delivery checkpoint (2026-10-26, final)
+
+- `results/20261026T120625Z-final/`: three interleaved rounds, full 10,000-image
+  MNIST test split for all five static profiles, baseline `42f870f` vs current
+  runtime `60f4a82`.  Warm b8 34.631 → **10.603 ms** (3.266x), b1 7.138 →
+  **3.329 ms** (2.144x); full five-profile evaluation wall 224.214 → **148.204 s**
+  (1.513x).  Both arms have identical raw logits in every round.
+- Accuracy: MLP **0.98310**, Tiny ViT **0.98210**; top-1 agreement **1.00000**
+  for every profile.  Fresh current-build packed numeric replay:
+  **PASS / 0 problems** (33 layers, 5 profile logits), no recalibration.
+- Creation cost is reported separately (Tiny ViT b8 18.0 → 62.2 ms, amortised);
+  no cold-start speedup is claimed.
+- Summary: [OPTIMIZATION-SUMMARY.md](../OPTIMIZATION-SUMMARY.md); replay:
+  `RK_FINAL_LIMIT=10000 RK_FINAL_ROUNDS=3 ./scripts/run-final-delivery.sh`.
+
 ## QKV mapped-input checkpoint (2026-10-26, v13)
 
 Seventh optimisation package; report:

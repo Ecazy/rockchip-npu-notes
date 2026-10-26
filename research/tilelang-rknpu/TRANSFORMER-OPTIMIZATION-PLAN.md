@@ -14,6 +14,7 @@
 | 上传策略契约与布局快路径 | [OPTIMIZATION-RESULTS-5.md](OPTIMIZATION-RESULTS-5.md) | >128 上传安全回退；策略创建时快照；仅独立 MM shared group 合并；16×16 CUBE/WEIGHT 打包快路径，b8 1.0195× |
 | Python/ctypes binding 复用 | [OPTIMIZATION-RESULTS-6.md](OPTIMIZATION-RESULTS-6.md) | PlanCall 缓存静态 binding 描述符，运行仅更新数据指针；b8 1.147× / b1 1.101×；下载同步合并因无稳定收益撤回 |
 | QKV 输入布局映射 | [OPTIMIZATION-RESULTS-7.md](OPTIMIZATION-RESULTS-7.md) | 显式 group_layout 让 QK/PV 直接读 QKV 列窗口；生产移除 split_heads 及 q/k/v 数组；b1 pooled 1.027×，b8 接近噪声边界但无退化 |
+| 最终交付验收 | [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md) | 五个静态 profile 全部 10,000 张、3 轮同 campaign baseline/current 对照、packed 冻结政策 PASS；完整评估墙钟 224.2→148.2 s；明确非声明与下一阶段契约建议 |
 
 完整模型里程碑已独立关闭，见 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)。候选方案本身不构成实施授权、能力声明或验收通过。新一轮工作按具体任务推进，不由本文的历史“下一步”措辞自动启动。
 

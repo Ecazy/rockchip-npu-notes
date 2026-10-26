@@ -44,6 +44,18 @@ Final model campaign:
 ./scripts/run-model-admission.sh
 ```
 
+Final optimisation delivery re-acceptance (full 10,000-image test split for all
+five static profiles, baseline `42f870f` vs current default, three interleaved
+rounds, plus fresh packed numeric observation):
+
+```bash
+RK_FINAL_LIMIT=10000 RK_FINAL_ROUNDS=3 ./scripts/run-final-delivery.sh
+```
+
+Current evidence: `results/20261026T120625Z-final/` (`analysis.json`,
+`analysis.md`, `verify-packed-summary.json`, raw per-round logits/traces).
+Summary and explicit non-claims: [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md).
+
 Current evidence: `results/20261024T071144Z-models/` (core 1 full 10,000-image
 test split for MLP and Transformer; masks 2/4 fixed 512-image subset; independent
 verifier PASS).  The report keeps raw logits and deterministic layer traces.

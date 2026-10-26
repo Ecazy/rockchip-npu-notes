@@ -245,3 +245,34 @@ results/20261026T081153Z-numeric/campaign/tools/
 results/20261026T081153Z-numeric/campaign/numeric/
 results/20261026T081153Z-numeric/campaign.tgz
 
+
+# Final optimisation delivery campaign: retain identity/analysis, per-round
+# reports, raw logits/layer traces and packed observations.  The regenerable
+# campaign payload (plans/weights/data) and reference sidecars stay local.
+!results/20261026T120625Z-final/
+!results/20261026T120625Z-final/README.md
+!results/20261026T120625Z-final/analysis.json
+!results/20261026T120625Z-final/analysis.md
+!results/20261026T120625Z-final/analysis.log
+!results/20261026T120625Z-final/verify-packed.log
+!results/20261026T120625Z-final/verify-packed-summary.json
+!results/20261026T120625Z-final/*.build.log
+!results/20261026T120625Z-final/round-*.log
+!results/20261026T120625Z-final/finish_final.log
+!results/20261026T120625Z-final/campaign/manifest.json
+!results/20261026T120625Z-final/campaign/SHA256SUMS
+!results/20261026T120625Z-final/model-results/r*-baseline/
+!results/20261026T120625Z-final/model-results/r*-current/
+!results/20261026T120625Z-final/model-results/r*-*/*.json
+!results/20261026T120625Z-final/model-results/r*-*/*.log
+!results/20261026T120625Z-final/model-results/r*-*/*.txt
+!results/20261026T120625Z-final/model-results/r*-*/*.sha256
+!results/20261026T120625Z-final/model-results/r*-*/model_eval.*.logits.npy
+!results/20261026T120625Z-final/model-results/r*-*/model_eval.layers.npz
+!results/20261026T120625Z-final/model-results/numeric-current*/
+!results/20261026T120625Z-final/model-results/numeric-current*/*.json
+!results/20261026T120625Z-final/model-results/numeric-current*/*.log
+!results/20261026T120625Z-final/model-results/numeric-current*/observation.npz
+results/20261026T120625Z-final/campaign/plans/
+results/20261026T120625Z-final/campaign/weights/
+results/20261026T120625Z-final/campaign/data/
