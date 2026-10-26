@@ -909,6 +909,49 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
                 if (desc->actions[s->task_ids[j]].template_id != RK_TEMPLATE_MM_F16)
                     all_plain_mm = 0;
             if (all_plain_mm && s->ntask_ids > 1) {
+                /* Validation domain first: structure alone does not license a
+                 * chain.  Only the geometry and size the board probe covered are
+                 * admitted, and the check lives here so a caller that skips the
+                 * Python admission rules still cannot submit one. */
+                if (s->ntask_ids > RK_MAX_INDEPENDENT_MM_TASKS) {
+                    free(task_submit);
+                    return fail(diag, RK_E_UNSUPPORTED, "validate",
+                                "independent MM chain exceeds the validated task "
+                                "count");
+                }
+                for (uint32_t j = 0; j < s->ntask_ids; j++) {
+                    const rk_action_desc *a = &desc->actions[s->task_ids[j]];
+                    if (a->ninputs != 2 || a->noutputs != 1) { all_plain_mm = 0; break; }
+                    const rk_view_desc *iv0 = view_at(desc, a->inputs[0]);
+                    const rk_view_desc *iv1 = view_at(desc, a->inputs[1]);
+                    const rk_view_desc *ov = view_at(desc, a->outputs[0]);
+                    if (!iv0 || !iv1 || !ov) { all_plain_mm = 0; break; }
+                    const rk_tensor_desc *t0 = &iv0->tensor;
+                    const rk_tensor_desc *t1 = &iv1->tensor;
+                    const rk_tensor_desc *ty = &ov->tensor;
+                    int geometry_ok =
+                        t0->layout == RK_LAYOUT_CUBE_F16 &&
+                        t0->rows == RK_INDEPENDENT_MM_ROWS &&
+                        t0->cols == RK_INDEPENDENT_MM_COLS &&
+                        t0->physical_rows == RK_INDEPENDENT_MM_ROWS &&
+                        t0->physical_cols == RK_INDEPENDENT_MM_PHYS_COLS &&
+                        t1->layout == RK_LAYOUT_WEIGHT_F16 &&
+                        t1->rows == RK_INDEPENDENT_MM_COLS &&
+                        t1->cols == RK_INDEPENDENT_MM_K &&
+                        t1->physical_rows == RK_INDEPENDENT_MM_PHYS_COLS &&
+                        t1->physical_cols == RK_INDEPENDENT_MM_PHYS_COLS &&
+                        ty->layout == RK_LAYOUT_CUBE_F16 &&
+                        ty->rows == RK_INDEPENDENT_MM_ROWS &&
+                        ty->cols == RK_INDEPENDENT_MM_COLS &&
+                        ty->physical_rows == RK_INDEPENDENT_MM_ROWS &&
+                        ty->physical_cols == RK_INDEPENDENT_MM_PHYS_COLS;
+                    if (!geometry_ok) {
+                        free(task_submit);
+                        return fail(diag, RK_E_UNSUPPORTED, "validate",
+                                    "independent MM chain geometry is outside the "
+                                    "validated domain");
+                    }
+                }
                 /* Each task's written *region* (buffer base + view offset, view
                  * extent) must be disjoint from every other task's written region
                  * and from every task's read region.  Shared BOs are legal only

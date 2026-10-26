@@ -13,6 +13,17 @@ extern "C" {
 #define RK_MAX_SUBMIT_TASKS 64u
 #define RK_MAX_PROGRAMS_PER_SUBMIT 64u
 #define RK_MAX_WORDS_PER_PROGRAM 2048u
+/* Admission domain for a chained group of *independent* matmuls.  Structural
+ * independence (disjoint written regions, no read of a region written in the
+ * same submit) is necessary but not sufficient: the only board evidence covers
+ * this exact geometry and this task count, so the verifier refuses anything
+ * outside it instead of generalising from one probe.  These constants are pinned
+ * to the Python admission check by the ABI dump below. */
+#define RK_MAX_INDEPENDENT_MM_TASKS 32u
+#define RK_INDEPENDENT_MM_ROWS 16u
+#define RK_INDEPENDENT_MM_COLS 16u
+#define RK_INDEPENDENT_MM_K 16u
+#define RK_INDEPENDENT_MM_PHYS_COLS 32u
 /* MVP verifier complexity bounds.  Real plans stay far below these; the limits
  * keep the pairwise alias/lifetime checks bounded for hostile descriptors. */
 #define RK_MAX_WRITERS_PER_BUFFER 64u

@@ -196,6 +196,13 @@ static void dump_layout(FILE *out) {
     /* Not a ctypes mirror: the emission array size that the Host requirement
      * formula must use.  Python pins its own constant against this value. */
     printf("ABI_CONST %s %zu\n", "co_program", sizeof(co_program));
+    printf("ABI_CONST %s %u\n", "independent_mm_tasks",
+           RK_MAX_INDEPENDENT_MM_TASKS);
+    printf("ABI_CONST %s %u\n", "independent_mm_rows", RK_INDEPENDENT_MM_ROWS);
+    printf("ABI_CONST %s %u\n", "independent_mm_cols", RK_INDEPENDENT_MM_COLS);
+    printf("ABI_CONST %s %u\n", "independent_mm_k", RK_INDEPENDENT_MM_K);
+    printf("ABI_CONST %s %u\n", "independent_mm_phys_cols",
+           RK_INDEPENDENT_MM_PHYS_COLS);
     printf("ABI_SIZE %s %zu\n", "rk_group_report", sizeof(rk_group_report));
     RK_DUMP_FIELD(rk_group_report, abi_version);
     RK_DUMP_FIELD(rk_group_report, struct_size);

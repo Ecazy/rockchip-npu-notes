@@ -114,6 +114,85 @@ class RepeatExpandTests(unittest.TestCase):
             with self.assertRaises(BackendError, msg=name):
                 expand_static_repeat(plan, 2)
 
+    def _bypass_and_expand(self, nrepeat):
+        """Expand while skipping the Python admission limits.
+
+        The C verifier is the authority: a caller that does not run this module
+        (or patches its limits) must still be refused.  Raising the module
+        constants is exactly that caller.
+        """
+        from rknpu_backend.passes import repeat_expand
+        saved = (repeat_expand.MAX_GROUP_TASKS,)
+        repeat_expand.MAX_GROUP_TASKS = max(nrepeat, repeat_expand.MAX_GROUP_TASKS)
+        try:
+            return repeat_expand.expand_static_repeat(self.parent, nrepeat)
+        finally:
+            (repeat_expand.MAX_GROUP_TASKS,) = saved
+
+    def test_c_verifier_refuses_a_task_count_outside_the_domain(self):
+        """64 independent 16x16x16 tasks: structurally fine, still refused."""
+        from rknpu_backend.errors import BackendError
+        group = self._bypass_and_expand(64)
+        with self.assertRaises(BackendError) as caught:
+            self.lib.create_plan(group)
+        self.assertIn("task count", str(caught.exception))
+
+    def test_c_verifier_refuses_geometry_outside_the_domain(self):
+        """8x8x8 / 32x32x32 are structurally independent but unmeasured."""
+        import dataclasses
+        from rknpu_backend.errors import BackendError
+        from rknpu_backend.plan import Buffer, View
+        from rknpu_backend.passes.repeat_expand import expand_static_repeat
+
+        base = expand_static_repeat(self.parent, 4)
+
+        def reshape(rows, cols, phys_rows, phys_cols, atom, w_rows, w_phys_rows):
+            # Rewrite every view/buffer consistently so the *only* thing wrong is
+            # the geometry the C verifier gates on.
+            views = []
+            buffers = []
+            for v in base.views:
+                tensor = dataclasses.replace(
+                    v.tensor,
+                    rows=w_rows if v.tensor.layout == "co.weight.f16.v1" else rows,
+                    cols=w_rows if v.tensor.layout == "co.weight.f16.v1" else cols,
+                    physical_rows=(w_phys_rows
+                                   if v.tensor.layout == "co.weight.f16.v1"
+                                   else phys_rows),
+                    physical_cols=phys_cols, atom=atom,
+                    bytes=None)
+                views.append(dataclasses.replace(v, tensor=tensor))
+            return views
+
+        # A canonical (but unmeasured) 8x8x8 geometry: cube physical rows are
+        # round_up(max(rows,12),4), weight physical rows round_up(rows,32).
+        views = []
+        for v in base.views:
+            weight = v.tensor.layout == "co.weight.f16.v1"
+            rows = 8
+            cols = 8
+            phys_rows = 32 if weight else 12
+            views.append(dataclasses.replace(
+                v, tensor=dataclasses.replace(
+                    v.tensor, rows=rows, cols=cols, physical_rows=phys_rows,
+                    physical_cols=32, bytes=phys_rows * 32 * 2),
+                valid_region=(0, rows, 0, cols)))
+        # The publish tiles were sized for the 16x16 geometry; keep the plan
+        # internally consistent so the *only* remaining objection is the geometry.
+        publish = tuple(dataclasses.replace(p, rows=8, cols=8)
+                        for p in base.publish)
+        bindings = tuple(dataclasses.replace(b, shape=(8, 8))
+                         for b in base.bindings)
+        actions = tuple(
+            dataclasses.replace(a, attrs=dict(a.attrs, src_row_stride=8))
+            if a.kind == "upload" else a for a in base.actions)
+        tampered = dataclasses.replace(base, views=tuple(views),
+                                       publish=publish, bindings=bindings,
+                                       actions=actions)
+        with self.assertRaises(BackendError) as caught:
+            self.lib.create_plan(tampered)
+        self.assertIn("geometry", str(caught.exception))
+
     def test_single_repeat_returns_the_parent_unchanged(self):
         from rknpu_backend.passes.repeat_expand import expand_static_repeat
         self.assertIs(expand_static_repeat(self.parent, 1), self.parent)

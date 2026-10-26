@@ -30,9 +30,17 @@ from ..plan import (Accounting, Action, Binding, Buffer, ConstantSpec, Plan,
 
 GROUP_RECIPE = "independent_mm_v1"
 GROUP_TEMPLATE = "co.mm.f16.v1"
-# The only geometry family with board evidence behind it (see
-# results/20261026T033032Z-b2probe): one primitive tile, independent tasks.
+# Validation domain, not a convenience limit.  The only board evidence behind an
+# independent MM chain is one geometry (16x16x16 with a 32-wide packed tile) and
+# up to 32 tasks (results/20261026T033032Z-b2probe).  Structure independence is a
+# necessary condition, not a license to generalise.  These numbers are pinned to
+# the C verifier's constants by a test that reads the ABI dump, so the two sides
+# cannot drift apart.
 MAX_GROUP_TASKS = 32
+GROUP_M = 16
+GROUP_N = 16
+GROUP_K = 16
+GROUP_PHYS_COLS = 32
 HOST_STAGING_FLOOR = 65536
 
 
@@ -89,6 +97,30 @@ def _admit(plan: Plan) -> tuple[Action, list[Action]]:
         reject(RK_E_UNSUPPORTED,
                "repeat expansion admits exactly one publish tile",
                stage="repeat_expand", actual=len(plan.publish))
+    # The geometry, not just the action shape.  The probe covered one M/N/K and a
+    # single packed tile; anything else has no evidence and is refused here as
+    # well as in the C verifier.
+    for i, (binding, view) in enumerate(((plan.bindings[0], plan.views[0]),
+                                        (plan.bindings[1], plan.views[1]),
+                                        (plan.bindings[2], plan.views[2]))):
+        tensor = view.tensor
+        want = ((GROUP_M, GROUP_N, GROUP_PHYS_COLS),
+                (GROUP_N, GROUP_K, GROUP_PHYS_COLS),
+                (GROUP_M, GROUP_N, GROUP_PHYS_COLS))[i]
+        if (tensor.rows, tensor.cols, tensor.physical_cols) != want or \
+                (binding.shape != (want[0], want[1])):
+            reject(RK_E_UNSUPPORTED,
+                   "repeat expansion only admits the validated 16x16x16 "
+                   "geometry (32-wide packed tile)", stage="repeat_expand",
+                   actual={"binding": i, "shape": list(binding.shape),
+                           "tensor": [tensor.rows, tensor.cols,
+                                      tensor.physical_cols]})
+    if int(task.attrs.get("k0", 0)) != 0 or \
+            int(task.attrs.get("kt", -1)) != GROUP_K:
+        reject(RK_E_UNSUPPORTED,
+               "repeat expansion only admits a single full K tile of "
+               f"{GROUP_K}", stage="repeat_expand",
+               actual={"k0": task.attrs.get("k0"), "kt": task.attrs.get("kt")})
     return task, uploads
 
 

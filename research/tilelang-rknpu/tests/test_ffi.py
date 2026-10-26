@@ -136,6 +136,42 @@ class FFITests(unittest.TestCase):
                 consts[parts[1]] = int(parts[2])
         self.assertEqual(consts.get("co_program"), storage.CO_PROGRAM_BYTES)
 
+    def test_repeat_group_admission_domain_matches_the_c_verifier(self):
+        """Python and C must gate the independent-MM group on identical limits.
+
+        Structure independence is a necessary condition, not a validation domain:
+        both sides accept only the geometry and task count the board probe
+        covered.  Pinning the Python constants to the C header keeps the two from
+        drifting apart, which is exactly how an unmeasured 64-task or 8x8x8 chain
+        could otherwise slip through one of them.
+        """
+        import os
+        import subprocess
+        from pathlib import Path
+
+        from rknpu_backend.passes import repeat_expand
+
+        binary = os.environ.get("RK_PLAN_CONTRACT_BIN")
+        if not binary:
+            candidate = (Path(__file__).resolve().parents[2] / "custom-ops" /
+                         "build-host-mvp" / "rk_plan_contract_test")
+            binary = str(candidate) if candidate.is_file() else ""
+        if not binary or not Path(binary).is_file():
+            self.skipTest("rk_plan_contract_test binary not built")
+        out = subprocess.run([binary], capture_output=True, text=True, check=True)
+        consts = {}
+        for line in out.stdout.splitlines():
+            parts = line.split()
+            if parts and parts[0] == "ABI_CONST":
+                consts[parts[1]] = int(parts[2])
+        self.assertEqual(consts.get("independent_mm_tasks"),
+                         repeat_expand.MAX_GROUP_TASKS)
+        self.assertEqual(consts.get("independent_mm_rows"), repeat_expand.GROUP_M)
+        self.assertEqual(consts.get("independent_mm_cols"), repeat_expand.GROUP_N)
+        self.assertEqual(consts.get("independent_mm_k"), repeat_expand.GROUP_K)
+        self.assertEqual(consts.get("independent_mm_phys_cols"),
+                         repeat_expand.GROUP_PHYS_COLS)
+
     def test_plan_create_deep_copies_descriptor(self):
         try:
             from rknpu_backend.runtime.ffi import default_library
