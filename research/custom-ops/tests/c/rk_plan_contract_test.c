@@ -167,10 +167,76 @@ static void dump_layout(FILE *out) {
     RK_DUMP_FIELD(rk_run_report, emit_us);
     RK_DUMP_FIELD(rk_run_report, submit_wait_us);
     RK_DUMP_FIELD(rk_run_report, output_sync_us);
+    /* Extended attribution lives in its own struct behind its own entry point,
+     * so rk_run_report stays exactly the original ABI surface. */
+    printf("ABI_SIZE %s %zu\n", "rk_run_attribution", sizeof(rk_run_attribution));
+    RK_DUMP_FIELD(rk_run_attribution, abi_version);
+    RK_DUMP_FIELD(rk_run_attribution, struct_size);
+    RK_DUMP_FIELD(rk_run_attribution, task_count);
+    RK_DUMP_FIELD(rk_run_attribution, submit_count);
+    RK_DUMP_FIELD(rk_run_attribution, fail_action_id);
+    RK_DUMP_FIELD(rk_run_attribution, numeric_mode);
+    RK_DUMP_FIELD(rk_run_attribution, upload_calls);
+    RK_DUMP_FIELD(rk_run_attribution, upload_bytes);
+    RK_DUMP_FIELD(rk_run_attribution, download_calls);
+    RK_DUMP_FIELD(rk_run_attribution, download_bytes);
+    RK_DUMP_FIELD(rk_run_attribution, validate_us);
+    RK_DUMP_FIELD(rk_run_attribution, pack_us);
+    RK_DUMP_FIELD(rk_run_attribution, emit_us);
+    RK_DUMP_FIELD(rk_run_attribution, command_us);
+    RK_DUMP_FIELD(rk_run_attribution, submit_alloc_us);
+    RK_DUMP_FIELD(rk_run_attribution, submit_wait_us);
+    RK_DUMP_FIELD(rk_run_attribution, output_sync_us);
+    RK_DUMP_FIELD(rk_run_attribution, download_us);
+    RK_DUMP_FIELD(rk_run_attribution, guard_us);
+    RK_DUMP_FIELD(rk_run_attribution, publish_us);
+    RK_DUMP_FIELD(rk_run_attribution, alloc_us);
+    RK_DUMP_FIELD(rk_run_attribution, total_us);
+    RK_DUMP_FIELD(rk_run_attribution, clock_us);
+    /* Not a ctypes mirror: the emission array size that the Host requirement
+     * formula must use.  Python pins its own constant against this value. */
+    printf("ABI_CONST %s %zu\n", "co_program", sizeof(co_program));
+    printf("ABI_SIZE %s %zu\n", "rk_group_report", sizeof(rk_group_report));
+    RK_DUMP_FIELD(rk_group_report, abi_version);
+    RK_DUMP_FIELD(rk_group_report, struct_size);
+    RK_DUMP_FIELD(rk_group_report, repeat_count);
+    RK_DUMP_FIELD(rk_group_report, repeat_completed);
+    RK_DUMP_FIELD(rk_group_report, fail_repeat);
+    RK_DUMP_FIELD(rk_group_report, fail_action_id);
+    RK_DUMP_FIELD(rk_group_report, task_count);
+    RK_DUMP_FIELD(rk_group_report, submit_count);
+    RK_DUMP_FIELD(rk_group_report, numeric_mode);
+    RK_DUMP_FIELD(rk_group_report, reserved0);
+    RK_DUMP_FIELD(rk_group_report, upload_calls);
+    RK_DUMP_FIELD(rk_group_report, upload_bytes);
+    RK_DUMP_FIELD(rk_group_report, download_calls);
+    RK_DUMP_FIELD(rk_group_report, download_bytes);
+    RK_DUMP_FIELD(rk_group_report, validate_us);
+    RK_DUMP_FIELD(rk_group_report, pack_us);
+    RK_DUMP_FIELD(rk_group_report, emit_us);
+    RK_DUMP_FIELD(rk_group_report, command_us);
+    RK_DUMP_FIELD(rk_group_report, submit_alloc_us);
+    RK_DUMP_FIELD(rk_group_report, submit_wait_us);
+    RK_DUMP_FIELD(rk_group_report, output_sync_us);
+    RK_DUMP_FIELD(rk_group_report, download_us);
+    RK_DUMP_FIELD(rk_group_report, guard_us);
+    RK_DUMP_FIELD(rk_group_report, publish_us);
+    RK_DUMP_FIELD(rk_group_report, alloc_us);
+    RK_DUMP_FIELD(rk_group_report, total_us);
+    RK_DUMP_FIELD(rk_group_report, clock_us);
 }
 
 int main(void) {
     EXPECT(rk_abi_version() == RK_ABI_VERSION);
+    /* rk_run_report is frozen at its original 88 bytes: the extended entry
+     * point exists precisely so this struct never grows under old callers. */
+    EXPECT(sizeof(rk_run_report) == 88u);
+    EXPECT(offsetof(rk_run_report, pack_us) == 56u);
+    EXPECT(offsetof(rk_run_report, output_sync_us) == 80u);
+    /* The extended declarations must be self-describing and non-empty. */
+    EXPECT(RK_RUN_ATTRIBUTION_V1_SIZE == sizeof(rk_run_attribution));
+    EXPECT(RK_GROUP_REPORT_V1_SIZE == sizeof(rk_group_report));
+    EXPECT(RK_RUN_ATTRIBUTION_V1_SIZE > sizeof(rk_run_report));
     EXPECT(RK_SCHEMA_VERSION == 2u);
 
     co_tensor cube13x33;

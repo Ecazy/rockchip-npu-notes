@@ -1090,6 +1090,28 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
         if (host > UINT64_MAX - largest_output)
             return fail(diag, RK_E_BUDGET, "validate", "host bytes overflow");
         host += largest_output;
+        /* Runtime-owned Host scratch lives as long as the workspace: one
+         * co_program per submit task (emission array), one download tile, and
+         * the per-output offset/count bookkeeping.  Counting it here is what
+         * keeps a plan's declared Host requirement honest; the workspace checks
+         * the same total before it allocates. */
+        {
+            uint64_t runtime = (uint64_t)max_tasks * (uint64_t)sizeof(co_program);
+            uint64_t tile = 0, nout = 0;
+            for (uint32_t i = 0; i < desc->nvalues; i++) {
+                const rk_value_desc *v = &desc->values[i];
+                if (v->role != RK_ROLE_OUTPUT) continue;
+                nout++;
+                if (v->nbytes > tile) tile = v->nbytes;
+            }
+            if (runtime > UINT64_MAX - tile)
+                return fail(diag, RK_E_BUDGET, "validate", "host bytes overflow");
+            runtime += tile;
+            runtime += nout * (uint64_t)(sizeof(size_t) + sizeof(uint32_t));
+            if (host > UINT64_MAX - runtime)
+                return fail(diag, RK_E_BUDGET, "validate", "host bytes overflow");
+            host += runtime;
+        }
         /* A zero claim is not "unconstrained": it would bypass the check. */
         if (!desc->claimed_host_bytes)
             return fail(diag, RK_E_BUDGET, "validate",

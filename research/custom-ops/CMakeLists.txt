@@ -157,6 +157,24 @@ add_library(rknpu_plan SHARED $<TARGET_OBJECTS:rk_plan_runtime_obj>
 target_include_directories(rknpu_plan PUBLIC include PRIVATE src)
 target_link_libraries(rknpu_plan PRIVATE rk_plan_core custom_ops)
 set_target_properties(rknpu_plan PROPERTIES OUTPUT_NAME rknpu_plan)
+
+# Identical runtime with the timing probes compiled out.  This is the
+# end-to-end control for "does the envelope instrumentation cost anything": the
+# same sources, the same ABI, only now_us()/the probe counter removed.  It is a
+# measurement target, never the production library.
+add_library(rk_plan_runtime_noprobe_obj OBJECT src/rk_plan_runtime.c
+  src/rk_plan_emit.c)
+target_include_directories(rk_plan_runtime_noprobe_obj PRIVATE include src)
+target_link_libraries(rk_plan_runtime_noprobe_obj PUBLIC custom_ops)
+target_compile_options(rk_plan_runtime_noprobe_obj PRIVATE -Wall -Wextra
+  -Werror -DRK_PLAN_PROBE_OFF=1)
+set_target_properties(rk_plan_runtime_noprobe_obj PROPERTIES
+  POSITION_INDEPENDENT_CODE ON)
+add_library(rknpu_plan_noprobe SHARED $<TARGET_OBJECTS:rk_plan_runtime_noprobe_obj>
+  src/rk_plan_target.c)
+target_include_directories(rknpu_plan_noprobe PUBLIC include PRIVATE src)
+target_link_libraries(rknpu_plan_noprobe PRIVATE rk_plan_core custom_ops)
+set_target_properties(rknpu_plan_noprobe PROPERTIES OUTPUT_NAME rknpu_plan_noprobe)
 # Test-only shared library: same runtime objects and C ABI, but the vendor calls
 # resolve to the mock seam.  The production rknpu_plan target never links it.
 add_library(rknpu_plan_mock SHARED $<TARGET_OBJECTS:rk_plan_runtime_obj>
@@ -203,6 +221,34 @@ target_link_options(rk_mock_scenarios PRIVATE
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
   -Wl,--wrap=rocket_context_faulted)
 
+# Guard-scan coverage: the vectorised scan must keep byte-exact coverage.
+add_executable(guard_scan_test tests/c/guard_scan_test.c tests/mock/npu_mock.c)
+target_include_directories(guard_scan_test PRIVATE include src tests/mock)
+target_link_libraries(guard_scan_test PRIVATE custom_ops m)
+target_compile_options(guard_scan_test PRIVATE -Wall -Wextra -Werror)
+target_link_options(guard_scan_test PRIVATE
+  -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
+  -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
+  -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
+  -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_ew_max
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=rocket_context_faulted)
+add_test(NAME guard_scan COMMAND guard_scan_test)
+
+# Download helpers: exhaustive FP16 finiteness and publish-rectangle equivalence.
+add_executable(fp16_scan_test tests/c/fp16_scan_test.c)
+target_include_directories(fp16_scan_test PRIVATE src)
+target_link_libraries(fp16_scan_test PRIVATE m)
+target_compile_options(fp16_scan_test PRIVATE -Wall -Wextra -Werror)
+add_test(NAME fp16_scan COMMAND fp16_scan_test)
+
+# Per-task reference comparison for the B2 chain probe (host-checkable).
+add_executable(task_ref_test tests/c/task_ref_test.c)
+target_include_directories(task_ref_test PRIVATE src)
+target_compile_options(task_ref_test PRIVATE -Wall -Wextra -Werror)
+add_test(NAME task_ref COMMAND task_ref_test)
+
 add_executable(rk_plan_contract_test tests/c/rk_plan_contract_test.c)
 target_link_libraries(rk_plan_contract_test PRIVATE rk_plan_core custom_ops)
 target_compile_options(rk_plan_contract_test PRIVATE -Wall -Wextra -Werror)
@@ -238,3 +284,20 @@ add_test(NAME provider_context COMMAND provider_context_test)
 # deterministic instead of silently seeing zeroed fresh heap pages.
 set_tests_properties(rk_plan_host PROPERTIES
   ENVIRONMENT "ROCKET_CHIP=rk3588;MALLOC_PERTURB_=128")
+
+# Primitive cost floor for the plan envelope.  This is a measurement tool, not a
+# runtime path and deliberately not a ctest case: without a device it reports
+# "unsupported" and exits 77, while on a board it succeeds, so its exit status is
+# environment-dependent.  Campaign scripts record its JSON lines instead.
+add_executable(plan_envelope_probe tools/c/plan_envelope_probe.c)
+target_include_directories(plan_envelope_probe PRIVATE "${RKT}/include")
+target_link_libraries(plan_envelope_probe PRIVATE custom_ops)
+target_compile_options(plan_envelope_probe PRIVATE -Wall -Wextra -Werror)
+
+# Bounded B2 validity experiment: N independent matmuls in one chain vs N separate
+# submits, with per-task input/weight/output BOs and a bitwise comparison.  A
+# measurement tool only; no recipe, plan or runtime path is added by it.
+add_executable(independent_mm_chain_probe tools/c/independent_mm_chain_probe.c)
+target_include_directories(independent_mm_chain_probe PRIVATE "${RKT}/include" src)
+target_link_libraries(independent_mm_chain_probe PRIVATE custom_ops)
+target_compile_options(independent_mm_chain_probe PRIVATE -Wall -Wextra -Werror)

@@ -858,6 +858,244 @@ static void lut_segment_case(void) {
                         (double)acc[(size_t)bad_r * cols + 0]);
             EXPECT(rk_workspace_destroy(ws2, &diag) == 0);
         }
+
+        rk_workspace *ws3 = NULL;
+        unsigned legacy_tasks = 0, legacy_submits = 0;
+        EXPECT(rk_workspace_create(0, live_plan, constants, 1, &ws3, &diag) == 0);
+        EXPECT(ws3 != NULL);
+        if (!ws3) return;
+
+        /* --- ABI write boundary ---------------------------------------------
+         * The pre-extension caller received an 88-byte rk_run_report and was
+         * never required to initialise struct_size, so the legacy entry must
+         * write exactly that struct and not one byte more.  A tail sentinel
+         * proves the boundary for both the running and the rejected pre-flight
+         * path. */
+        {
+            struct { rk_run_report report; unsigned char tail[72]; } legacy;
+            unsigned size = (unsigned)sizeof(rk_run_report);
+            EXPECT(size == 88u);
+            EXPECT(sizeof(legacy) == size + 72u);
+
+            memset(&legacy, 0x5a, sizeof(legacy));    /* struct_size garbage */
+            EXPECT(rk_workspace_run(ws3, inputs, 1, outputs, 1, &legacy.report,
+                                    &diag) == 0);
+            {
+                int tail_intact = 1;
+                for (unsigned i = 0; i < 72; i++)
+                    if (legacy.tail[i] != 0x5a) tail_intact = 0;
+                EXPECT(tail_intact);
+                EXPECT(legacy.report.struct_size == size);
+                EXPECT(legacy.report.task_count >= 1u);
+                legacy_tasks = legacy.report.task_count;
+                legacy_submits = legacy.report.submit_count;
+            }
+            /* A zeroed legacy report (ctypes/userspace idiom) is just as safe. */
+            memset(&legacy, 0x00, sizeof(legacy));
+            EXPECT(rk_workspace_run(ws3, inputs, 1, outputs, 1, &legacy.report,
+                                    &diag) == 0);
+            {
+                int tail_intact = 1;
+                for (unsigned i = 0; i < 72; i++)
+                    if (legacy.tail[i] != 0x00) tail_intact = 0;
+                EXPECT(tail_intact);
+            }
+            /* The rejected pre-flight path (no workspace) must not overrun
+             * either, even before any plan work happens. */
+            memset(&legacy, 0xa5, sizeof(legacy));
+            EXPECT(rk_workspace_run(NULL, inputs, 1, outputs, 1, &legacy.report,
+                                    &diag) == RK_E_INVALID);
+            {
+                int tail_intact = 1;
+                for (unsigned i = 0; i < 72; i++)
+                    if (legacy.tail[i] != 0xa5) tail_intact = 0;
+                EXPECT(tail_intact);
+            }
+        }
+
+        /* --- explicit attribution entry -------------------------------------
+         * The extended entry refuses an unusable declaration instead of
+         * guessing a size, and fills the whole struct when the caller states it
+         * correctly. */
+        {
+            rk_run_attribution env;
+            const uint32_t size = (uint32_t)sizeof(env);
+            EXPECT(size == RK_RUN_ATTRIBUTION_V1_SIZE);
+            memset(&env, 0, sizeof(env));
+            env.struct_size = 0;
+            EXPECT(rk_workspace_run_ex(ws3, inputs, 1, outputs, 1, &env, &diag) ==
+                   RK_E_SCHEMA);
+            env.struct_size = (uint32_t)sizeof(rk_run_report); /* legacy size */
+            EXPECT(rk_workspace_run_ex(ws3, inputs, 1, outputs, 1, &env, &diag) ==
+                   RK_E_SCHEMA);
+            env.struct_size = size + 8u;                        /* too large */
+            EXPECT(rk_workspace_run_ex(ws3, inputs, 1, outputs, 1, &env, &diag) ==
+                   RK_E_SCHEMA);
+            env.struct_size = size;
+            EXPECT(rk_workspace_run_ex(ws3, inputs, 1, outputs, 1, &env, &diag) ==
+                   0);
+            EXPECT(env.abi_version == RK_ABI_VERSION);
+            EXPECT(env.struct_size == size);
+            /* The attributed entry reports the same device work as the legacy
+             * one; only the envelope detail differs. */
+            EXPECT(env.task_count == legacy_tasks);
+            EXPECT(env.submit_count == legacy_submits);
+            EXPECT(env.submit_count >= 1u);
+            EXPECT(env.total_us >= 0.0 && env.clock_us >= 0.0);
+            /* The attribution intervals are disjoint parts of the whole call. */
+            {
+                double attributed = env.validate_us + env.pack_us + env.emit_us +
+                                    env.command_us + env.submit_alloc_us +
+                                    env.submit_wait_us + env.output_sync_us +
+                                    env.download_us + env.guard_us +
+                                    env.publish_us + env.alloc_us;
+                EXPECT(attributed <= env.total_us + 1.0);
+            }
+            EXPECT(isfinite(env.total_us));
+        }
+        EXPECT(rk_workspace_destroy(ws3, &diag) == 0);
+
+        /* --- a refused caller must not release another caller's lock ---------
+         * The busy flag is the single-run gate.  A caller that is refused because
+         * the workspace is running must leave that ownership untouched, otherwise
+         * a third caller (or destroy) can enter a workspace that is still running.
+         * The flag is set directly here to model a concurrent owner without
+         * needing a second thread. */
+        {
+            rk_workspace *bws = NULL;
+            EXPECT(rk_workspace_create(0, live_plan, constants, 1, &bws, &diag) == 0);
+            EXPECT(bws != NULL);
+            if (bws) {
+                rk_run_report lreport;
+                rk_run_attribution att;
+                rk_group_report greport;
+                memset(&att, 0, sizeof(att));
+                att.struct_size = sizeof(att);
+                memset(&greport, 0, sizeof(greport));
+                greport.struct_size = sizeof(greport);
+                atomic_store_explicit(&bws->busy, 1, memory_order_release);
+                for (unsigned i = 0; i < 3; i++) {
+                    EXPECT(rk_workspace_run(bws, inputs, 1, outputs, 1, &lreport,
+                                            &diag) == RK_E_BUSY);
+                    EXPECT(atomic_load_explicit(&bws->busy,
+                                                memory_order_acquire) == 1);
+                    EXPECT(rk_workspace_run_ex(bws, inputs, 1, outputs, 1, &att,
+                                               &diag) == RK_E_BUSY);
+                    EXPECT(atomic_load_explicit(&bws->busy,
+                                                memory_order_acquire) == 1);
+                    /* The group entry needs repeat-major bindings; two repeats
+                     * of (input, output) are enough to reach the gate. */
+                    {
+                        rk_binding pair[4] = {inputs[0], outputs[0],
+                                              inputs[0], outputs[0]};
+                        EXPECT(rk_workspace_run_group(bws, pair, 2, &greport,
+                                                      &diag) == RK_E_BUSY);
+                    }
+                    EXPECT(atomic_load_explicit(&bws->busy,
+                                                memory_order_acquire) == 1);
+                    EXPECT(rk_workspace_destroy(bws, &diag) == RK_E_BUSY);
+                    EXPECT(atomic_load_explicit(&bws->busy,
+                                                memory_order_acquire) == 1);
+                }
+                /* Releasing the owner restores normal service, and a completed
+                 * run leaves the flag at 0 (it does not stay held). */
+                atomic_store_explicit(&bws->busy, 0, memory_order_release);
+                EXPECT(rk_workspace_run_ex(bws, inputs, 1, outputs, 1, &att,
+                                           &diag) == 0);
+                EXPECT(atomic_load_explicit(&bws->busy,
+                                            memory_order_acquire) == 0);
+                EXPECT(rk_workspace_destroy(bws, &diag) == 0);
+            }
+        }
+
+        /* --- group staging must respect the plan Host budget -----------------
+         * Growing the repeat arena is Host memory: it is capped by the plan's
+         * declared Host budget (and by its declared requirement when no budget
+         * is stated), rejected before any allocation, and a rejected group
+         * publishes nothing and leaves the workspace usable. */
+        {
+            rk_plan_desc tight = desc;
+            tight.host_budget_bytes = tight.claimed_host_bytes;
+            rk_plan *tight_plan = NULL;
+            EXPECT(rk_plan_create(&tight, &tight_plan, &diag) == 0);
+            EXPECT(tight_plan != NULL);
+            if (tight_plan) {
+                rk_workspace *gws = NULL;
+                EXPECT(rk_workspace_create(0, tight_plan, constants, 1, &gws,
+                                           &diag) == 0);
+                EXPECT(gws != NULL);
+                if (gws) {
+                    /* This plan has one input and one output, so one repeat is
+                     * (input, output) and the group layout is repeat-major. */
+                    const uint32_t stride = (uint32_t)(rows * cols * 2u);
+                    const uint64_t budget = tight.claimed_host_bytes;
+                    const uint64_t fixed =
+                        rk_workspace_host_bytes(gws, 0);   /* everything but arena */
+                    /* Boundary derived from the runtime's own accounting: the
+                     * largest capacity whose *total* Host footprint fits, and one
+                     * more.  The rejected case must be one where the staging block
+                     * alone would still fit -- otherwise the test would pass under
+                     * the old staging-only rule and prove nothing. */
+                    const uint32_t fit = (uint32_t)((budget - fixed) / stride);
+                    const uint32_t over = fit + 1u;
+                    EXPECT(fit >= 1u);
+                    EXPECT(fixed + (uint64_t)fit * stride <= budget);
+                    EXPECT(fixed + (uint64_t)over * stride > budget);
+                    EXPECT((uint64_t)over * stride <= budget);   /* staging fits */
+                    rk_binding *group = calloc((size_t)over * 2u, sizeof(*group));
+                    EXPECT(group != NULL);
+                    if (group) {
+                        for (uint32_t r = 0; r < over; r++) {
+                            group[2u * r + 0u] = inputs[0];
+                            group[2u * r + 1u] = outputs[0];
+                        }
+                        rk_group_report greport;
+                        int rc;
+                        memset(&greport, 0, sizeof(greport));
+                        greport.struct_size = sizeof(greport);
+                        memset(out, 0x7e, (size_t)rows * cols * 2);
+                        rc = rk_workspace_run_group(gws, group, over, &greport,
+                                                    &diag);
+                        EXPECT(rc == RK_E_BUDGET);
+                        EXPECT(greport.fail_repeat == UINT32_MAX);
+                        {
+                            int untouched = 1;
+                            for (size_t i = 0; i < (size_t)rows * cols * 2; i++)
+                                if (((unsigned char *)out)[i] != 0x7e)
+                                    untouched = 0;
+                            EXPECT(untouched);
+                        }
+                        /* An unusable declaration is refused before any run. */
+                        greport.struct_size = 0;
+                        EXPECT(rk_workspace_run_group(gws, group, fit, &greport,
+                                                      &diag) == RK_E_SCHEMA);
+                        greport.struct_size =
+                            (uint32_t)sizeof(rk_run_report);   /* too small */
+                        EXPECT(rk_workspace_run_group(gws, group, fit, &greport,
+                                                      &diag) == RK_E_SCHEMA);
+                        /* A repeat set inside the total footprint still works,
+                         * and the workspace is not poisoned by the rejections. */
+                        greport.struct_size = (uint32_t)sizeof(greport);
+                        memset(out, 0, (size_t)rows * cols * 2);
+                        EXPECT(rk_workspace_run_group(gws, group, fit, &greport,
+                                                      &diag) == 0);
+                        EXPECT(greport.repeat_count == fit);
+                        EXPECT(greport.repeat_completed == fit);
+                        EXPECT(greport.fail_repeat == UINT32_MAX);
+                        EXPECT(greport.submit_count == fit);   /* unchanged */
+                        {
+                            int published = 0;
+                            for (size_t i = 0; i < (size_t)rows * cols * 2; i++)
+                                if (((unsigned char *)out)[i]) published = 1;
+                            EXPECT(published);
+                        }
+                        free(group);
+                    }
+                    EXPECT(rk_workspace_destroy(gws, &diag) == 0);
+                }
+                rk_plan_destroy(tight_plan);
+            }
+        }
         rk_plan_destroy(live_plan);
         EXPECT(rk_mock_bo_count() == 0);   /* table drained with the workspace */
         free(acc); free(out); free(identity); free(gate_ref); free(ref);
@@ -1009,7 +1247,14 @@ static void multi_output_budget_case(void) {
     };
     const uint64_t output_total = 2u * y_logical;
     const uint64_t staging = output_total > 65536u ? output_total : 65536u;
-    const uint64_t host = x_logical + w_logical + output_total + staging;
+    /* Runtime-owned Host scratch is part of the declared requirement: one
+     * co_program per submit task, the download tile (largest output) and the
+     * per-output offset/count bookkeeping. */
+    const uint64_t runtime_scratch =
+        1u * (uint64_t)sizeof(co_program) + y_logical +
+        2u * (uint64_t)(sizeof(size_t) + sizeof(uint32_t));
+    const uint64_t host = x_logical + w_logical + output_total + staging +
+                          runtime_scratch;
     /* Device request: one slot per buffer, plus the command area sized by the
      * *largest single submit* (each submit here carries one task). */
     const uint64_t device = x_t.bytes + w_t.bytes + 2u * y_t.bytes +

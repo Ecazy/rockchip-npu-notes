@@ -128,8 +128,13 @@ int co_upload_f16(co_view *v, const _Float16 *src) {
     int rc=begin(v,1); if(rc) return rc;
     _Float16 *dst=(_Float16 *)((char *)v->buffer->bo.ptr+v->offset);
     memset(dst,0,v->tensor.bytes);
-    for(unsigned r=0;r<v->tensor.rows;r++) for(unsigned c=0;c<v->tensor.cols;c++)
-        dst[co_index(&v->tensor,r,c)]=src[(size_t)r*v->tensor.cols+c];
+    /* Two-byte element copies: memcpy() with a constant small size is a call in
+     * an unoptimised build, and this loop runs once per logical element. */
+    for(unsigned r=0;r<v->tensor.rows;r++) {
+        size_t row=(size_t)r*v->tensor.cols;
+        for(unsigned c=0;c<v->tensor.cols;c++)
+            dst[co_index(&v->tensor,r,c)]=src[row+c];
+    }
     return rocket_bo_fini(v->buffer->fd,&v->buffer->bo);
 }
 int co_download(co_view *v, void *dst) {
@@ -137,8 +142,17 @@ int co_download(co_view *v, void *dst) {
     int rc=begin(v,0); if(rc) return rc;
     unsigned b=width(v->tensor.type);
     char *src=(char *)v->buffer->bo.ptr+v->offset;
-    for(unsigned r=0;r<v->tensor.rows;r++) for(unsigned c=0;c<v->tensor.cols;c++)
-        memcpy((char *)dst+((size_t)r*v->tensor.cols+c)*b,src+co_index(&v->tensor,r,c)*b,b);
+    /* Same elements, same order, same bytes as the memcpy loop; only the copy
+     * itself is specialised on the element width (2 for FP16, 4 for FP32). */
+    for(unsigned r=0;r<v->tensor.rows;r++) {
+        size_t drow=(size_t)r*v->tensor.cols;
+        for(unsigned c=0;c<v->tensor.cols;c++) {
+            size_t idx=co_index(&v->tensor,r,c);
+            if(b==2) ((uint16_t *)dst)[drow+c]=((const uint16_t *)src)[idx];
+            else if(b==4) ((uint32_t *)dst)[drow+c]=((const uint32_t *)src)[idx];
+            else memcpy((char *)dst+(drow+c)*b,src+idx*b,b);
+        }
+    }
     return rocket_bo_fini(v->buffer->fd,&v->buffer->bo);
 }
 int co_sentinel(co_buffer *b) {
@@ -148,13 +162,30 @@ int co_sentinel(co_buffer *b) {
     memset((char *)b->bo.ptr+b->payload+CO_SLACK,0xa5,CO_GUARD);
     return rocket_bo_fini(b->fd,&b->bo);
 }
+/* Exact equality check over a byte run, words at a time.  Coverage is identical
+ * to a byte loop (every byte in [p,p+n) must equal `value`); only the failure
+ * detection strategy differs, so a corrupt slack/guard byte is still caught.
+ * CO_SLACK is 32 KiB, which made the byte loop the single largest Host cost of a
+ * small plan call, larger than either cache-sync ioctl. */
+static int bytes_all_equal(const unsigned char *p, unsigned char value, size_t n) {
+    const uint64_t want = 0x0101010101010101ull * (uint64_t)value;
+    size_t i = 0;
+    for (; i + sizeof(uint64_t) <= n; i += sizeof(uint64_t)) {
+        uint64_t word;
+        memcpy(&word, p + i, sizeof(word));
+        if (word != want) return 0;
+    }
+    for (; i < n; i++) if (p[i] != value) return 0;
+    return 1;
+}
 int co_guard_check(co_buffer *b) {
     if (!b || !b->bo.handle) return ROCKET_E_SHAPE;
     int rc=rocket_bo_prep(b->fd,&b->bo,0,2000000000ull); if(rc) return rc;
     unsigned char *p=(unsigned char *)b->bo.ptr+b->payload+CO_SLACK;
-    for(unsigned i=0;i<CO_GUARD;i++) if(p[i]!=0xa5) rc=ROCKET_E_DEVICE;
+    int guard_ok=bytes_all_equal(p,0xa5,CO_GUARD);
     p=(unsigned char *)b->bo.ptr+b->payload;
-    for(unsigned i=0;i<CO_SLACK;i++)if(p[i]!=0)rc=ROCKET_E_DEVICE;
+    int slack_ok=bytes_all_equal(p,0x00,CO_SLACK);
+    if(!guard_ok||!slack_ok)rc=ROCKET_E_DEVICE;
     int end=rocket_bo_fini(b->fd,&b->bo); return rc?rc:end;
 }
 static int same(co_view a,co_view b) {

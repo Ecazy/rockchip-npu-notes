@@ -256,6 +256,11 @@ typedef struct rk_binding {
     uint64_t nbytes;
 } rk_binding;
 
+/* The original single-run report.  ``rk_workspace_run`` is unchanged by the
+ * envelope work: it writes exactly sizeof(rk_run_report) bytes and never reads
+ * ``struct_size`` to decide how much to write, because callers from before the
+ * extension never had to initialise that field.  Extended attribution is
+ * delivered only through the explicit rk_workspace_run_ex entry below. */
 typedef struct rk_run_report {
     uint32_t abi_version;
     uint32_t struct_size;
@@ -272,6 +277,85 @@ typedef struct rk_run_report {
     double submit_wait_us;
     double output_sync_us;
 } rk_run_report;
+
+/* Envelope attribution for rk_workspace_run_ex.  Every interval is disjoint and
+ * lies inside the enclosing call, so their sum plus the residual accounts for
+ * the whole dwell.  These are Host envelopes, not device compute times:
+ * pack/download include Host cache-sync ioctls and Host copy loops, submit_wait
+ * is the blocking driver interval.
+ *
+ * ``struct_size`` is mandatory for this entry point: it must be at least
+ * RK_RUN_ATTRIBUTION_V1_SIZE and at most sizeof(rk_run_attribution).  The entry
+ * refuses to run rather than guessing a size, so it can never write past the
+ * caller's buffer.  Appending a field later keeps RK_RUN_ATTRIBUTION_V1_SIZE at
+ * its introduction value so older callers stay valid. */
+typedef struct rk_run_attribution {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t task_count;
+    uint32_t submit_count;
+    uint32_t fail_action_id;
+    uint32_t numeric_mode;
+    uint64_t upload_calls;
+    uint64_t upload_bytes;
+    uint64_t download_calls;
+    uint64_t download_bytes;
+    double validate_us;      /* busy/poison/context gates, binding+finite+alias */
+    double pack_us;          /* upload action: BO prep, memset, pack, BO fini */
+    double emit_us;          /* co_program emission for each NPU action */
+    double command_us;       /* command BO prep/pack/verify/fini in submit seam */
+    double submit_alloc_us;  /* command workspace allocation in submit seam */
+    double submit_wait_us;   /* blocking driver submit interval */
+    double output_sync_us;   /* post-submit output BO prep/fini handshake */
+    double download_us;      /* download action: BO sync, copy-out, finite scan */
+    double guard_us;         /* final data-BO slack/guard gate */
+    double publish_us;       /* staged bytes -> caller output bindings */
+    double alloc_us;         /* per-call Host scratch allocation/free */
+    double total_us;         /* whole C-side dwell of the entry point */
+    double clock_us;         /* cost of the timing probes themselves */
+} rk_run_attribution;
+
+#define RK_RUN_ATTRIBUTION_V1_SIZE \
+    ((uint32_t)(offsetof(rk_run_attribution, clock_us) + sizeof(double)))
+
+/* Static-repeat group report.  ``nrepeat`` independent binding sets execute
+ * inside one native call.  Submission count is *not* reduced here: every repeat
+ * still performs its own plan submits.  Publication is deferred until every
+ * repeat has submitted and the shared data-BO guard gate has passed, so a
+ * failing repeat publishes no partial result.  ``struct_size`` is mandatory and
+ * is validated exactly like rk_run_attribution. */
+typedef struct rk_group_report {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t repeat_count;
+    uint32_t repeat_completed;
+    uint32_t fail_repeat;
+    uint32_t fail_action_id;
+    uint32_t task_count;
+    uint32_t submit_count;
+    uint32_t numeric_mode;
+    uint32_t reserved0;
+    uint64_t upload_calls;
+    uint64_t upload_bytes;
+    uint64_t download_calls;
+    uint64_t download_bytes;
+    double validate_us;
+    double pack_us;
+    double emit_us;
+    double command_us;
+    double submit_alloc_us;
+    double submit_wait_us;
+    double output_sync_us;
+    double download_us;
+    double guard_us;
+    double publish_us;
+    double alloc_us;
+    double total_us;
+    double clock_us;
+} rk_group_report;
+
+#define RK_GROUP_REPORT_V1_SIZE \
+    ((uint32_t)(offsetof(rk_group_report, clock_us) + sizeof(double)))
 
 typedef struct rk_plan rk_plan;
 typedef struct rk_workspace rk_workspace;
@@ -295,6 +379,24 @@ int rk_workspace_run(rk_workspace *ws,
                      const rk_binding *inputs, uint32_t ninputs,
                      const rk_binding *outputs, uint32_t noutputs,
                      rk_run_report *report, rk_diag *diag);
+/* Static-repeat group entry.  ``bindings`` holds ``nrepeat`` consecutive
+ * (inputs..., outputs...) binding sets for the same immutable plan, laid out
+ * repeat-major; each set must contain exactly the plan's input and output values
+ * in binding-id order.  One call replaces ``nrepeat`` separate
+ * ``rk_workspace_run`` calls without changing the number of device submits.
+ * Every declared check still runs per repeat; only the guard gate, the Host
+ * scratch allocation and the caller transition are shared.  On failure nothing
+ * is published and ``report->fail_repeat`` names the repeat that failed. */
+int rk_workspace_run_group(rk_workspace *ws, const rk_binding *bindings,
+                           uint32_t nrepeat, rk_group_report *report,
+                           rk_diag *diag);
+/* Single run with envelope attribution.  ``envelope`` is required and its
+ * struct_size is validated before anything is written; an unusable size is a
+ * schema error, never a guess. */
+int rk_workspace_run_ex(rk_workspace *ws,
+                        const rk_binding *inputs, uint32_t ninputs,
+                        const rk_binding *outputs, uint32_t noutputs,
+                        rk_run_attribution *envelope, rk_diag *diag);
 int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag);
 
 #ifdef __cplusplus

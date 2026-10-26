@@ -39,6 +39,12 @@ typedef struct rk_plan {
     uint32_t runtime_abi_version;
 } rk_plan;
 
+/* Total Host bytes this workspace keeps resident for ``capacity`` repeats:
+ * staging arena + download tile + emission array + output bookkeeping.  The
+ * group entry uses it to bound growth, and the host tests use it to derive
+ * boundaries instead of hard-coding them. */
+uint64_t rk_workspace_host_bytes(const rk_workspace *ws, uint32_t capacity);
+
 void rk_diag_clear(rk_diag *diag);
 void rk_diag_set(rk_diag *diag, int code, const char *stage,
                  const char *message, const char *source,
@@ -68,6 +74,23 @@ typedef struct rk_workspace {
     atomic_int poisoned;
     int created;
     uint32_t max_submit_tasks;
+    /* Pre-allocated per-run Host scratch.  The single-run gate gives exclusive
+     * ownership of these buffers to whichever entry point runs, so a plan call
+     * no longer allocates or frees the emission array, the per-output tile
+     * counters or the output staging block. */
+    uint32_t ninputs;
+    uint32_t noutputs;
+    size_t staging_stride;      /* bytes per repeat: sum of output value nbytes */
+    uint32_t staging_capacity;  /* repeats the staging arena can hold */
+    void *staging_arena;
+    size_t *staging_offsets;    /* [noutputs] offsets inside one repeat block */
+    uint32_t *tile_count_scratch;                 /* [noutputs] */
+    co_program *batch_scratch;                    /* [max_submit_tasks] */
+    /* One download scratch for the largest downloaded tile.  The tile is copied
+     * into the staging block before the next download runs, so a single buffer
+     * is enough and the per-download malloc/free disappears. */
+    void *tile_scratch;
+    size_t tile_scratch_bytes;
 } rk_workspace;
 
 #endif

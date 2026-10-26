@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "custom_ops.h"
@@ -309,6 +310,12 @@ int __wrap_co_execute_profiled(int fd, const co_program *p, unsigned count,
                         enum co_mode mode, co_execute_workspace *workspace,
                         co_execute_profile *profile) {
     (void)fd; (void)workspace;
+    /* The mock performs the work the provider would perform, so it reports that
+     * work as the simulated blocking submit.  Without this the envelope
+     * attribution would show an unexplained residual that only exists because
+     * the provider seam is substituted, which would hide real logic errors. */
+    struct timespec mock_start, mock_end;
+    clock_gettime(CLOCK_MONOTONIC, &mock_start);
     if (mock_delay_us) usleep(mock_delay_us);
     if (!p || !count || count > 64u ||
         (mode != CO_CHAIN && mode != CO_SEPARATE))
@@ -448,6 +455,12 @@ int __wrap_co_execute_profiled(int fd, const co_program *p, unsigned count,
             }
         if (mock_inject_nan) dst[0] = (_Float16)NAN;
         mock_maybe_corrupt_guard(&p[i]);
+    }
+    if (profile) {
+        clock_gettime(CLOCK_MONOTONIC, &mock_end);
+        profile->submit_wait_us =
+            (double)(mock_end.tv_sec - mock_start.tv_sec) * 1e6 +
+            (double)(mock_end.tv_nsec - mock_start.tv_nsec) / 1e3;
     }
     return 0;
 }
