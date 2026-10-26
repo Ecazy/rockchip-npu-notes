@@ -207,7 +207,9 @@ def run_profile(args) -> dict:
     if repeat_submit != "manifest":
         extra["repeat_submit"] = repeat_submit
     t_setup = time.perf_counter()
-    runner = HybridRunner(lib, program, weights, fd=fd, **extra)
+    reuse_bindings = getattr(args, "reuse_bindings", "on") != "off"
+    runner = HybridRunner(lib, program, weights, fd=fd,
+                          reuse_bindings=reuse_bindings, **extra)
     runner_setup_us = (time.perf_counter() - t_setup) * 1e6
     plan_call_count = len(runner.calls)
     per_run = []
@@ -258,6 +260,7 @@ def run_profile(args) -> dict:
         "label": getattr(args, "label", ""),
         "plan_entry": getattr(args, "plan_entry", "attributed"),
         "repeat_submit": getattr(args, "repeat_submit", "manifest"),
+        "reuse_bindings": reuse_bindings,
         "creation": {
             "manifest_load_us": manifest_load_us,
             "runner_setup_us": runner_setup_us,
@@ -321,6 +324,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--label", default="",
                     help="free-form arm/round label recorded in the JSON")
+    ap.add_argument("--reuse-bindings", choices=("on", "off"), default="on",
+                    help="reuse PlanCall ctypes binding descriptors across runs")
     ap.add_argument("--repeat-submit",
                     choices=("manifest", "separate", "b1", "shared",
                              "chain_shared"),

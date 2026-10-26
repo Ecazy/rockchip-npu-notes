@@ -12,6 +12,7 @@
 | D（RMSNorm 部分） | [OPTIMIZATION-RESULTS-3.md](OPTIMIZATION-RESULTS-3.md) | 现有 RKPlan 无合法行归约/rsqrt 能力；`co_row_ops` 复用更慢；residual+RMSNorm Host 融合逐位等价但无实测收益，默认不变 |
 | QK/PV 上传同步收口 | [OPTIMIZATION-RESULTS-4.md](OPTIMIZATION-RESULTS-4.md) | shared group 同 BO 连续切片合并为一次 prep/fini；prep/fini calls 134→10 (b8)，默认 coalesced，保留逐切片开关 |
 | 上传策略契约与布局快路径 | [OPTIMIZATION-RESULTS-5.md](OPTIMIZATION-RESULTS-5.md) | >128 上传安全回退；策略创建时快照；仅独立 MM shared group 合并；16×16 CUBE/WEIGHT 打包快路径，b8 1.0195× |
+| Python/ctypes binding 复用 | [OPTIMIZATION-RESULTS-6.md](OPTIMIZATION-RESULTS-6.md) | PlanCall 缓存静态 binding 描述符，运行仅更新数据指针；b8 1.147× / b1 1.101×；下载同步合并因无稳定收益撤回 |
 
 完整模型里程碑已独立关闭，见 [MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md)。候选方案本身不构成实施授权、能力声明或验收通过。新一轮工作按具体任务推进，不由本文的历史“下一步”措辞自动启动。
 

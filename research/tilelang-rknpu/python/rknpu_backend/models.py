@@ -8,6 +8,7 @@ softmax, layout bridge and mean pooling are explicit Host work.
 """
 from __future__ import annotations
 
+import ctypes
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -17,8 +18,8 @@ import numpy as np
 
 from .errors import RK_E_INVALID, RK_E_SHAPE, RK_E_UNSUPPORTED, reject
 from .plan import Plan
-from .runtime.ffi import (RKBinding, CWorkspace, LibRKPlan, make_binding,
-                          validate_numpy_binding)
+from .runtime.ffi import (RK_ABI_VERSION, RK_DTYPE_F16, RKBinding, CWorkspace,
+                          LibRKPlan, make_binding, validate_numpy_binding)
 
 MNIST_MEAN = np.float32(0.1307)
 MNIST_STD = np.float32(0.3081)
@@ -373,10 +374,14 @@ class PlanCall:
     """
 
     def __init__(self, lib: LibRKPlan, plan: Plan, constants: dict[str, np.ndarray],
-                 *, fd: int = 0, entry: str = "attributed"):
+                 *, fd: int = 0, entry: str = "attributed",
+                 reuse_bindings: bool = True):
         if entry not in ("attributed", "legacy"):
             reject(RK_E_INVALID, f"unknown plan entry {entry!r}", stage="model")
+        if not isinstance(reuse_bindings, bool):
+            reject(RK_E_INVALID, "reuse_bindings must be boolean", stage="model")
         self.entry = entry
+        self.reuse_bindings = reuse_bindings
         self.lib = lib
         self.plan = plan
         self.cplan: CPlan | None = None
@@ -427,6 +432,21 @@ class PlanCall:
             raise
         self.inputs = [b for b in plan.bindings if b.role == "input"]
         self.outputs = [b for b in plan.bindings if b.role == "output"]
+        self._input_bind_cache = [self._binding_slot(b) for b in self.inputs]
+        self._output_bind_cache = [self._binding_slot(b) for b in self.outputs]
+
+    @staticmethod
+    def _binding_slot(spec: Any) -> RKBinding:
+        shape = list(spec.shape) + [0] * (2 - len(spec.shape))
+        return RKBinding(
+            abi_version=RK_ABI_VERSION,
+            struct_size=ctypes.sizeof(RKBinding),
+            id=spec.id,
+            dtype=RK_DTYPE_F16,
+            rank=len(spec.shape),
+            shape=(ctypes.c_uint32 * 2)(*shape),
+            data=None,
+            nbytes=spec.nbytes)
 
     def _prepare_inputs(self, inputs: list[np.ndarray]) -> list[np.ndarray]:
         if len(inputs) != len(self.inputs):
@@ -483,10 +503,20 @@ class PlanCall:
                    stage="model")
         in_arrays = self._prepare_inputs(inputs)
         out_arrays = self._prepare_outputs(outputs)
-        in_bind = [make_binding(spec.id, arr)
-                   for spec, arr in zip(self.inputs, in_arrays)]
-        out_bind = [make_binding(spec.id, arr)
-                    for spec, arr in zip(self.outputs, out_arrays)]
+        if self.reuse_bindings:
+            in_bind = self._input_bind_cache
+            out_bind = self._output_bind_cache
+            for bind, arr in zip(in_bind, in_arrays):
+                bind.data = arr.ctypes.data
+                bind.nbytes = arr.nbytes
+            for bind, arr in zip(out_bind, out_arrays):
+                bind.data = arr.ctypes.data
+                bind.nbytes = arr.nbytes
+        else:
+            in_bind = [make_binding(spec.id, arr)
+                       for spec, arr in zip(self.inputs, in_arrays)]
+            out_bind = [make_binding(spec.id, arr)
+                        for spec, arr in zip(self.outputs, out_arrays)]
         # The mock harness snapshots each emitted co_program.  Clear that
         # test-only cache between calls; production builds have no such symbol.
         if hasattr(self.lib.cdll, "rk_mock_reset_tags"):

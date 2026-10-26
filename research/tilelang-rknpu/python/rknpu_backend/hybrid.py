@@ -1257,7 +1257,8 @@ class HybridRunner:
                  weights: dict[str, np.ndarray], *,
                  weights_path: str | Path | None = None, fd: int = 0,
                  plan_entry: str = "attributed",
-                 repeat_submit: str = "manifest"):
+                 repeat_submit: str = "manifest",
+                 reuse_bindings: bool = True):
         if plan_entry not in ("attributed", "legacy"):
             reject(RK_E_INVALID, f"unknown plan entry {plan_entry!r}",
                    stage="model")
@@ -1267,6 +1268,7 @@ class HybridRunner:
                    stage="model")
         self.plan_entry = plan_entry
         self.repeat_submit = repeat_submit
+        self.reuse_bindings = bool(reuse_bindings)
         t0 = time.perf_counter()
         self.lib = lib
         self.program = program
@@ -1290,8 +1292,9 @@ class HybridRunner:
                                f"group plan {key!r} carries constants; the shared "
                                "repeat path does not re-slice them",
                                stage="model")
-                    self.calls[key] = PlanCall(lib, info.plan, {}, fd=fd,
-                                               entry=self.plan_entry)
+                    self.calls[key] = PlanCall(
+                        lib, info.plan, {}, fd=fd, entry=self.plan_entry,
+                        reuse_bindings=self.reuse_bindings)
                     continue
                 plan_constants = {}
                 lookup = {spec.name: spec for spec in info.plan.constants}
@@ -1300,7 +1303,8 @@ class HybridRunner:
                         desc, lookup[name], self.weights, program.weights)
                 self.calls[key] = PlanCall(
                     lib, info.plan, plan_constants, fd=fd,
-                    entry=self.plan_entry)
+                    entry=self.plan_entry,
+                    reuse_bindings=self.reuse_bindings)
         except BaseException as exc:
             cleanup_errors = self._cleanup_calls()
             if cleanup_errors:

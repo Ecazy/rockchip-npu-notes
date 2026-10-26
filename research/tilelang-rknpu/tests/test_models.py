@@ -489,6 +489,28 @@ class CompleteModelTests(unittest.TestCase):
                 else:
                     os.environ[key] = value
 
+    def test_binding_descriptor_reuse_is_bitwise_control(self):
+        """Reusing ctypes descriptors must not change outputs or traces."""
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"))
+        outputs = {}
+        traces = {}
+        for reuse in (True, False):
+            with HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
+                              reuse_bindings=reuse) as runner:
+                result = runner.run(self.x[:8], capture=True)
+                outputs[reuse] = result.outputs["logits"]
+                traces[reuse] = result.trace
+                changed = runner.run(self.x[8:16]).outputs["logits"]
+                if reuse:
+                    changed_reuse = changed
+        np.testing.assert_array_equal(outputs[True], outputs[False])
+        for name in ("h1", "norm2", "gate", "up", "act", "ffn", "h2", "logits"):
+            np.testing.assert_array_equal(traces[True][name], traces[False][name])
+        self.assertTrue(np.isfinite(changed_reuse).all())
+
     def test_fixed_qk_pv_layout_pack_is_bitwise_general_path(self):
         """The fixed 16x16 CUBE/WEIGHT pack is a fast path only; outputs and
         all bytes must equal the generic packing path."""
@@ -780,7 +802,7 @@ class CompleteModelTests(unittest.TestCase):
         loader_spec.loader.exec_module(verifier)
         for spec_name, result_name in (
                 ("numeric_acceptance_packed.json",
-                 "20261026T094941Z-numeric-replay"),
+                 "20261026T100356Z-numeric-replay"),
                 ("numeric_acceptance_packed.json",
                  "20261026T091612Z-numeric-replay"),
                 ("numeric_acceptance_device_ffn.json",
