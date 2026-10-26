@@ -12,6 +12,10 @@ from .dag import DraftBuffer, DraftPlan
 
 CO_SLACK = 32768
 CO_GUARD = 64
+# sizeof(co_program) in the C seam: the emission array is one of these per submit
+# task.  Pinned by tests/test_ffi.py against the C ABI dump so a change to
+# co_program cannot silently understate the Host requirement.
+CO_PROGRAM_BYTES = 16624
 CO_MAX_WORDS = 2048
 
 
@@ -85,8 +89,17 @@ def assign_storage(draft: DraftPlan, *, profile: TargetProfile,
     # The caller still supplies the scalar/channel source; the expanded tile is
     # an additional Host preparation allocation, not an extra device transfer.
     constant_bytes = sum(c.nbytes for c in draft.constants) + broadcast_expand_bytes
+    # Runtime-owned Host scratch is part of the plan's Host requirement: the
+    # per-submit emission array (one co_program per submit task), the download
+    # tile and the per-output bookkeeping all live for the workspace's lifetime.
+    # CO_PROGRAM_BYTES is pinned to sizeof(co_program) by a C/Python test.
+    largest_output = max((b.nbytes for b in draft.bindings if b.role == "output"),
+                         default=0)
+    runtime_scratch = (max_tasks * CO_PROGRAM_BYTES + largest_output +
+                       len([b for b in draft.bindings if b.role == "output"]) *
+                       (8 + 4))
     host_bytes = input_bytes + output_bytes + constant_bytes + \
-        max(output_bytes, 65536)
+        max(output_bytes, 65536) + runtime_scratch
 
     check_budgets(profile, device_bytes=device_request, host_bytes=host_bytes)
     if device_request > options.device_budget_bytes:

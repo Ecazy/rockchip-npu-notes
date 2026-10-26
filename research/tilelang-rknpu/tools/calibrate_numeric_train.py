@@ -22,6 +22,16 @@ from rknpu_backend.numeric_policy import freeze_atol
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -112,6 +122,11 @@ def main() -> int:
             "basis": basis["formula"] + "; train split only; labels never "
                      "read; test data not used",
         }
+    # The frozen spec must name the compiled package it was calibrated against.
+    # Leaving this to the template would silently pin a stale manifest hash and
+    # make every later verification report a hash mismatch.
+    spec["compiled_manifest_sha256"] = _sha256(
+        ROOT / "models" / "compiled" / "manifest.json")
     spec["status"] = "frozen"
     spec["layer_tolerances"] = layer_tolerances
     spec["task_logit_tolerances"] = task_tolerances
