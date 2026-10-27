@@ -124,7 +124,7 @@ for spec in 'mnist_mlp 32' 'mnist_mlp 8' 'mnist_mlp 1' 'tiny_vit 8' 'tiny_vit 1'
   read -r model batch <<< "$spec"
   PYTHONPATH=python:. python3 tools/execution_cost_model.py \
     --profile "$latest/model-results/profiles/${model}_b${batch}.generic.json" \
-    --plans-dir "$latest/campaign/plans/current" \
+    --plans-dir models/compiled \
     --manifest "${model}_b${batch}" \
     --prepared-profile "$latest/model-results/profiles/${model}_b${batch}.prepared.json" \
     --campaign-analysis "$latest/analysis.json" \

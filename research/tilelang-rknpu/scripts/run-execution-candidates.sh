@@ -354,7 +354,7 @@ for spec in 'mnist_mlp 32' 'mnist_mlp 8' 'mnist_mlp 1' \
   read -r model batch <<< "$spec"
   PYTHONPATH="$HERE/python:$HERE" python3 "$HERE/tools/execution_cost_model.py" \
     --profile "$LOCAL/model-results/cost-profiles/${model}_b${batch}.generic.json" \
-    --plans-dir "$LOCAL/campaign/plans/current" \
+    --plans-dir "$HERE/models/compiled" \
     --manifest "${model}_b${batch}" \
     --prepared-profile "$LOCAL/model-results/cost-profiles/${model}_b${batch}.prepared.json" \
     --campaign-analysis "$LOCAL/analysis.json" \
