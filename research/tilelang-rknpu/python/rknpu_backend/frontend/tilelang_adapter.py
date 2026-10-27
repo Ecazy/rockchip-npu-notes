@@ -16,6 +16,12 @@ Parameter roles come from the copy data flow (which parameter feeds GEMM operand
 A, operand B, and which parameter receives the accumulator), so square shapes are
 not ambiguous.  A buffer is identified by its underlying TVM var, not by name.
 
+The recognizer does not choose its output container.  Node and module
+construction goes through :mod:`rknpu_backend.frontend.graph_builder`, whose
+default carrier is the internal RKIR module and whose alternative carrier returns
+container-free records for :mod:`rknpu_backend.frontend.native_graph`.  Both
+carriers therefore share one copy of the recognition logic.
+
 The optional TileLang import stays inside this module, so importing
 :mod:`rknpu_backend` has no TileLang dependency.
 """
@@ -26,8 +32,9 @@ from typing import Any, Iterable
 
 from ..errors import (RK_E_NUMERIC_CONTRACT, RK_E_SHAPE, RK_E_UNSUPPORTED,
                       reject)
-from ..ir import Module, NumericContract, Op, TensorType, Value
+from ..ir import NumericContract, TensorType
 from ..options import CompileOptions
+from .graph_builder import active_builder
 
 ALLOWED_TILEOPS = {"tl.tileop.fill", "tl.tileop.copy", "tl.tileop.gemm"}
 FORBIDDEN_TOKENS = ("atomic", "barrier", "shuffle", "sync", "reduce")
@@ -74,6 +81,26 @@ def _import_tirx():
                stage="frontend",
                alternative="install the pinned optional TileLang dependency from "
                            "provenance.json")
+
+
+def _value(*args, **kwargs):
+    """Construct one recognized value through the active carrier."""
+    return active_builder().value(*args, **kwargs)
+
+
+def _op(*args, **kwargs):
+    """Construct one recognized operation through the active carrier."""
+    return active_builder().op(*args, **kwargs)
+
+
+def _finish(*, name: str, values, ops, inputs, outputs,
+            profile_hash: str = "", source_hash: str = "",
+            state_signature: str = ""):
+    """Finish a recognized graph in the active carrier."""
+    return active_builder().finish(
+        name=name, values=values, ops=ops, inputs=inputs, outputs=outputs,
+        profile_hash=profile_hash, source_hash=source_hash,
+        state_signature=state_signature)
 
 
 def _int_imm(node: Any) -> int | None:
@@ -879,7 +906,7 @@ def _strip_expr_casts(expr: _Expr) -> _Expr:
 def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any,
                              prim_func: Any, span: str,
                              options: CompileOptions,
-                             profile_hash: str) -> Module:
+                             profile_hash: str) -> Any:
     """Extract a sequence of separately launched, self-contained stage kernels.
 
     Each ``T.Kernel`` is a launch boundary.  A stage writes one global parameter;
@@ -1579,7 +1606,7 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
                source=span)
 
     # Build the op list in launch order.
-    ops: list[Op] = []
+    ops: list[Any] = []
     op_for_stage: dict[int, int] = {}
     gemm_count = 0
     for info in stage_infos:
@@ -1606,7 +1633,7 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
             }
             if info["k_hints"] is not None:
                 attrs["source_k_loop"] = info["k_hints"]
-            ops.append(Op(op_id, "matmul", info["inputs"],
+            ops.append(_op(op_id, "matmul", info["inputs"],
                           (info["output"],), attrs, span))
         else:
             points = {
@@ -1616,11 +1643,11 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
                 "relu": ("relu",),
             }[info["opcode"]]
             contract = _contract_with_points(options, points)
-            ops.append(Op(op_id, info["opcode"], info["inputs"],
+            ops.append(_op(op_id, info["opcode"], info["inputs"],
                           (info["output"],),
                           {"numeric_contract": contract.to_dict()}, span))
 
-    values: list[Value] = []
+    values: list[Any] = []
     for pid in range(len(params)):
         shape = pshape(pid)
         if pid in produced:
@@ -1632,14 +1659,14 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
             producer = None
         axes = () if len(shape) == 0 else (("col",) if len(shape) == 1
                                            else ("row", "col"))
-        values.append(Value(pid, _buffer_name(params[pid]),
+        values.append(_value(pid, _buffer_name(params[pid]),
                             TensorType("float16", shape, axes=axes),
                             producer, role))
     inputs = tuple(pid for pid in range(len(params))
                    if pid in external and pid not in weight_pids
                    and pid not in constant_pids)
     outputs = tuple(output_pids)
-    return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
                   ops=tuple(ops), inputs=inputs, outputs=outputs,
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
@@ -1648,7 +1675,7 @@ def _extract_staged_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
 def _extract_static_dataflow(items: list[_Item], params: list[Any], *, tirx: Any,
                              prim_func: Any, span: str,
                              options: CompileOptions,
-                             profile_hash: str) -> Module:
+                             profile_hash: str) -> Any:
     """Extract the closed MatMul -> SiLU -> MatMul + residual SSA graph.
 
     This is the no-K-loop, one-primitive-tile subset.  It deliberately refuses
@@ -2056,27 +2083,27 @@ def _extract_static_dataflow(items: list[_Item], params: list[Any], *, tirx: Any
                  "source_accumulator_dtype": "float32",
                  "tile_m": g2.gm, "tile_n": g2.gn, "tile_k": g2.gk, **shared}
     values = (
-        Value(0, _buffer_name(x_param), TensorType("float16", (m, d)),
+        _value(0, _buffer_name(x_param), TensorType("float16", (m, d)),
               None, "input"),
-        Value(1, _buffer_name(w1_param), TensorType("float16", (d, h)),
+        _value(1, _buffer_name(w1_param), TensorType("float16", (d, h)),
               None, "constant"),
-        Value(2, _buffer_name(w2_param), TensorType("float16", (h, d)),
+        _value(2, _buffer_name(w2_param), TensorType("float16", (h, d)),
               None, "constant"),
-        Value(3, "Z", TensorType("float16", (m, h)), 0, "temporary"),
-        Value(4, "S", TensorType("float16", (m, h)), 1, "temporary"),
-        Value(5, "P", TensorType("float16", (m, d)), 2, "temporary"),
-        Value(6, _buffer_name(y_param), TensorType("float16", (m, d)),
+        _value(3, "Z", TensorType("float16", (m, h)), 0, "temporary"),
+        _value(4, "S", TensorType("float16", (m, h)), 1, "temporary"),
+        _value(5, "P", TensorType("float16", (m, d)), 2, "temporary"),
+        _value(6, _buffer_name(y_param), TensorType("float16", (m, d)),
               3, "output"),
     )
     ops = (
-        Op(0, "matmul", (0, 1), (3,), mm1_attrs, span),
-        Op(1, "silu", (3,), (4,),
+        _op(0, "matmul", (0, 1), (3,), mm1_attrs, span),
+        _op(1, "silu", (3,), (4,),
            {"numeric_contract": c_act.to_dict()}, span),
-        Op(2, "matmul", (4, 2), (5,), mm2_attrs, span),
-        Op(3, "add", (5, 0), (6,),
+        _op(2, "matmul", (4, 2), (5,), mm2_attrs, span),
+        _op(3, "add", (5, 0), (6,),
            {"numeric_contract": c_add.to_dict()}, span),
     )
-    return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
                   ops=ops, inputs=(0,), outputs=(6,),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
@@ -2169,7 +2196,7 @@ def _check_unfused_fp32_residual(store_items: list[_Item], groups: list[_GemmGro
 
 def _extract_ffn_branch(items: list[_Item], params: list[Any], *, tirx: Any,
                         prim_func: Any, span: str, options: CompileOptions,
-                        profile_hash: str) -> Module:
+                        profile_hash: str) -> Any:
     """Extract the staged-FP16 SwiGLU branch graph for the generic lowerer.
 
     Required source dataflow::
@@ -2531,43 +2558,43 @@ def _extract_ffn_branch(items: list[_Item], params: list[Any], *, tirx: Any,
                 "tile_k": group.gk, **shared}
 
     values = (
-        Value(0, _buffer_name(x_param), TensorType("float16", (m, d)),
+        _value(0, _buffer_name(x_param), TensorType("float16", (m, d)),
               None, "input"),
-        Value(1, _buffer_name(wg), TensorType("float16", (d, h)),
+        _value(1, _buffer_name(wg), TensorType("float16", (d, h)),
               None, "constant"),
-        Value(2, _buffer_name(wu), TensorType("float16", (d, h)),
+        _value(2, _buffer_name(wu), TensorType("float16", (d, h)),
               None, "constant"),
-        Value(3, _buffer_name(wd), TensorType("float16", (h, d)),
+        _value(3, _buffer_name(wd), TensorType("float16", (h, d)),
               None, "constant"),
-        Value(4, "Zg", TensorType("float16", (m, h)), 0, "temporary"),
-        Value(5, "Zu", TensorType("float16", (m, h)), 1, "temporary"),
-        Value(6, "S", TensorType("float16", (m, h)), 2, "temporary"),
-        Value(7, "A", TensorType("float16", (m, h)), 3, "temporary"),
-        Value(8, "H", TensorType("float16", (m, d)), 4, "temporary"),
-        Value(9, _buffer_name(y_param), TensorType("float16", (m, d)),
+        _value(4, "Zg", TensorType("float16", (m, h)), 0, "temporary"),
+        _value(5, "Zu", TensorType("float16", (m, h)), 1, "temporary"),
+        _value(6, "S", TensorType("float16", (m, h)), 2, "temporary"),
+        _value(7, "A", TensorType("float16", (m, h)), 3, "temporary"),
+        _value(8, "H", TensorType("float16", (m, d)), 4, "temporary"),
+        _value(9, _buffer_name(y_param), TensorType("float16", (m, d)),
               5, "output"),
     )
     if not residual_is_x:
         values = values + (
-            Value(10, _buffer_name(residual_param),
+            _value(10, _buffer_name(residual_param),
                   TensorType("float16", (m, d)), None, "input"),
         )
     gate_group = g0 if gate_n is n0 else g1
     up_group = g1 if gate_n is n0 else g0
     ops = (
-        Op(0, "matmul", (0, 1), (4,), mm_attrs(gate_contract, gate_group), span),
-        Op(1, "matmul", (0, 2), (5,), mm_attrs(up_contract, up_group), span),
-        Op(2, "silu", (4,), (6,),
+        _op(0, "matmul", (0, 1), (4,), mm_attrs(gate_contract, gate_group), span),
+        _op(1, "matmul", (0, 2), (5,), mm_attrs(up_contract, up_group), span),
+        _op(2, "silu", (4,), (6,),
            {"numeric_contract": silu_contract.to_dict()}, span),
-        Op(3, "mul", (6, 5), (7,),
+        _op(3, "mul", (6, 5), (7,),
            {"numeric_contract": mul_contract.to_dict()}, span),
-        Op(4, "matmul", (7, 3), (8,),
+        _op(4, "matmul", (7, 3), (8,),
            mm_attrs(proj_contract, g2), span),
-        Op(5, "add", (8, 0 if residual_is_x else 10), (9,),
+        _op(5, "add", (8, 0 if residual_is_x else 10), (9,),
            {"numeric_contract": add_contract.to_dict()}, span),
     )
     inputs = (0,) if residual_is_x else (0, 10)
-    return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
                   ops=ops, inputs=inputs, outputs=(9,),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
@@ -2581,7 +2608,7 @@ MULTI_OUTPUT_NARROWING_NAMES = ("gemm0_accumulator", "gemm1_accumulator")
 def _extract_branch_outputs(items: list[_Item], params: list[Any], *, tirx: Any,
                             prim_func: Any, span: str,
                             options: CompileOptions,
-                            profile_hash: str) -> Module:
+                            profile_hash: str) -> Any:
     """Extract two independent GEMMs that export two FP16 outputs.
 
     The two branches may share one parameter->tile copy.  Each GEMM accumulator
@@ -2828,22 +2855,22 @@ def _extract_branch_outputs(items: list[_Item], params: list[Any], *, tirx: Any,
               "source_accumulator_dtype": "float32",
               "tile_m": m, "tile_n": n1, "tile_k": k, **shared}
     values = (
-        Value(0, _buffer_name(x0), TensorType("float16", (m, k)),
+        _value(0, _buffer_name(x0), TensorType("float16", (m, k)),
               None, "input"),
-        Value(1, _buffer_name(w0), TensorType("float16", (k, n0)),
+        _value(1, _buffer_name(w0), TensorType("float16", (k, n0)),
               None, "constant"),
-        Value(2, _buffer_name(w1), TensorType("float16", (k, n1)),
+        _value(2, _buffer_name(w1), TensorType("float16", (k, n1)),
               None, "constant"),
-        Value(3, _buffer_name(y0), TensorType("float16", (m, n0)),
+        _value(3, _buffer_name(y0), TensorType("float16", (m, n0)),
               0, "output"),
-        Value(4, _buffer_name(y1), TensorType("float16", (m, n1)),
+        _value(4, _buffer_name(y1), TensorType("float16", (m, n1)),
               1, "output"),
     )
     ops = (
-        Op(0, "matmul", (0, 1), (3,), attrs0, span),
-        Op(1, "matmul", (0, 2), (4,), attrs1, span),
+        _op(0, "matmul", (0, 1), (3,), attrs0, span),
+        _op(1, "matmul", (0, 2), (4,), attrs1, span),
     )
-    return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
                   ops=ops, inputs=(0,), outputs=(3, 4),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
@@ -2857,7 +2884,7 @@ BROADCAST_TAIL_NARROWING_NAMES = ("gemm_accumulator", "broadcast_add")
 def _extract_broadcast_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                             prim_func: Any, span: str,
                             options: CompileOptions,
-                            profile_hash: str) -> Module:
+                            profile_hash: str) -> Any:
     """Extract one GEMM followed by Add/Mul with a rank-0/1 constant.
 
     The source must materialise the accumulator in FP16 and write the binary
@@ -3063,21 +3090,21 @@ def _extract_broadcast_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                 "tile_m": gm, "tile_n": gn, "tile_k": gk,
                 "source_narrowing_points": points}
     values = (
-        Value(0, _buffer_name(x_param), TensorType("float16", (gm, gk)),
+        _value(0, _buffer_name(x_param), TensorType("float16", (gm, gk)),
               None, "input"),
-        Value(1, _buffer_name(w_param), TensorType("float16", (gk, gn)),
+        _value(1, _buffer_name(w_param), TensorType("float16", (gk, gn)),
               None, "constant"),
-        Value(2, "Z", TensorType("float16", (gm, gn)), 0, "temporary"),
-        Value(3, _buffer_name(bias_param), bias_ty, None, "constant"),
-        Value(4, _buffer_name(y_param), TensorType("float16", (gm, gn)),
+        _value(2, "Z", TensorType("float16", (gm, gn)), 0, "temporary"),
+        _value(3, _buffer_name(bias_param), bias_ty, None, "constant"),
+        _value(4, _buffer_name(y_param), TensorType("float16", (gm, gn)),
               1, "output"),
     )
     ops = (
-        Op(0, "matmul", (0, 1), (2,), mm_attrs, span),
-        Op(1, binary_def.expr.kind, (2, 3), (4,),
+        _op(0, "matmul", (0, 1), (2,), mm_attrs, span),
+        _op(1, binary_def.expr.kind, (2, 3), (4,),
            {"numeric_contract": bin_contract.to_dict()}, span),
     )
-    return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
                   ops=ops, inputs=(0,), outputs=(4,),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
@@ -3269,7 +3296,7 @@ def _tile_parallel_axes(item: _Item, rows: int, cols: int,
 def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                          prim_func: Any, span: str,
                          options: CompileOptions,
-                         profile_hash: str) -> Module:
+                         profile_hash: str) -> Any:
     """Extract the canonical explicit guarded rectangular-tail K loop.
 
     Source shape (the only accepted form)::
@@ -3631,23 +3658,23 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                  "coverage": "ragged_tail",
                  "m_tail": m_tail, "n_tail": n_tail}
     values = (
-        Value(0, _buffer_name(a_param), TensorType("float16",
+        _value(0, _buffer_name(a_param), TensorType("float16",
                                                    (logical_m, logical_k)),
               None, "input"),
-        Value(1, _buffer_name(b_param), TensorType("float16",
+        _value(1, _buffer_name(b_param), TensorType("float16",
                                                    (logical_k, logical_n)),
               None, "constant"),
-        Value(2, _buffer_name(c_param), TensorType("float16",
+        _value(2, _buffer_name(c_param), TensorType("float16",
                                                    (logical_m, logical_n)),
               0, "output"),
     )
-    ops = (Op(0, "matmul", (0, 1), (2,),
+    ops = (_op(0, "matmul", (0, 1), (2,),
               {"b_layout": "kn", "numeric_contract": contract.to_dict(),
                "source_accumulator_dtype": "float32",
                "source_k_loop": hints,
                "source_mn_tiling": mn_tiling,
                "source_tail_contract": tail_contract}, span),)
-    return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
                   ops=ops, inputs=(0,), outputs=(2,),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
@@ -4014,7 +4041,7 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
 
 
 def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
-                   options: CompileOptions, profile_hash: str) -> Module:
+                   options: CompileOptions, profile_hash: str) -> Any:
     logical_k = block.trips * block.block_k
     if not 1 <= logical_k <= 4096:
         reject(RK_E_SHAPE, "logical K must be in 1..4096", stage="frontend",
@@ -4033,18 +4060,18 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
                  "grid_x": block.grid_x, "grid_y": block.grid_y,
                  "coverage": "exact_once"}
     values = [
-        Value(0, "A", TensorType("float16", (logical_m, logical_k)), None,
+        _value(0, "A", TensorType("float16", (logical_m, logical_k)), None,
               "input"),
-        Value(1, "B", TensorType("float16", (logical_k, logical_n)), None,
+        _value(1, "B", TensorType("float16", (logical_k, logical_n)), None,
               "constant"),
-        Value(2, "Y", TensorType("float16", (logical_m, logical_n)), 0, "output"),
+        _value(2, "Y", TensorType("float16", (logical_m, logical_n)), 0, "output"),
     ]
-    ops = [Op(0, "matmul", (0, 1), (2,),
+    ops = [_op(0, "matmul", (0, 1), (2,),
               {"b_layout": "kn", "numeric_contract": contract.to_dict(),
                "source_accumulator_dtype": "float32",
                "source_k_loop": hints,
                "source_mn_tiling": mn_tiling}, span)]
-    return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
                   ops=tuple(ops), inputs=(0,), outputs=(2,),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
@@ -4064,7 +4091,7 @@ def _numeric_contract(options: CompileOptions) -> NumericContract:
 
 
 def extract(prim_func: Any, *, options: CompileOptions,
-            profile_hash: str = "", b_is_input: bool = False) -> Module:
+            profile_hash: str = "", b_is_input: bool = False) -> Any:
     tirx = _import_tirx()
     if not isinstance(prim_func, tirx.PrimFunc):
         reject(RK_E_UNSUPPORTED,
@@ -4382,24 +4409,24 @@ def extract(prim_func: Any, *, options: CompileOptions,
 
     b_role = "input" if b_is_input else "constant"
     values = [
-        Value(0, "A", TensorType("float16", (gm, gk)), None, "input"),
-        Value(1, "B", TensorType("float16", (gk, gn)), None, b_role),
-        Value(2, "Z" if activation else "Y", TensorType("float16", (gm, gn)),
+        _value(0, "A", TensorType("float16", (gm, gk)), None, "input"),
+        _value(1, "B", TensorType("float16", (gk, gn)), None, b_role),
+        _value(2, "Z" if activation else "Y", TensorType("float16", (gm, gn)),
               0, "temporary" if activation else "output"),
     ]
-    ops = [Op(0, "matmul", (0, 1), (2,),
+    ops = [_op(0, "matmul", (0, 1), (2,),
               {"b_layout": "kn", "numeric_contract": contract.to_dict(),
                "source_accumulator_dtype": "float32",
                "tile_m": gm, "tile_n": gn, "tile_k": gk},
               span)]
     if activation:
-        values.append(Value(3, "Y", TensorType("float16", (gm, gn)), 1, "output"))
-        ops.append(Op(1, activation, (2,), (3,), {}, span))
+        values.append(_value(3, "Y", TensorType("float16", (gm, gn)), 1, "output"))
+        ops.append(_op(1, activation, (2,), (3,), {}, span))
         outputs = (3,)
     else:
         outputs = (2,)
     module_inputs = (0, 1) if b_is_input else (0,)
-    return Module(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
                   ops=tuple(ops), inputs=module_inputs, outputs=outputs,
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
