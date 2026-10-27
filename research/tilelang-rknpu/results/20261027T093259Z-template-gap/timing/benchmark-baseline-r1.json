@@ -1,0 +1,3550 @@
+{
+  "application_interval": "PlanCall.run_into with entry=legacy and reused workspace/output",
+  "backend": "board",
+  "cases": [
+    {
+      "amortized_1000_us": 479.1824637213722,
+      "application_fresh_output_us": {
+        "max": 634.3669956550002,
+        "mean": 514.0412715263665,
+        "median": 510.70202607661486,
+        "min": 507.4929795227945,
+        "p10": 508.95201275125146
+      },
+      "application_reuse_us": {
+        "max": 491.160957608372,
+        "mean": 473.4896800946444,
+        "median": 471.9110147561878,
+        "min": 468.1189893744886,
+        "p10": 468.99402514100075
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 768.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 2.9947849121093713,
+          "command_us": 27.50086181640625,
+          "download_us": 2.5082916259765624,
+          "emit_us": 14.469607543945312,
+          "guard_us": 176.88184997558594,
+          "output_sync_us": 24.832314453125,
+          "pack_clear_us": 2.082584228515625,
+          "pack_fini_us": 6.320238647460937,
+          "pack_layout_us": 4.739425048828125,
+          "pack_prep_us": 5.678577270507812,
+          "pack_us": 19.71346923828125,
+          "publish_us": 0.0641607666015625,
+          "submit_alloc_us": 0.8049700927734375,
+          "submit_wait_us": 176.3945684814453,
+          "total_us": 449.91051025390624,
+          "validate_us": 2.4179296875
+        },
+        "submit_count": 8.0,
+        "task_count": 11.0,
+        "upload_bytes": 24576.0,
+        "upload_calls": 4.0
+      },
+      "bind_prepared_us": 91.28998499363661,
+      "bindings": [
+        {
+          "name": "X",
+          "nbytes": 2048,
+          "role": "input",
+          "shape": [
+            1,
+            1024
+          ]
+        },
+        {
+          "name": "W1",
+          "nbytes": 524288,
+          "role": "constant",
+          "shape": [
+            1024,
+            256
+          ]
+        },
+        {
+          "name": "B1",
+          "nbytes": 512,
+          "role": "constant",
+          "shape": [
+            1,
+            256
+          ]
+        },
+        {
+          "name": "W2",
+          "nbytes": 65536,
+          "role": "constant",
+          "shape": [
+            256,
+            128
+          ]
+        },
+        {
+          "name": "B2",
+          "nbytes": 256,
+          "role": "constant",
+          "shape": [
+            1,
+            128
+          ]
+        },
+        {
+          "name": "W3",
+          "nbytes": 4096,
+          "role": "constant",
+          "shape": [
+            128,
+            16
+          ]
+        },
+        {
+          "name": "B3",
+          "nbytes": 32,
+          "role": "constant",
+          "shape": [
+            1,
+            16
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 32,
+          "role": "output",
+          "shape": [
+            1,
+            16
+          ]
+        },
+        {
+          "name": "__identity_32",
+          "nbytes": 2048,
+          "role": "constant",
+          "shape": [
+            32,
+            32
+          ]
+        },
+        {
+          "name": "__identity_128",
+          "nbytes": 32768,
+          "role": "constant",
+          "shape": [
+            128,
+            128
+          ]
+        },
+        {
+          "name": "__identity_256",
+          "nbytes": 131072,
+          "role": "constant",
+          "shape": [
+            256,
+            256
+          ]
+        },
+        {
+          "name": "__zero_1x256",
+          "nbytes": 512,
+          "role": "constant",
+          "shape": [
+            1,
+            256
+          ]
+        },
+        {
+          "name": "__zero_1x128",
+          "nbytes": 256,
+          "role": "constant",
+          "shape": [
+            1,
+            128
+          ]
+        }
+      ],
+      "case": "mlp_mnist_mlp_b1",
+      "cold_once_us": 7743.359979940578,
+      "constant_bytes": 761376,
+      "constant_materialize_us": 1953.5589963197708,
+      "cpu_fp32_reference": null,
+      "kind": "mlp",
+      "manifest": "mnist_mlp_b1",
+      "output_sha256": "25230ea529ac82d1d74faa5ce40cfb45b101505f68d9d51fe549c44fa85b3f56",
+      "plan": "mlp",
+      "plan_hash": "b294e9f4a44e23ab6cc59402bb60adda62646d3e22215a36d06e7ceb4f9f2a79",
+      "setup_samples_us": [
+        5559.386976528913,
+        5305.0569840706885,
+        5181.392014492303
+      ],
+      "setup_us": 5305.0569840706885,
+      "workspace_setup_us": 5226.599983870983
+    },
+    {
+      "amortized_1000_us": 524.4373048190027,
+      "application_fresh_output_us": {
+        "max": 669.3670293316245,
+        "mean": 574.6896780328825,
+        "median": 570.7850214093924,
+        "min": 567.8670131601393,
+        "p10": 569.0339661668986
+      },
+      "application_reuse_us": {
+        "max": 529.9519980326295,
+        "mean": 517.8860013838857,
+        "median": 517.1180237084627,
+        "min": 514.2019945196807,
+        "p10": 515.6599800102413
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 768.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 2.9947849121093713,
+          "command_us": 27.603068237304687,
+          "download_us": 3.421201171875,
+          "emit_us": 14.171848754882813,
+          "guard_us": 176.44730651855468,
+          "output_sync_us": 25.05965576171875,
+          "pack_clear_us": 2.06775634765625,
+          "pack_fini_us": 6.3816357421875,
+          "pack_layout_us": 36.667958374023435,
+          "pack_prep_us": 5.96745361328125,
+          "pack_us": 52.15225158691406,
+          "publish_us": 0.08459228515625,
+          "submit_alloc_us": 0.67660888671875,
+          "submit_wait_us": 248.9313995361328,
+          "total_us": 570.2010198974609,
+          "validate_us": 17.33645263671875
+        },
+        "submit_count": 8.0,
+        "task_count": 11.0,
+        "upload_bytes": 24576.0,
+        "upload_calls": 4.0
+      },
+      "bind_prepared_us": 48.41602640226483,
+      "bindings": [
+        {
+          "name": "X",
+          "nbytes": 16384,
+          "role": "input",
+          "shape": [
+            8,
+            1024
+          ]
+        },
+        {
+          "name": "W1",
+          "nbytes": 524288,
+          "role": "constant",
+          "shape": [
+            1024,
+            256
+          ]
+        },
+        {
+          "name": "B1",
+          "nbytes": 4096,
+          "role": "constant",
+          "shape": [
+            8,
+            256
+          ]
+        },
+        {
+          "name": "W2",
+          "nbytes": 65536,
+          "role": "constant",
+          "shape": [
+            256,
+            128
+          ]
+        },
+        {
+          "name": "B2",
+          "nbytes": 2048,
+          "role": "constant",
+          "shape": [
+            8,
+            128
+          ]
+        },
+        {
+          "name": "W3",
+          "nbytes": 4096,
+          "role": "constant",
+          "shape": [
+            128,
+            16
+          ]
+        },
+        {
+          "name": "B3",
+          "nbytes": 256,
+          "role": "constant",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 256,
+          "role": "output",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "__identity_32",
+          "nbytes": 2048,
+          "role": "constant",
+          "shape": [
+            32,
+            32
+          ]
+        },
+        {
+          "name": "__identity_128",
+          "nbytes": 32768,
+          "role": "constant",
+          "shape": [
+            128,
+            128
+          ]
+        },
+        {
+          "name": "__identity_256",
+          "nbytes": 131072,
+          "role": "constant",
+          "shape": [
+            256,
+            256
+          ]
+        },
+        {
+          "name": "__zero_8x256",
+          "nbytes": 4096,
+          "role": "constant",
+          "shape": [
+            8,
+            256
+          ]
+        },
+        {
+          "name": "__zero_8x128",
+          "nbytes": 2048,
+          "role": "constant",
+          "shape": [
+            8,
+            128
+          ]
+        }
+      ],
+      "case": "mlp_mnist_mlp_b8",
+      "cold_once_us": 7836.399134248495,
+      "constant_bytes": 772352,
+      "constant_materialize_us": 1906.8920519202948,
+      "cpu_fp32_reference": null,
+      "kind": "mlp",
+      "manifest": "mnist_mlp_b8",
+      "output_sha256": "b29f51d06585b5f1f440a2b4b46025d76192531c859b662ffff800a61b743af0",
+      "plan": "mlp",
+      "plan_hash": "b9f56f9214dff73c72079e6aa274ae7c333d0cba140e1a28877e27fe6dd65c1c",
+      "setup_samples_us": [
+        5575.137038249522,
+        5405.681033153087,
+        5587.677995208651
+      ],
+      "setup_us": 5575.137038249522,
+      "workspace_setup_us": 5363.973032217473
+    },
+    {
+      "amortized_1000_us": 707.6433866168372,
+      "application_fresh_output_us": {
+        "max": 937.1129563078284,
+        "mean": 809.9596295505762,
+        "median": 807.9059771262109,
+        "min": 802.3649570532143,
+        "p10": 805.5730140767992
+      },
+      "application_reuse_us": {
+        "max": 2219.846996013075,
+        "mean": 758.3025861531496,
+        "median": 700.2829806879163,
+        "min": 698.2409977354109,
+        "p10": 699.1160335019231
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 2048.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 2.9947849121093713,
+          "command_us": 27.7721240234375,
+          "download_us": 6.728641357421875,
+          "emit_us": 15.0351513671875,
+          "guard_us": 179.65271118164063,
+          "output_sync_us": 28.932921752929687,
+          "pack_clear_us": 3.5903900146484373,
+          "pack_fini_us": 9.890149536132812,
+          "pack_layout_us": 145.39390991210936,
+          "pack_prep_us": 6.851137084960937,
+          "pack_us": 166.70868103027342,
+          "publish_us": 0.1633233642578125,
+          "submit_alloc_us": 0.682481689453125,
+          "submit_wait_us": 186.62353942871093,
+          "total_us": 685.037451171875,
+          "validate_us": 68.21412048339843
+        },
+        "submit_count": 8.0,
+        "task_count": 11.0,
+        "upload_bytes": 65536.0,
+        "upload_calls": 4.0
+      },
+      "bind_prepared_us": 49.58297358825803,
+      "bindings": [
+        {
+          "name": "X",
+          "nbytes": 65536,
+          "role": "input",
+          "shape": [
+            32,
+            1024
+          ]
+        },
+        {
+          "name": "W1",
+          "nbytes": 524288,
+          "role": "constant",
+          "shape": [
+            1024,
+            256
+          ]
+        },
+        {
+          "name": "B1",
+          "nbytes": 16384,
+          "role": "constant",
+          "shape": [
+            32,
+            256
+          ]
+        },
+        {
+          "name": "W2",
+          "nbytes": 65536,
+          "role": "constant",
+          "shape": [
+            256,
+            128
+          ]
+        },
+        {
+          "name": "B2",
+          "nbytes": 8192,
+          "role": "constant",
+          "shape": [
+            32,
+            128
+          ]
+        },
+        {
+          "name": "W3",
+          "nbytes": 4096,
+          "role": "constant",
+          "shape": [
+            128,
+            16
+          ]
+        },
+        {
+          "name": "B3",
+          "nbytes": 1024,
+          "role": "constant",
+          "shape": [
+            32,
+            16
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 1024,
+          "role": "output",
+          "shape": [
+            32,
+            16
+          ]
+        },
+        {
+          "name": "__identity_32",
+          "nbytes": 2048,
+          "role": "constant",
+          "shape": [
+            32,
+            32
+          ]
+        },
+        {
+          "name": "__identity_128",
+          "nbytes": 32768,
+          "role": "constant",
+          "shape": [
+            128,
+            128
+          ]
+        },
+        {
+          "name": "__identity_256",
+          "nbytes": 131072,
+          "role": "constant",
+          "shape": [
+            256,
+            256
+          ]
+        },
+        {
+          "name": "__zero_32x256",
+          "nbytes": 16384,
+          "role": "constant",
+          "shape": [
+            32,
+            256
+          ]
+        },
+        {
+          "name": "__zero_32x128",
+          "nbytes": 8192,
+          "role": "constant",
+          "shape": [
+            32,
+            128
+          ]
+        }
+      ],
+      "case": "mlp_mnist_mlp_b32",
+      "cold_once_us": 8060.688909608871,
+      "constant_bytes": 809984,
+      "constant_materialize_us": 1914.7669663652778,
+      "cpu_fp32_reference": null,
+      "kind": "mlp",
+      "manifest": "mnist_mlp_b32",
+      "output_sha256": "46b25df5277de918377175f93d4a4a47001bf53cc55963bc8de0cc40f3d08e9c",
+      "plan": "mlp",
+      "plan_hash": "0cf197412f270e9dafd20782dd45c0c8d1a1644a64da891959d645d44596d379",
+      "setup_samples_us": [
+        5636.969988700002,
+        5504.555010702461,
+        5596.135975793004
+      ],
+      "setup_us": 5596.135975793004,
+      "workspace_setup_us": 5396.055988967419
+    },
+    {
+      "amortized_1000_us": 86.0966113395989,
+      "application_fresh_output_us": {
+        "max": 184.0390032157302,
+        "mean": 144.52770818024874,
+        "median": 143.78997730091214,
+        "min": 139.41503129899502,
+        "p10": 141.1649864166975
+      },
+      "application_reuse_us": {
+        "max": 126.87296839430928,
+        "mean": 88.80200993735343,
+        "median": 85.45699529349804,
+        "min": 84.28998989984393,
+        "p10": 84.87398736178875
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 6144.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 1.0569829101562502,
+          "command_us": 1.9511993408203125,
+          "download_us": 18.132596435546876,
+          "emit_us": 1.3795477294921874,
+          "guard_us": 21.982711791992188,
+          "output_sync_us": 2.6949896240234374,
+          "pack_clear_us": 0.2916900634765625,
+          "pack_fini_us": 1.245440673828125,
+          "pack_layout_us": 4.716229858398438,
+          "pack_prep_us": 1.6624609375,
+          "pack_us": 8.22494873046875,
+          "publish_us": 0.3470111083984375,
+          "submit_alloc_us": 0.07878173828125,
+          "submit_wait_us": 15.921847534179687,
+          "total_us": 74.03285034179687,
+          "validate_us": 2.3450006103515624
+        },
+        "submit_count": 1.0,
+        "task_count": 1.0,
+        "upload_bytes": 2048.0,
+        "upload_calls": 1.0
+      },
+      "bind_prepared_us": 37.62403503060341,
+      "bindings": [
+        {
+          "name": "A",
+          "nbytes": 2048,
+          "role": "input",
+          "shape": [
+            16,
+            64
+          ]
+        },
+        {
+          "name": "B",
+          "nbytes": 24576,
+          "role": "constant",
+          "shape": [
+            64,
+            192
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 6144,
+          "role": "output",
+          "shape": [
+            16,
+            192
+          ]
+        }
+      ],
+      "case": "qkv_tiny_vit_b1",
+      "cold_once_us": 725.0730413943529,
+      "constant_bytes": 24576,
+      "constant_materialize_us": 138.2480259053409,
+      "cpu_fp32_reference": {
+        "max_abs_error": 0.00012037158012390137,
+        "mean_abs_error": 1.677935324551072e-05,
+        "median_ms": 0.1954140025191009,
+        "tolerance_applied": false
+      },
+      "kind": "gemm",
+      "manifest": "tiny_vit_b1",
+      "output_sha256": "ce04bbdc26cbb0f1c5fc6de201ca0fb56822398a68fb16624cffb7687009f409",
+      "plan": "qkv",
+      "plan_hash": "5f63eaaf615d3e099b28f69c9ad87538c591cb9ee0bfb59d3267cb3658953436",
+      "setup_samples_us": [
+        779.9069862812757,
+        515.6600382179022,
+        478.3269832842052
+      ],
+      "setup_us": 515.6600382179022,
+      "workspace_setup_us": 463.74398516491055
+    },
+    {
+      "amortized_1000_us": 362.1000139391981,
+      "application_fresh_output_us": {
+        "max": 479.20196084305644,
+        "mean": 390.18079813104123,
+        "median": 378.8699978031218,
+        "min": 371.2860052473843,
+        "p10": 374.7869632206857
+      },
+      "application_reuse_us": {
+        "max": 377.7030506171286,
+        "mean": 358.73435623943806,
+        "median": 361.36998096480966,
+        "min": 321.99599081650376,
+        "p10": 359.6200258471072
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 49152.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 1.0569829101562502,
+          "command_us": 2.00087158203125,
+          "download_us": 166.03494079589845,
+          "emit_us": 1.627520751953125,
+          "guard_us": 24.692153930664062,
+          "output_sync_us": 4.071598510742188,
+          "pack_clear_us": 0.82833984375,
+          "pack_fini_us": 2.38589111328125,
+          "pack_layout_us": 37.32404541015625,
+          "pack_prep_us": 1.9220611572265625,
+          "pack_us": 42.81315856933594,
+          "publish_us": 1.9366455078125,
+          "submit_alloc_us": 0.078740234375,
+          "submit_wait_us": 64.39040893554687,
+          "total_us": 326.70328918457034,
+          "validate_us": 17.225580444335936
+        },
+        "submit_count": 1.0,
+        "task_count": 1.0,
+        "upload_bytes": 16384.0,
+        "upload_calls": 1.0
+      },
+      "bind_prepared_us": 40.249957237392664,
+      "bindings": [
+        {
+          "name": "A",
+          "nbytes": 16384,
+          "role": "input",
+          "shape": [
+            128,
+            64
+          ]
+        },
+        {
+          "name": "B",
+          "nbytes": 24576,
+          "role": "constant",
+          "shape": [
+            64,
+            192
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 49152,
+          "role": "output",
+          "shape": [
+            128,
+            192
+          ]
+        }
+      ],
+      "case": "qkv_tiny_vit_b8",
+      "cold_once_us": 1091.40295535326,
+      "constant_bytes": 24576,
+      "constant_materialize_us": 144.082005135715,
+      "cpu_fp32_reference": {
+        "max_abs_error": 0.0001602768898010254,
+        "mean_abs_error": 1.64400007633958e-05,
+        "median_ms": 1.4320649788714945,
+        "tolerance_applied": false
+      },
+      "kind": "gemm",
+      "manifest": "tiny_vit_b8",
+      "output_sha256": "70e3bc24dfe10de71c067dd389e99fb6908872b8813162efb6a1522818fd7784",
+      "plan": "qkv",
+      "plan_hash": "05cc9c88dfec4da3ddd302b201981fda023340a38f01235cc028e9c1373e7d53",
+      "setup_samples_us": [
+        895.4060031101108,
+        618.6169921420515,
+        584.7839638590813
+      ],
+      "setup_us": 618.6169921420515,
+      "workspace_setup_us": 545.7010120153427
+    },
+    {
+      "amortized_1000_us": 131.71458890428767,
+      "application_fresh_output_us": {
+        "max": 194.83099458739161,
+        "mean": 148.12107954639941,
+        "median": 149.76851525716484,
+        "min": 135.6240245513618,
+        "p10": 137.69411598332226
+      },
+      "application_reuse_us": {
+        "max": 135.33199671655893,
+        "mean": 114.30268129333854,
+        "median": 130.9559738729149,
+        "min": 92.16496255248785,
+        "p10": 92.74797630496323
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 8192.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 1.0569829101562502,
+          "command_us": 1.92205810546875,
+          "download_us": 22.24802978515625,
+          "emit_us": 1.49331298828125,
+          "guard_us": 22.971329345703126,
+          "output_sync_us": 2.872921142578125,
+          "pack_clear_us": 0.2653497314453125,
+          "pack_fini_us": 1.370810546875,
+          "pack_layout_us": 4.733746948242188,
+          "pack_prep_us": 1.904581298828125,
+          "pack_us": 8.551539306640626,
+          "publish_us": 0.4462774658203125,
+          "submit_alloc_us": 0.13126953125,
+          "submit_wait_us": 17.9051416015625,
+          "total_us": 81.96596923828125,
+          "validate_us": 2.34798095703125
+        },
+        "submit_count": 1.0,
+        "task_count": 1.0,
+        "upload_bytes": 2048.0,
+        "upload_calls": 1.0
+      },
+      "bind_prepared_us": 38.49901258945465,
+      "bindings": [
+        {
+          "name": "A",
+          "nbytes": 2048,
+          "role": "input",
+          "shape": [
+            16,
+            64
+          ]
+        },
+        {
+          "name": "B",
+          "nbytes": 32768,
+          "role": "constant",
+          "shape": [
+            64,
+            256
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 8192,
+          "role": "output",
+          "shape": [
+            16,
+            256
+          ]
+        }
+      ],
+      "case": "gate_up_tiny_vit_b1",
+      "cold_once_us": 889.5710052456707,
+      "constant_bytes": 32768,
+      "constant_materialize_us": 211.74701396375895,
+      "cpu_fp32_reference": {
+        "max_abs_error": 0.00024181604385375977,
+        "mean_abs_error": 2.3113865609047934e-05,
+        "median_ms": 0.2435389906167984,
+        "tolerance_applied": false
+      },
+      "kind": "gemm",
+      "manifest": "tiny_vit_b1",
+      "output_sha256": "2df61ff9c4f10383d35ec6d333a5817944c22de405e7dca488f85ec57656268f",
+      "plan": "gate_up",
+      "plan_hash": "9f3c55f30c2fdb34e9e78e4b05bb7bf3666d78266db2b61dc3fe6c93cb929477",
+      "setup_samples_us": [
+        833.8640327565372,
+        553.5769741982222,
+        515.3680103830993
+      ],
+      "setup_us": 553.5769741982222,
+      "workspace_setup_us": 508.36900481954217
+    },
+    {
+      "amortized_1000_us": 410.6504963710904,
+      "application_fresh_output_us": {
+        "max": 544.8259762488306,
+        "mean": 458.1936838803813,
+        "median": 464.3274878617376,
+        "min": 424.0770358592272,
+        "p10": 432.9446819610894
+      },
+      "application_reuse_us": {
+        "max": 418.2440461590886,
+        "mean": 404.65955808758736,
+        "median": 409.7860073670745,
+        "min": 367.78696812689304,
+        "p10": 372.7450384758413
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 65536.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 1.0569829101562502,
+          "command_us": 1.901640625,
+          "download_us": 197.15825317382811,
+          "emit_us": 1.5691497802734375,
+          "guard_us": 26.63171142578125,
+          "output_sync_us": 5.107052001953125,
+          "pack_clear_us": 0.848720703125,
+          "pack_fini_us": 2.5958319091796875,
+          "pack_layout_us": 37.34166137695313,
+          "pack_prep_us": 2.1116864013671877,
+          "pack_us": 43.16325561523438,
+          "publish_us": 2.48791748046875,
+          "submit_alloc_us": 0.09041015625,
+          "submit_wait_us": 81.6044091796875,
+          "total_us": 378.93139221191404,
+          "validate_us": 17.23726806640625
+        },
+        "submit_count": 1.0,
+        "task_count": 1.0,
+        "upload_bytes": 16384.0,
+        "upload_calls": 1.0
+      },
+      "bind_prepared_us": 41.41603130847216,
+      "bindings": [
+        {
+          "name": "A",
+          "nbytes": 16384,
+          "role": "input",
+          "shape": [
+            128,
+            64
+          ]
+        },
+        {
+          "name": "B",
+          "nbytes": 32768,
+          "role": "constant",
+          "shape": [
+            64,
+            256
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 65536,
+          "role": "output",
+          "shape": [
+            128,
+            256
+          ]
+        }
+      ],
+      "case": "gate_up_tiny_vit_b8",
+      "cold_once_us": 1274.275011382997,
+      "constant_bytes": 32768,
+      "constant_materialize_us": 209.99799016863108,
+      "cpu_fp32_reference": {
+        "max_abs_error": 0.00024068355560302734,
+        "mean_abs_error": 2.255384242744185e-05,
+        "median_ms": 1.86839303933084,
+        "tolerance_applied": false
+      },
+      "kind": "gemm",
+      "manifest": "tiny_vit_b8",
+      "output_sha256": "8df7716c08f78b355b810256b461be3442558f4e6196b332ad4c29b83d36264d",
+      "plan": "gate_up",
+      "plan_hash": "4bbebbb73dfe7529f8fd17d220cd542c4f69e6a96b2be80b318e2a4b5d9d5935",
+      "setup_samples_us": [
+        943.5300016775727,
+        676.9499741494656,
+        625.9080255404115
+      ],
+      "setup_us": 676.9499741494656,
+      "workspace_setup_us": 613.0749825388193
+    },
+    {
+      "amortized_1000_us": 80.53085941355675,
+      "application_fresh_output_us": {
+        "max": 181.1229740269482,
+        "mean": 128.97334701847285,
+        "median": 126.72750744968653,
+        "min": 124.83098544180393,
+        "p10": 125.70596300065517
+      },
+      "application_reuse_us": {
+        "max": 119.58199320361018,
+        "mean": 80.8017224771902,
+        "median": 79.91603342816234,
+        "min": 79.62400559335947,
+        "p10": 79.9149856902659
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 2048.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 1.0569829101562502,
+          "command_us": 2.1203692626953123,
+          "download_us": 8.309464111328126,
+          "emit_us": 1.41160888671875,
+          "guard_us": 22.154776611328124,
+          "output_sync_us": 2.7503570556640624,
+          "pack_clear_us": 0.460877685546875,
+          "pack_fini_us": 1.577879638671875,
+          "pack_layout_us": 9.26906005859375,
+          "pack_prep_us": 1.7879107666015626,
+          "pack_us": 13.372782592773438,
+          "publish_us": 0.180792236328125,
+          "submit_alloc_us": 0.08751953125,
+          "submit_wait_us": 13.145280151367187,
+          "total_us": 68.91987365722656,
+          "validate_us": 4.477029418945312
+        },
+        "submit_count": 1.0,
+        "task_count": 1.0,
+        "upload_bytes": 4096.0,
+        "upload_calls": 1.0
+      },
+      "bind_prepared_us": 37.04201662912965,
+      "bindings": [
+        {
+          "name": "A",
+          "nbytes": 4096,
+          "role": "input",
+          "shape": [
+            16,
+            128
+          ]
+        },
+        {
+          "name": "B",
+          "nbytes": 16384,
+          "role": "constant",
+          "shape": [
+            128,
+            64
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 2048,
+          "role": "output",
+          "shape": [
+            16,
+            64
+          ]
+        }
+      ],
+      "case": "down_tiny_vit_b1",
+      "cold_once_us": 694.7420188225806,
+      "constant_bytes": 16384,
+      "constant_materialize_us": 117.54001025110483,
+      "cpu_fp32_reference": {
+        "max_abs_error": 0.00022268295288085938,
+        "mean_abs_error": 3.28649184666574e-05,
+        "median_ms": 0.13008201494812965,
+        "tolerance_applied": false
+      },
+      "kind": "gemm",
+      "manifest": "tiny_vit_b1",
+      "output_sha256": "5eb2b61f2a7f79634c8b99b8406414a7ce8fcaf8f4c781da077b9464303045de",
+      "plan": "down",
+      "plan_hash": "ea43d153c27b4d2896d7dc35ad838510f5e29155e231e732b88420d139871cc3",
+      "setup_samples_us": [
+        759.490008931607,
+        515.9520078450441,
+        473.36897114291787
+      ],
+      "setup_us": 515.9520078450441,
+      "workspace_setup_us": 460.24395851418376
+    },
+    {
+      "amortized_1000_us": 279.50228739064187,
+      "application_fresh_output_us": {
+        "max": 415.3279587626457,
+        "mean": 334.91944894194603,
+        "median": 323.1625014450401,
+        "min": 311.4959690719843,
+        "p10": 314.4129877910018
+      },
+      "application_reuse_us": {
+        "max": 301.2880333699286,
+        "mean": 275.06846678443253,
+        "median": 278.8300043903291,
+        "min": 239.74699433892965,
+        "p10": 241.8764343019575
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 16384.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 1.0569829101562502,
+          "command_us": 1.9775103759765624,
+          "download_us": 52.33895202636719,
+          "emit_us": 1.502071533203125,
+          "guard_us": 24.587166748046876,
+          "output_sync_us": 3.37449951171875,
+          "pack_clear_us": 1.2950494384765625,
+          "pack_fini_us": 4.150360107421875,
+          "pack_layout_us": 73.48731689453125,
+          "pack_prep_us": 2.3392291259765625,
+          "pack_us": 81.52282104492187,
+          "publish_us": 0.78168212890625,
+          "submit_alloc_us": 0.0670806884765625,
+          "submit_wait_us": 34.34037109375,
+          "total_us": 235.94080993652344,
+          "validate_us": 34.20340026855469
+        },
+        "submit_count": 1.0,
+        "task_count": 1.0,
+        "upload_bytes": 32768.0,
+        "upload_calls": 1.0
+      },
+      "bind_prepared_us": 42.000028770416975,
+      "bindings": [
+        {
+          "name": "A",
+          "nbytes": 32768,
+          "role": "input",
+          "shape": [
+            128,
+            128
+          ]
+        },
+        {
+          "name": "B",
+          "nbytes": 16384,
+          "role": "constant",
+          "shape": [
+            128,
+            64
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 16384,
+          "role": "output",
+          "shape": [
+            128,
+            64
+          ]
+        }
+      ],
+      "case": "down_tiny_vit_b8",
+      "cold_once_us": 951.1130047030747,
+      "constant_bytes": 16384,
+      "constant_materialize_us": 123.3729999512434,
+      "cpu_fp32_reference": {
+        "max_abs_error": 0.00024014711380004883,
+        "mean_abs_error": 2.7206620870856568e-05,
+        "median_ms": 0.9630710119381547,
+        "tolerance_applied": false
+      },
+      "kind": "gemm",
+      "manifest": "tiny_vit_b8",
+      "output_sha256": "ee45b34d1d510f5941fb43b1dfdedaa69357e43e550410e04deee7f202e16152",
+      "plan": "down",
+      "plan_hash": "7af7e79f69fc8eeeedd104fb06a9cacb26632e3d2cc8f9812c5ace53829f6706",
+      "setup_samples_us": [
+        861.2800156697631,
+        582.1590311825275,
+        530.2429781295359
+      ],
+      "setup_us": 582.1590311825275,
+      "workspace_setup_us": 506.9099715910852
+    },
+    {
+      "amortized_1000_us": 64.15485945763066,
+      "application_fresh_output_us": {
+        "max": 179.37301890924573,
+        "mean": 108.54524851310998,
+        "median": 110.83198478445411,
+        "min": 96.53996676206589,
+        "p10": 98.02819695323706
+      },
+      "application_reuse_us": {
+        "max": 80.79095277935266,
+        "mean": 63.7668234994635,
+        "median": 63.582032453268766,
+        "min": 62.41601658985019,
+        "p10": 62.998972134664655
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 768.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 1.0569829101562502,
+          "command_us": 1.930760498046875,
+          "download_us": 2.5462408447265625,
+          "emit_us": 1.382471923828125,
+          "guard_us": 21.979730224609376,
+          "output_sync_us": 2.674520263671875,
+          "pack_clear_us": 0.2479888916015625,
+          "pack_fini_us": 1.376640625,
+          "pack_layout_us": 0.3324798583984375,
+          "pack_prep_us": 1.8549603271484374,
+          "pack_us": 4.077420043945312,
+          "publish_us": 0.0379486083984375,
+          "submit_alloc_us": 0.09622802734375,
+          "submit_wait_us": 11.159061279296875,
+          "total_us": 47.1502490234375,
+          "validate_us": 0.3499884033203125
+        },
+        "submit_count": 1.0,
+        "task_count": 1.0,
+        "upload_bytes": 1536.0,
+        "upload_calls": 1.0
+      },
+      "bind_prepared_us": 38.50000211969018,
+      "bindings": [
+        {
+          "name": "A",
+          "nbytes": 128,
+          "role": "input",
+          "shape": [
+            1,
+            64
+          ]
+        },
+        {
+          "name": "B",
+          "nbytes": 2048,
+          "role": "constant",
+          "shape": [
+            64,
+            16
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 32,
+          "role": "output",
+          "shape": [
+            1,
+            16
+          ]
+        }
+      ],
+      "case": "classifier_tiny_vit_b1",
+      "cold_once_us": 636.4090368151665,
+      "constant_bytes": 2048,
+      "constant_materialize_us": 148.45700934529305,
+      "cpu_fp32_reference": {
+        "max_abs_error": 9.113550186157227e-05,
+        "mean_abs_error": 1.2604054063558578e-05,
+        "median_ms": 0.012542004697024822,
+        "tolerance_applied": false
+      },
+      "kind": "gemm",
+      "manifest": "tiny_vit_b1",
+      "output_sha256": "6cdb1a727a06e7f4a1712d4654affa1ab17d057ec04b447a495946053066ad84",
+      "plan": "classifier",
+      "plan_hash": "ec780abc31a527f5ce44d2496468e160058aeb6d97197209e5ea8c6b096f48ba",
+      "setup_samples_us": [
+        703.7820178084075,
+        440.41103683412075,
+        393.7450237572193
+      ],
+      "setup_us": 440.41103683412075,
+      "workspace_setup_us": 385.8699928969145
+    },
+    {
+      "amortized_1000_us": 62.715772772207856,
+      "application_fresh_output_us": {
+        "max": 156.33099246770144,
+        "mean": 106.0253253672272,
+        "median": 104.41499762237072,
+        "min": 101.78994853049517,
+        "p10": 102.95695392414927
+      },
+      "application_reuse_us": {
+        "max": 70.28999971225858,
+        "mean": 62.11311160586774,
+        "median": 62.12398875504732,
+        "min": 61.540049500763416,
+        "p10": 61.83201912790537
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 768.0,
+        "download_calls": 1.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 1.0569829101562502,
+          "command_us": 2.0066400146484376,
+          "download_us": 3.435799560546875,
+          "emit_us": 1.397120361328125,
+          "guard_us": 21.828041381835938,
+          "output_sync_us": 2.6774713134765626,
+          "pack_clear_us": 0.245,
+          "pack_fini_us": 1.37080810546875,
+          "pack_layout_us": 2.39455810546875,
+          "pack_prep_us": 1.8228802490234375,
+          "pack_us": 6.113240356445313,
+          "publish_us": 0.0787408447265625,
+          "submit_alloc_us": 0.1020697021484375,
+          "submit_wait_us": 21.55389892578125,
+          "total_us": 61.32504211425781,
+          "validate_us": 1.2774993896484375
+        },
+        "submit_count": 1.0,
+        "task_count": 1.0,
+        "upload_bytes": 1536.0,
+        "upload_calls": 1.0
+      },
+      "bind_prepared_us": 39.95798761025071,
+      "bindings": [
+        {
+          "name": "A",
+          "nbytes": 1024,
+          "role": "input",
+          "shape": [
+            8,
+            64
+          ]
+        },
+        {
+          "name": "B",
+          "nbytes": 2048,
+          "role": "constant",
+          "shape": [
+            64,
+            16
+          ]
+        },
+        {
+          "name": "Y",
+          "nbytes": 256,
+          "role": "output",
+          "shape": [
+            8,
+            16
+          ]
+        }
+      ],
+      "case": "classifier_tiny_vit_b8",
+      "cold_once_us": 653.9080059155822,
+      "constant_bytes": 2048,
+      "constant_materialize_us": 156.33099246770144,
+      "cpu_fp32_reference": {
+        "max_abs_error": 0.00011026859283447266,
+        "mean_abs_error": 1.1384116078261286e-05,
+        "median_ms": 0.019249971956014633,
+        "tolerance_applied": false
+      },
+      "kind": "gemm",
+      "manifest": "tiny_vit_b8",
+      "output_sha256": "3d10c4f6cdfcbff0621ecbc0df58b1d687feaf9d6a2c2491892c312d5a1965ec",
+      "plan": "classifier",
+      "plan_hash": "f68f9131075631696750442702bd93cbd9319de85934cb81c99269ea6e8bfe4c",
+      "setup_samples_us": [
+        743.156997486949,
+        430.4950125515461,
+        393.7450237572193
+      ],
+      "setup_us": 430.4950125515461,
+      "workspace_setup_us": 395.4950370825827
+    },
+    {
+      "amortized_1000_us": 152.52028341637924,
+      "application_fresh_output_us": {
+        "max": 562.61703139171,
+        "mean": 373.1594100827351,
+        "median": 362.2455114964396,
+        "min": 349.41203193739057,
+        "p10": 352.0661673974246
+      },
+      "application_reuse_us": {
+        "max": 193.37300909683108,
+        "mean": 153.52610719855875,
+        "median": 151.66396042332053,
+        "min": 150.20597493276,
+        "p10": 150.79003060236573
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 4096.0,
+        "download_calls": 4.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 2.9947849121093713,
+          "command_us": 4.780354614257813,
+          "download_us": 17.925516967773437,
+          "emit_us": 5.15070068359375,
+          "guard_us": 21.839730224609376,
+          "output_sync_us": 9.866962280273437,
+          "pack_clear_us": 0.0,
+          "pack_fini_us": 0.0,
+          "pack_layout_us": 0.0,
+          "pack_prep_us": 0.0,
+          "pack_us": 10.438599243164063,
+          "publish_us": 0.2508294677734375,
+          "submit_alloc_us": 0.0991705322265625,
+          "submit_wait_us": 18.791827392578124,
+          "total_us": 142.53854858398438,
+          "validate_us": 51.69726806640625
+        },
+        "submit_count": 1.0,
+        "task_count": 4.0,
+        "upload_bytes": 12288.0,
+        "upload_calls": 8.0
+      },
+      "bind_prepared_us": 183.16501518711448,
+      "bindings": [
+        {
+          "name": "A_0",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_0",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_0",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_1",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_1",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_1",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_2",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_2",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_2",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_3",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_3",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_3",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        }
+      ],
+      "case": "attn_qk_qkv_group_tiny_vit_b1",
+      "cold_once_us": 1007.9869534820318,
+      "constant_bytes": 0,
+      "constant_materialize_us": 2.3329630494117737,
+      "cpu_fp32_reference": null,
+      "kind": "group",
+      "manifest": "tiny_vit_b1",
+      "output_sha256": "276f80ae12d23bca091c497a812b7a688f7c05c2dc219d058307a1fbbbd5b3f8",
+      "plan": "attn_qk_qkv_group",
+      "plan_hash": "52b9c4dd38611d29b5073a68919733612e705edce23959d1e84198f599e49de6",
+      "setup_samples_us": [
+        1000.1129703596234,
+        757.1569876745343,
+        685.4080129414797
+      ],
+      "setup_us": 757.1569876745343,
+      "workspace_setup_us": 670.825014822185
+    },
+    {
+      "amortized_1000_us": 987.6263475161977,
+      "application_fresh_output_us": {
+        "max": 3384.163952432573,
+        "mean": 2332.8921670326963,
+        "median": 2319.8870185296983,
+        "min": 2302.0950029604137,
+        "p10": 2310.9033063519746
+      },
+      "application_reuse_us": {
+        "max": 991.945038549602,
+        "mean": 982.0710906060413,
+        "median": 982.6129535213113,
+        "min": 944.1129514016211,
+        "p10": 981.1540367081761
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 32768.0,
+        "download_calls": 32.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 17.792545654296877,
+          "command_us": 26.232097778320313,
+          "download_us": 172.18612426757812,
+          "emit_us": 47.23764831542969,
+          "guard_us": 27.404599609375,
+          "output_sync_us": 117.2164013671875,
+          "pack_clear_us": 0.0,
+          "pack_fini_us": 0.0,
+          "pack_layout_us": 0.0,
+          "pack_prep_us": 0.0,
+          "pack_us": 42.97945373535156,
+          "publish_us": 1.449534912109375,
+          "submit_alloc_us": 0.1225408935546875,
+          "submit_wait_us": 94.77878234863282,
+          "total_us": 964.847172241211,
+          "validate_us": 424.2966632080078
+        },
+        "submit_count": 1.0,
+        "task_count": 32.0,
+        "upload_bytes": 98304.0,
+        "upload_calls": 64.0
+      },
+      "bind_prepared_us": 961.6130264475942,
+      "bindings": [
+        {
+          "name": "A_0",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_0",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_0",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_1",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_1",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_1",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_2",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_2",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_2",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_3",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_3",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_3",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_4",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_4",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_4",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_5",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_5",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_5",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_6",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_6",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_6",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_7",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_7",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_7",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_8",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_8",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_8",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_9",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_9",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_9",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_10",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_10",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_10",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_11",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_11",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_11",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_12",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_12",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_12",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_13",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_13",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_13",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_14",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_14",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_14",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_15",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_15",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_15",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_16",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_16",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_16",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_17",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_17",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_17",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_18",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_18",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_18",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_19",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_19",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_19",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_20",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_20",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_20",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_21",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_21",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_21",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_22",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_22",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_22",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_23",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_23",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_23",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_24",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_24",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_24",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_25",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_25",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_25",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_26",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_26",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_26",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_27",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_27",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_27",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_28",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_28",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_28",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_29",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_29",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_29",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_30",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_30",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_30",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_31",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "B_31",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_31",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        }
+      ],
+      "case": "attn_qk_qkv_group_tiny_vit_b8",
+      "cold_once_us": 5996.006948407739,
+      "constant_bytes": 0,
+      "constant_materialize_us": 2.6249908842146397,
+      "cpu_fp32_reference": null,
+      "kind": "group",
+      "manifest": "tiny_vit_b8",
+      "output_sha256": "56615bc161911f22d3171522019df92e882bca6ee5da08e90bebe175e197e4a5",
+      "plan": "attn_qk_qkv_group",
+      "plan_hash": "f20c52b74ce9a3f50eebce3c0dea11b3c6cc1b3cd6df8cc70892aee2bdd31209",
+      "setup_samples_us": [
+        4442.026955075562,
+        4227.070952765644,
+        4142.779973335564
+      ],
+      "setup_us": 4227.070952765644,
+      "workspace_setup_us": 4049.1559775546193
+    },
+    {
+      "amortized_1000_us": 137.9844160983339,
+      "application_fresh_output_us": {
+        "max": 553.2850045710802,
+        "mean": 338.65861070808023,
+        "median": 327.24550692364573,
+        "min": 307.12096486240625,
+        "p10": 312.9539603833109
+      },
+      "application_reuse_us": {
+        "max": 180.24799646809697,
+        "mean": 152.96672494150698,
+        "median": 137.08201004192233,
+        "min": 134.74799925461411,
+        "p10": 135.62303502112627
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 4096.0,
+        "download_calls": 4.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 2.9947849121093713,
+          "command_us": 4.90579833984375,
+          "download_us": 18.928909912109376,
+          "emit_us": 5.0048895263671875,
+          "guard_us": 22.014796752929687,
+          "output_sync_us": 10.91690185546875,
+          "pack_clear_us": 0.0,
+          "pack_fini_us": 0.0,
+          "pack_layout_us": 0.0,
+          "pack_prep_us": 0.0,
+          "pack_us": 11.520691528320313,
+          "publish_us": 0.2012109375,
+          "submit_alloc_us": 0.0903692626953125,
+          "submit_wait_us": 21.597691040039063,
+          "total_us": 125.05341857910156,
+          "validate_us": 28.31466796875
+        },
+        "submit_count": 1.0,
+        "task_count": 4.0,
+        "upload_bytes": 12288.0,
+        "upload_calls": 8.0
+      },
+      "bind_prepared_us": 193.95601702854037,
+      "bindings": [
+        {
+          "name": "A_0",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_0",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_0",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_1",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_1",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_1",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_2",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_2",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_2",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_3",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_3",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_3",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        }
+      ],
+      "case": "attn_pv_qkv_group_tiny_vit_b1",
+      "cold_once_us": 1039.4880664534867,
+      "constant_bytes": 0,
+      "constant_materialize_us": 2.334010787308216,
+      "cpu_fp32_reference": null,
+      "kind": "group",
+      "manifest": "tiny_vit_b1",
+      "output_sha256": "03cea60cbe1556ead6ca9f41dba4f7de774ca565b8d6c0ca5e2a8b0d31a8005e",
+      "plan": "attn_pv_qkv_group",
+      "plan_hash": "24f866289c08d595577f34a2426600cdffcecf4b6faab03fd58c2caa5598dd4e",
+      "setup_samples_us": [
+        1010.0289946421981,
+        776.114990003407,
+        739.0740211121738
+      ],
+      "setup_us": 776.114990003407,
+      "workspace_setup_us": 706.1160285957158
+    },
+    {
+      "amortized_1000_us": 816.1088175256737,
+      "application_fresh_output_us": {
+        "max": 2874.3380098603666,
+        "mean": 1946.6458115493879,
+        "median": 1935.037988005206,
+        "min": 1906.6010136157274,
+        "p10": 1926.8416741397232
+      },
+      "application_reuse_us": {
+        "max": 826.2809715233743,
+        "mean": 809.7811322659254,
+        "median": 811.1149654723704,
+        "min": 772.0320136286318,
+        "p10": 809.9480182863772
+      },
+      "attributed": {
+        "calls": 100,
+        "download_bytes": 32768.0,
+        "download_calls": 32.0,
+        "per_call": {
+          "alloc_us": 0.0,
+          "clock_us": 17.792545654296877,
+          "command_us": 25.56425048828125,
+          "download_us": 178.1040118408203,
+          "emit_us": 47.00733154296875,
+          "guard_us": 27.410408935546876,
+          "output_sync_us": 123.30628967285156,
+          "pack_clear_us": 0.0,
+          "pack_fini_us": 0.0,
+          "pack_layout_us": 0.0,
+          "pack_prep_us": 0.0,
+          "pack_us": 47.972653198242185,
+          "publish_us": 1.216319580078125,
+          "submit_alloc_us": 0.102049560546875,
+          "submit_wait_us": 96.17880065917969,
+          "total_us": 795.7352703857422,
+          "validate_us": 237.90358947753907
+        },
+        "submit_count": 1.0,
+        "task_count": 32.0,
+        "upload_bytes": 98304.0,
+        "upload_calls": 64.0
+      },
+      "bind_prepared_us": 965.9869829192758,
+      "bindings": [
+        {
+          "name": "A_0",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_0",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_0",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_1",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_1",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_1",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_2",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_2",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_2",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_3",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_3",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_3",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_4",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_4",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_4",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_5",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_5",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_5",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_6",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_6",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_6",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_7",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_7",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_7",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_8",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_8",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_8",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_9",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_9",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_9",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_10",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_10",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_10",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_11",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_11",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_11",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_12",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_12",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_12",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_13",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_13",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_13",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_14",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_14",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_14",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_15",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_15",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_15",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_16",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_16",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_16",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_17",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_17",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_17",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_18",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_18",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_18",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_19",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_19",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_19",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_20",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_20",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_20",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_21",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_21",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_21",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_22",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_22",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_22",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_23",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_23",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_23",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_24",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_24",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_24",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_25",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_25",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_25",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_26",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_26",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_26",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_27",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_27",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_27",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_28",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_28",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_28",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_29",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_29",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_29",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_30",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_30",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_30",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "A_31",
+          "nbytes": 512,
+          "role": "input",
+          "shape": [
+            16,
+            16
+          ]
+        },
+        {
+          "name": "B_31",
+          "nbytes": 6144,
+          "role": "input",
+          "shape": [
+            16,
+            192
+          ]
+        },
+        {
+          "name": "Y_31",
+          "nbytes": 512,
+          "role": "output",
+          "shape": [
+            16,
+            16
+          ]
+        }
+      ],
+      "case": "attn_pv_qkv_group_tiny_vit_b8",
+      "cold_once_us": 5804.967018775642,
+      "constant_bytes": 0,
+      "constant_materialize_us": 2.625049091875553,
+      "cpu_fp32_reference": null,
+      "kind": "group",
+      "manifest": "tiny_vit_b8",
+      "output_sha256": "dfeb7eadaa300c421f5bb029b3157d3d9622cafda41e9d8376bbf30868fb8199",
+      "plan": "attn_pv_qkv_group",
+      "plan_hash": "8bfff8c59cd33367051ab7792d44ad7c3269fba332f22f2e73e7c14e977cd466",
+      "setup_samples_us": [
+        4415.485018398613,
+        4180.403950158507,
+        4062.2809901833534
+      ],
+      "setup_us": 4180.403950158507,
+      "workspace_setup_us": 4025.24002129212
+    }
+  ],
+  "cpu_reference": "NumPy FP32; different numeric policy, not ranked",
+  "environment": {
+    "cpu_affinity": [
+      6
+    ],
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64",
+    "thread_config": {
+      "MKL_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null
+    }
+  },
+  "instrumentation": "separate attributed pass; excluded from app median",
+  "kind": "gemm-template-benchmark",
+  "runs": 500,
+  "schema_version": 1,
+  "warmup": 20
+}

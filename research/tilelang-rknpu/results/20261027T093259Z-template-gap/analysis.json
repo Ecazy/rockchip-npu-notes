@@ -1,0 +1,4130 @@
+{
+  "baseline_cases": {
+    "attn_pv_qkv_group_tiny_vit_b1": {
+      "amortized_1000_us": 137.9844160983339,
+      "application_max_us": 168.87299716472626,
+      "application_min_us": 130.51950372755527,
+      "application_us": 137.08201004192233,
+      "bind_prepared_us": 193.95601702854037,
+      "cold_once_us": 1066.7575406841934,
+      "constant_bytes": 0.0,
+      "constant_materialize_us": 2.0420411601662636,
+      "cpu_fp32": null,
+      "download_bytes": 4096.0,
+      "download_calls": 4.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 2.9947849121093713,
+        "command_us": 4.888211669921875,
+        "download_us": 18.899837036132812,
+        "emit_us": 5.019578247070313,
+        "guard_us": 22.12845947265625,
+        "output_sync_us": 10.902377319335937,
+        "pack_clear_us": 0.0,
+        "pack_fini_us": 0.0,
+        "pack_layout_us": 0.0,
+        "pack_prep_us": 0.0,
+        "pack_us": 11.520691528320313,
+        "publish_us": 0.2012109375,
+        "submit_alloc_us": 0.0903692626953125,
+        "submit_wait_us": 21.597691040039063,
+        "total_us": 125.05341857910156,
+        "validate_us": 28.31466796875
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 3.4707890624999944,
+          "min": 2.9749294433593723
+        },
+        "command_us": {
+          "max": 4.90579833984375,
+          "min": 4.87673828125
+        },
+        "download_us": {
+          "max": 18.928909912109376,
+          "min": 18.736336669921876
+        },
+        "emit_us": {
+          "max": 5.311261596679688,
+          "min": 5.0048895263671875
+        },
+        "guard_us": {
+          "max": 22.163460083007813,
+          "min": 22.014796752929687
+        },
+        "output_sync_us": {
+          "max": 10.91690185546875,
+          "min": 10.730238647460938
+        },
+        "pack_clear_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_fini_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_layout_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_prep_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_us": {
+          "max": 11.6722900390625,
+          "min": 11.427363891601562
+        },
+        "publish_us": {
+          "max": 0.20999755859375,
+          "min": 0.1925079345703125
+        },
+        "submit_alloc_us": {
+          "max": 0.0933587646484375,
+          "min": 0.0728497314453125
+        },
+        "submit_wait_us": {
+          "max": 54.191041259765626,
+          "min": 18.015961303710938
+        },
+        "total_us": {
+          "max": 157.56509887695313,
+          "min": 121.88886779785156
+        },
+        "validate_us": {
+          "max": 28.364230346679687,
+          "min": 28.265072021484375
+        }
+      },
+      "fresh_output_us": 327.24550692364573,
+      "kind": "group",
+      "manifest": "tiny_vit_b1",
+      "plan": "attn_pv_qkv_group",
+      "runs": 3,
+      "setup_us": 793.6150068417192,
+      "submit_count": 1.0,
+      "task_count": 4.0,
+      "upload_bytes": 12288.0,
+      "upload_calls": 8.0,
+      "workspace_setup_us": 715.1580066420138
+    },
+    "attn_pv_qkv_group_tiny_vit_b8": {
+      "amortized_1000_us": 786.1643847427331,
+      "application_max_us": 811.1149654723704,
+      "application_min_us": 734.6990169025958,
+      "application_us": 781.0739916749299,
+      "bind_prepared_us": 965.9869829192758,
+      "cold_once_us": 5822.467035613954,
+      "constant_bytes": 0.0,
+      "constant_materialize_us": 2.625049091875553,
+      "cpu_fp32": null,
+      "download_bytes": 32768.0,
+      "download_calls": 32.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 17.792545654296877,
+        "command_us": 25.56425048828125,
+        "download_us": 163.9992999267578,
+        "emit_us": 46.98400512695312,
+        "guard_us": 27.063361206054687,
+        "output_sync_us": 109.53398864746094,
+        "pack_clear_us": 0.0,
+        "pack_fini_us": 0.0,
+        "pack_layout_us": 0.0,
+        "pack_prep_us": 0.0,
+        "pack_us": 47.81812316894531,
+        "publish_us": 1.2774908447265625,
+        "submit_alloc_us": 0.084580078125,
+        "submit_wait_us": 96.17880065917969,
+        "total_us": 767.6626501464843,
+        "validate_us": 237.87448303222655
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 20.620570312499968,
+          "min": 17.674580810546846
+        },
+        "command_us": {
+          "max": 29.915900268554687,
+          "min": 24.31885986328125
+        },
+        "download_us": {
+          "max": 178.1040118408203,
+          "min": 157.40156677246094
+        },
+        "emit_us": {
+          "max": 47.00733154296875,
+          "min": 46.90222229003906
+        },
+        "guard_us": {
+          "max": 27.410408935546876,
+          "min": 26.170938720703123
+        },
+        "output_sync_us": {
+          "max": 123.30628967285156,
+          "min": 102.884150390625
+        },
+        "pack_clear_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_fini_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_layout_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_prep_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_us": {
+          "max": 47.972653198242185,
+          "min": 47.05109985351562
+        },
+        "publish_us": {
+          "max": 1.3183465576171876,
+          "min": 1.216319580078125
+        },
+        "submit_alloc_us": {
+          "max": 0.102049560546875,
+          "min": 0.081629638671875
+        },
+        "submit_wait_us": {
+          "max": 98.07464111328125,
+          "min": 60.767950439453124
+        },
+        "total_us": {
+          "max": 795.7352703857422,
+          "min": 721.4953106689453
+        },
+        "validate_us": {
+          "max": 237.90358947753907,
+          "min": 237.76940856933595
+        }
+      },
+      "fresh_output_us": 1931.100501678884,
+      "kind": "group",
+      "manifest": "tiny_vit_b8",
+      "plan": "attn_pv_qkv_group",
+      "runs": 3,
+      "setup_us": 4267.02800905332,
+      "submit_count": 1.0,
+      "task_count": 32.0,
+      "upload_bytes": 98304.0,
+      "upload_calls": 64.0,
+      "workspace_setup_us": 4117.697011679411
+    },
+    "attn_qk_qkv_group_tiny_vit_b1": {
+      "amortized_1000_us": 189.86774288350716,
+      "application_max_us": 191.62194803357124,
+      "application_min_us": 151.66396042332053,
+      "application_us": 188.99800488725305,
+      "bind_prepared_us": 183.16501518711448,
+      "cold_once_us": 1058.7360011413693,
+      "constant_bytes": 0.0,
+      "constant_materialize_us": 2.040993422269821,
+      "cpu_fp32": null,
+      "download_bytes": 4096.0,
+      "download_calls": 4.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 2.9947849121093713,
+        "command_us": 4.844480590820313,
+        "download_us": 17.925516967773437,
+        "emit_us": 5.1594921875,
+        "guard_us": 21.921428833007813,
+        "output_sync_us": 9.884439697265625,
+        "pack_clear_us": 0.0,
+        "pack_fini_us": 0.0,
+        "pack_layout_us": 0.0,
+        "pack_prep_us": 0.0,
+        "pack_us": 10.3598583984375,
+        "publish_us": 0.2507952880859375,
+        "submit_alloc_us": 0.0962396240234375,
+        "submit_wait_us": 19.70185974121094,
+        "total_us": 145.1402880859375,
+        "validate_us": 51.7264111328125
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 3.4707890624999944,
+          "min": 2.9749294433593723
+        },
+        "command_us": {
+          "max": 4.937841186523437,
+          "min": 4.780354614257813
+        },
+        "download_us": {
+          "max": 18.651887817382814,
+          "min": 17.6252099609375
+        },
+        "emit_us": {
+          "max": 5.23825927734375,
+          "min": 5.15070068359375
+        },
+        "guard_us": {
+          "max": 21.9564501953125,
+          "min": 21.839730224609376
+        },
+        "output_sync_us": {
+          "max": 10.680662841796876,
+          "min": 9.866962280273437
+        },
+        "pack_clear_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_fini_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_layout_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_prep_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_us": {
+          "max": 10.438599243164063,
+          "min": 10.34235107421875
+        },
+        "publish_us": {
+          "max": 0.2508294677734375,
+          "min": 0.2128515625
+        },
+        "submit_alloc_us": {
+          "max": 0.0991705322265625,
+          "min": 0.078751220703125
+        },
+        "submit_wait_us": {
+          "max": 30.95131164550781,
+          "min": 18.791827392578124
+        },
+        "total_us": {
+          "max": 154.508330078125,
+          "min": 142.53854858398438
+        },
+        "validate_us": {
+          "max": 51.735150756835935,
+          "min": 51.69726806640625
+        }
+      },
+      "fresh_output_us": 354.8079985193908,
+      "kind": "group",
+      "manifest": "tiny_vit_b1",
+      "plan": "attn_qk_qkv_group",
+      "runs": 3,
+      "setup_us": 755.6990021839738,
+      "submit_count": 1.0,
+      "task_count": 4.0,
+      "upload_bytes": 12288.0,
+      "upload_calls": 8.0,
+      "workspace_setup_us": 685.1159851066768
+    },
+    "attn_qk_qkv_group_tiny_vit_b8": {
+      "amortized_1000_us": 987.6263475161977,
+      "application_max_us": 991.0709923133254,
+      "application_min_us": 941.1960490979254,
+      "application_us": 982.6129535213113,
+      "bind_prepared_us": 976.4870046637952,
+      "cold_once_us": 6053.17298322916,
+      "constant_bytes": 0.0,
+      "constant_materialize_us": 2.6249908842146397,
+      "cpu_fp32": null,
+      "download_bytes": 32768.0,
+      "download_calls": 32.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 17.792545654296877,
+        "command_us": 26.1009228515625,
+        "download_us": 172.18612426757812,
+        "emit_us": 47.23764831542969,
+        "guard_us": 27.46594055175781,
+        "output_sync_us": 117.2164013671875,
+        "pack_clear_us": 0.0,
+        "pack_fini_us": 0.0,
+        "pack_layout_us": 0.0,
+        "pack_prep_us": 0.0,
+        "pack_us": 43.049361572265624,
+        "publish_us": 1.4641357421875,
+        "submit_alloc_us": 0.107921142578125,
+        "submit_wait_us": 94.77878234863282,
+        "total_us": 964.847172241211,
+        "validate_us": 424.2966632080078
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 20.620570312499968,
+          "min": 17.674580810546846
+        },
+        "command_us": {
+          "max": 26.232097778320313,
+          "min": 25.753863525390624
+        },
+        "download_us": {
+          "max": 177.4448663330078,
+          "min": 170.17376708984375
+        },
+        "emit_us": {
+          "max": 47.44486633300781,
+          "min": 47.22608093261719
+        },
+        "guard_us": {
+          "max": 27.655469360351564,
+          "min": 27.404599609375
+        },
+        "output_sync_us": {
+          "max": 122.52766479492188,
+          "min": 115.29726318359376
+        },
+        "pack_clear_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_fini_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_layout_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_prep_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_us": {
+          "max": 43.67362976074219,
+          "min": 42.97945373535156
+        },
+        "publish_us": {
+          "max": 1.478680419921875,
+          "min": 1.449534912109375
+        },
+        "submit_alloc_us": {
+          "max": 0.1225408935546875,
+          "min": 0.104970703125
+        },
+        "submit_wait_us": {
+          "max": 97.3337322998047,
+          "min": 77.96144653320313
+        },
+        "total_us": {
+          "max": 977.5490942382812,
+          "min": 945.4516625976562
+        },
+        "validate_us": {
+          "max": 424.53000305175783,
+          "min": 424.02532653808595
+        }
+      },
+      "fresh_output_us": 2309.678529854864,
+      "kind": "group",
+      "manifest": "tiny_vit_b8",
+      "plan": "attn_qk_qkv_group",
+      "runs": 3,
+      "setup_us": 4227.070952765644,
+      "submit_count": 1.0,
+      "task_count": 32.0,
+      "upload_bytes": 98304.0,
+      "upload_calls": 64.0,
+      "workspace_setup_us": 4075.6980306468904
+    },
+    "classifier_tiny_vit_b1": {
+      "amortized_1000_us": 59.47656597709283,
+      "application_max_us": 63.582032453268766,
+      "application_min_us": 58.04101238027215,
+      "application_us": 58.91598993912339,
+      "bind_prepared_us": 38.50000211969018,
+      "cold_once_us": 623.2840823940933,
+      "constant_bytes": 2048.0,
+      "constant_materialize_us": 146.4150263927877,
+      "cpu_fp32": {
+        "max_abs_error": 9.113550186157227e-05,
+        "mean_abs_error": 1.2604054063558578e-05,
+        "median_ms": 0.011958007235080004,
+        "min_ms": null
+      },
+      "download_bytes": 768.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.0569829101562502,
+        "command_us": 2.0270587158203126,
+        "download_us": 2.5462408447265625,
+        "emit_us": 1.4116497802734376,
+        "guard_us": 21.892208862304688,
+        "output_sync_us": 2.674520263671875,
+        "pack_clear_us": 0.2479888916015625,
+        "pack_fini_us": 1.3271099853515624,
+        "pack_layout_us": 0.3441900634765625,
+        "pack_prep_us": 1.7907806396484376,
+        "pack_us": 3.9754388427734373,
+        "publish_us": 0.0466802978515625,
+        "submit_alloc_us": 0.08459228515625,
+        "submit_wait_us": 11.237711791992188,
+        "total_us": 47.1502490234375,
+        "validate_us": 0.3499884033203125
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.224984375000002,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.027117919921875,
+          "min": 1.930760498046875
+        },
+        "download_us": {
+          "max": 2.74158935546875,
+          "min": 2.49371337890625
+        },
+        "emit_us": {
+          "max": 1.4202789306640624,
+          "min": 1.382471923828125
+        },
+        "guard_us": {
+          "max": 21.979730224609376,
+          "min": 21.76389221191406
+        },
+        "output_sync_us": {
+          "max": 2.83203125,
+          "min": 2.61327880859375
+        },
+        "pack_clear_us": {
+          "max": 0.2567340087890625,
+          "min": 0.19248046875
+        },
+        "pack_fini_us": {
+          "max": 1.376640625,
+          "min": 1.29792236328125
+        },
+        "pack_layout_us": {
+          "max": 0.3587274169921875,
+          "min": 0.3324798583984375
+        },
+        "pack_prep_us": {
+          "max": 1.8549603271484374,
+          "min": 1.776259765625
+        },
+        "pack_us": {
+          "max": 4.077420043945312,
+          "min": 3.966641845703125
+        },
+        "publish_us": {
+          "max": 0.055428466796875,
+          "min": 0.0379486083984375
+        },
+        "submit_alloc_us": {
+          "max": 0.09622802734375,
+          "min": 0.0699884033203125
+        },
+        "submit_wait_us": {
+          "max": 11.319412231445312,
+          "min": 11.159061279296875
+        },
+        "total_us": {
+          "max": 47.62278198242188,
+          "min": 46.940260620117186
+        },
+        "validate_us": {
+          "max": 0.3733917236328125,
+          "min": 0.3470782470703125
+        }
+      },
+      "fresh_output_us": 95.9569588303566,
+      "kind": "gemm",
+      "manifest": "tiny_vit_b1",
+      "plan": "classifier",
+      "runs": 3,
+      "setup_us": 426.4120361767709,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 1536.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 380.0370031967759
+    },
+    "classifier_tiny_vit_b8": {
+      "amortized_1000_us": 63.02640930516645,
+      "application_max_us": 62.70798621699214,
+      "application_min_us": 62.12398875504732,
+      "application_us": 62.415958382189274,
+      "bind_prepared_us": 39.95798761025071,
+      "cold_once_us": 653.9080059155822,
+      "constant_bytes": 2048.0,
+      "constant_materialize_us": 157.7900256961584,
+      "cpu_fp32": {
+        "max_abs_error": 0.00011026859283447266,
+        "mean_abs_error": 1.1384116078261286e-05,
+        "median_ms": 0.019832979887723923,
+        "min_ms": null
+      },
+      "download_bytes": 768.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.0569829101562502,
+        "command_us": 2.0066412353515624,
+        "download_us": 3.435799560546875,
+        "emit_us": 1.4349493408203124,
+        "guard_us": 21.83385192871094,
+        "output_sync_us": 2.6774713134765626,
+        "pack_clear_us": 0.2449005126953125,
+        "pack_fini_us": 1.31834228515625,
+        "pack_layout_us": 2.3974908447265624,
+        "pack_prep_us": 1.782081298828125,
+        "pack_us": 6.0228515625,
+        "publish_us": 0.084571533203125,
+        "submit_alloc_us": 0.1020697021484375,
+        "submit_wait_us": 11.424401245117188,
+        "total_us": 51.3735009765625,
+        "validate_us": 1.28623046875
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.224984375000002,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.0883184814453126,
+          "min": 2.0066400146484376
+        },
+        "download_us": {
+          "max": 3.4736798095703123,
+          "min": 3.3045416259765625
+        },
+        "emit_us": {
+          "max": 1.449580078125,
+          "min": 1.397120361328125
+        },
+        "guard_us": {
+          "max": 21.833868408203124,
+          "min": 21.828041381835938
+        },
+        "output_sync_us": {
+          "max": 2.835018310546875,
+          "min": 2.668690185546875
+        },
+        "pack_clear_us": {
+          "max": 0.245,
+          "min": 0.230347900390625
+        },
+        "pack_fini_us": {
+          "max": 1.37080810546875,
+          "min": 1.2891790771484375
+        },
+        "pack_layout_us": {
+          "max": 2.400438232421875,
+          "min": 2.39455810546875
+        },
+        "pack_prep_us": {
+          "max": 1.8228802490234375,
+          "min": 1.7470513916015624
+        },
+        "pack_us": {
+          "max": 6.113240356445313,
+          "min": 5.9586083984375
+        },
+        "publish_us": {
+          "max": 0.08751220703125,
+          "min": 0.0787408447265625
+        },
+        "submit_alloc_us": {
+          "max": 0.11954833984375,
+          "min": 0.099200439453125
+        },
+        "submit_wait_us": {
+          "max": 21.55389892578125,
+          "min": 11.29903076171875
+        },
+        "total_us": {
+          "max": 61.32504211425781,
+          "min": 51.1400927734375
+        },
+        "validate_us": {
+          "max": 1.2863104248046875,
+          "min": 1.2774993896484375
+        }
+      },
+      "fresh_output_us": 104.41499762237072,
+      "kind": "gemm",
+      "manifest": "tiny_vit_b8",
+      "plan": "classifier",
+      "runs": 3,
+      "setup_us": 430.4950125515461,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 1536.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 395.4950370825827
+    },
+    "down_tiny_vit_b1": {
+      "amortized_1000_us": 80.53085941355675,
+      "application_max_us": 81.95702685043216,
+      "application_min_us": 79.91603342816234,
+      "application_us": 79.91603342816234,
+      "bind_prepared_us": 37.33299672603607,
+      "cold_once_us": 687.1580262668431,
+      "constant_bytes": 16384.0,
+      "constant_materialize_us": 117.83197987824678,
+      "cpu_fp32": {
+        "max_abs_error": 0.00022268295288085938,
+        "mean_abs_error": 3.28649184666574e-05,
+        "median_ms": 0.13008201494812965,
+        "min_ms": null
+      },
+      "download_bytes": 2048.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.0569829101562502,
+        "command_us": 2.0882916259765625,
+        "download_us": 8.309464111328126,
+        "emit_us": 1.4144781494140626,
+        "guard_us": 22.21014221191406,
+        "output_sync_us": 2.7503570556640624,
+        "pack_clear_us": 0.437532958984375,
+        "pack_fini_us": 1.577879638671875,
+        "pack_layout_us": 9.216570434570313,
+        "pack_prep_us": 1.8404010009765626,
+        "pack_us": 13.372782592773438,
+        "publish_us": 0.163309326171875,
+        "submit_alloc_us": 0.072889404296875,
+        "submit_wait_us": 15.058487548828126,
+        "total_us": 70.59988952636719,
+        "validate_us": 4.477029418945312
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.224984375000002,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.1203692626953123,
+          "min": 2.0066729736328126
+        },
+        "download_us": {
+          "max": 8.644882202148438,
+          "min": 8.257027587890626
+        },
+        "emit_us": {
+          "max": 1.4320526123046875,
+          "min": 1.41160888671875
+        },
+        "guard_us": {
+          "max": 22.942157592773437,
+          "min": 22.154776611328124
+        },
+        "output_sync_us": {
+          "max": 2.8670404052734373,
+          "min": 2.6774603271484376
+        },
+        "pack_clear_us": {
+          "max": 0.460877685546875,
+          "min": 0.4317108154296875
+        },
+        "pack_fini_us": {
+          "max": 1.7062103271484375,
+          "min": 1.5282977294921876
+        },
+        "pack_layout_us": {
+          "max": 9.26906005859375,
+          "min": 9.213546752929688
+        },
+        "pack_prep_us": {
+          "max": 1.98909912109375,
+          "min": 1.7879107666015626
+        },
+        "pack_us": {
+          "max": 13.617708129882812,
+          "min": 13.296959838867188
+        },
+        "publish_us": {
+          "max": 0.180792236328125,
+          "min": 0.142930908203125
+        },
+        "submit_alloc_us": {
+          "max": 0.08751953125,
+          "min": 0.0525384521484375
+        },
+        "submit_wait_us": {
+          "max": 17.849778442382814,
+          "min": 13.145280151367187
+        },
+        "total_us": {
+          "max": 75.17029296875,
+          "min": 68.91987365722656
+        },
+        "validate_us": {
+          "max": 4.50618896484375,
+          "min": 4.474161376953125
+        }
+      },
+      "fresh_output_us": 125.41498290374875,
+      "kind": "gemm",
+      "manifest": "tiny_vit_b1",
+      "plan": "down",
+      "runs": 3,
+      "setup_us": 510.11901814490557,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 4096.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 452.0770162343979
+    },
+    "down_tiny_vit_b8": {
+      "amortized_1000_us": 280.3655990283005,
+      "application_max_us": 280.2885137498379,
+      "application_min_us": 278.8300043903291,
+      "application_us": 279.70498194918036,
+      "bind_prepared_us": 41.41603130847216,
+      "cold_once_us": 940.3220610693097,
+      "constant_bytes": 16384.0,
+      "constant_materialize_us": 125.41498290374875,
+      "cpu_fp32": {
+        "max_abs_error": 0.00024014711380004883,
+        "mean_abs_error": 2.7206620870856568e-05,
+        "median_ms": 0.9645299869589508,
+        "min_ms": null
+      },
+      "download_bytes": 16384.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.0569829101562502,
+        "command_us": 2.015478515625,
+        "download_us": 52.61311157226562,
+        "emit_us": 1.502071533203125,
+        "guard_us": 24.587166748046876,
+        "output_sync_us": 3.37449951171875,
+        "pack_clear_us": 1.3154205322265624,
+        "pack_fini_us": 4.331220092773438,
+        "pack_layout_us": 73.38530883789062,
+        "pack_prep_us": 2.382950439453125,
+        "pack_us": 81.62766967773437,
+        "publish_us": 0.819591064453125,
+        "submit_alloc_us": 0.090430908203125,
+        "submit_wait_us": 42.238607788085936,
+        "total_us": 244.4747686767578,
+        "validate_us": 34.22362915039062
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.224984375000002,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.0853497314453127,
+          "min": 1.9775103759765624
+        },
+        "download_us": {
+          "max": 52.68307922363281,
+          "min": 52.33895202636719
+        },
+        "emit_us": {
+          "max": 1.534237060546875,
+          "min": 1.469959716796875
+        },
+        "guard_us": {
+          "max": 24.651393432617187,
+          "min": 24.575579833984374
+        },
+        "output_sync_us": {
+          "max": 3.4707794189453125,
+          "min": 3.3657513427734376
+        },
+        "pack_clear_us": {
+          "max": 1.3386492919921875,
+          "min": 1.2950494384765625
+        },
+        "pack_fini_us": {
+          "max": 4.427460327148437,
+          "min": 4.150360107421875
+        },
+        "pack_layout_us": {
+          "max": 73.48731689453125,
+          "min": 73.34437866210938
+        },
+        "pack_prep_us": {
+          "max": 2.490841064453125,
+          "min": 2.3392291259765625
+        },
+        "pack_us": {
+          "max": 81.95142822265625,
+          "min": 81.52282104492187
+        },
+        "publish_us": {
+          "max": 0.85166015625,
+          "min": 0.78168212890625
+        },
+        "submit_alloc_us": {
+          "max": 0.110841064453125,
+          "min": 0.0670806884765625
+        },
+        "submit_wait_us": {
+          "max": 46.29857116699219,
+          "min": 34.34037109375
+        },
+        "total_us": {
+          "max": 248.94017395019532,
+          "min": 235.94080993652344
+        },
+        "validate_us": {
+          "max": 34.279158935546874,
+          "min": 34.20340026855469
+        }
+      },
+      "fresh_output_us": 323.1625014450401,
+      "kind": "gemm",
+      "manifest": "tiny_vit_b8",
+      "plan": "down",
+      "runs": 3,
+      "setup_us": 571.95097906515,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 32768.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 493.7860067002475
+    },
+    "gate_up_tiny_vit_b1": {
+      "amortized_1000_us": 131.71458890428767,
+      "application_max_us": 131.24803081154823,
+      "application_min_us": 95.37400910630822,
+      "application_us": 130.9559738729149,
+      "bind_prepared_us": 38.49901258945465,
+      "cold_once_us": 889.5710052456707,
+      "constant_bytes": 32768.0,
+      "constant_materialize_us": 197.16500537469983,
+      "cpu_fp32": {
+        "max_abs_error": 0.00024181604385375977,
+        "mean_abs_error": 2.3113865609047934e-05,
+        "median_ms": 0.24324603145942092,
+        "min_ms": null
+      },
+      "download_bytes": 8192.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.0569829101562502,
+        "command_us": 1.92205810546875,
+        "download_us": 22.24802978515625,
+        "emit_us": 1.4873980712890624,
+        "guard_us": 22.971329345703126,
+        "output_sync_us": 2.872921142578125,
+        "pack_clear_us": 0.2653497314453125,
+        "pack_fini_us": 1.370810546875,
+        "pack_layout_us": 4.733746948242188,
+        "pack_prep_us": 1.8783575439453124,
+        "pack_us": 8.551539306640626,
+        "publish_us": 0.4462774658203125,
+        "submit_alloc_us": 0.0875408935546875,
+        "submit_wait_us": 17.896416625976563,
+        "total_us": 81.96596923828125,
+        "validate_us": 2.365362548828125
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.224984375000002,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.12627685546875,
+          "min": 1.8783001708984375
+        },
+        "download_us": {
+          "max": 22.531038818359374,
+          "min": 22.140135498046874
+        },
+        "emit_us": {
+          "max": 1.49331298828125,
+          "min": 1.4175079345703125
+        },
+        "guard_us": {
+          "max": 23.983375244140625,
+          "min": 22.828460693359375
+        },
+        "output_sync_us": {
+          "max": 3.3570880126953124,
+          "min": 2.80872314453125
+        },
+        "pack_clear_us": {
+          "max": 0.265400390625,
+          "min": 0.25079345703125
+        },
+        "pack_fini_us": {
+          "max": 1.4582623291015624,
+          "min": 1.34162841796875
+        },
+        "pack_layout_us": {
+          "max": 4.754117431640625,
+          "min": 4.722031860351563
+        },
+        "pack_prep_us": {
+          "max": 1.904581298828125,
+          "min": 1.7441302490234376
+        },
+        "pack_us": {
+          "max": 8.618599243164063,
+          "min": 8.321129760742188
+        },
+        "publish_us": {
+          "max": 0.4841497802734375,
+          "min": 0.4434375
+        },
+        "submit_alloc_us": {
+          "max": 0.13126953125,
+          "min": 0.08743896484375
+        },
+        "submit_wait_us": {
+          "max": 17.9051416015625,
+          "min": 17.838040161132813
+        },
+        "total_us": {
+          "max": 83.77147583007813,
+          "min": 81.3098077392578
+        },
+        "validate_us": {
+          "max": 2.3770501708984373,
+          "min": 2.34798095703125
+        }
+      },
+      "fresh_output_us": 139.70700092613697,
+      "kind": "gemm",
+      "manifest": "tiny_vit_b1",
+      "plan": "gate_up",
+      "runs": 3,
+      "setup_us": 557.0760113187134,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 2048.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 508.36900481954217
+    },
+    "gate_up_tiny_vit_b8": {
+      "amortized_1000_us": 410.6504963710904,
+      "application_max_us": 419.7030211798847,
+      "application_min_us": 375.0789910554886,
+      "application_us": 409.7860073670745,
+      "bind_prepared_us": 39.958045817911625,
+      "cold_once_us": 1233.4430939517915,
+      "constant_bytes": 32768.0,
+      "constant_materialize_us": 205.6219964288175,
+      "cpu_fp32": {
+        "max_abs_error": 0.00024068355560302734,
+        "mean_abs_error": 2.255384242744185e-05,
+        "median_ms": 1.8716009799391031,
+        "min_ms": null
+      },
+      "download_bytes": 65536.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.0569829101562502,
+        "command_us": 1.94543212890625,
+        "download_us": 199.33410583496095,
+        "emit_us": 1.60417236328125,
+        "guard_us": 26.634677734375,
+        "output_sync_us": 5.107052001953125,
+        "pack_clear_us": 0.848720703125,
+        "pack_fini_us": 2.607449951171875,
+        "pack_layout_us": 37.431990966796874,
+        "pack_prep_us": 2.1116864013671877,
+        "pack_us": 43.33234985351562,
+        "publish_us": 2.48791748046875,
+        "submit_alloc_us": 0.09041015625,
+        "submit_wait_us": 83.47687194824219,
+        "total_us": 390.25076171875,
+        "validate_us": 17.281028442382812
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.224984375000002,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 1.9540997314453126,
+          "min": 1.901640625
+        },
+        "download_us": {
+          "max": 204.19328063964844,
+          "min": 197.15825317382811
+        },
+        "emit_us": {
+          "max": 1.7032989501953124,
+          "min": 1.5691497802734375
+        },
+        "guard_us": {
+          "max": 27.859571533203123,
+          "min": 26.63171142578125
+        },
+        "output_sync_us": {
+          "max": 5.620350341796875,
+          "min": 4.978720092773438
+        },
+        "pack_clear_us": {
+          "max": 0.851680908203125,
+          "min": 0.831270751953125
+        },
+        "pack_fini_us": {
+          "max": 3.0070086669921876,
+          "min": 2.5958319091796875
+        },
+        "pack_layout_us": {
+          "max": 37.48453063964844,
+          "min": 37.34166137695313
+        },
+        "pack_prep_us": {
+          "max": 2.1758380126953125,
+          "min": 2.094140625
+        },
+        "pack_us": {
+          "max": 43.796065673828124,
+          "min": 43.16325561523438
+        },
+        "publish_us": {
+          "max": 2.54325927734375,
+          "min": 2.412030029296875
+        },
+        "submit_alloc_us": {
+          "max": 0.1137603759765625,
+          "min": 0.0787188720703125
+        },
+        "submit_wait_us": {
+          "max": 93.41095397949219,
+          "min": 81.6044091796875
+        },
+        "total_us": {
+          "max": 393.3366510009766,
+          "min": 378.93139221191404
+        },
+        "validate_us": {
+          "max": 17.353939819335938,
+          "min": 17.23726806640625
+        }
+      },
+      "fresh_output_us": 464.3274878617376,
+      "kind": "gemm",
+      "manifest": "tiny_vit_b8",
+      "plan": "gate_up",
+      "runs": 3,
+      "setup_us": 632.0340326055884,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 16384.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 568.1600305251777
+    },
+    "mlp_mnist_mlp_b1": {
+      "amortized_1000_us": 475.97315424354747,
+      "application_max_us": 471.9110147561878,
+      "application_min_us": 465.2019706554711,
+      "application_us": 468.7019973061979,
+      "bind_prepared_us": 91.28998499363661,
+      "cold_once_us": 7743.359979940578,
+      "constant_bytes": 761376.0,
+      "constant_materialize_us": 1953.5589963197708,
+      "cpu_fp32": null,
+      "download_bytes": 768.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 2.9947849121093713,
+        "command_us": 27.50086181640625,
+        "download_us": 2.51412841796875,
+        "emit_us": 14.635767211914063,
+        "guard_us": 176.88184997558594,
+        "output_sync_us": 25.06261962890625,
+        "pack_clear_us": 2.082584228515625,
+        "pack_fini_us": 6.28822021484375,
+        "pack_layout_us": 4.7278515625,
+        "pack_prep_us": 5.99662109375,
+        "pack_us": 20.086837768554688,
+        "publish_us": 0.04958984375,
+        "submit_alloc_us": 0.7058953857421875,
+        "submit_wait_us": 176.3945684814453,
+        "total_us": 450.50846130371093,
+        "validate_us": 2.4352960205078125
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 3.4707890624999944,
+          "min": 2.9749294433593723
+        },
+        "command_us": {
+          "max": 27.61191345214844,
+          "min": 27.471463012695313
+        },
+        "download_us": {
+          "max": 2.51418212890625,
+          "min": 2.5082916259765624
+        },
+        "emit_us": {
+          "max": 14.65309326171875,
+          "min": 14.469607543945312
+        },
+        "guard_us": {
+          "max": 177.3048193359375,
+          "min": 176.80027038574218
+        },
+        "output_sync_us": {
+          "max": 25.514781494140625,
+          "min": 24.832314453125
+        },
+        "pack_clear_us": {
+          "max": 2.0969403076171873,
+          "min": 2.0475201416015625
+        },
+        "pack_fini_us": {
+          "max": 6.320238647460937,
+          "min": 6.2562188720703125
+        },
+        "pack_layout_us": {
+          "max": 4.739425048828125,
+          "min": 4.698822021484375
+        },
+        "pack_prep_us": {
+          "max": 6.089861450195312,
+          "min": 5.678577270507812
+        },
+        "pack_us": {
+          "max": 20.133499145507812,
+          "min": 19.71346923828125
+        },
+        "publish_us": {
+          "max": 0.0641607666015625,
+          "min": 0.0437506103515625
+        },
+        "submit_alloc_us": {
+          "max": 0.8049700927734375,
+          "min": 0.6620367431640625
+        },
+        "submit_wait_us": {
+          "max": 453.0166729736328,
+          "min": 176.3743798828125
+        },
+        "total_us": {
+          "max": 728.0169104003907,
+          "min": 449.91051025390624
+        },
+        "validate_us": {
+          "max": 2.4353607177734373,
+          "min": 2.4179296875
+        }
+      },
+      "fresh_output_us": 511.57650887034833,
+      "kind": "mlp",
+      "manifest": "mnist_mlp_b1",
+      "plan": "mlp",
+      "runs": 3,
+      "setup_us": 5401.888978667557,
+      "submit_count": 8.0,
+      "task_count": 11.0,
+      "upload_bytes": 24576.0,
+      "upload_calls": 4.0,
+      "workspace_setup_us": 5226.599983870983
+    },
+    "mlp_mnist_mlp_b32": {
+      "amortized_1000_us": 707.6433866168372,
+      "application_max_us": 710.7830024324358,
+      "application_min_us": 699.1159752942622,
+      "application_us": 700.2829806879163,
+      "bind_prepared_us": 51.915994845330715,
+      "cold_once_us": 8188.7279520742595,
+      "constant_bytes": 809984.0,
+      "constant_materialize_us": 1914.7669663652778,
+      "cpu_fp32": null,
+      "download_bytes": 2048.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 2.9947849121093713,
+        "command_us": 27.646834716796874,
+        "download_us": 6.661649169921875,
+        "emit_us": 15.119823608398438,
+        "guard_us": 179.7431494140625,
+        "output_sync_us": 28.932921752929687,
+        "pack_clear_us": 3.5903900146484373,
+        "pack_fini_us": 9.890149536132812,
+        "pack_layout_us": 145.67107971191408,
+        "pack_prep_us": 6.8657568359375,
+        "pack_us": 166.91873657226563,
+        "publish_us": 0.1633233642578125,
+        "submit_alloc_us": 0.69706298828125,
+        "submit_wait_us": 187.70266235351562,
+        "total_us": 696.2110412597656,
+        "validate_us": 68.25208068847657
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 3.4707890624999944,
+          "min": 2.9749294433593723
+        },
+        "command_us": {
+          "max": 27.7721240234375,
+          "min": 27.57377197265625
+        },
+        "download_us": {
+          "max": 6.728641357421875,
+          "min": 6.609081420898438
+        },
+        "emit_us": {
+          "max": 15.210134887695313,
+          "min": 15.0351513671875
+        },
+        "guard_us": {
+          "max": 189.172548828125,
+          "min": 179.65271118164063
+        },
+        "output_sync_us": {
+          "max": 29.11391357421875,
+          "min": 28.68205810546875
+        },
+        "pack_clear_us": {
+          "max": 4.083269653320312,
+          "min": 3.52614013671875
+        },
+        "pack_fini_us": {
+          "max": 9.8961083984375,
+          "min": 9.782412109375
+        },
+        "pack_layout_us": {
+          "max": 145.93062744140624,
+          "min": 145.39390991210936
+        },
+        "pack_prep_us": {
+          "max": 6.947481079101562,
+          "min": 6.851137084960937
+        },
+        "pack_us": {
+          "max": 167.79951965332032,
+          "min": 166.70868103027342
+        },
+        "publish_us": {
+          "max": 0.163341064453125,
+          "min": 0.142939453125
+        },
+        "submit_alloc_us": {
+          "max": 0.714644775390625,
+          "min": 0.682481689453125
+        },
+        "submit_wait_us": {
+          "max": 351.70165771484375,
+          "min": 186.62353942871093
+        },
+        "total_us": {
+          "max": 850.4395397949219,
+          "min": 685.037451171875
+        },
+        "validate_us": {
+          "max": 68.28703552246094,
+          "min": 68.21412048339843
+        }
+      },
+      "fresh_output_us": 807.9059771262109,
+      "kind": "mlp",
+      "manifest": "mnist_mlp_b32",
+      "plan": "mlp",
+      "runs": 3,
+      "setup_us": 5818.383011501282,
+      "submit_count": 8.0,
+      "task_count": 11.0,
+      "upload_bytes": 65536.0,
+      "upload_calls": 4.0,
+      "workspace_setup_us": 5539.553996641189
+    },
+    "mlp_mnist_mlp_b8": {
+      "amortized_1000_us": 524.4373048190027,
+      "application_max_us": 816.364015918225,
+      "application_min_us": 513.3269587531686,
+      "application_us": 517.1180237084627,
+      "bind_prepared_us": 48.41602640226483,
+      "cold_once_us": 7836.399134248495,
+      "constant_bytes": 772352.0,
+      "constant_materialize_us": 1907.1839633397758,
+      "cpu_fp32": null,
+      "download_bytes": 768.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 2.9947849121093713,
+        "command_us": 27.652337646484376,
+        "download_us": 3.421201171875,
+        "emit_us": 14.778585815429688,
+        "guard_us": 176.44730651855468,
+        "output_sync_us": 25.115044555664063,
+        "pack_clear_us": 2.0825775146484373,
+        "pack_fini_us": 6.29410888671875,
+        "pack_layout_us": 36.577462158203126,
+        "pack_prep_us": 5.976199951171875,
+        "pack_us": 51.88682189941406,
+        "publish_us": 0.0787493896484375,
+        "submit_alloc_us": 0.67660888671875,
+        "submit_wait_us": 176.67506652832031,
+        "total_us": 498.43150634765624,
+        "validate_us": 17.33645263671875
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 3.4707890624999944,
+          "min": 2.9749294433593723
+        },
+        "command_us": {
+          "max": 27.667108154296876,
+          "min": 27.603068237304687
+        },
+        "download_us": {
+          "max": 3.4357318115234374,
+          "min": 3.368720703125
+        },
+        "emit_us": {
+          "max": 14.842919311523438,
+          "min": 14.171848754882813
+        },
+        "guard_us": {
+          "max": 176.48816833496093,
+          "min": 176.35698181152344
+        },
+        "output_sync_us": {
+          "max": 25.3046875,
+          "min": 25.05965576171875
+        },
+        "pack_clear_us": {
+          "max": 2.12040771484375,
+          "min": 2.06775634765625
+        },
+        "pack_fini_us": {
+          "max": 6.3816357421875,
+          "min": 6.2852105712890625
+        },
+        "pack_layout_us": {
+          "max": 36.667958374023435,
+          "min": 36.51606140136719
+        },
+        "pack_prep_us": {
+          "max": 5.999561767578125,
+          "min": 5.96745361328125
+        },
+        "pack_us": {
+          "max": 52.15225158691406,
+          "min": 51.8751611328125
+        },
+        "publish_us": {
+          "max": 0.08459228515625,
+          "min": 0.0699786376953125
+        },
+        "submit_alloc_us": {
+          "max": 0.6883697509765625,
+          "min": 0.6125128173828125
+        },
+        "submit_wait_us": {
+          "max": 248.9313995361328,
+          "min": 176.43558654785156
+        },
+        "total_us": {
+          "max": 570.2010198974609,
+          "min": 498.0290478515625
+        },
+        "validate_us": {
+          "max": 17.371397705078124,
+          "min": 17.316071166992188
+        }
+      },
+      "fresh_output_us": 573.2635327149183,
+      "kind": "mlp",
+      "manifest": "mnist_mlp_b8",
+      "plan": "mlp",
+      "runs": 3,
+      "setup_us": 5528.762994799763,
+      "submit_count": 8.0,
+      "task_count": 11.0,
+      "upload_bytes": 24576.0,
+      "upload_calls": 4.0,
+      "workspace_setup_us": 5342.972988728434
+    },
+    "qkv_tiny_vit_b1": {
+      "amortized_1000_us": 87.26653369376436,
+      "application_max_us": 86.62400068715215,
+      "application_min_us": 85.45699529349804,
+      "application_us": 86.62301115691662,
+      "bind_prepared_us": 37.91600465774536,
+      "cold_once_us": 729.1570072993636,
+      "constant_bytes": 24576.0,
+      "constant_materialize_us": 138.83202336728573,
+      "cpu_fp32": {
+        "max_abs_error": 0.00012037158012390137,
+        "mean_abs_error": 1.677935324551072e-05,
+        "median_ms": 0.1942469971254468,
+        "min_ms": null
+      },
+      "download_bytes": 6144.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.0569829101562502,
+        "command_us": 1.9511993408203125,
+        "download_us": 18.132596435546876,
+        "emit_us": 1.3795477294921874,
+        "guard_us": 22.46675964355469,
+        "output_sync_us": 2.8291485595703123,
+        "pack_clear_us": 0.2916900634765625,
+        "pack_fini_us": 1.2599627685546875,
+        "pack_layout_us": 4.739610595703125,
+        "pack_prep_us": 1.6800006103515626,
+        "pack_us": 8.2744921875,
+        "publish_us": 0.3500396728515625,
+        "submit_alloc_us": 0.09916748046875,
+        "submit_wait_us": 17.67182312011719,
+        "total_us": 76.54693298339843,
+        "validate_us": 2.3478997802734374
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.224984375000002,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 1.962918701171875,
+          "min": 1.9483807373046875
+        },
+        "download_us": {
+          "max": 18.164772338867188,
+          "min": 18.086038208007814
+        },
+        "emit_us": {
+          "max": 1.4700299072265626,
+          "min": 1.3562506103515626
+        },
+        "guard_us": {
+          "max": 22.54550048828125,
+          "min": 21.982711791992188
+        },
+        "output_sync_us": {
+          "max": 2.88455078125,
+          "min": 2.6949896240234374
+        },
+        "pack_clear_us": {
+          "max": 0.29458251953125,
+          "min": 0.291629638671875
+        },
+        "pack_fini_us": {
+          "max": 1.3095196533203124,
+          "min": 1.245440673828125
+        },
+        "pack_layout_us": {
+          "max": 4.751195678710937,
+          "min": 4.716229858398438
+        },
+        "pack_prep_us": {
+          "max": 1.6887603759765626,
+          "min": 1.6624609375
+        },
+        "pack_us": {
+          "max": 8.2802490234375,
+          "min": 8.22494873046875
+        },
+        "publish_us": {
+          "max": 0.355880126953125,
+          "min": 0.3470111083984375
+        },
+        "submit_alloc_us": {
+          "max": 0.1108221435546875,
+          "min": 0.07878173828125
+        },
+        "submit_wait_us": {
+          "max": 18.654701538085938,
+          "min": 15.921847534179687
+        },
+        "total_us": {
+          "max": 77.78064086914063,
+          "min": 74.03285034179687
+        },
+        "validate_us": {
+          "max": 2.4062109375,
+          "min": 2.3450006103515624
+        }
+      },
+      "fresh_output_us": 130.66502287983894,
+      "kind": "gemm",
+      "manifest": "tiny_vit_b1",
+      "plan": "qkv",
+      "runs": 3,
+      "setup_us": 515.6600382179022,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 2048.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 465.202028863132
+    },
+    "qkv_tiny_vit_b8": {
+      "amortized_1000_us": 366.4550076937303,
+      "application_max_us": 371.5790226124227,
+      "application_min_us": 361.36998096480966,
+      "application_us": 365.7459747046232,
+      "bind_prepared_us": 40.249957237392664,
+      "cold_once_us": 1091.40295535326,
+      "constant_bytes": 24576.0,
+      "constant_materialize_us": 144.37397476285696,
+      "cpu_fp32": {
+        "max_abs_error": 0.0001602768898010254,
+        "mean_abs_error": 1.64400007633958e-05,
+        "median_ms": 1.4355650055222213,
+        "min_ms": null
+      },
+      "download_bytes": 49152.0,
+      "download_calls": 1.0,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.0569829101562502,
+        "command_us": 2.00087158203125,
+        "download_us": 170.18243835449218,
+        "emit_us": 1.627520751953125,
+        "guard_us": 24.70380126953125,
+        "output_sync_us": 4.071598510742188,
+        "pack_clear_us": 0.8604217529296875,
+        "pack_fini_us": 2.4091632080078127,
+        "pack_layout_us": 37.39119445800781,
+        "pack_prep_us": 1.9511541748046874,
+        "pack_us": 42.900652465820315,
+        "publish_us": 1.948319091796875,
+        "submit_alloc_us": 0.078740234375,
+        "submit_wait_us": 64.38752014160156,
+        "total_us": 326.70328918457034,
+        "validate_us": 17.292709350585938
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.224984375000002,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.1088043212890626,
+          "min": 1.968804931640625
+        },
+        "download_us": {
+          "max": 171.05154113769532,
+          "min": 166.03494079589845
+        },
+        "emit_us": {
+          "max": 1.7121087646484374,
+          "min": 1.5400396728515624
+        },
+        "guard_us": {
+          "max": 26.8242529296875,
+          "min": 24.692153930664062
+        },
+        "output_sync_us": {
+          "max": 5.089511108398438,
+          "min": 4.0132904052734375
+        },
+        "pack_clear_us": {
+          "max": 0.8662603759765625,
+          "min": 0.82833984375
+        },
+        "pack_fini_us": {
+          "max": 3.0245745849609373,
+          "min": 2.38589111328125
+        },
+        "pack_layout_us": {
+          "max": 37.44074462890625,
+          "min": 37.32404541015625
+        },
+        "pack_prep_us": {
+          "max": 2.315902099609375,
+          "min": 1.9220611572265625
+        },
+        "pack_us": {
+          "max": 43.956619873046876,
+          "min": 42.81315856933594
+        },
+        "publish_us": {
+          "max": 2.062119140625,
+          "min": 1.9366455078125
+        },
+        "submit_alloc_us": {
+          "max": 0.087408447265625,
+          "min": 0.0787115478515625
+        },
+        "submit_wait_us": {
+          "max": 64.39040893554687,
+          "min": 55.04556396484375
+        },
+        "total_us": {
+          "max": 336.29905029296873,
+          "min": 321.4883685302734
+        },
+        "validate_us": {
+          "max": 17.313162841796874,
+          "min": 17.225580444335936
+        }
+      },
+      "fresh_output_us": 380.91198075562716,
+      "kind": "gemm",
+      "manifest": "tiny_vit_b8",
+      "plan": "qkv",
+      "runs": 3,
+      "setup_us": 618.6169921420515,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 16384.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 545.7010120153427
+    }
+  },
+  "cases": {
+    "attn_pv_qkv_group_tiny_vit_b1": {
+      "amortized_1000_us": 158.39713570312597,
+      "application_max_us": 161.2899941392243,
+      "application_min_us": 121.33200652897358,
+      "application_us": 157.4982306919992,
+      "bind_prepared_us": 194.39353491179645,
+      "binding_delta_share": 0.06484373890524761,
+      "binding_delta_us": 10.212774149030452,
+      "cold_once_us": 1054.9440048635006,
+      "constant_bytes": 0.0,
+      "constant_materialize_us": 2.0414881873875856,
+      "cpu_fp32": null,
+      "device_submit_share": 0.34317557899737566,
+      "device_submit_us": 54.049546508789064,
+      "download_bytes": 4096.0,
+      "download_calls": 4.0,
+      "download_share": 0.07536090750084541,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 2.9749999999999996,
+        "command_us": 4.4843136596679685,
+        "download_us": 11.869209594726563,
+        "emit_us": 5.124495544433594,
+        "guard_us": 21.149979553222657,
+        "output_sync_us": 9.551960144042969,
+        "pack_clear_us": 0.0,
+        "pack_fini_us": 0.0,
+        "pack_layout_us": 0.0,
+        "pack_prep_us": 0.0,
+        "pack_us": 10.845510864257811,
+        "publish_us": 0.18667327880859375,
+        "submit_alloc_us": 0.08753082275390625,
+        "submit_wait_us": 54.049546508789064,
+        "total_us": 147.28545654296875,
+        "validate_us": 28.308785400390626
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 2.9947890624999953,
+          "min": 2.9749294433593723
+        },
+        "command_us": {
+          "max": 4.943660888671875,
+          "min": 4.299050903320312
+        },
+        "download_us": {
+          "max": 12.258519287109374,
+          "min": 11.6489599609375
+        },
+        "emit_us": {
+          "max": 5.360783081054688,
+          "min": 4.952469482421875
+        },
+        "guard_us": {
+          "max": 22.017650146484375,
+          "min": 20.9443115234375
+        },
+        "output_sync_us": {
+          "max": 10.062359008789063,
+          "min": 9.3711474609375
+        },
+        "pack_clear_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_fini_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_layout_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_prep_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_us": {
+          "max": 11.488607177734375,
+          "min": 10.62822998046875
+        },
+        "publish_us": {
+          "max": 0.2129522705078125,
+          "min": 0.1662786865234375
+        },
+        "submit_alloc_us": {
+          "max": 0.1108282470703125,
+          "min": 0.0583404541015625
+        },
+        "submit_wait_us": {
+          "max": 54.31059448242188,
+          "min": 41.325740356445316
+        },
+        "total_us": {
+          "max": 148.9143829345703,
+          "min": 133.38040100097658
+        },
+        "validate_us": {
+          "max": 28.41085693359375,
+          "min": 28.157111206054687
+        }
+      },
+      "fresh_output_us": 336.8709876667708,
+      "guard_share": 0.1342870930060363,
+      "kind": "group",
+      "logical_macs": 16384,
+      "manifest": "tiny_vit_b1",
+      "non_submit_c_share": 0.5919806820973768,
+      "non_submit_c_us": 93.23591003417968,
+      "pack_share": 0.06886116000545495,
+      "padding_ratio": 4.0,
+      "physical_gmac_s": 1.2125171113016298,
+      "physical_macs": 65536,
+      "plan": "attn_pv_qkv_group",
+      "runs": 6,
+      "setup_us": 767.6570094190538,
+      "submit_count": 1.0,
+      "task_count": 4.0,
+      "upload_bytes": 12288.0,
+      "upload_calls": 8.0,
+      "workspace_setup_us": 698.6779917497188
+    },
+    "attn_pv_qkv_group_tiny_vit_b8": {
+      "amortized_1000_us": 728.9866551582236,
+      "application_max_us": 784.2810009606183,
+      "application_min_us": 721.1364863906056,
+      "application_us": 723.9080005092546,
+      "bind_prepared_us": 968.6125267762691,
+      "binding_delta_share": 0.004781232986879422,
+      "binding_delta_us": 3.4611728115007736,
+      "cold_once_us": 5810.363523778506,
+      "constant_bytes": 0.0,
+      "constant_materialize_us": 2.333021257072687,
+      "cpu_fp32": null,
+      "device_submit_share": 0.13350312011694634,
+      "device_submit_us": 96.64397674560547,
+      "download_bytes": 32768.0,
+      "download_calls": 32.0,
+      "download_share": 0.1694195522431659,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 17.67499999999997,
+        "command_us": 26.544195556640624,
+        "download_us": 122.64416931152344,
+        "emit_us": 47.07444793701171,
+        "guard_us": 25.92004425048828,
+        "output_sync_us": 103.95595825195312,
+        "pack_clear_us": 0.0,
+        "pack_fini_us": 0.0,
+        "pack_layout_us": 0.0,
+        "pack_prep_us": 0.0,
+        "pack_us": 46.79438201904297,
+        "publish_us": 1.300838623046875,
+        "submit_alloc_us": 0.08167480468749999,
+        "submit_wait_us": 96.64397674560547,
+        "total_us": 720.4468276977539,
+        "validate_us": 237.79281127929687
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 17.79257031249996,
+          "min": 17.674580810546846
+        },
+        "command_us": {
+          "max": 32.13542907714844,
+          "min": 25.584730834960936
+        },
+        "download_us": {
+          "max": 142.392587890625,
+          "min": 117.39137329101563
+        },
+        "emit_us": {
+          "max": 47.22014038085938,
+          "min": 46.969376220703126
+        },
+        "guard_us": {
+          "max": 27.917967529296874,
+          "min": 25.406739501953126
+        },
+        "output_sync_us": {
+          "max": 123.52213195800782,
+          "min": 98.66667114257812
+        },
+        "pack_clear_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_fini_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_layout_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_prep_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_us": {
+          "max": 48.996427612304686,
+          "min": 45.998238525390626
+        },
+        "publish_us": {
+          "max": 1.5662408447265626,
+          "min": 1.2104498291015624
+        },
+        "submit_alloc_us": {
+          "max": 0.1049810791015625,
+          "min": 0.0670697021484375
+        },
+        "submit_wait_us": {
+          "max": 98.10961853027344,
+          "min": 88.5693505859375
+        },
+        "total_us": {
+          "max": 769.1559399414062,
+          "min": 698.7748699951172
+        },
+        "validate_us": {
+          "max": 238.3090576171875,
+          "min": 237.23568786621092
+        }
+      },
+      "fresh_output_us": 1917.9752562195063,
+      "guard_share": 0.03580571596425797,
+      "kind": "group",
+      "logical_macs": 131072,
+      "manifest": "tiny_vit_b8",
+      "non_submit_c_share": 0.8617156468961743,
+      "non_submit_c_us": 623.8028509521484,
+      "pack_share": 0.0646413383829493,
+      "padding_ratio": 4.0,
+      "physical_gmac_s": 5.424942325997984,
+      "physical_macs": 524288,
+      "plan": "attn_pv_qkv_group",
+      "runs": 6,
+      "setup_us": 4267.7579913288355,
+      "submit_count": 1.0,
+      "task_count": 32.0,
+      "upload_bytes": 98304.0,
+      "upload_calls": 64.0,
+      "workspace_setup_us": 4094.801493920386
+    },
+    "attn_qk_qkv_group_tiny_vit_b1": {
+      "amortized_1000_us": 165.4960872256197,
+      "application_max_us": 181.7059819586575,
+      "application_min_us": 143.78997730091214,
+      "application_us": 164.643264724873,
+      "bind_prepared_us": 187.97698430716991,
+      "binding_delta_share": -0.026318301914088668,
+      "binding_delta_us": -4.333131149150432,
+      "cold_once_us": 1031.0284851584584,
+      "constant_bytes": 0.0,
+      "constant_materialize_us": 2.04198295250535,
+      "cpu_fp32": null,
+      "device_submit_share": 0.3226405375247581,
+      "device_submit_us": 53.120591430664064,
+      "download_bytes": 4096.0,
+      "download_calls": 4.0,
+      "download_share": 0.07099221961880642,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 2.9749999999999996,
+        "command_us": 4.507638549804687,
+        "download_us": 11.688390808105469,
+        "emit_us": 5.292288208007813,
+        "guard_us": 21.251976013183594,
+        "output_sync_us": 9.388628845214843,
+        "pack_clear_us": 0.0,
+        "pack_fini_us": 0.0,
+        "pack_layout_us": 0.0,
+        "pack_prep_us": 0.0,
+        "pack_us": 10.014215698242186,
+        "publish_us": 0.2144073486328125,
+        "submit_alloc_us": 0.08310150146484374,
+        "submit_wait_us": 53.120591430664064,
+        "total_us": 168.97639587402344,
+        "validate_us": 51.69289001464844
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 2.9947890624999953,
+          "min": 2.9749294433593723
+        },
+        "command_us": {
+          "max": 5.0544891357421875,
+          "min": 4.3428802490234375
+        },
+        "download_us": {
+          "max": 12.26145263671875,
+          "min": 11.147310180664062
+        },
+        "emit_us": {
+          "max": 5.509401245117187,
+          "min": 4.981683349609375
+        },
+        "guard_us": {
+          "max": 21.819341430664064,
+          "min": 20.8743603515625
+        },
+        "output_sync_us": {
+          "max": 9.939872436523437,
+          "min": 9.00947021484375
+        },
+        "pack_clear_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_fini_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_layout_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_prep_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_us": {
+          "max": 10.383182373046875,
+          "min": 9.729929809570313
+        },
+        "publish_us": {
+          "max": 0.23339111328125,
+          "min": 0.192548828125
+        },
+        "submit_alloc_us": {
+          "max": 0.093310546875,
+          "min": 0.075791015625
+        },
+        "submit_wait_us": {
+          "max": 54.447708740234376,
+          "min": 16.02102294921875
+        },
+        "total_us": {
+          "max": 170.61407897949218,
+          "min": 132.26913513183592
+        },
+        "validate_us": {
+          "max": 51.758479614257816,
+          "min": 51.64761047363281
+        }
+      },
+      "fresh_output_us": 381.2034847214818,
+      "guard_share": 0.1290789273930925,
+      "kind": "group",
+      "logical_macs": 16384,
+      "manifest": "tiny_vit_b1",
+      "non_submit_c_share": 0.7036777643893306,
+      "non_submit_c_us": 115.85580444335938,
+      "pack_share": 0.06082371917840935,
+      "padding_ratio": 4.0,
+      "physical_gmac_s": 1.2337212036793908,
+      "physical_macs": 65536,
+      "plan": "attn_qk_qkv_group",
+      "runs": 6,
+      "setup_us": 730.7615305762738,
+      "submit_count": 1.0,
+      "task_count": 4.0,
+      "upload_bytes": 12288.0,
+      "upload_calls": 8.0,
+      "workspace_setup_us": 672.2830003127456
+    },
+    "attn_qk_qkv_group_tiny_vit_b8": {
+      "amortized_1000_us": 925.5708148702979,
+      "application_max_us": 929.8209915868938,
+      "application_min_us": 913.1970000453293,
+      "application_us": 920.4880043398589,
+      "bind_prepared_us": 975.1754987519234,
+      "binding_delta_share": 0.019857153914925412,
+      "binding_delta_us": 18.27827197901911,
+      "cold_once_us": 6003.298534778878,
+      "constant_bytes": 0.0,
+      "constant_materialize_us": 2.333021257072687,
+      "cpu_fp32": null,
+      "device_submit_share": 0.10651931190635103,
+      "device_submit_us": 98.04974884033203,
+      "download_bytes": 32768.0,
+      "download_calls": 32.0,
+      "download_share": 0.13351236139980593,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 17.67499999999997,
+        "command_us": 27.32157470703125,
+        "download_us": 122.89652709960937,
+        "emit_us": 47.18078460693359,
+        "guard_us": 26.254024658203125,
+        "output_sync_us": 104.14262542724609,
+        "pack_clear_us": 0.0,
+        "pack_fini_us": 0.0,
+        "pack_layout_us": 0.0,
+        "pack_prep_us": 0.0,
+        "pack_us": 42.140945739746094,
+        "publish_us": 1.421815185546875,
+        "submit_alloc_us": 0.08457489013671876,
+        "submit_wait_us": 98.04974884033203,
+        "total_us": 902.2097323608398,
+        "validate_us": 424.1347439575195
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 17.79257031249996,
+          "min": 17.674580810546846
+        },
+        "command_us": {
+          "max": 31.951729736328126,
+          "min": 26.220511474609374
+        },
+        "download_us": {
+          "max": 129.08721740722658,
+          "min": 120.25842102050781
+        },
+        "emit_us": {
+          "max": 47.6053271484375,
+          "min": 47.071624755859375
+        },
+        "guard_us": {
+          "max": 26.978831787109375,
+          "min": 25.55260009765625
+        },
+        "output_sync_us": {
+          "max": 110.38269287109375,
+          "min": 100.89794189453124
+        },
+        "pack_clear_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_fini_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_layout_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_prep_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "pack_us": {
+          "max": 43.78149780273438,
+          "min": 40.96411315917969
+        },
+        "publish_us": {
+          "max": 1.537091064453125,
+          "min": 1.3767425537109375
+        },
+        "submit_alloc_us": {
+          "max": 0.119569091796875,
+          "min": 0.0641607666015625
+        },
+        "submit_wait_us": {
+          "max": 99.05155090332032,
+          "min": 77.78362365722656
+        },
+        "total_us": {
+          "max": 911.8811285400391,
+          "min": 895.5072924804688
+        },
+        "validate_us": {
+          "max": 424.4307873535156,
+          "min": 423.5441748046875
+        }
+      },
+      "fresh_output_us": 2287.7312294440344,
+      "guard_share": 0.028521854206054076,
+      "kind": "group",
+      "logical_macs": 131072,
+      "manifest": "tiny_vit_b8",
+      "non_submit_c_share": 0.8736235341787235,
+      "non_submit_c_us": 804.1599835205077,
+      "pack_share": 0.04578109170468558,
+      "padding_ratio": 4.0,
+      "physical_gmac_s": 5.347163110573294,
+      "physical_macs": 524288,
+      "plan": "attn_qk_qkv_group",
+      "runs": 6,
+      "setup_us": 4226.924997055903,
+      "submit_count": 1.0,
+      "task_count": 32.0,
+      "upload_bytes": 98304.0,
+      "upload_calls": 64.0,
+      "workspace_setup_us": 4099.760000826791
+    },
+    "classifier_tiny_vit_b1": {
+      "amortized_1000_us": 58.902644173940644,
+      "application_max_us": 96.54101449996233,
+      "application_min_us": 57.45800444856286,
+      "application_us": 58.33302566315979,
+      "bind_prepared_us": 37.47898153960705,
+      "binding_delta_share": -0.13344079958732874,
+      "binding_delta_us": -7.784005586840209,
+      "cold_once_us": 634.9510513246059,
+      "constant_bytes": 2048.0,
+      "constant_materialize_us": 144.81096877716482,
+      "cpu_fp32": {
+        "max_abs_error": 6.028264760971069e-05,
+        "mean_abs_error": 1.0173185728490353e-05,
+        "median_ms": 0.0029160291887819767,
+        "min_ms": 0.0026249908842146397
+      },
+      "device_submit_share": 0.5388957761954589,
+      "device_submit_us": 31.43542114257812,
+      "download_bytes": 768.0,
+      "download_calls": 1.0,
+      "download_share": 0.042074107585827025,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.049999999999998,
+        "command_us": 1.9249581909179687,
+        "download_us": 2.454309997558594,
+        "emit_us": 1.3225970458984375,
+        "guard_us": 21.61076599121094,
+        "output_sync_us": 2.7386953735351565,
+        "pack_clear_us": 0.2348162841796875,
+        "pack_fini_us": 1.3095651245117188,
+        "pack_layout_us": 0.33680908203125004,
+        "pack_prep_us": 1.8039398193359375,
+        "pack_us": 3.9491827392578127,
+        "publish_us": 0.043740234375000006,
+        "submit_alloc_us": 0.078740234375,
+        "submit_wait_us": 31.43542114257812,
+        "total_us": 66.11703125,
+        "validate_us": 0.3280889892578125
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.0569843749999992,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 1.9366912841796875,
+          "min": 1.9075408935546876
+        },
+        "download_us": {
+          "max": 2.6278997802734376,
+          "min": 2.33615966796875
+        },
+        "emit_us": {
+          "max": 1.43785888671875,
+          "min": 1.26871826171875
+        },
+        "guard_us": {
+          "max": 21.883430786132813,
+          "min": 20.9647900390625
+        },
+        "output_sync_us": {
+          "max": 2.9078033447265623,
+          "min": 2.595802001953125
+        },
+        "pack_clear_us": {
+          "max": 0.245015869140625,
+          "min": 0.21867431640625
+        },
+        "pack_fini_us": {
+          "max": 1.39412841796875,
+          "min": 1.2162213134765625
+        },
+        "pack_layout_us": {
+          "max": 0.352908935546875,
+          "min": 0.3237286376953125
+        },
+        "pack_prep_us": {
+          "max": 1.8316290283203125,
+          "min": 1.6712176513671875
+        },
+        "pack_us": {
+          "max": 4.068668823242188,
+          "min": 3.771243896484375
+        },
+        "publish_us": {
+          "max": 0.0641888427734375,
+          "min": 0.032119140625
+        },
+        "submit_alloc_us": {
+          "max": 0.1020989990234375,
+          "min": 0.052469482421875
+        },
+        "submit_wait_us": {
+          "max": 49.387333984375,
+          "min": 11.141477661132813
+        },
+        "total_us": {
+          "max": 85.31711975097656,
+          "min": 46.24026062011719
+        },
+        "validate_us": {
+          "max": 0.3587188720703125,
+          "min": 0.3208538818359375
+        }
+      },
+      "fresh_output_us": 137.15449313167483,
+      "guard_share": 0.37047222813369707,
+      "kind": "gemm",
+      "logical_macs": 1024,
+      "manifest": "tiny_vit_b1",
+      "non_submit_c_share": 0.5945450233918698,
+      "non_submit_c_us": 34.681610107421875,
+      "pack_share": 0.06770063260668335,
+      "padding_ratio": 24.0,
+      "physical_gmac_s": 0.7817932480857624,
+      "physical_macs": 24576,
+      "plan": "classifier",
+      "runs": 6,
+      "setup_us": 429.0364740882069,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 1536.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 379.74497536197305
+    },
+    "classifier_tiny_vit_b8": {
+      "amortized_1000_us": 100.35497430362739,
+      "application_max_us": 100.03999341279268,
+      "application_min_us": 60.66600326448679,
+      "application_us": 99.74802378565073,
+      "bind_prepared_us": 40.6875042244792,
+      "binding_delta_share": 0.1254320114121254,
+      "binding_delta_us": 12.511595257818698,
+      "cold_once_us": 706.5540412440896,
+      "constant_bytes": 2048.0,
+      "constant_materialize_us": 162.4559808988124,
+      "cpu_fp32": {
+        "max_abs_error": 0.00011613965034484863,
+        "mean_abs_error": 1.168896778835915e-05,
+        "median_ms": 0.010207993909716606,
+        "min_ms": 0.009915995178744197
+      },
+      "device_submit_share": 0.49307347646393856,
+      "device_submit_us": 49.18310485839844,
+      "download_bytes": 768.0,
+      "download_calls": 1.0,
+      "download_share": 0.027309765651722804,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.049999999999998,
+        "command_us": 1.9629553222656249,
+        "download_us": 2.7240951538085936,
+        "emit_us": 1.3401937866210938,
+        "guard_us": 21.62095153808594,
+        "output_sync_us": 2.7679046630859374,
+        "pack_clear_us": 0.23772827148437498,
+        "pack_fini_us": 1.3212362670898439,
+        "pack_layout_us": 2.4004293823242184,
+        "pack_prep_us": 1.7908151245117188,
+        "pack_us": 6.057875061035157,
+        "publish_us": 0.07145355224609375,
+        "submit_alloc_us": 0.06998016357421874,
+        "submit_wait_us": 49.18310485839844,
+        "total_us": 87.23642852783203,
+        "validate_us": 1.2716244506835936
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.0569843749999992,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.13790771484375,
+          "min": 1.927847900390625
+        },
+        "download_us": {
+          "max": 2.8816094970703126,
+          "min": 2.540389404296875
+        },
+        "emit_us": {
+          "max": 1.432113037109375,
+          "min": 1.292088623046875
+        },
+        "guard_us": {
+          "max": 21.918511352539063,
+          "min": 20.996771240234374
+        },
+        "output_sync_us": {
+          "max": 2.96324951171875,
+          "min": 2.6045294189453125
+        },
+        "pack_clear_us": {
+          "max": 0.2420635986328125,
+          "min": 0.233289794921875
+        },
+        "pack_fini_us": {
+          "max": 1.3912335205078126,
+          "min": 1.21625
+        },
+        "pack_layout_us": {
+          "max": 2.447060546875,
+          "min": 2.368306884765625
+        },
+        "pack_prep_us": {
+          "max": 1.8724615478515625,
+          "min": 1.69743896484375
+        },
+        "pack_us": {
+          "max": 6.162800903320313,
+          "min": 5.798269653320313
+        },
+        "publish_us": {
+          "max": 0.084580078125,
+          "min": 0.0525103759765625
+        },
+        "submit_alloc_us": {
+          "max": 0.1020599365234375,
+          "min": 0.06416259765625
+        },
+        "submit_wait_us": {
+          "max": 49.34941162109375,
+          "min": 11.34278076171875
+        },
+        "total_us": {
+          "max": 88.80848083496093,
+          "min": 49.65269897460937
+        },
+        "validate_us": {
+          "max": 1.289130859375,
+          "min": 1.25416748046875
+        }
+      },
+      "fresh_output_us": 141.31075295154005,
+      "guard_share": 0.21675568815826732,
+      "kind": "gemm",
+      "logical_macs": 8192,
+      "manifest": "tiny_vit_b8",
+      "non_submit_c_share": 0.3814945121239361,
+      "non_submit_c_us": 38.053323669433595,
+      "pack_share": 0.06073178025113529,
+      "padding_ratio": 3.0,
+      "physical_gmac_s": 0.4996837851281655,
+      "physical_macs": 24576,
+      "plan": "classifier",
+      "runs": 6,
+      "setup_us": 473.36952411569655,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 1536.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 404.0990024805069
+    },
+    "down_tiny_vit_b1": {
+      "amortized_1000_us": 95.84121668012813,
+      "application_max_us": 113.74900350347161,
+      "application_min_us": 75.24900138378143,
+      "application_us": 95.22799518890679,
+      "bind_prepared_us": 38.49997301585972,
+      "binding_delta_share": -0.07566544419964623,
+      "binding_delta_us": -7.2054685562104055,
+      "cold_once_us": 699.1164991632104,
+      "constant_bytes": 16384.0,
+      "constant_materialize_us": 117.83148511312902,
+      "cpu_fp32": {
+        "max_abs_error": 0.00022751092910766602,
+        "mean_abs_error": 3.072006620641332e-05,
+        "median_ms": 0.12104000779800117,
+        "min_ms": 0.12074850383214653
+      },
+      "device_submit_share": 0.5373504425602741,
+      "device_submit_us": 51.17080535888672,
+      "download_bytes": 2048.0,
+      "download_calls": 1.0,
+      "download_share": 0.03670758365410364,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.049999999999998,
+        "command_us": 2.0124786376953123,
+        "download_us": 3.4955895996093753,
+        "emit_us": 1.370830078125,
+        "guard_us": 22.460958557128905,
+        "output_sync_us": 2.7781097412109377,
+        "pack_clear_us": 0.45058532714843746,
+        "pack_fini_us": 1.6507827758789062,
+        "pack_layout_us": 9.22678466796875,
+        "pack_prep_us": 1.8725064086914063,
+        "pack_us": 13.522952575683593,
+        "publish_us": 0.17209930419921876,
+        "submit_alloc_us": 0.08020904541015625,
+        "submit_wait_us": 51.17080535888672,
+        "total_us": 102.4334637451172,
+        "validate_us": 4.463869934082031
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.0569843749999992,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.076666259765625,
+          "min": 1.90162353515625
+        },
+        "download_us": {
+          "max": 3.578658447265625,
+          "min": 3.383291015625
+        },
+        "emit_us": {
+          "max": 1.52833740234375,
+          "min": 1.3269873046875
+        },
+        "guard_us": {
+          "max": 22.7410595703125,
+          "min": 22.355978393554686
+        },
+        "output_sync_us": {
+          "max": 2.855439453125,
+          "min": 2.6745489501953124
+        },
+        "pack_clear_us": {
+          "max": 0.4754168701171875,
+          "min": 0.437481689453125
+        },
+        "pack_fini_us": {
+          "max": 1.6771002197265625,
+          "min": 1.59830810546875
+        },
+        "pack_layout_us": {
+          "max": 9.245758056640625,
+          "min": 9.1931982421875
+        },
+        "pack_prep_us": {
+          "max": 1.9395404052734375,
+          "min": 1.860811767578125
+        },
+        "pack_us": {
+          "max": 13.579823608398437,
+          "min": 13.404849243164062
+        },
+        "publish_us": {
+          "max": 0.198271484375,
+          "min": 0.148741455078125
+        },
+        "submit_alloc_us": {
+          "max": 0.0874822998046875,
+          "min": 0.0700299072265625
+        },
+        "submit_wait_us": {
+          "max": 51.38804809570313,
+          "min": 13.200631103515626
+        },
+        "total_us": {
+          "max": 103.04747192382813,
+          "min": 64.27670776367188
+        },
+        "validate_us": {
+          "max": 4.48280029296875,
+          "min": 4.441990966796875
+        }
+      },
+      "fresh_output_us": 159.83148477971554,
+      "guard_share": 0.2358650784632438,
+      "kind": "gemm",
+      "logical_macs": 131072,
+      "manifest": "tiny_vit_b1",
+      "non_submit_c_share": 0.5383150016393721,
+      "non_submit_c_us": 51.26265838623048,
+      "pack_share": 0.1420060618608812,
+      "padding_ratio": 1.0,
+      "physical_gmac_s": 2.5614605648812017,
+      "physical_macs": 131072,
+      "plan": "down",
+      "runs": 6,
+      "setup_us": 493.7854828312993,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 4096.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 445.6609894987196
+    },
+    "down_tiny_vit_b8": {
+      "amortized_1000_us": 221.7346959223505,
+      "application_max_us": 239.74699433892965,
+      "application_min_us": 201.24699221923947,
+      "application_us": 221.08049597591162,
+      "bind_prepared_us": 39.37448491342366,
+      "binding_delta_share": -0.016523839760219056,
+      "binding_delta_us": -3.6530986896157174,
+      "cold_once_us": 859.8219428677112,
+      "constant_bytes": 16384.0,
+      "constant_materialize_us": 127.45647109113634,
+      "cpu_fp32": {
+        "max_abs_error": 0.0002409219741821289,
+        "mean_abs_error": 2.7583000701270066e-05,
+        "median_ms": 0.9538835001876578,
+        "min_ms": 0.9534459968563169
+      },
+      "device_submit_share": 0.28822558782004004,
+      "device_submit_us": 63.72105590820313,
+      "download_bytes": 16384.0,
+      "download_calls": 1.0,
+      "download_share": 0.05608179615240537,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.049999999999998,
+        "command_us": 2.0153405761718752,
+        "download_us": 12.398591308593751,
+        "emit_us": 1.5078411865234376,
+        "guard_us": 24.384496765136717,
+        "output_sync_us": 3.459125671386719,
+        "pack_clear_us": 1.3255609130859374,
+        "pack_fini_us": 4.258290405273438,
+        "pack_layout_us": 73.36782165527343,
+        "pack_prep_us": 2.4382864379882814,
+        "pack_us": 81.62479766845703,
+        "publish_us": 0.7451498413085937,
+        "submit_alloc_us": 0.07728027343749999,
+        "submit_wait_us": 63.72105590820313,
+        "total_us": 224.73359466552733,
+        "validate_us": 34.213453979492186
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.0569843749999992,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.0911602783203125,
+          "min": 1.846209716796875
+        },
+        "download_us": {
+          "max": 13.471974487304687,
+          "min": 11.908652954101562
+        },
+        "emit_us": {
+          "max": 1.589510498046875,
+          "min": 1.4204205322265624
+        },
+        "guard_us": {
+          "max": 24.703827514648438,
+          "min": 24.278011474609375
+        },
+        "output_sync_us": {
+          "max": 3.58161865234375,
+          "min": 3.1879693603515626
+        },
+        "pack_clear_us": {
+          "max": 1.3795379638671874,
+          "min": 1.254163818359375
+        },
+        "pack_fini_us": {
+          "max": 4.354500732421875,
+          "min": 4.033680419921875
+        },
+        "pack_layout_us": {
+          "max": 73.53702819824218,
+          "min": 73.26868957519531
+        },
+        "pack_prep_us": {
+          "max": 2.525750732421875,
+          "min": 2.324398193359375
+        },
+        "pack_us": {
+          "max": 81.81431091308593,
+          "min": 81.44099731445313
+        },
+        "publish_us": {
+          "max": 0.8020806884765626,
+          "min": 0.7233197021484375
+        },
+        "submit_alloc_us": {
+          "max": 0.09916015625,
+          "min": 0.0583612060546875
+        },
+        "submit_wait_us": {
+          "max": 64.83374267578125,
+          "min": 28.008392333984375
+        },
+        "total_us": {
+          "max": 226.117451171875,
+          "min": 190.15254028320314
+        },
+        "validate_us": {
+          "max": 34.50378051757812,
+          "min": 34.15080322265625
+        }
+      },
+      "fresh_output_us": 312.5170187558979,
+      "guard_share": 0.11029691541760242,
+      "kind": "gemm",
+      "logical_macs": 1048576,
+      "manifest": "tiny_vit_b8",
+      "non_submit_c_share": 0.7282982519401789,
+      "non_submit_c_us": 161.0125387573242,
+      "pack_share": 0.3692084971500637,
+      "padding_ratio": 1.0,
+      "physical_gmac_s": 16.455722289200352,
+      "physical_macs": 1048576,
+      "plan": "down",
+      "runs": 6,
+      "setup_us": 530.535529833287,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 32768.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 472.05647570081055
+    },
+    "gate_up_tiny_vit_b1": {
+      "amortized_1000_us": 97.59586057043634,
+      "application_max_us": 115.78999692574143,
+      "application_min_us": 78.74899893067777,
+      "application_us": 96.83199459686875,
+      "bind_prepared_us": 39.37448491342366,
+      "binding_delta_share": -0.06602504208934941,
+      "binding_delta_us": -6.393336518853914,
+      "cold_once_us": 855.739475809969,
+      "constant_bytes": 32768.0,
+      "constant_materialize_us": 195.99750521592796,
+      "cpu_fp32": {
+        "max_abs_error": 0.00023922324180603027,
+        "mean_abs_error": 2.2330546016746666e-05,
+        "median_ms": 0.233476486755535,
+        "min_ms": 0.2333299780730158
+      },
+      "device_submit_share": 0.5766873073207174,
+      "device_submit_us": 55.8417822265625,
+      "download_bytes": 8192.0,
+      "download_calls": 1.0,
+      "download_share": 0.06602415931029881,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.049999999999998,
+        "command_us": 2.025560302734375,
+        "download_us": 6.393251037597656,
+        "emit_us": 1.3868386840820313,
+        "guard_us": 23.31407928466797,
+        "output_sync_us": 3.1266448974609373,
+        "pack_clear_us": 0.2610992431640625,
+        "pack_fini_us": 1.3766549682617186,
+        "pack_layout_us": 4.73076904296875,
+        "pack_prep_us": 1.817076416015625,
+        "pack_us": 8.448010864257812,
+        "publish_us": 0.43458587646484376,
+        "submit_alloc_us": 0.08020538330078125,
+        "submit_wait_us": 55.8417822265625,
+        "total_us": 103.22533111572267,
+        "validate_us": 2.321640319824219
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.0569843749999992,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.0825201416015626,
+          "min": 1.93081787109375
+        },
+        "download_us": {
+          "max": 6.714028930664062,
+          "min": 6.101611328125
+        },
+        "emit_us": {
+          "max": 1.5225115966796876,
+          "min": 1.3095379638671876
+        },
+        "guard_us": {
+          "max": 23.805548095703124,
+          "min": 22.600958251953124
+        },
+        "output_sync_us": {
+          "max": 3.3191705322265626,
+          "min": 2.922490234375
+        },
+        "pack_clear_us": {
+          "max": 0.2858831787109375,
+          "min": 0.25666259765625
+        },
+        "pack_fini_us": {
+          "max": 1.4583367919921875,
+          "min": 1.318311767578125
+        },
+        "pack_layout_us": {
+          "max": 4.789042358398437,
+          "min": 4.704473876953125
+        },
+        "pack_prep_us": {
+          "max": 1.9220703125,
+          "min": 1.735389404296875
+        },
+        "pack_us": {
+          "max": 8.70617919921875,
+          "min": 8.356181640625
+        },
+        "publish_us": {
+          "max": 0.4666888427734375,
+          "min": 0.417060546875
+        },
+        "submit_alloc_us": {
+          "max": 0.113751220703125,
+          "min": 0.067030029296875
+        },
+        "submit_wait_us": {
+          "max": 55.955515747070315,
+          "min": 17.95477111816406
+        },
+        "total_us": {
+          "max": 105.59364440917969,
+          "min": 67.02704833984374
+        },
+        "validate_us": {
+          "max": 2.3566864013671873,
+          "min": 2.2924609375
+        }
+      },
+      "fresh_output_us": 160.12298874557018,
+      "guard_share": 0.24076834709157044,
+      "kind": "gemm",
+      "logical_macs": 262144,
+      "manifest": "tiny_vit_b1",
+      "non_submit_c_share": 0.48933773476863196,
+      "non_submit_c_us": 47.38354888916017,
+      "pack_share": 0.08724400338368114,
+      "padding_ratio": 1.0,
+      "physical_gmac_s": 4.694406044141349,
+      "physical_macs": 262144,
+      "plan": "gate_up",
+      "runs": 6,
+      "setup_us": 574.868026887998,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 2048.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 522.9520029388368
+    },
+    "gate_up_tiny_vit_b8": {
+      "amortized_1000_us": 255.74490876169875,
+      "application_max_us": 257.2460216470063,
+      "application_min_us": 219.03897868469357,
+      "application_us": 254.9135242588818,
+      "bind_prepared_us": 40.396000258624554,
+      "binding_delta_share": 0.0508529126472257,
+      "binding_delta_us": 12.963095181733365,
+      "cold_once_us": 1072.1535072661936,
+      "constant_bytes": 32768.0,
+      "constant_materialize_us": 207.22649060189724,
+      "cpu_fp32": {
+        "max_abs_error": 0.00024211406707763672,
+        "mean_abs_error": 2.2147418349049985e-05,
+        "median_ms": 1.853809750173241,
+        "min_ms": 1.8519134900998324
+      },
+      "device_submit_share": 0.3906407056610055,
+      "device_submit_us": 99.57959899902343,
+      "download_bytes": 65536.0,
+      "download_calls": 1.0,
+      "download_share": 0.15931362939074722,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.049999999999998,
+        "command_us": 2.0036941528320313,
+        "download_us": 40.61119873046875,
+        "emit_us": 1.6609844970703125,
+        "guard_us": 27.32299346923828,
+        "output_sync_us": 5.319898681640625,
+        "pack_clear_us": 0.8691592407226563,
+        "pack_fini_us": 2.8889599609375,
+        "pack_layout_us": 37.405783081054686,
+        "pack_prep_us": 2.199102478027344,
+        "pack_us": 43.61678985595704,
+        "publish_us": 2.471837158203125,
+        "submit_alloc_us": 0.10062042236328125,
+        "submit_wait_us": 99.57959899902343,
+        "total_us": 241.95042907714844,
+        "validate_us": 17.254757385253907
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.0569843749999992,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.1204266357421875,
+          "min": 1.889949951171875
+        },
+        "download_us": {
+          "max": 41.90315979003906,
+          "min": 39.73620971679688
+        },
+        "emit_us": {
+          "max": 1.959989013671875,
+          "min": 1.490419921875
+        },
+        "guard_us": {
+          "max": 27.614598388671876,
+          "min": 26.67548828125
+        },
+        "output_sync_us": {
+          "max": 5.454078369140625,
+          "min": 5.209100341796875
+        },
+        "pack_clear_us": {
+          "max": 0.912880859375,
+          "min": 0.7786895751953125
+        },
+        "pack_fini_us": {
+          "max": 2.99539306640625,
+          "min": 2.5986700439453125
+        },
+        "pack_layout_us": {
+          "max": 37.45249755859375,
+          "min": 37.29500854492188
+        },
+        "pack_prep_us": {
+          "max": 2.3245458984375,
+          "min": 2.0591473388671875
+        },
+        "pack_us": {
+          "max": 43.91561218261719,
+          "min": 43.26525817871094
+        },
+        "publish_us": {
+          "max": 2.49662109375,
+          "min": 2.46160888671875
+        },
+        "submit_alloc_us": {
+          "max": 0.1225396728515625,
+          "min": 0.0758294677734375
+        },
+        "submit_wait_us": {
+          "max": 99.83917114257812,
+          "min": 99.5270916748047
+        },
+        "total_us": {
+          "max": 243.75436645507813,
+          "min": 240.68311950683594
+        },
+        "validate_us": {
+          "max": 17.272250366210937,
+          "min": 17.216870727539064
+        }
+      },
+      "fresh_output_us": 313.61023138742894,
+      "guard_share": 0.10718534274976303,
+      "kind": "gemm",
+      "logical_macs": 2097152,
+      "manifest": "tiny_vit_b8",
+      "non_submit_c_share": 0.5585063816917688,
+      "non_submit_c_us": 142.370830078125,
+      "pack_share": 0.17110425970048282,
+      "padding_ratio": 1.0,
+      "physical_gmac_s": 21.06005668912732,
+      "physical_macs": 2097152,
+      "plan": "gate_up",
+      "runs": 6,
+      "setup_us": 628.0959933064878,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 16384.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 570.6385127268732
+    },
+    "mlp_mnist_mlp_b1": {
+      "amortized_1000_us": 447.20950283226557,
+      "application_max_us": 448.28600948676467,
+      "application_min_us": 438.5155043564737,
+      "application_us": 440.2650083648041,
+      "bind_prepared_us": 83.41600187122822,
+      "binding_delta_share": 0.024401620722537622,
+      "binding_delta_us": 10.743179751522803,
+      "cold_once_us": 7407.509459881112,
+      "constant_bytes": 761376.0,
+      "constant_materialize_us": 1810.0604938808829,
+      "cpu_fp32": null,
+      "device_submit_share": 0.40128851686967687,
+      "device_submit_us": 176.6732922363281,
+      "download_bytes": 768.0,
+      "download_calls": 1.0,
+      "download_share": 0.005551590044551306,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.9250000000000025,
+        "command_us": 28.613553771972654,
+        "download_us": 2.4441708374023436,
+        "emit_us": 15.160538635253907,
+        "guard_us": 159.60965423583986,
+        "output_sync_us": 25.86318328857422,
+        "pack_clear_us": 1.1973190307617188,
+        "pack_fini_us": 2.9545233154296877,
+        "pack_layout_us": 4.555751037597656,
+        "pack_prep_us": 2.1233114624023437,
+        "pack_us": 11.109440307617188,
+        "publish_us": 0.06998931884765625,
+        "submit_alloc_us": 0.6927536010742188,
+        "submit_wait_us": 176.6732922363281,
+        "total_us": 429.5218286132813,
+        "validate_us": 2.4149813842773433
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.937804687500003,
+          "min": 1.9249543457031273
+        },
+        "command_us": {
+          "max": 28.719944458007813,
+          "min": 28.165824584960937
+        },
+        "download_us": {
+          "max": 2.511258544921875,
+          "min": 2.4324359130859374
+        },
+        "emit_us": {
+          "max": 15.682559204101562,
+          "min": 14.8806494140625
+        },
+        "guard_us": {
+          "max": 166.82539123535156,
+          "min": 157.29965087890625
+        },
+        "output_sync_us": {
+          "max": 26.14469055175781,
+          "min": 25.719085693359375
+        },
+        "pack_clear_us": {
+          "max": 1.25123046875,
+          "min": 1.157908935546875
+        },
+        "pack_fini_us": {
+          "max": 2.9808306884765625,
+          "min": 2.81162353515625
+        },
+        "pack_layout_us": {
+          "max": 4.587886962890625,
+          "min": 4.538300170898437
+        },
+        "pack_prep_us": {
+          "max": 2.1874908447265624,
+          "min": 2.0970806884765625
+        },
+        "pack_us": {
+          "max": 11.199829711914063,
+          "min": 11.05394287109375
+        },
+        "publish_us": {
+          "max": 0.090447998046875,
+          "min": 0.0349810791015625
+        },
+        "submit_alloc_us": {
+          "max": 0.7786065673828125,
+          "min": 0.65334228515625
+        },
+        "submit_wait_us": {
+          "max": 482.2616363525391,
+          "min": 176.11779418945312
+        },
+        "total_us": {
+          "max": 729.7464196777344,
+          "min": 424.9120489501953
+        },
+        "validate_us": {
+          "max": 2.4675,
+          "min": 2.4003924560546874
+        }
+      },
+      "fresh_output_us": 782.9689857317135,
+      "guard_share": 0.36253086482763835,
+      "kind": "mlp",
+      "logical_macs": 296960,
+      "manifest": "mnist_mlp_b1",
+      "non_submit_c_share": 0.5743098624077855,
+      "non_submit_c_us": 252.84853637695318,
+      "pack_share": 0.02523353002519767,
+      "padding_ratio": 12.082758620689654,
+      "physical_gmac_s": 20.30921569741487,
+      "physical_macs": 3588096,
+      "plan": "mlp",
+      "runs": 6,
+      "setup_us": 5305.640981532633,
+      "submit_count": 8.0,
+      "task_count": 11.0,
+      "upload_bytes": 24576.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 5060.789495473728
+    },
+    "mlp_mnist_mlp_b32": {
+      "amortized_1000_us": 680.420588090783,
+      "application_max_us": 982.3210129979998,
+      "application_min_us": 671.4079936500639,
+      "application_us": 673.1580360792577,
+      "bind_prepared_us": 65.77000021934509,
+      "binding_delta_share": -0.01514081965149497,
+      "binding_delta_us": -10.192164421230586,
+      "cold_once_us": 7903.043966507539,
+      "constant_bytes": 809984.0,
+      "constant_materialize_us": 1781.9144995883107,
+      "cpu_fp32": null,
+      "device_submit_share": 0.31279892455509395,
+      "device_submit_us": 210.56310974121095,
+      "download_bytes": 2048.0,
+      "download_calls": 1.0,
+      "download_share": 0.005678088155418955,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.9250000000000025,
+        "command_us": 28.011272583007813,
+        "download_us": 3.822250671386719,
+        "emit_us": 15.509038085937501,
+        "guard_us": 163.39247375488281,
+        "output_sync_us": 30.070413513183595,
+        "pack_clear_us": 2.3201834106445314,
+        "pack_fini_us": 6.718459777832031,
+        "pack_layout_us": 144.77276641845702,
+        "pack_prep_us": 2.8612332153320312,
+        "pack_us": 157.00942749023437,
+        "publish_us": 0.14292053222656248,
+        "submit_alloc_us": 0.7029232788085937,
+        "submit_wait_us": 210.56310974121095,
+        "total_us": 683.3502005004883,
+        "validate_us": 68.26373596191407
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.937804687500003,
+          "min": 1.9249543457031273
+        },
+        "command_us": {
+          "max": 28.71714660644531,
+          "min": 26.93207275390625
+        },
+        "download_us": {
+          "max": 3.86751220703125,
+          "min": 3.80911865234375
+        },
+        "emit_us": {
+          "max": 15.667919311523438,
+          "min": 15.166426391601563
+        },
+        "guard_us": {
+          "max": 168.65407958984375,
+          "min": 161.99246215820312
+        },
+        "output_sync_us": {
+          "max": 30.21922790527344,
+          "min": 29.92771728515625
+        },
+        "pack_clear_us": {
+          "max": 2.391632080078125,
+          "min": 2.280809326171875
+        },
+        "pack_fini_us": {
+          "max": 6.8045281982421875,
+          "min": 6.4573822021484375
+        },
+        "pack_layout_us": {
+          "max": 144.96815124511718,
+          "min": 144.4256915283203
+        },
+        "pack_prep_us": {
+          "max": 2.96333740234375,
+          "min": 2.756220703125
+        },
+        "pack_us": {
+          "max": 157.2909094238281,
+          "min": 156.54425964355468
+        },
+        "publish_us": {
+          "max": 0.1691412353515625,
+          "min": 0.110841064453125
+        },
+        "submit_alloc_us": {
+          "max": 0.7670147705078125,
+          "min": 0.6416119384765625
+        },
+        "submit_wait_us": {
+          "max": 491.32074768066406,
+          "min": 186.0576934814453
+        },
+        "total_us": {
+          "max": 961.9101525878906,
+          "min": 657.4549731445312
+        },
+        "validate_us": {
+          "max": 68.45619201660156,
+          "min": 68.16453063964843
+        }
+      },
+      "fresh_output_us": 1081.0489911818877,
+      "guard_share": 0.24272528143100852,
+      "kind": "mlp",
+      "logical_macs": 9502720,
+      "manifest": "mnist_mlp_b32",
+      "non_submit_c_share": 0.702341895096401,
+      "non_submit_c_us": 472.78709075927736,
+      "pack_share": 0.2332430411211017,
+      "padding_ratio": 1.006896551724138,
+      "physical_gmac_s": 45.44127417076859,
+      "physical_macs": 9568256,
+      "plan": "mlp",
+      "runs": 6,
+      "setup_us": 5559.095501666889,
+      "submit_count": 8.0,
+      "task_count": 11.0,
+      "upload_bytes": 65536.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 5332.327506039292
+    },
+    "mlp_mnist_mlp_b8": {
+      "amortized_1000_us": 498.7658316094894,
+      "application_max_us": 792.7389815449715,
+      "application_min_us": 486.493983771652,
+      "application_us": 491.8900231132284,
+      "bind_prepared_us": 66.35297904722393,
+      "binding_delta_share": 0.029111538230043546,
+      "binding_delta_us": 14.319675212837751,
+      "cold_once_us": 7552.320268587209,
+      "constant_bytes": 772352.0,
+      "constant_materialize_us": 1805.97702274099,
+      "cpu_fp32": null,
+      "device_submit_share": 0.3633614333125508,
+      "device_submit_us": 178.7338638305664,
+      "download_bytes": 768.0,
+      "download_calls": 1.0,
+      "download_share": 0.005425421348116888,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.9250000000000025,
+        "command_us": 28.60635009765625,
+        "download_us": 2.6687106323242187,
+        "emit_us": 14.861631469726563,
+        "guard_us": 159.21878295898438,
+        "output_sync_us": 26.13440124511719,
+        "pack_clear_us": 1.15790771484375,
+        "pack_fini_us": 3.0347686767578126,
+        "pack_layout_us": 36.09479461669922,
+        "pack_prep_us": 2.204953918457031,
+        "pack_us": 42.76809051513672,
+        "publish_us": 0.08167083740234375,
+        "submit_alloc_us": 0.7028512573242187,
+        "submit_wait_us": 178.7338638305664,
+        "total_us": 477.57034790039063,
+        "validate_us": 17.311646423339845
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.937804687500003,
+          "min": 1.9249543457031273
+        },
+        "command_us": {
+          "max": 28.69383728027344,
+          "min": 28.28836181640625
+        },
+        "download_us": {
+          "max": 2.721240234375,
+          "min": 2.630770263671875
+        },
+        "emit_us": {
+          "max": 15.204347534179687,
+          "min": 14.758038330078126
+        },
+        "guard_us": {
+          "max": 166.35587890625,
+          "min": 157.1625213623047
+        },
+        "output_sync_us": {
+          "max": 26.284576416015625,
+          "min": 25.736376342773436
+        },
+        "pack_clear_us": {
+          "max": 1.19291748046875,
+          "min": 1.1345404052734376
+        },
+        "pack_fini_us": {
+          "max": 3.100411376953125,
+          "min": 2.94875244140625
+        },
+        "pack_layout_us": {
+          "max": 36.242069702148434,
+          "min": 35.99708984375
+        },
+        "pack_prep_us": {
+          "max": 2.24875,
+          "min": 2.1116070556640625
+        },
+        "pack_us": {
+          "max": 42.918248901367186,
+          "min": 42.62064758300781
+        },
+        "publish_us": {
+          "max": 0.1166802978515625,
+          "min": 0.0671209716796875
+        },
+        "submit_alloc_us": {
+          "max": 0.770020751953125,
+          "min": 0.656258544921875
+        },
+        "submit_wait_us": {
+          "max": 475.13359375,
+          "min": 176.70395263671875
+        },
+        "total_us": {
+          "max": 770.3633917236328,
+          "min": 470.8314318847656
+        },
+        "validate_us": {
+          "max": 17.345147705078126,
+          "min": 17.26935729980469
+        }
+      },
+      "fresh_output_us": 551.8265097634867,
+      "guard_share": 0.32368776652811626,
+      "kind": "mlp",
+      "logical_macs": 2375680,
+      "manifest": "mnist_mlp_b8",
+      "non_submit_c_share": 0.6075270284574057,
+      "non_submit_c_us": 298.8364840698242,
+      "pack_share": 0.08694644840416273,
+      "padding_ratio": 1.5103448275862068,
+      "physical_gmac_s": 20.075076558527222,
+      "physical_macs": 3588096,
+      "plan": "mlp",
+      "runs": 6,
+      "setup_us": 5361.2025221809745,
+      "submit_count": 8.0,
+      "task_count": 11.0,
+      "upload_bytes": 24576.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 5154.120997758582
+    },
+    "qkv_tiny_vit_b1": {
+      "amortized_1000_us": 112.95017736847512,
+      "application_max_us": 113.74900350347161,
+      "application_min_us": 111.12395441159606,
+      "application_us": 112.2899993788451,
+      "bind_prepared_us": 38.35398820228875,
+      "binding_delta_share": 0.10429712170858582,
+      "binding_delta_us": 11.711523731872433,
+      "cold_once_us": 768.2399591431022,
+      "constant_bytes": 24576.0,
+      "constant_materialize_us": 137.66501797363162,
+      "cpu_fp32": {
+        "max_abs_error": 0.00012977421283721924,
+        "mean_abs_error": 1.6841826436575502e-05,
+        "median_ms": 0.17616449622437358,
+        "min_ms": 0.17587299225851893
+      },
+      "device_submit_share": 0.4812990460329449,
+      "device_submit_us": 54.04506958007812,
+      "download_bytes": 6144.0,
+      "download_calls": 1.0,
+      "download_share": 0.04928601124311379,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.049999999999998,
+        "command_us": 1.9585214233398438,
+        "download_us": 5.534326171875,
+        "emit_us": 1.366455078125,
+        "guard_us": 22.647599182128907,
+        "output_sync_us": 2.9414080810546874,
+        "pack_clear_us": 0.27268951416015624,
+        "pack_fini_us": 1.3650192260742187,
+        "pack_layout_us": 4.733609008789063,
+        "pack_prep_us": 1.7747805786132813,
+        "pack_us": 8.415929870605469,
+        "publish_us": 0.3601846313476562,
+        "submit_alloc_us": 0.07437561035156251,
+        "submit_wait_us": 54.04506958007812,
+        "total_us": 100.57847564697266,
+        "validate_us": 2.3390661621093747
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.0569843749999992,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.0796112060546874,
+          "min": 1.855010986328125
+        },
+        "download_us": {
+          "max": 5.751585083007813,
+          "min": 5.328670654296875
+        },
+        "emit_us": {
+          "max": 1.3970281982421875,
+          "min": 1.306630859375
+        },
+        "guard_us": {
+          "max": 23.315564575195314,
+          "min": 22.043905029296877
+        },
+        "output_sync_us": {
+          "max": 3.1558050537109374,
+          "min": 2.730009765625
+        },
+        "pack_clear_us": {
+          "max": 0.291751708984375,
+          "min": 0.2420989990234375
+        },
+        "pack_fini_us": {
+          "max": 1.45827880859375,
+          "min": 1.2658306884765624
+        },
+        "pack_layout_us": {
+          "max": 4.745397338867187,
+          "min": 4.722011108398437
+        },
+        "pack_prep_us": {
+          "max": 1.87825927734375,
+          "min": 1.6974810791015624
+        },
+        "pack_us": {
+          "max": 8.656498413085938,
+          "min": 8.280258178710938
+        },
+        "publish_us": {
+          "max": 0.3820916748046875,
+          "min": 0.32662841796875
+        },
+        "submit_alloc_us": {
+          "max": 0.096229248046875,
+          "min": 0.064158935546875
+        },
+        "submit_wait_us": {
+          "max": 54.17345275878906,
+          "min": 35.9941064453125
+        },
+        "total_us": {
+          "max": 102.03827697753906,
+          "min": 81.52564819335937
+        },
+        "validate_us": {
+          "max": 2.4265704345703125,
+          "min": 2.324541015625
+        }
+      },
+      "fresh_output_us": 154.14401423186064,
+      "guard_share": 0.20168847900444115,
+      "kind": "gemm",
+      "logical_macs": 196608,
+      "manifest": "tiny_vit_b1",
+      "non_submit_c_share": 0.4144038322584693,
+      "non_submit_c_us": 46.53340606689454,
+      "pack_share": 0.0749481691794451,
+      "padding_ratio": 1.0,
+      "physical_gmac_s": 3.6378526575618073,
+      "physical_macs": 196608,
+      "plan": "qkv",
+      "runs": 6,
+      "setup_us": 523.0974638834596,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 2048.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 476.7225182149559
+    },
+    "qkv_tiny_vit_b8": {
+      "amortized_1000_us": 235.37095825304277,
+      "application_max_us": 236.53850075788796,
+      "application_min_us": 229.830970056355,
+      "application_us": 234.6429682802409,
+      "bind_prepared_us": 39.374514017254114,
+      "binding_delta_share": 0.05796814177603306,
+      "binding_delta_us": 13.601816852018231,
+      "cold_once_us": 944.9882636545226,
+      "constant_bytes": 24576.0,
+      "constant_materialize_us": 145.83149459213018,
+      "cpu_fp32": {
+        "max_abs_error": 0.00019216537475585938,
+        "mean_abs_error": 1.647964927542489e-05,
+        "median_ms": 1.3942219957243651,
+        "min_ms": 1.3935650058556348
+      },
+      "device_submit_share": 0.3722247831190194,
+      "device_submit_us": 87.33992797851562,
+      "download_bytes": 49152.0,
+      "download_calls": 1.0,
+      "download_share": 0.15003100131420538,
+      "envelope": {
+        "alloc_us": 0.0,
+        "clock_us": 1.049999999999998,
+        "command_us": 2.0226757812500002,
+        "download_us": 35.203719482421874,
+        "emit_us": 1.54724853515625,
+        "guard_us": 26.28609588623047,
+        "output_sync_us": 4.911630859375,
+        "pack_clear_us": 0.866240234375,
+        "pack_fini_us": 2.840780029296875,
+        "pack_layout_us": 37.34164276123047,
+        "pack_prep_us": 2.226842041015625,
+        "pack_us": 43.55986419677734,
+        "publish_us": 1.8287152099609374,
+        "submit_alloc_us": 0.08021514892578124,
+        "submit_wait_us": 87.33992797851562,
+        "total_us": 221.04115142822266,
+        "validate_us": 17.224145812988283
+      },
+      "envelope_ranges": {
+        "alloc_us": {
+          "max": 0.0,
+          "min": 0.0
+        },
+        "clock_us": {
+          "max": 1.0569843749999992,
+          "min": 1.049975097656248
+        },
+        "command_us": {
+          "max": 2.082401123046875,
+          "min": 1.9366796875
+        },
+        "download_us": {
+          "max": 36.61239868164063,
+          "min": 33.246593627929684
+        },
+        "emit_us": {
+          "max": 1.764588623046875,
+          "min": 1.411688232421875
+        },
+        "guard_us": {
+          "max": 26.707551879882814,
+          "min": 24.75633117675781
+        },
+        "output_sync_us": {
+          "max": 5.086599731445313,
+          "min": 4.161947631835938
+        },
+        "pack_clear_us": {
+          "max": 0.9478826904296875,
+          "min": 0.825411376953125
+        },
+        "pack_fini_us": {
+          "max": 3.0449908447265623,
+          "min": 2.5491497802734373
+        },
+        "pack_layout_us": {
+          "max": 37.4436962890625,
+          "min": 37.27739379882812
+        },
+        "pack_prep_us": {
+          "max": 2.2924298095703124,
+          "min": 2.041680908203125
+        },
+        "pack_us": {
+          "max": 43.88065795898437,
+          "min": 43.18364013671875
+        },
+        "publish_us": {
+          "max": 1.9191790771484376,
+          "min": 1.770379638671875
+        },
+        "submit_alloc_us": {
+          "max": 0.1050421142578125,
+          "min": 0.0583209228515625
+        },
+        "submit_wait_us": {
+          "max": 87.51931701660156,
+          "min": 85.54180236816406
+        },
+        "total_us": {
+          "max": 223.6908465576172,
+          "min": 217.04678161621095
+        },
+        "validate_us": {
+          "max": 17.254760131835937,
+          "min": 17.184742431640625
+        }
+      },
+      "fresh_output_us": 292.0272381743416,
+      "guard_share": 0.11202592636330881,
+      "kind": "gemm",
+      "logical_macs": 1572864,
+      "manifest": "tiny_vit_b8",
+      "non_submit_c_share": 0.5698070751049475,
+      "non_submit_c_us": 133.70122344970704,
+      "pack_share": 0.18564316892186827,
+      "padding_ratio": 1.0,
+      "physical_gmac_s": 18.00853328373367,
+      "physical_macs": 1572864,
+      "plan": "qkv",
+      "runs": 6,
+      "setup_us": 586.5345010533929,
+      "submit_count": 1.0,
+      "task_count": 1.0,
+      "upload_bytes": 16384.0,
+      "upload_calls": 1.0,
+      "workspace_setup_us": 525.284995092079
+    }
+  },
+  "disclosure": "submit_wait_us is the C blocking submit+wait interval. It includes device execution and submission, and is not a pure matrix-kernel timer. Vendor internal submit and operator time are unavailable.",
+  "external": {
+    "cpu": {
+      "mnist_mlp.b1": {
+        "accuracy": 0.9831,
+        "max_abs_logit_error": 0.0,
+        "setup_ms": 0.0,
+        "warm_ms": 0.2526077807007823
+      },
+      "mnist_mlp.b32": {
+        "accuracy": 0.9831,
+        "max_abs_logit_error": 0.0,
+        "setup_ms": 0.0,
+        "warm_ms": 6.830520490421706
+      },
+      "mnist_mlp.b8": {
+        "accuracy": 0.9831,
+        "max_abs_logit_error": 0.0,
+        "setup_ms": 0.0,
+        "warm_ms": 1.74885239363648
+      },
+      "tiny_vit.b1": {
+        "accuracy": 0.9821,
+        "max_abs_logit_error": 0.0,
+        "setup_ms": 0.0,
+        "warm_ms": 0.8694507050968241
+      },
+      "tiny_vit.b8": {
+        "accuracy": 0.9821,
+        "max_abs_logit_error": 0.0,
+        "setup_ms": 0.0,
+        "warm_ms": 5.856715676002205
+      }
+    },
+    "vendor": {
+      "mnist_mlp.b1": {
+        "accuracy": 0.9831,
+        "max_abs_logit_error": 0.03049468994140625,
+        "setup_ms": 56.015149981249124,
+        "warm_ms": 0.2588031809020322
+      },
+      "mnist_mlp.b32": {
+        "accuracy": 0.9831,
+        "max_abs_logit_error": 0.03049468994140625,
+        "setup_ms": 182.3955869767815,
+        "warm_ms": 0.5379622547433468
+      },
+      "mnist_mlp.b8": {
+        "accuracy": 0.9831,
+        "max_abs_logit_error": 0.03049468994140625,
+        "setup_ms": 56.784266023896635,
+        "warm_ms": 0.3098817800171673
+      },
+      "tiny_vit.b1": {
+        "accuracy": 0.9821,
+        "max_abs_logit_error": 0.10714578628540039,
+        "setup_ms": 56.74664198886603,
+        "warm_ms": 0.5893604930024594
+      },
+      "tiny_vit.b8": {
+        "accuracy": 0.9821,
+        "max_abs_logit_error": 0.12277078628540039,
+        "setup_ms": 57.41192598361522,
+        "warm_ms": 1.5821207127999515
+      }
+    }
+  },
+  "fast_download_cases": {
+    "attn_pv_qkv_group_tiny_vit_b1": {
+      "app_after_us": 157.4982306919992,
+      "app_before_us": 165.5179657973349,
+      "download_after_us": 11.869209594726563,
+      "download_before_us": 17.950398559570313,
+      "download_saved_us": 6.081188964843751
+    },
+    "attn_pv_qkv_group_tiny_vit_b8": {
+      "app_after_us": 723.9080005092546,
+      "app_before_us": 753.0735019827262,
+      "download_after_us": 122.64416931152344,
+      "download_before_us": 153.57222778320312,
+      "download_saved_us": 30.928058471679677
+    },
+    "attn_qk_qkv_group_tiny_vit_b1": {
+      "app_after_us": 164.643264724873,
+      "app_before_us": 187.97648954205215,
+      "download_after_us": 11.688390808105469,
+      "download_before_us": 18.039324645996096,
+      "download_saved_us": 6.3509338378906275
+    },
+    "attn_qk_qkv_group_tiny_vit_b8": {
+      "app_after_us": 920.4880043398589,
+      "app_before_us": 973.8625085446984,
+      "download_after_us": 122.89652709960937,
+      "download_before_us": 168.01391662597655,
+      "download_saved_us": 45.11738952636718
+    },
+    "classifier_tiny_vit_b1": {
+      "app_after_us": 58.33302566315979,
+      "app_before_us": 96.39450581744313,
+      "download_after_us": 2.454309997558594,
+      "download_before_us": 2.6439547729492188,
+      "download_saved_us": 0.18964477539062496
+    },
+    "classifier_tiny_vit_b8": {
+      "app_after_us": 99.74802378565073,
+      "app_before_us": 100.18653119914234,
+      "download_after_us": 2.7240951538085936,
+      "download_before_us": 3.4066500854492188,
+      "download_saved_us": 0.6825549316406252
+    },
+    "down_tiny_vit_b1": {
+      "app_after_us": 95.22799518890679,
+      "app_before_us": 118.41498780995607,
+      "download_after_us": 3.4955895996093753,
+      "download_before_us": 8.270076904296875,
+      "download_saved_us": 4.7744873046875
+    },
+    "down_tiny_vit_b8": {
+      "app_after_us": 221.08049597591162,
+      "app_before_us": 279.12150835618377,
+      "download_after_us": 12.398591308593751,
+      "download_before_us": 52.82305175781249,
+      "download_saved_us": 40.42446044921874
+    },
+    "gate_up_tiny_vit_b1": {
+      "app_after_us": 96.83199459686875,
+      "app_before_us": 130.9565268456936,
+      "download_after_us": 6.393251037597656,
+      "download_before_us": 22.666628417968752,
+      "download_saved_us": 16.273377380371095
+    },
+    "gate_up_tiny_vit_b8": {
+      "app_after_us": 254.9135242588818,
+      "app_before_us": 412.84901089966297,
+      "download_after_us": 40.61119873046875,
+      "download_before_us": 198.54370269775393,
+      "download_saved_us": 157.9325039672852
+    },
+    "mlp_mnist_mlp_b1": {
+      "app_after_us": 440.2650083648041,
+      "app_before_us": 436.91050086636096,
+      "download_after_us": 2.4441708374023436,
+      "download_before_us": 2.4922460937500004,
+      "download_saved_us": 0.04807525634765675
+    },
+    "mlp_mnist_mlp_b32": {
+      "app_after_us": 673.1580360792577,
+      "app_before_us": 671.4079936500639,
+      "download_after_us": 3.822250671386719,
+      "download_before_us": 6.644094848632813,
+      "download_saved_us": 2.821844177246094
+    },
+    "mlp_mnist_mlp_b8": {
+      "app_after_us": 491.8900231132284,
+      "app_before_us": 484.45200081914663,
+      "download_after_us": 2.6687106323242187,
+      "download_before_us": 3.3249508666992185,
+      "download_saved_us": 0.6562402343749998
+    },
+    "qkv_tiny_vit_b1": {
+      "app_after_us": 112.2899993788451,
+      "app_before_us": 124.54000534489751,
+      "download_after_us": 5.534326171875,
+      "download_before_us": 18.087449340820314,
+      "download_saved_us": 12.553123168945314
+    },
+    "qkv_tiny_vit_b8": {
+      "app_after_us": 234.6429682802409,
+      "app_before_us": 362.2450167313218,
+      "download_after_us": 35.203719482421874,
+      "download_before_us": 164.03419647216796,
+      "download_saved_us": 128.8304769897461
+    }
+  },
+  "kind": "hardware-template-and-granularity-analysis",
+  "mlp_delivery": {
+    "b1": {
+      "bitwise": true,
+      "calls": 10000,
+      "manifest": "mnist_mlp_b1",
+      "new_mean_us": 653.7570233514998,
+      "new_median_us": 599.0760400891304,
+      "new_pass_medians": [
+        648.4949424222577,
+        646.2414586450905,
+        666.5346689871512
+      ],
+      "old_mean_us": 681.7212696381224,
+      "old_median_us": 627.0760204643011,
+      "old_pass_medians": [
+        676.3576236087829,
+        674.7243371559307,
+        694.0818481496535
+      ],
+      "paired_ratio_mean": 1.0444797108196486,
+      "paired_ratio_median": 1.0452311400859942
+    },
+    "b32": {
+      "bitwise": true,
+      "calls": 312,
+      "manifest": "mnist_mlp_b32",
+      "new_mean_us": 1212.763204662185,
+      "new_median_us": 1127.569004893303,
+      "new_pass_medians": [
+        1198.8366015243512,
+        1188.1180100131016,
+        1251.3350024491024
+      ],
+      "old_mean_us": 1254.1154243298765,
+      "old_median_us": 1168.547518318519,
+      "old_pass_medians": [
+        1241.6324889039597,
+        1228.9937854243012,
+        1291.719998661369
+      ],
+      "paired_ratio_mean": 1.035007554248953,
+      "paired_ratio_median": 1.0338911202894656
+    },
+    "b8": {
+      "bitwise": true,
+      "calls": 1250,
+      "manifest": "mnist_mlp_b8",
+      "new_mean_us": 791.6804130654782,
+      "new_median_us": 716.6159921325743,
+      "new_pass_medians": [
+        780.0180229358375,
+        800.1586315222085,
+        794.8645847383887
+      ],
+      "old_mean_us": 821.9968653904895,
+      "old_median_us": 746.8030089512467,
+      "old_pass_medians": [
+        809.7081356681883,
+        831.0149112716317,
+        825.2675492316484
+      ],
+      "paired_ratio_mean": 1.040039638743394,
+      "paired_ratio_median": 1.0399840523412909
+    }
+  },
+  "mlp_plan_productization": {
+    "b1": {
+      "bitwise": true,
+      "model": {
+        "calls": 10000,
+        "manifest": "mnist_mlp_b1",
+        "new_mean_us": 685.6074209693664,
+        "new_median_us": 619.2000000737607,
+        "new_pass_medians": [
+          657.7866386680398,
+          745.375871961005,
+          653.6597522790544
+        ],
+        "old_mean_us": 707.0576055499259,
+        "old_median_us": 641.07496291399,
+        "old_pass_medians": [
+          679.6691479394212,
+          767.1392543008551,
+          674.3644144095015
+        ],
+        "paired_ratio_mean": 1.0332751126398885,
+        "paired_ratio_median": 1.033127660285853,
+        "rounds": 3
+      },
+      "new_app_us": 440.2650083648041,
+      "new_logical_macs": 296960,
+      "new_peak_bytes": 829184,
+      "new_physical_macs": 3588096,
+      "new_reserved_bytes": 1452992,
+      "new_setup_us": 5305.640981532633,
+      "new_slots": 19,
+      "new_transfers": 16,
+      "new_upload_calls": 1.0,
+      "old_app_us": 468.7019973061979,
+      "old_reserved_bytes": 1551488,
+      "old_setup_us": 5401.888978667557,
+      "old_slots": 22,
+      "old_transfers": 19,
+      "old_upload_calls": 4.0,
+      "plan": {
+        "manifest": "mnist_mlp_b1",
+        "new": {
+          "mean": 506.09435968605493,
+          "median": 478.0360031872988,
+          "p10": 471.6190160252154
+        },
+        "old": {
+          "mean": 546.8936296771668,
+          "median": 509.2429928481579,
+          "p10": 503.9930110797286
+        },
+        "ratio_median": 1.0652816722020662
+      }
+    },
+    "b32": {
+      "bitwise": true,
+      "model": {
+        "calls": 312,
+        "manifest": "mnist_mlp_b32",
+        "new_mean_us": 1199.4668886286374,
+        "new_median_us": 1110.5065059382468,
+        "new_pass_medians": [
+          1297.0119686752487,
+          1139.2811584534147,
+          1162.1075387572487
+        ],
+        "old_mean_us": 1228.1788702736783,
+        "old_median_us": 1138.6525293346494,
+        "old_pass_medians": [
+          1327.3700995994611,
+          1167.6024208636356,
+          1189.564090357938
+        ],
+        "paired_ratio_mean": 1.0246423299284095,
+        "paired_ratio_median": 1.0240143337436018,
+        "rounds": 3
+      },
+      "new_app_us": 673.1580360792577,
+      "new_logical_macs": 9502720,
+      "new_peak_bytes": 937984,
+      "new_physical_macs": 9568256,
+      "new_reserved_bytes": 1561792,
+      "new_setup_us": 5559.095501666889,
+      "new_slots": 19,
+      "new_transfers": 16,
+      "new_upload_calls": 1.0,
+      "old_app_us": 700.2829806879163,
+      "old_reserved_bytes": 1660288,
+      "old_setup_us": 5818.383011501282,
+      "old_slots": 22,
+      "old_transfers": 19,
+      "old_upload_calls": 4.0,
+      "plan": {
+        "manifest": "mnist_mlp_b32",
+        "new": {
+          "mean": 829.0505233162548,
+          "median": 774.3649766780436,
+          "p10": 772.0309658907354
+        },
+        "old": {
+          "mean": 873.3891141794933,
+          "median": 806.1560220085084,
+          "p10": 803.8230007514358
+        },
+        "ratio_median": 1.041054342962211
+      }
+    },
+    "b8": {
+      "bitwise": true,
+      "model": {
+        "calls": 1250,
+        "manifest": "mnist_mlp_b8",
+        "new_mean_us": 813.5044383040319,
+        "new_median_us": 704.6579848974943,
+        "new_pass_medians": [
+          771.5030299965292,
+          761.5155653096735,
+          907.4947196058929
+        ],
+        "old_mean_us": 841.2650779200097,
+        "old_median_us": 732.9490035772324,
+        "old_pass_medians": [
+          800.5398248787969,
+          788.4915806353092,
+          934.7638282459229
+        ],
+        "paired_ratio_mean": 1.0357212100660933,
+        "paired_ratio_median": 1.0369447854173661,
+        "rounds": 3
+      },
+      "new_app_us": 491.8900231132284,
+      "new_logical_macs": 2375680,
+      "new_peak_bytes": 829184,
+      "new_physical_macs": 3588096,
+      "new_reserved_bytes": 1452992,
+      "new_setup_us": 5361.2025221809745,
+      "new_slots": 19,
+      "new_transfers": 16,
+      "new_upload_calls": 1.0,
+      "old_app_us": 517.1180237084627,
+      "old_reserved_bytes": 1551488,
+      "old_setup_us": 5528.762994799763,
+      "old_slots": 22,
+      "old_transfers": 19,
+      "old_upload_calls": 4.0,
+      "plan": {
+        "manifest": "mnist_mlp_b8",
+        "new": {
+          "mean": 572.2564026170099,
+          "median": 540.4509720392525,
+          "p10": 538.4089890867472
+        },
+        "old": {
+          "mean": 620.8835265473075,
+          "median": 573.7009923905134,
+          "p10": 571.3680293411016
+        },
+        "ratio_median": 1.0615227320728104
+      }
+    }
+  },
+  "pair_protocol": "same process, alternating old/new plan calls; full 10k model runner uses per-batch alternating calls",
+  "register_recipe": {
+    "k_limit": 256,
+    "matmul": "gen_matmul_fp16: one CNA/CORE/DPU regcmd task per compiled task; no user-visible register budget",
+    "mn_limit": 256,
+    "note": "K>256 is an ordered MM/MM_ACC chain; M/N>256 is output tiling. The plan stores no register schedule or alternative tiling recipe.",
+    "physical_cols": "round_up(k/n,32)",
+    "physical_rows": "max(m,12) rounded up to 4"
+  },
+  "schema_version": 1,
+  "vit_fast_download": {
+    "b1": {
+      "bitwise": true,
+      "calls": 10000,
+      "lib1": "/mnt/ssd/workspace/tl-exec-20261027T025648Z/source/build-final/librknpu_plan.so",
+      "lib1_mean_us": 1512.9506713264466,
+      "lib1_median_us": 1593.3579998090863,
+      "lib1_pass_medians": [
+        1495.4654042143375,
+        1560.6550342054106,
+        1482.7315755595919
+      ],
+      "lib2": "/mnt/ssd/workspace/tl-exec-20261027T025648Z/source/build-fastdl/librknpu_plan.so",
+      "lib2_mean_us": 1452.0077016767268,
+      "lib2_median_us": 1532.4000269174576,
+      "lib2_pass_medians": [
+        1435.0228555733338,
+        1498.7088496040087,
+        1422.2913998528384
+      ],
+      "manifest": "tiny_vit_b1",
+      "paired_ratio_mean": 1.0429769819213972,
+      "paired_ratio_median": 1.0414849211530113
+    },
+    "b8": {
+      "bitwise": true,
+      "calls": 1250,
+      "lib1": "/mnt/ssd/workspace/tl-exec-20261027T025648Z/source/build-final/librknpu_plan.so",
+      "lib1_mean_us": 4478.920364504059,
+      "lib1_median_us": 4512.910003541037,
+      "lib1_pass_medians": [
+        4518.5603147838265,
+        4415.663287695497,
+        4502.537491032854
+      ],
+      "lib2": "/mnt/ssd/workspace/tl-exec-20261027T025648Z/source/build-fastdl/librknpu_plan.so",
+      "lib2_mean_us": 3971.6228163956353,
+      "lib2_median_us": 4010.6649976223707,
+      "lib2_pass_medians": [
+        4010.3109331801534,
+        3906.276412215084,
+        3998.281103791669
+      ],
+      "manifest": "tiny_vit_b8",
+      "paired_ratio_mean": 1.1282565950870238,
+      "paired_ratio_median": 1.1336226960048612
+    }
+  }
+}

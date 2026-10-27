@@ -374,3 +374,34 @@ results/20261027T025648Z-execution-candidates/campaign/vendor/
 !results/20261027T080223Z-graph-plan/deviceffn/manifests/SHA256SUMS
 
 !results/20261027T080223Z-graph-plan/SHA256SUMS
+
+# Template/granularity campaign (2026-10-27): keep manifests, geometry,
+# per-case timing analyses, fixed-frequency external JSON, frozen numeric
+# observations/spec, exact final runtime and hashes. External raw logits are
+# intentionally not committed; their JSON summaries remain.
+!results/20261027T093259Z-template-gap/
+!results/20261027T093259Z-template-gap/*.json
+!results/20261027T093259Z-template-gap/*.md
+!results/20261027T093259Z-template-gap/*.log
+!results/20261027T093259Z-template-gap/*.txt
+!results/20261027T093259Z-template-gap/SHA256SUMS
+!results/20261027T093259Z-template-gap/timing/
+!results/20261027T093259Z-template-gap/timing/*.json
+!results/20261027T093259Z-template-gap/timing/*.log
+!results/20261027T093259Z-template-gap/timing/*.txt
+!results/20261027T093259Z-template-gap/numeric/
+!results/20261027T093259Z-template-gap/numeric/*.log
+!results/20261027T093259Z-template-gap/numeric/calibration/
+!results/20261027T093259Z-template-gap/numeric/calibration/*.json
+!results/20261027T093259Z-template-gap/numeric/calibration/*.npz
+!results/20261027T093259Z-template-gap/numeric/acceptance/
+!results/20261027T093259Z-template-gap/numeric/acceptance/*.json
+!results/20261027T093259Z-template-gap/numeric/acceptance/*.npz
+!results/20261027T093259Z-template-gap/numeric/spec/
+!results/20261027T093259Z-template-gap/numeric/spec/*.json
+!results/20261027T093259Z-template-gap/numeric/spec/*.npz
+!results/20261027T093259Z-template-gap/external/
+!results/20261027T093259Z-template-gap/external/*.json
+!results/20261027T093259Z-template-gap/external/*.log
+!results/20261027T093259Z-template-gap/runtime/
+!results/20261027T093259Z-template-gap/runtime/*.so

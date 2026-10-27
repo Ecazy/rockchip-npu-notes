@@ -1,0 +1,189 @@
+{
+  "backend": "rknn-toolkit-lite2",
+  "kind": "vendor-rknn-runtime-eval",
+  "profiles": [
+    {
+      "argmax_seconds": 0.0003324959543533623,
+      "batch": 32,
+      "batch_schedule": {
+        "batch_histogram": {
+          "32": 312,
+          "8": 2
+        },
+        "calls": 314,
+        "no_dynamic_shapes": true,
+        "tail_calls": 2
+      },
+      "context_batches": [
+        32,
+        8
+      ],
+      "end_to_end_seconds": 0.16925264394376427,
+      "metrics": {
+        "accuracy": 0.9831,
+        "accuracy_delta": 0.0,
+        "cpu_accuracy": 0.9831,
+        "declared_accuracy": 0.9831,
+        "declared_max_abs_logit_error": 0.0625,
+        "declared_mean_abs_logit_error": 0.003984404045343399,
+        "declared_top1_agreement": 1.0,
+        "max_abs_logit_error": 0.03049468994140625,
+        "mean_abs_logit_error": 0.0029338499692548067,
+        "n": 10000,
+        "top1_agreement": 1.0
+      },
+      "model": "mnist_mlp",
+      "model_call_seconds": 0.1689201479894109,
+      "n": 10000,
+      "setup_seconds": 0.1823955869767815,
+      "throughput_basis": "app-side input preparation+RKNN inference+argmax",
+      "throughput_images_s": 59083.27200680298,
+      "warmup_seconds": 0.0017800229834392667
+    },
+    {
+      "argmax_seconds": 0.0003351219929754734,
+      "batch": 8,
+      "batch_schedule": {
+        "batch_histogram": {
+          "8": 1250
+        },
+        "calls": 1250,
+        "no_dynamic_shapes": true,
+        "tail_calls": 0
+      },
+      "context_batches": [
+        8
+      ],
+      "end_to_end_seconds": 0.38768734701443464,
+      "metrics": {
+        "accuracy": 0.9831,
+        "accuracy_delta": 0.0,
+        "cpu_accuracy": 0.9831,
+        "declared_accuracy": 0.9831,
+        "declared_max_abs_logit_error": 0.0625,
+        "declared_mean_abs_logit_error": 0.003984404045343399,
+        "declared_top1_agreement": 1.0,
+        "max_abs_logit_error": 0.03049468994140625,
+        "mean_abs_logit_error": 0.0029338499692548067,
+        "n": 10000,
+        "top1_agreement": 1.0
+      },
+      "model": "mnist_mlp",
+      "model_call_seconds": 0.38735222502145916,
+      "n": 10000,
+      "setup_seconds": 0.056784266023896635,
+      "throughput_basis": "app-side input preparation+RKNN inference+argmax",
+      "throughput_images_s": 25793.980837934527,
+      "warmup_seconds": 0.000729741994291544
+    },
+    {
+      "argmax_seconds": 0.00035553803900256753,
+      "batch": 1,
+      "batch_schedule": {
+        "batch_histogram": {
+          "1": 10000
+        },
+        "calls": 10000,
+        "no_dynamic_shapes": true,
+        "tail_calls": 0
+      },
+      "context_batches": [
+        1
+      ],
+      "end_to_end_seconds": 2.5883873470593244,
+      "metrics": {
+        "accuracy": 0.9831,
+        "accuracy_delta": 0.0,
+        "cpu_accuracy": 0.9831,
+        "declared_accuracy": 0.9831,
+        "declared_max_abs_logit_error": 0.0625,
+        "declared_mean_abs_logit_error": 0.003984404045343399,
+        "declared_top1_agreement": 1.0,
+        "max_abs_logit_error": 0.03049468994140625,
+        "mean_abs_logit_error": 0.0029338499692548067,
+        "n": 10000,
+        "top1_agreement": 1.0
+      },
+      "model": "mnist_mlp",
+      "model_call_seconds": 2.588031809020322,
+      "n": 10000,
+      "setup_seconds": 0.056015149981249124,
+      "throughput_basis": "app-side input preparation+RKNN inference+argmax",
+      "throughput_images_s": 3863.4093971140114,
+      "warmup_seconds": 0.0013830679818056524
+    },
+    {
+      "argmax_seconds": 0.0003540799953043461,
+      "batch": 8,
+      "batch_schedule": {
+        "batch_histogram": {
+          "8": 1250
+        },
+        "calls": 1250,
+        "no_dynamic_shapes": true,
+        "tail_calls": 0
+      },
+      "context_batches": [
+        8
+      ],
+      "end_to_end_seconds": 1.9780049709952436,
+      "metrics": {
+        "accuracy": 0.9821,
+        "accuracy_delta": 0.0,
+        "cpu_accuracy": 0.9821,
+        "declared_accuracy": 0.9821,
+        "declared_max_abs_logit_error": 0.11328125,
+        "declared_mean_abs_logit_error": 0.012008378998041153,
+        "declared_top1_agreement": 1.0,
+        "max_abs_logit_error": 0.12277078628540039,
+        "mean_abs_logit_error": 0.011518682318475039,
+        "n": 10000,
+        "top1_agreement": 1.0
+      },
+      "model": "tiny_vit",
+      "model_call_seconds": 1.9776508909999393,
+      "n": 10000,
+      "setup_seconds": 0.05741192598361522,
+      "throughput_basis": "app-side input preparation+RKNN inference+argmax",
+      "throughput_images_s": 5055.59902358003,
+      "warmup_seconds": 0.002047477988526225
+    },
+    {
+      "argmax_seconds": 0.0003721630200743675,
+      "batch": 1,
+      "batch_schedule": {
+        "batch_histogram": {
+          "1": 10000
+        },
+        "calls": 10000,
+        "no_dynamic_shapes": true,
+        "tail_calls": 0
+      },
+      "context_batches": [
+        1
+      ],
+      "end_to_end_seconds": 5.893977093044668,
+      "metrics": {
+        "accuracy": 0.9821,
+        "accuracy_delta": 0.0,
+        "cpu_accuracy": 0.9821,
+        "declared_accuracy": 0.9821,
+        "declared_max_abs_logit_error": 0.09765625,
+        "declared_mean_abs_logit_error": 0.012104876539111138,
+        "declared_top1_agreement": 1.0,
+        "max_abs_logit_error": 0.10714578628540039,
+        "mean_abs_logit_error": 0.011438511545444199,
+        "n": 10000,
+        "top1_agreement": 1.0
+      },
+      "model": "tiny_vit",
+      "model_call_seconds": 5.893604930024594,
+      "n": 10000,
+      "setup_seconds": 0.05674664198886603,
+      "throughput_basis": "app-side input preparation+RKNN inference+argmax",
+      "throughput_images_s": 1696.6472455077478,
+      "warmup_seconds": 0.0016758979763835669
+    }
+  ],
+  "schema_version": 1
+}

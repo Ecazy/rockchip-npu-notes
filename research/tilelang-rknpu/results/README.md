@@ -5,6 +5,21 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Hardware-template and granularity checkpoint (2026-10-27)
+
+- `results/20261027T093259Z-template-gap/`: fixed-frequency geometry and
+  envelope campaign for MLP b1/b8/b32, ViT QKV/gate-up/down, and QK/PV groups.
+  MLP b1 and b8 use the same 12 padded physical rows and same 11 tasks/8
+  submits; QK/PV b8 has 32 tiny 16³ tasks but only ~98 µs submit+wait.
+- Implemented exact CUBE layout bridge: one K-major external upload with stable
+  K-slice views (MLP plan gains 1.065×/1.062×/1.041×; final end-to-end delivered
+  gains 1.045×/1.040×/1.034×) and atom-wise CUBE→row-major download (Tiny ViT
+  b8/b1 gains 1.134×/1.041×). All full-test logits are bitwise equal.
+- Frozen packed numeric spec: **PASS / 0 problems**; Host **348 passed,
+  3 skipped, 68 subtests**; CTest **31/31**. Device FFN remains opt-in.
+- Report: [TEMPLATE-GRANULARITY-REPORT.md](../TEMPLATE-GRANULARITY-REPORT.md);
+  evidence: [README](20261027T093259Z-template-gap/README.md).
+
 ## Vendor RKNN baseline checkpoint (2026-10-27, v14)
 
 - `results/20261027T015302Z-vendor/`: two rounds, full 10,000-image test split

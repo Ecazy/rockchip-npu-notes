@@ -1,5 +1,13 @@
 # 图级执行方案与最小验证原型
 
+> **后续 package identity note:** this report's `72f898…` compiled-package
+> hash is the historical graph-stage identity. The later 2026-10-27
+> template/granularity stage recompiled the MLP plans for packed K-major uploads;
+> the current `models/compiled/manifest.json` hash is
+> `16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869`.
+> The compiled graph executor itself is unchanged. See
+> [TEMPLATE-GRANULARITY-REPORT.md](TEMPLATE-GRANULARITY-REPORT.md).
+
 日期：2026-10-27。本阶段承接 prepared Host-residency lowering，但不再把
 “整模型设备驻留、只剩输入输出边界”作为预设目标。产物是一个**已实现并实测**
 的 same-policy 图级执行路径，以及一个需要独立数值政策决策的 device-FFN

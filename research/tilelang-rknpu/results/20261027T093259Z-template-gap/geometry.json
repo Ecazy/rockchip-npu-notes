@@ -1,0 +1,1196 @@
+{
+  "cases": [
+    {
+      "batch": 1,
+      "data_bo_count": 19,
+      "manifest": "mnist_mlp_b1",
+      "model": "mnist_mlp",
+      "peak_payload_bytes": 829184,
+      "plan": "mlp",
+      "plan_hash": "a1df244f7a6746c26152e57ddc2cd6d2ef03d5adb2786c3af6f2cfa448a36393",
+      "reserved_bytes": 1452992,
+      "submit_count": 8,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 256,
+              "m": 1,
+              "n": 256,
+              "physical_k": 256,
+              "physical_m": 12,
+              "physical_n": 256,
+              "source_k_loop": {
+                "lowering_k_tile": 256,
+                "narrowing_base": "explicit f16 writeback every K tile",
+                "pipeline_hint_dropped": true,
+                "source_k_block": 256,
+                "source_k_trips": 4
+              },
+              "source_mn_tiling": {
+                "block_m": 1,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 4,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            },
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 3,
+              "k": 256,
+              "m": 1,
+              "n": 256,
+              "physical_k": 256,
+              "physical_m": 12,
+              "physical_n": 256,
+              "source_k_loop": {
+                "lowering_k_tile": 256,
+                "narrowing_base": "explicit f16 writeback every K tile",
+                "pipeline_hint_dropped": true,
+                "source_k_block": 256,
+                "source_k_trips": 4
+              },
+              "source_mn_tiling": {
+                "block_m": 1,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 4,
+                "grid_y": 1
+              },
+              "template": "co.mm_acc.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 1024,
+          "logical_macs": 262144,
+          "mm_tasks": 4,
+          "mode": "chain",
+          "padding_ratio": 12.0,
+          "physical_macs": 3145728,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 4
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 1,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 2,
+          "tasks": 1
+        },
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 256,
+              "m": 1,
+              "n": 128,
+              "physical_k": 256,
+              "physical_m": 12,
+              "physical_n": 128,
+              "source_k_loop": null,
+              "source_mn_tiling": {
+                "block_m": 1,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 2,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 256,
+          "logical_macs": 32768,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 12.0,
+          "physical_macs": 393216,
+          "recipe": "linear_k_acc_v1",
+          "submit": 3,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 4,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 5,
+          "tasks": 1
+        },
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 128,
+              "m": 1,
+              "n": 16,
+              "physical_k": 128,
+              "physical_m": 12,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": {
+                "block_m": 1,
+                "block_n": 16,
+                "coverage": "exact_once",
+                "grid_x": 1,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 128,
+          "logical_macs": 2048,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 24.0,
+          "physical_macs": 49152,
+          "recipe": "linear_k_acc_v1",
+          "submit": 6,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 7,
+          "tasks": 1
+        }
+      ],
+      "task_count": 11,
+      "transfers": 16
+    },
+    {
+      "batch": 8,
+      "data_bo_count": 19,
+      "manifest": "mnist_mlp_b8",
+      "model": "mnist_mlp",
+      "peak_payload_bytes": 829184,
+      "plan": "mlp",
+      "plan_hash": "20abc9c7b8c1dff33d595cf0c217955247a5b1f2df35490494d2a7a1fff36c50",
+      "reserved_bytes": 1452992,
+      "submit_count": 8,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 256,
+              "m": 8,
+              "n": 256,
+              "physical_k": 256,
+              "physical_m": 12,
+              "physical_n": 256,
+              "source_k_loop": {
+                "lowering_k_tile": 256,
+                "narrowing_base": "explicit f16 writeback every K tile",
+                "pipeline_hint_dropped": true,
+                "source_k_block": 256,
+                "source_k_trips": 4
+              },
+              "source_mn_tiling": {
+                "block_m": 8,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 4,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            },
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 3,
+              "k": 256,
+              "m": 8,
+              "n": 256,
+              "physical_k": 256,
+              "physical_m": 12,
+              "physical_n": 256,
+              "source_k_loop": {
+                "lowering_k_tile": 256,
+                "narrowing_base": "explicit f16 writeback every K tile",
+                "pipeline_hint_dropped": true,
+                "source_k_block": 256,
+                "source_k_trips": 4
+              },
+              "source_mn_tiling": {
+                "block_m": 8,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 4,
+                "grid_y": 1
+              },
+              "template": "co.mm_acc.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 1024,
+          "logical_macs": 2097152,
+          "mm_tasks": 4,
+          "mode": "chain",
+          "padding_ratio": 1.5,
+          "physical_macs": 3145728,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 4
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 1,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 2,
+          "tasks": 1
+        },
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 256,
+              "m": 8,
+              "n": 128,
+              "physical_k": 256,
+              "physical_m": 12,
+              "physical_n": 128,
+              "source_k_loop": null,
+              "source_mn_tiling": {
+                "block_m": 8,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 2,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 256,
+          "logical_macs": 262144,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 1.5,
+          "physical_macs": 393216,
+          "recipe": "linear_k_acc_v1",
+          "submit": 3,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 4,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 5,
+          "tasks": 1
+        },
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 128,
+              "m": 8,
+              "n": 16,
+              "physical_k": 128,
+              "physical_m": 12,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": {
+                "block_m": 8,
+                "block_n": 16,
+                "coverage": "exact_once",
+                "grid_x": 1,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 128,
+          "logical_macs": 16384,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 3.0,
+          "physical_macs": 49152,
+          "recipe": "linear_k_acc_v1",
+          "submit": 6,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 7,
+          "tasks": 1
+        }
+      ],
+      "task_count": 11,
+      "transfers": 16
+    },
+    {
+      "batch": 32,
+      "data_bo_count": 19,
+      "manifest": "mnist_mlp_b32",
+      "model": "mnist_mlp",
+      "peak_payload_bytes": 937984,
+      "plan": "mlp",
+      "plan_hash": "48e6449fb20102515de0486a7a78875ef6a568bd1e4d0c07d029e5dcec323987",
+      "reserved_bytes": 1561792,
+      "submit_count": 8,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 256,
+              "m": 32,
+              "n": 256,
+              "physical_k": 256,
+              "physical_m": 32,
+              "physical_n": 256,
+              "source_k_loop": {
+                "lowering_k_tile": 256,
+                "narrowing_base": "explicit f16 writeback every K tile",
+                "pipeline_hint_dropped": true,
+                "source_k_block": 256,
+                "source_k_trips": 4
+              },
+              "source_mn_tiling": {
+                "block_m": 32,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 4,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            },
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 3,
+              "k": 256,
+              "m": 32,
+              "n": 256,
+              "physical_k": 256,
+              "physical_m": 32,
+              "physical_n": 256,
+              "source_k_loop": {
+                "lowering_k_tile": 256,
+                "narrowing_base": "explicit f16 writeback every K tile",
+                "pipeline_hint_dropped": true,
+                "source_k_block": 256,
+                "source_k_trips": 4
+              },
+              "source_mn_tiling": {
+                "block_m": 32,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 4,
+                "grid_y": 1
+              },
+              "template": "co.mm_acc.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 1024,
+          "logical_macs": 8388608,
+          "mm_tasks": 4,
+          "mode": "chain",
+          "padding_ratio": 1.0,
+          "physical_macs": 8388608,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 4
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 1,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 2,
+          "tasks": 1
+        },
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 256,
+              "m": 32,
+              "n": 128,
+              "physical_k": 256,
+              "physical_m": 32,
+              "physical_n": 128,
+              "source_k_loop": null,
+              "source_mn_tiling": {
+                "block_m": 32,
+                "block_n": 64,
+                "coverage": "exact_once",
+                "grid_x": 2,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 256,
+          "logical_macs": 1048576,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 1.0,
+          "physical_macs": 1048576,
+          "recipe": "linear_k_acc_v1",
+          "submit": 3,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 4,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 5,
+          "tasks": 1
+        },
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 128,
+              "m": 32,
+              "n": 16,
+              "physical_k": 128,
+              "physical_m": 32,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": {
+                "block_m": 32,
+                "block_n": 16,
+                "coverage": "exact_once",
+                "grid_x": 1,
+                "grid_y": 1
+              },
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 128,
+          "logical_macs": 65536,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 2.0,
+          "physical_macs": 131072,
+          "recipe": "linear_k_acc_v1",
+          "submit": 6,
+          "tasks": 1
+        },
+        {
+          "geometry": [],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": null,
+          "logical_macs": 0,
+          "mm_tasks": 0,
+          "mode": "chain",
+          "padding_ratio": null,
+          "physical_macs": 0,
+          "recipe": "gate_ew_v1",
+          "submit": 7,
+          "tasks": 1
+        }
+      ],
+      "task_count": 11,
+      "transfers": 16
+    },
+    {
+      "batch": 1,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b1",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 32768,
+      "plan": "qkv",
+      "plan_hash": "5f63eaaf615d3e099b28f69c9ad87538c591cb9ee0bfb59d3267cb3658953436",
+      "reserved_bytes": 131264,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 64,
+              "m": 16,
+              "n": 192,
+              "physical_k": 64,
+              "physical_m": 16,
+              "physical_n": 192,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 64,
+          "logical_macs": 196608,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 1.0,
+          "physical_macs": 196608,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 1
+        }
+      ],
+      "task_count": 1,
+      "transfers": 3
+    },
+    {
+      "batch": 8,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b8",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 90112,
+      "plan": "qkv",
+      "plan_hash": "05cc9c88dfec4da3ddd302b201981fda023340a38f01235cc028e9c1373e7d53",
+      "reserved_bytes": 188608,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 64,
+              "m": 128,
+              "n": 192,
+              "physical_k": 64,
+              "physical_m": 128,
+              "physical_n": 192,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 64,
+          "logical_macs": 1572864,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 1.0,
+          "physical_macs": 1572864,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 1
+        }
+      ],
+      "task_count": 1,
+      "transfers": 3
+    },
+    {
+      "batch": 1,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b1",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 43008,
+      "plan": "gate_up",
+      "plan_hash": "9f3c55f30c2fdb34e9e78e4b05bb7bf3666d78266db2b61dc3fe6c93cb929477",
+      "reserved_bytes": 141504,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 64,
+              "m": 16,
+              "n": 256,
+              "physical_k": 64,
+              "physical_m": 16,
+              "physical_n": 256,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 64,
+          "logical_macs": 262144,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 1.0,
+          "physical_macs": 262144,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 1
+        }
+      ],
+      "task_count": 1,
+      "transfers": 3
+    },
+    {
+      "batch": 8,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b8",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 114688,
+      "plan": "gate_up",
+      "plan_hash": "4bbebbb73dfe7529f8fd17d220cd542c4f69e6a96b2be80b318e2a4b5d9d5935",
+      "reserved_bytes": 213184,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 64,
+              "m": 128,
+              "n": 256,
+              "physical_k": 64,
+              "physical_m": 128,
+              "physical_n": 256,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 64,
+          "logical_macs": 2097152,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 1.0,
+          "physical_macs": 2097152,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 1
+        }
+      ],
+      "task_count": 1,
+      "transfers": 3
+    },
+    {
+      "batch": 1,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b1",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 22528,
+      "plan": "down",
+      "plan_hash": "ea43d153c27b4d2896d7dc35ad838510f5e29155e231e732b88420d139871cc3",
+      "reserved_bytes": 121024,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 128,
+              "m": 16,
+              "n": 64,
+              "physical_k": 128,
+              "physical_m": 16,
+              "physical_n": 64,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 128,
+          "logical_macs": 131072,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 1.0,
+          "physical_macs": 131072,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 1
+        }
+      ],
+      "task_count": 1,
+      "transfers": 3
+    },
+    {
+      "batch": 8,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b8",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 65536,
+      "plan": "down",
+      "plan_hash": "7af7e79f69fc8eeeedd104fb06a9cacb26632e3d2cc8f9812c5ace53829f6706",
+      "reserved_bytes": 164032,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 128,
+              "m": 128,
+              "n": 64,
+              "physical_k": 128,
+              "physical_m": 128,
+              "physical_n": 64,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 128,
+          "logical_macs": 1048576,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 1.0,
+          "physical_macs": 1048576,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 1
+        }
+      ],
+      "task_count": 1,
+      "transfers": 3
+    },
+    {
+      "batch": 1,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b1",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 6400,
+      "plan": "classifier",
+      "plan_hash": "ec780abc31a527f5ce44d2496468e160058aeb6d97197209e5ea8c6b096f48ba",
+      "reserved_bytes": 104896,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 64,
+              "m": 1,
+              "n": 16,
+              "physical_k": 64,
+              "physical_m": 12,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 64,
+          "logical_macs": 1024,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 24.0,
+          "physical_macs": 24576,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 1
+        }
+      ],
+      "task_count": 1,
+      "transfers": 3
+    },
+    {
+      "batch": 8,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b8",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 6400,
+      "plan": "classifier",
+      "plan_hash": "f68f9131075631696750442702bd93cbd9319de85934cb81c99269ea6e8bfe4c",
+      "reserved_bytes": 104896,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 1,
+              "k": 64,
+              "m": 8,
+              "n": 16,
+              "physical_k": 64,
+              "physical_m": 12,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 1,
+          "logical_k_if_k_chain": 64,
+          "logical_macs": 8192,
+          "mm_tasks": 1,
+          "mode": "chain",
+          "padding_ratio": 3.0,
+          "physical_macs": 24576,
+          "recipe": "linear_k_acc_v1",
+          "submit": 0,
+          "tasks": 1
+        }
+      ],
+      "task_count": 1,
+      "transfers": 3
+    },
+    {
+      "batch": 1,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b1",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 16384,
+      "plan": "attn_qk_qkv_group",
+      "plan_hash": "52b9c4dd38611d29b5073a68919733612e705edce23959d1e84198f599e49de6",
+      "reserved_bytes": 114880,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 4,
+              "k": 16,
+              "m": 16,
+              "n": 16,
+              "physical_k": 32,
+              "physical_m": 16,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 4,
+          "logical_k_if_k_chain": 16,
+          "logical_macs": 16384,
+          "mm_tasks": 4,
+          "mode": "chain",
+          "padding_ratio": 4.0,
+          "physical_macs": 65536,
+          "recipe": "independent_mm_v1",
+          "submit": 0,
+          "tasks": 4
+        }
+      ],
+      "task_count": 4,
+      "transfers": 12
+    },
+    {
+      "batch": 8,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b8",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 131072,
+      "plan": "attn_qk_qkv_group",
+      "plan_hash": "f20c52b74ce9a3f50eebce3c0dea11b3c6cc1b3cd6df8cc70892aee2bdd31209",
+      "reserved_bytes": 229568,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 32,
+              "k": 16,
+              "m": 16,
+              "n": 16,
+              "physical_k": 32,
+              "physical_m": 16,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 32,
+          "logical_k_if_k_chain": 16,
+          "logical_macs": 131072,
+          "mm_tasks": 32,
+          "mode": "chain",
+          "padding_ratio": 4.0,
+          "physical_macs": 524288,
+          "recipe": "independent_mm_v1",
+          "submit": 0,
+          "tasks": 32
+        }
+      ],
+      "task_count": 32,
+      "transfers": 96
+    },
+    {
+      "batch": 1,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b1",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 16384,
+      "plan": "attn_pv_qkv_group",
+      "plan_hash": "24f866289c08d595577f34a2426600cdffcecf4b6faab03fd58c2caa5598dd4e",
+      "reserved_bytes": 114880,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 4,
+              "k": 16,
+              "m": 16,
+              "n": 16,
+              "physical_k": 32,
+              "physical_m": 16,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 4,
+          "logical_k_if_k_chain": 16,
+          "logical_macs": 16384,
+          "mm_tasks": 4,
+          "mode": "chain",
+          "padding_ratio": 4.0,
+          "physical_macs": 65536,
+          "recipe": "independent_mm_v1",
+          "submit": 0,
+          "tasks": 4
+        }
+      ],
+      "task_count": 4,
+      "transfers": 12
+    },
+    {
+      "batch": 8,
+      "data_bo_count": 3,
+      "manifest": "tiny_vit_b8",
+      "model": "tiny_vit",
+      "peak_payload_bytes": 131072,
+      "plan": "attn_pv_qkv_group",
+      "plan_hash": "8bfff8c59cd33367051ab7792d44ad7c3269fba332f22f2e73e7c14e977cd466",
+      "reserved_bytes": 229568,
+      "submit_count": 1,
+      "submits": [
+        {
+          "geometry": [
+            {
+              "a_layout": "co.cube.f16.v1",
+              "count": 32,
+              "k": 16,
+              "m": 16,
+              "n": 16,
+              "physical_k": 32,
+              "physical_m": 16,
+              "physical_n": 32,
+              "source_k_loop": null,
+              "source_mn_tiling": null,
+              "template": "co.mm.f16.v1",
+              "w_layout": "co.weight.f16.v1",
+              "y_layout": "co.cube.f16.v1"
+            }
+          ],
+          "independent_runs": 32,
+          "logical_k_if_k_chain": 16,
+          "logical_macs": 131072,
+          "mm_tasks": 32,
+          "mode": "chain",
+          "padding_ratio": 4.0,
+          "physical_macs": 524288,
+          "recipe": "independent_mm_v1",
+          "submit": 0,
+          "tasks": 32
+        }
+      ],
+      "task_count": 32,
+      "transfers": 96
+    }
+  ],
+  "kind": "gemm-geometry-inventory",
+  "register_recipe": {
+    "k_limit": 256,
+    "matmul": "gen_matmul_fp16: one CNA/CORE/DPU regcmd task per compiled task; no user-visible register budget",
+    "mn_limit": 256,
+    "note": "K>256 is an ordered MM/MM_ACC chain; M/N>256 is output tiling. The plan stores no register schedule or alternative tiling recipe.",
+    "physical_cols": "round_up(k/n,32)",
+    "physical_rows": "max(m,12) rounded up to 4"
+  },
+  "schema_version": 1
+}

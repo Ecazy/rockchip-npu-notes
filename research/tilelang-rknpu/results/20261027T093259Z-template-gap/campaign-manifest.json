@@ -1,0 +1,106 @@
+{
+  "board": {
+    "cpu_affinity": 6,
+    "cpu_frequency_khz": 2304000,
+    "cpu_governor": "performance",
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": 1,
+      "OMP_NUM_THREADS": 1,
+      "OPENBLAS_NUM_THREADS": 1
+    },
+    "dmc_frequency_hz": 2112000000,
+    "dmc_governor": "performance",
+    "driver": "v0.9.8",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "npu_frequency_hz": 1000000000,
+    "npu_governor": "performance",
+    "target": "RK3588 OPi 5 Plus"
+  },
+  "external": {
+    "cpu": "NumPy FP32, separate numeric policy",
+    "limit": 10000,
+    "note": "vendor internal device Submit count and per-kernel time unknown",
+    "rounds": 1,
+    "vendor": "RKNN Runtime 2.3.2, non-quantized FP16, separate numeric policy"
+  },
+  "identities": {
+    "compiled_manifest_sha256": "16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869",
+    "final_library_sha256": "19b5263a137cda82eff215ca181d267923ca9645d4cca2378de290ab6dbcaa16",
+    "mlp_plans": {
+      "mnist_mlp_b1": {
+        "plan_hash": "a1df244f7a6746c26152e57ddc2cd6d2ef03d5adb2786c3af6f2cfa448a36393",
+        "sha256": "cd86ea3a2940dd38b7d5888e4233184f3ee4f69954454619ef0f35c320549c11"
+      },
+      "mnist_mlp_b32": {
+        "plan_hash": "48e6449fb20102515de0486a7a78875ef6a568bd1e4d0c07d029e5dcec323987",
+        "sha256": "faffefc00b9fdab0ed2ed1e61059519056d5515bbd77813569833fa941b49a1a"
+      },
+      "mnist_mlp_b8": {
+        "plan_hash": "20abc9c7b8c1dff33d595cf0c217955247a5b1f2df35490494d2a7a1fff36c50",
+        "sha256": "7d3b11ccc4853a2eb910a70a8fe0ac2305d2c5ce0a5550802abd3bc9c8b4505a"
+      }
+    },
+    "mnist_mlp_weights_sha256": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+    "numeric_acceptance_packed_sha256": "2ccefee0d19dbb558622c67f7020331b573357c44434e7dde24e26d98514ecb2",
+    "test_images_sha256": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+    "test_labels_sha256": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6",
+    "tiny_vit_weights_sha256": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+  },
+  "implemented": [
+    {
+      "effect": "one external CUBE upload; stable K-slice views",
+      "name": "k_major_upload_coalescing",
+      "resource": {
+        "reserved_bytes_b1_b8": "1551488->1452992",
+        "reserved_bytes_b32": "1660288->1561792",
+        "slots": "22->19",
+        "transfers": "19->16",
+        "upload_actions": "4->1"
+      },
+      "scope": "compiler + C validator"
+    },
+    {
+      "effect": "8-FP16 atom copies; exact logical row-major order",
+      "name": "cube_to_rowmajor_download_fastpath",
+      "scope": "C runtime"
+    }
+  ],
+  "kind": "hardware-template-and-execution-granularity-campaign",
+  "measurement": {
+    "app_interval": "PlanCall prepared run with reused workspace/output",
+    "attributes": "separate attributed pass; excluded from app medians",
+    "benchmark_runs": 500,
+    "case_orders": "three forward + three reverse for final template medians",
+    "pair_order": "per-call/per-batch alternating old/new",
+    "submit_wait": "blocking C submit interval, includes submission + device execution, not pure kernel",
+    "warmup": 20
+  },
+  "schema_version": 1,
+  "source": {
+    "c_files": {
+      "research/custom-ops/CMakeLists.txt": "5f18c3a2fa530c5fa1c8731505af34af2e1ebaf17890fd6e38c7c438ad9b47ae",
+      "research/custom-ops/src/custom_ops.c": "8ab45aecaf48976e6b91b793bfb39cd810d8ec13d90433f5b3050b1488d62ede",
+      "research/custom-ops/src/rk_plan_validate.c": "ef01b856c100e347957dcaf6c1d65463a6db337d0d102f674527c1b7d03ae0a5"
+    },
+    "git_head": "16d49adc0dce96ef95b89175939d110063877b25"
+  },
+  "tools": {
+    "research/custom-ops/tests/c/download_fastpath_test.c": "61319b2f96d8b98b7e84c7ad28b788b2f9a366e329c79e9867b9198d9542efc7",
+    "research/tilelang-rknpu/tools/analyze_template_gap.py": "d89efb772ffcf29bd3b691b3a4211b7ecc88fa097b7e63ae67fd4982c02a1019",
+    "research/tilelang-rknpu/tools/benchmark_gemm_templates.py": "9cb55e80d1b3344277675df326d7f21712581ef952883ec351afa41a0c78b6b7",
+    "research/tilelang-rknpu/tools/extract_gemm_geometry.py": "03e197ba1b573bc76b612bdd7c13fc365110226d72fe82275bc4e74721468349",
+    "research/tilelang-rknpu/tools/run_numeric_observation.py": "00c7f1ded73754430ed1b7ee1c16a9a57b1d3acbd13691471af3e8a634c70c97"
+  },
+  "verified": {
+    "ctest": "31/31",
+    "frozen_numeric": "PASS / 0 problems",
+    "full_test_bitwise": {
+      "mnist_mlp.b1": true,
+      "mnist_mlp.b32": true,
+      "mnist_mlp.b8": true,
+      "tiny_vit.b1": true,
+      "tiny_vit.b8": true
+    },
+    "pytest": "348 passed, 3 skipped, 68 subtests"
+  }
+}
