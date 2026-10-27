@@ -14,7 +14,7 @@ def parse(path):
 
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument('--root',type=Path,required=True); ap.add_argument('--out',type=Path,required=True)
+    ap=argparse.ArgumentParser(); ap.add_argument('--root',type=Path,required=True); ap.add_argument('--out',type=Path,required=True); ap.add_argument('--experiment',default='finite-scan')
     a=ap.parse_args(); cases={}; failures=[]
     for case in ('qk_b8','pv_b8'):
         rounds=[]
@@ -50,7 +50,7 @@ def main():
             'stable_positive_gain':bool(ratios) and min(ratios)>1.0,
             'all_bitwise':all(r['bitwise'] for r in rounds) and len(rounds)==7}
         if len(rounds)!=7: failures.append(f'{case}: only {len(rounds)}/7 valid rounds')
-    report={'kind':'finite-scan-isolated-summary','primary':'median of per-round medians and corresponding ratios','p10_role':'auxiliary only','cases':cases,'failures':failures,'status':'PASS' if not failures else 'FAIL'}
+    report={'kind':a.experiment+'-isolated-summary','experiment':a.experiment,'primary':'median of per-round medians and corresponding ratios','p10_role':'auxiliary only','cases':cases,'failures':failures,'status':'PASS' if not failures else 'FAIL'}
     a.out.write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
     print(json.dumps(report,indent=2,sort_keys=True))
     return 0 if not failures else 1

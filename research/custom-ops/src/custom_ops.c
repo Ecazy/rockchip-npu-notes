@@ -482,10 +482,47 @@ static int execute_impl(int fd,const co_program *p,unsigned n,enum co_mode mode,
     rc=rocket_submit_tasks_flags(fd,tasks,n,ins,ni,outs,no,p[0].flags|(mode==CO_CHAIN?ROCKET_JOB_BATCHED:0));
     if(prof)prof->submit_wait_us+=co_clock_us()-start;
     start=prof?co_clock_us():0;
-    if(!rc)for(unsigned i=0;i<n;i++) {
-        rocket_bo *b=&p[i].output.buffer->bo;
-        rc=rocket_bo_prep(fd,b,0,2000000000ull);if(rc)break;
-        rc=rocket_bo_fini(fd,b);if(rc)break;
+    if(!rc) {
+#ifdef CO_OUTPUT_SYNC_REFERENCE
+        /* Board A/B control: preserve the historical per-program output sync. */
+        for(unsigned i=0;i<n;i++) {
+            rocket_bo *b=&p[i].output.buffer->bo;
+            rc=rocket_bo_prep(fd,b,0,2000000000ull);if(rc)break;
+            rc=rocket_bo_fini(fd,b);if(rc)break;
+        }
+#else
+        /* PREP/FINI operate on the complete BO (provider syncs [0,page_up(size)))
+         * and the submit above is blocking.  Thus disjoint output views in one BO
+         * need one CPU sync pair after this submit.  Keep the seen set local to this
+         * call: CO_SEPARATE recurses once per submit and must sync each completion. */
+        struct output_sync_key {
+            int fd;
+            uint32_t handle;
+            uint64_t obj_addr;
+            size_t size;
+        } seen[CO_MAX_PROGRAMS];
+        unsigned nseen=0;
+        for(unsigned i=0;i<n;i++) {
+            co_buffer *buffer=p[i].output.buffer;
+            uint32_t handle=buffer->bo.handle;
+            int duplicate=0;
+            for(unsigned j=0;j<nseen;j++)
+                if(seen[j].fd==buffer->fd&&seen[j].handle==handle&&
+                   seen[j].obj_addr==buffer->bo.obj_addr&&
+                   seen[j].size==buffer->bo.size) {
+                    duplicate=1;break;
+                }
+            if(duplicate)continue;
+            /* Handle is the BO identity within fd.  Retain the provider's actual
+             * full-object sync identity as a consistency guard: prep/fini use
+             * obj_addr and page_up(size), so only identical backing objects merge. */
+            seen[nseen++]=(struct output_sync_key){buffer->fd,handle,
+                buffer->bo.obj_addr,buffer->bo.size};
+            rocket_bo *b=&buffer->bo;
+            rc=rocket_bo_prep(fd,b,0,2000000000ull);if(rc)break;
+            rc=rocket_bo_fini(fd,b);if(rc)break;
+        }
+#endif
     }
 if(prof)prof->output_sync_us+=co_clock_us()-start;
 end: start=prof?co_clock_us():0;if(!workspace)rocket_bo_free(fd,&rcbo);

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Same-process Tiny ViT A/B with only the compiled finite scan changed."""
+"""Same-process Tiny ViT A/B with one compile-time runtime helper changed."""
 from __future__ import annotations
 
 import argparse, gzip, json, statistics, struct, time
@@ -37,6 +37,7 @@ def main():
     ap.add_argument("--batch", type=int, choices=(1, 8), required=True)
     ap.add_argument("--limit", type=int, default=256)
     ap.add_argument("--rounds", type=int, default=7)
+    ap.add_argument("--experiment", default="finite-scan")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     if args.limit % args.batch:
@@ -129,7 +130,8 @@ def main():
             round_rows.append(row)
         for name, arr in all_logits.items():
             np.save(args.out.parent / f"{name}_logits.npy", arr)
-        result = {"schema_version": 1, "kind": "full-model-finite-scan-ab",
+        result = {"schema_version": 1, "kind": "full-model-" + args.experiment + "-ab",
+                  "experiment": args.experiment,
                   "batch": args.batch, "limit": args.limit, "rounds": args.rounds,
                   "prepared_validation": 0, "bitwise": True,
                   "timing": {k: summary(v) for k, v in samples.items()},

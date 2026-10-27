@@ -1,0 +1,785 @@
+Start testing: Oct 27 21:08 CST
+----------------------------------------------------------
+1/32 Testing: custom_ops_host
+1/32 Test: custom_ops_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/custom_ops_probe" "host"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"custom_ops_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+rocket_chain: verify task 0 encodes next length 534 (1070 words) but task 1 is 1068 words (533)
+HOST layout, ragged padding, address/view bounds, alias rejection, mixed-length chain PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"custom_ops_host" end time: Oct 27 21:08 CST
+"custom_ops_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/32 Testing: ktiling_host
+2/32 Test: ktiling_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/ktiling_host_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"ktiling_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+SLICE m=13 k=257 tiles=2 physical_cols=288 bytes=9216 PASS
+SLICE m=1 k=513 tiles=3 physical_cols=544 bytes=13056 PASS
+SLICE m=29 k=769 tiles=4 physical_cols=800 bytes=51200 PASS
+SLICE m=13 k=1024 tiles=4 physical_cols=1024 bytes=32768 PASS
+SLICE m=29 k=2049 tiles=9 physical_cols=2080 bytes=133120 PASS
+SLICE m=1 k=4096 tiles=16 physical_cols=4096 bytes=98304 PASS
+SLICE m=16 k=255 tiles=1 physical_cols=256 bytes=8192 PASS
+SLICE m=16 k=256 tiles=1 physical_cols=256 bytes=8192 PASS
+SLICE m=16 k=512 tiles=2 physical_cols=512 bytes=16384 PASS
+K-TILING host checks=119731 failures=0 PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"ktiling_host" end time: Oct 27 21:08 CST
+"ktiling_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/32 Testing: custom_operator_cli_help
+3/32 Test: custom_operator_cli_help
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/linear_hardsigmoid" "--help"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"custom_operator_cli_help" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+usage: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/linear_hardsigmoid M K N X.bin W.bin b.bin Y.bin [chain|separate] [repeat]
+row-major little-endian IEEE FP16: X[M,K], W[N,K], b[N], Y[M,N]
+M/N: 1..4096; K: 1..4096; repeat: 1..1000; default: chain, 1 run; no CPU fallback
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"custom_operator_cli_help" end time: Oct 27 21:08 CST
+"custom_operator_cli_help" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/32 Testing: two_task_host
+4/32 Test: two_task_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/two_task_probe" "host"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"two_task_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+rocket_chain: verify task 0 links to 0x402170 but task 1 is at 0x402180
+rocket_chain: verify task 0 links to 0x402170 but task 1 is at 0x402180
+HOST_TWO_TASK PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"two_task_host" end time: Oct 27 21:08 CST
+"two_task_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/32 Testing: ktiling_probe_host
+5/32 Test: ktiling_probe_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/ktiling_probe" "host"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"ktiling_probe_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+KTILING_HOST checks=15 failures=0 PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"ktiling_probe_host" end time: Oct 27 21:08 CST
+"ktiling_probe_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/32 Testing: two_task_evidence_negative
+6/32 Test: two_task_evidence_negative
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/two_task_verify_test.py"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"two_task_evidence_negative" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+...............
+----------------------------------------------------------------------
+Ran 15 tests in 0.096s
+
+OK
+<end of output>
+Test time =   0.13 sec
+----------------------------------------------------------
+Test Passed.
+"two_task_evidence_negative" end time: Oct 27 21:08 CST
+"two_task_evidence_negative" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/32 Testing: overlap_host
+7/32 Test: overlap_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/overlap_probe" "host"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"overlap_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+HOST_OVERLAP PASS mm_words=126 lut_words=1070 enable_mm=0x1d enable_lut=0x18
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"overlap_host" end time: Oct 27 21:08 CST
+"overlap_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/32 Testing: overlap_evidence_negative
+8/32 Test: overlap_evidence_negative
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/overlap_verify_test.py"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"overlap_evidence_negative" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+..........................
+----------------------------------------------------------------------
+Ran 26 tests in 0.194s
+
+OK
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Passed.
+"overlap_evidence_negative" end time: Oct 27 21:08 CST
+"overlap_evidence_negative" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/32 Testing: schedule_host
+9/32 Test: schedule_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/schedule_probe" "host"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"schedule_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+SCHEDULE_HOST PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"schedule_host" end time: Oct 27 21:08 CST
+"schedule_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/32 Testing: schedule_evidence_negative
+10/32 Test: schedule_evidence_negative
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/schedule_analyze_test.py"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"schedule_evidence_negative" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+..................
+----------------------------------------------------------------------
+Ran 18 tests in 0.003s
+
+OK
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"schedule_evidence_negative" end time: Oct 27 21:08 CST
+"schedule_evidence_negative" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/32 Testing: device_cost_schema
+11/32 Test: device_cost_schema
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/device_cost_schema_test.py"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"device_cost_schema" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+....................
+----------------------------------------------------------------------
+Ran 20 tests in 0.001s
+
+OK
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"device_cost_schema" end time: Oct 27 21:08 CST
+"device_cost_schema" time elapsed: 00:00:00
+----------------------------------------------------------
+
+12/32 Testing: cost_probe_help
+12/32 Test: cost_probe_help
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/cost_probe" "--help"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"cost_probe_help" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+cost_probe workload m k n programs workers operations warmup seed chain|separate device_ready|host_io fixed|split|poll|auto mask allowed continuous|burst affinity_base 2
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"cost_probe_help" end time: Oct 27 21:08 CST
+"cost_probe_help" time elapsed: 00:00:00
+----------------------------------------------------------
+
+13/32 Testing: multitile_host
+13/32 Test: multitile_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/multitile_host_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"multitile_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+MULTITILE host checks=1293350 failures=0
+<end of output>
+Test time =   5.18 sec
+----------------------------------------------------------
+Test Passed.
+"multitile_host" end time: Oct 27 21:08 CST
+"multitile_host" time elapsed: 00:00:05
+----------------------------------------------------------
+
+14/32 Testing: graph_host
+14/32 Test: graph_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/graph_host_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"graph_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+GRAPH host checks=2400033 failures=0
+<end of output>
+Test time =   5.37 sec
+----------------------------------------------------------
+Test Passed.
+"graph_host" end time: Oct 27 21:08 CST
+"graph_host" time elapsed: 00:00:05
+----------------------------------------------------------
+
+15/32 Testing: graph_cli_help
+15/32 Test: graph_cli_help
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/graph_ffn" "--help"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"graph_cli_help" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+usage: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/graph_ffn M D H X.bin Wgate.bin Wup.bin Wdown.bin b_gate.bin|- Y.bin [chain|separate] [repeat] [rmsnorm gamma.bin]
+FP16 row-major; Y=X+Linear(SiLU(Linear(X,Wgate,b_gate))*Linear(X,Wup),Wdown)
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"graph_cli_help" end time: Oct 27 21:08 CST
+"graph_cli_help" time elapsed: 00:00:00
+----------------------------------------------------------
+
+16/32 Testing: row_cli_help
+16/32 Test: row_cli_help
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/row_graph" "--help"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"row_cli_help" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+usage: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/row_graph rms|softmax|hsig-rms|hsig-softmax M N X.bin gamma.bin|- Y.bin [chain|separate] [repeat]
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"row_cli_help" end time: Oct 27 21:08 CST
+"row_cli_help" time elapsed: 00:00:00
+----------------------------------------------------------
+
+17/32 Testing: row_campaign_artifacts
+17/32 Test: row_campaign_artifacts
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/tests/python/row_campaign_test.py"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"row_campaign_artifacts" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.009s
+
+OK
+<end of output>
+Test time =   0.04 sec
+----------------------------------------------------------
+Test Passed.
+"row_campaign_artifacts" end time: Oct 27 21:08 CST
+"row_campaign_artifacts" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/32 Testing: regcmd_overlap_host
+18/32 Test: regcmd_overlap_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/regcmd_overlap_probe" "host"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"regcmd_overlap_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+regcmd_overlap_host PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"regcmd_overlap_host" end time: Oct 27 21:08 CST
+"regcmd_overlap_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+19/32 Testing: matched_overlap_evidence
+19/32 Test: matched_overlap_evidence
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/tests/python/matched_overlap_analyze_test.py"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"matched_overlap_evidence" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.001s
+
+OK
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"matched_overlap_evidence" end time: Oct 27 21:08 CST
+"matched_overlap_evidence" time elapsed: 00:00:00
+----------------------------------------------------------
+
+20/32 Testing: gdn_host
+20/32 Test: gdn_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/gdn_probe" "host"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"gdn_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+GDN host geometry and merged-output identity PASS (no hardware claim)
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"gdn_host" end time: Oct 27 21:08 CST
+"gdn_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+21/32 Testing: gdn_evidence_negative
+21/32 Test: gdn_evidence_negative
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/tests/python/gdn_gate_test.py"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"gdn_evidence_negative" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.005s
+
+OK
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"gdn_evidence_negative" end time: Oct 27 21:08 CST
+"gdn_evidence_negative" time elapsed: 00:00:00
+----------------------------------------------------------
+
+22/32 Testing: gdn_cpu_stages
+22/32 Test: gdn_cpu_stages
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/gdn_cpu_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"gdn_cpu_stages" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+CPU staged FP16, independent FP32 storage, invalid-input atomicity PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"gdn_cpu_stages" end time: Oct 27 21:08 CST
+"gdn_cpu_stages" time elapsed: 00:00:00
+----------------------------------------------------------
+
+23/32 Testing: gdn_experiments_evidence
+23/32 Test: gdn_experiments_evidence
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.venv-p0/bin/python" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/tests/python/gdn_experiments_test.py"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"gdn_experiments_evidence" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+
+OK
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"gdn_experiments_evidence" end time: Oct 27 21:08 CST
+"gdn_experiments_evidence" time elapsed: 00:00:00
+----------------------------------------------------------
+
+24/32 Testing: output_sync
+24/32 Test: output_sync
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/output_sync_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"output_sync" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+OUTPUT_SYNC checks=40 failures=0
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"output_sync" end time: Oct 27 21:08 CST
+"output_sync" time elapsed: 00:00:00
+----------------------------------------------------------
+
+25/32 Testing: guard_scan
+25/32 Test: guard_scan
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/guard_scan_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"guard_scan" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+GUARD_SCAN checks=32 failures=0
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"guard_scan" end time: Oct 27 21:08 CST
+"guard_scan" time elapsed: 00:00:00
+----------------------------------------------------------
+
+26/32 Testing: download_fastpath
+26/32 Test: download_fastpath
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/download_fastpath_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"download_fastpath" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+DOWNLOAD_FASTPATH checks=629 failures=0
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"download_fastpath" end time: Oct 27 21:08 CST
+"download_fastpath" time elapsed: 00:00:00
+----------------------------------------------------------
+
+27/32 Testing: fp16_scan
+27/32 Test: fp16_scan
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/fp16_scan_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"fp16_scan" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+FP16_SCAN checks=174 failures=0
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"fp16_scan" end time: Oct 27 21:08 CST
+"fp16_scan" time elapsed: 00:00:00
+----------------------------------------------------------
+
+28/32 Testing: task_ref
+28/32 Test: task_ref
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/task_ref_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"task_ref" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+TASK_REF checks=24 failures=0
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"task_ref" end time: Oct 27 21:08 CST
+"task_ref" time elapsed: 00:00:00
+----------------------------------------------------------
+
+29/32 Testing: rk_plan_contract
+29/32 Test: rk_plan_contract
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_contract_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"rk_plan_contract" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+ABI 1 value=56 tensor=48 buffer=56 view=88 action=144 submit=48 publish=32 plan=168 binding=48 report=88 diag=760
+ABI_SIZE rk_diag 760
+ABI_FIELD rk_diag abi_version 0 4
+ABI_FIELD rk_diag struct_size 4 4
+ABI_FIELD rk_diag code 8 4
+ABI_FIELD rk_diag native_status 12 4
+ABI_FIELD rk_diag action_id 16 4
+ABI_FIELD rk_diag has_action 20 4
+ABI_FIELD rk_diag stage 24 32
+ABI_FIELD rk_diag message 56 512
+ABI_FIELD rk_diag source 568 128
+ABI_FIELD rk_diag profile 696 64
+ABI_SIZE rk_value_desc 56
+ABI_FIELD rk_value_desc abi_version 0 4
+ABI_FIELD rk_value_desc struct_size 4 4
+ABI_FIELD rk_value_desc id 8 4
+ABI_FIELD rk_value_desc role 12 4
+ABI_FIELD rk_value_desc dtype 16 4
+ABI_FIELD rk_value_desc rank 20 4
+ABI_FIELD rk_value_desc shape 24 8
+ABI_FIELD rk_value_desc nbytes 32 8
+ABI_FIELD rk_value_desc name 40 8
+ABI_FIELD rk_value_desc name_len 48 4
+ABI_FIELD rk_value_desc reserved 52 4
+ABI_SIZE rk_tensor_desc 48
+ABI_FIELD rk_tensor_desc abi_version 0 4
+ABI_FIELD rk_tensor_desc struct_size 4 4
+ABI_FIELD rk_tensor_desc dtype 8 4
+ABI_FIELD rk_tensor_desc layout 12 4
+ABI_FIELD rk_tensor_desc rows 16 4
+ABI_FIELD rk_tensor_desc cols 20 4
+ABI_FIELD rk_tensor_desc physical_rows 24 4
+ABI_FIELD rk_tensor_desc physical_cols 28 4
+ABI_FIELD rk_tensor_desc atom 32 4
+ABI_FIELD rk_tensor_desc reserved 36 4
+ABI_FIELD rk_tensor_desc bytes 40 8
+ABI_SIZE rk_buffer_desc 56
+ABI_FIELD rk_buffer_desc abi_version 0 4
+ABI_FIELD rk_buffer_desc struct_size 4 4
+ABI_FIELD rk_buffer_desc id 8 4
+ABI_FIELD rk_buffer_desc role 12 4
+ABI_FIELD rk_buffer_desc slot_id 16 4
+ABI_FIELD rk_buffer_desc alignment 20 4
+ABI_FIELD rk_buffer_desc layout_id 24 4
+ABI_FIELD rk_buffer_desc padding_state 28 4
+ABI_FIELD rk_buffer_desc lifetime_first 32 4
+ABI_FIELD rk_buffer_desc lifetime_last 36 4
+ABI_FIELD rk_buffer_desc offset 40 8
+ABI_FIELD rk_buffer_desc capacity 48 8
+ABI_SIZE rk_view_desc 88
+ABI_FIELD rk_view_desc abi_version 0 4
+ABI_FIELD rk_view_desc struct_size 4 4
+ABI_FIELD rk_view_desc id 8 4
+ABI_FIELD rk_view_desc buffer_id 12 4
+ABI_FIELD rk_view_desc offset_bytes 16 8
+ABI_FIELD rk_view_desc valid_region 24 16
+ABI_FIELD rk_view_desc tensor 40 48
+ABI_SIZE rk_action_desc 144
+ABI_FIELD rk_action_desc abi_version 0 4
+ABI_FIELD rk_action_desc struct_size 4 4
+ABI_FIELD rk_action_desc id 8 4
+ABI_FIELD rk_action_desc kind 12 4
+ABI_FIELD rk_action_desc template_id 16 4
+ABI_FIELD rk_action_desc ninputs 20 4
+ABI_FIELD rk_action_desc noutputs 24 4
+ABI_FIELD rk_action_desc ndeps 28 4
+ABI_FIELD rk_action_desc source_binding 32 4
+ABI_FIELD rk_action_desc source_row_offset 36 4
+ABI_FIELD rk_action_desc source_col_offset 40 4
+ABI_FIELD rk_action_desc source_row_stride 44 4
+ABI_FIELD rk_action_desc flags 48 4
+ABI_FIELD rk_action_desc act_kind 52 4
+ABI_FIELD rk_action_desc inputs 56 8
+ABI_FIELD rk_action_desc outputs 64 8
+ABI_FIELD rk_action_desc deps 72 8
+ABI_FIELD rk_action_desc origin 80 64
+ABI_SIZE rk_submit_desc 48
+ABI_FIELD rk_submit_desc abi_version 0 4
+ABI_FIELD rk_submit_desc struct_size 4 4
+ABI_FIELD rk_submit_desc id 8 4
+ABI_FIELD rk_submit_desc mode 12 4
+ABI_FIELD rk_submit_desc core_policy 16 4
+ABI_FIELD rk_submit_desc ntask_ids 20 4
+ABI_FIELD rk_submit_desc ndeps 24 4
+ABI_FIELD rk_submit_desc task_ids 32 8
+ABI_FIELD rk_submit_desc deps 40 8
+ABI_SIZE rk_publish_desc 32
+ABI_FIELD rk_publish_desc abi_version 0 4
+ABI_FIELD rk_publish_desc struct_size 4 4
+ABI_FIELD rk_publish_desc binding_id 8 4
+ABI_FIELD rk_publish_desc view_id 12 4
+ABI_FIELD rk_publish_desc dst_row_offset 16 4
+ABI_FIELD rk_publish_desc dst_col_offset 20 4
+ABI_FIELD rk_publish_desc rows 24 4
+ABI_FIELD rk_publish_desc cols 28 4
+ABI_SIZE rk_plan_desc 168
+ABI_FIELD rk_plan_desc abi_version 0 4
+ABI_FIELD rk_plan_desc struct_size 4 4
+ABI_FIELD rk_plan_desc schema_version 8 4
+ABI_FIELD rk_plan_desc flags 12 4
+ABI_FIELD rk_plan_desc profile_hash 16 8
+ABI_FIELD rk_plan_desc source_hash 24 8
+ABI_FIELD rk_plan_desc values 32 8
+ABI_FIELD rk_plan_desc nvalues 40 4
+ABI_FIELD rk_plan_desc reserved0 44 4
+ABI_FIELD rk_plan_desc buffers 48 8
+ABI_FIELD rk_plan_desc nbuffers 56 4
+ABI_FIELD rk_plan_desc reserved1 60 4
+ABI_FIELD rk_plan_desc views 64 8
+ABI_FIELD rk_plan_desc nviews 72 4
+ABI_FIELD rk_plan_desc reserved2 76 4
+ABI_FIELD rk_plan_desc actions 80 8
+ABI_FIELD rk_plan_desc nactions 88 4
+ABI_FIELD rk_plan_desc reserved3 92 4
+ABI_FIELD rk_plan_desc submits 96 8
+ABI_FIELD rk_plan_desc nsubmits 104 4
+ABI_FIELD rk_plan_desc reserved4 108 4
+ABI_FIELD rk_plan_desc publish 112 8
+ABI_FIELD rk_plan_desc npublish 120 4
+ABI_FIELD rk_plan_desc reserved5 124 4
+ABI_FIELD rk_plan_desc device_budget_bytes 128 8
+ABI_FIELD rk_plan_desc host_budget_bytes 136 8
+ABI_FIELD rk_plan_desc claimed_device_bytes 144 8
+ABI_FIELD rk_plan_desc claimed_host_bytes 152 8
+ABI_FIELD rk_plan_desc runtime_abi_version 160 4
+ABI_FIELD rk_plan_desc reserved6 164 4
+ABI_SIZE rk_binding 48
+ABI_FIELD rk_binding abi_version 0 4
+ABI_FIELD rk_binding struct_size 4 4
+ABI_FIELD rk_binding id 8 4
+ABI_FIELD rk_binding dtype 12 4
+ABI_FIELD rk_binding rank 16 4
+ABI_FIELD rk_binding shape 20 8
+ABI_FIELD rk_binding data 32 8
+ABI_FIELD rk_binding nbytes 40 8
+ABI_SIZE rk_run_report 88
+ABI_FIELD rk_run_report abi_version 0 4
+ABI_FIELD rk_run_report struct_size 4 4
+ABI_FIELD rk_run_report task_count 8 4
+ABI_FIELD rk_run_report submit_count 12 4
+ABI_FIELD rk_run_report fail_action_id 16 4
+ABI_FIELD rk_run_report numeric_mode 20 4
+ABI_FIELD rk_run_report upload_calls 24 8
+ABI_FIELD rk_run_report upload_bytes 32 8
+ABI_FIELD rk_run_report download_calls 40 8
+ABI_FIELD rk_run_report download_bytes 48 8
+ABI_FIELD rk_run_report pack_us 56 8
+ABI_FIELD rk_run_report emit_us 64 8
+ABI_FIELD rk_run_report submit_wait_us 72 8
+ABI_FIELD rk_run_report output_sync_us 80 8
+ABI_SIZE rk_run_attribution 224
+ABI_FIELD rk_run_attribution abi_version 0 4
+ABI_FIELD rk_run_attribution struct_size 4 4
+ABI_FIELD rk_run_attribution task_count 8 4
+ABI_FIELD rk_run_attribution submit_count 12 4
+ABI_FIELD rk_run_attribution fail_action_id 16 4
+ABI_FIELD rk_run_attribution numeric_mode 20 4
+ABI_FIELD rk_run_attribution upload_calls 24 8
+ABI_FIELD rk_run_attribution upload_bytes 32 8
+ABI_FIELD rk_run_attribution download_calls 40 8
+ABI_FIELD rk_run_attribution download_bytes 48 8
+ABI_FIELD rk_run_attribution validate_us 56 8
+ABI_FIELD rk_run_attribution pack_us 64 8
+ABI_FIELD rk_run_attribution emit_us 72 8
+ABI_FIELD rk_run_attribution command_us 80 8
+ABI_FIELD rk_run_attribution submit_alloc_us 88 8
+ABI_FIELD rk_run_attribution submit_wait_us 96 8
+ABI_FIELD rk_run_attribution output_sync_us 104 8
+ABI_FIELD rk_run_attribution download_us 112 8
+ABI_FIELD rk_run_attribution guard_us 120 8
+ABI_FIELD rk_run_attribution publish_us 128 8
+ABI_FIELD rk_run_attribution alloc_us 136 8
+ABI_FIELD rk_run_attribution total_us 144 8
+ABI_FIELD rk_run_attribution clock_us 152 8
+ABI_FIELD rk_run_attribution pack_prep_us 160 8
+ABI_FIELD rk_run_attribution pack_clear_us 168 8
+ABI_FIELD rk_run_attribution pack_layout_us 176 8
+ABI_FIELD rk_run_attribution pack_fini_us 184 8
+ABI_FIELD rk_run_attribution pack_prep_calls 192 8
+ABI_FIELD rk_run_attribution pack_fini_calls 200 8
+ABI_FIELD rk_run_attribution upload_coalesce 208 4
+ABI_FIELD rk_run_attribution upload_fast_pack 212 4
+ABI_FIELD rk_run_attribution upload_policy_reserved 216 8
+ABI_CONST co_program 16624
+ABI_CONST independent_mm_tasks 32
+ABI_CONST independent_mm_rows 16
+ABI_CONST independent_mm_cols 16
+ABI_CONST independent_mm_k 16
+ABI_CONST independent_mm_phys_cols 32
+ABI_SIZE rk_group_report 176
+ABI_FIELD rk_group_report abi_version 0 4
+ABI_FIELD rk_group_report struct_size 4 4
+ABI_FIELD rk_group_report repeat_count 8 4
+ABI_FIELD rk_group_report repeat_completed 12 4
+ABI_FIELD rk_group_report fail_repeat 16 4
+ABI_FIELD rk_group_report fail_action_id 20 4
+ABI_FIELD rk_group_report task_count 24 4
+ABI_FIELD rk_group_report submit_count 28 4
+ABI_FIELD rk_group_report numeric_mode 32 4
+ABI_FIELD rk_group_report reserved0 36 4
+ABI_FIELD rk_group_report upload_calls 40 8
+ABI_FIELD rk_group_report upload_bytes 48 8
+ABI_FIELD rk_group_report download_calls 56 8
+ABI_FIELD rk_group_report download_bytes 64 8
+ABI_FIELD rk_group_report validate_us 72 8
+ABI_FIELD rk_group_report pack_us 80 8
+ABI_FIELD rk_group_report emit_us 88 8
+ABI_FIELD rk_group_report command_us 96 8
+ABI_FIELD rk_group_report submit_alloc_us 104 8
+ABI_FIELD rk_group_report submit_wait_us 112 8
+ABI_FIELD rk_group_report output_sync_us 120 8
+ABI_FIELD rk_group_report download_us 128 8
+ABI_FIELD rk_group_report guard_us 136 8
+ABI_FIELD rk_group_report publish_us 144 8
+ABI_FIELD rk_group_report alloc_us 152 8
+ABI_FIELD rk_group_report total_us 160 8
+ABI_FIELD rk_group_report clock_us 168 8
+RK_PLAN contract checks=34 failures=0
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"rk_plan_contract" end time: Oct 27 21:08 CST
+"rk_plan_contract" time elapsed: 00:00:00
+----------------------------------------------------------
+
+30/32 Testing: rk_plan_host
+30/32 Test: rk_plan_host
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/rk_plan_host_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"rk_plan_host" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+RK_PLAN host checks=806 failures=0
+<end of output>
+Test time =   0.69 sec
+----------------------------------------------------------
+Test Passed.
+"rk_plan_host" end time: Oct 27 21:08 CST
+"rk_plan_host" time elapsed: 00:00:00
+----------------------------------------------------------
+
+31/32 Testing: provider_context
+31/32 Test: provider_context
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/provider_context_test"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp
+"provider_context" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+[rknpu-submit] MEM_SYNC(dir=0x1, obj=0x5678, 0..40): Bad file descriptor
+[rknpu-submit] MEM_DESTROY(handle=39321): Bad file descriptor — leaking the object and its IOVA
+PROVIDER_CONTEXT PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"provider_context" end time: Oct 27 21:08 CST
+"provider_context" time elapsed: 00:00:00
+----------------------------------------------------------
+
+32/32 Testing: provider_seam
+32/32 Test: provider_seam
+Command: "/home/maoyu/Documents/code/rockchip-npu-notes/research/upstream-components/rocket-userspace/tools/provider-seam.sh" "/home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/provider/librknpu-submit.a"
+Directory: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/provider
+"provider_seam" start time: Oct 27 21:08 CST
+Output:
+----------------------------------------------------------
+provider-seam: /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/provider/librknpu-submit.a defines rocket_* symbols outside the seam:
+  rocket_context_faulted
+provider-seam: harmless if they are its own, a duplicate symbol if the library
+provider-seam: defines the same name above the seam.
+provider-seam: OK -- /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/build-host-mvp/provider/librknpu-submit.a defines all 27 seam symbols
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"provider_seam" end time: Oct 27 21:08 CST
+"provider_seam" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 27 21:08 CST

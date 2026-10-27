@@ -4,9 +4,11 @@ set -uo pipefail
 HERE=$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/.." && pwd)
 case "${1:-}" in
   build)
-    [[ $# == 6 ]] || exit 2
+    [[ $# == 6 || $# == 7 ]] || exit 2
     source_root=$(readlink -f "$2"); campaign=$(readlink -f "$3")
     fast=$(readlink -m "$4"); reference=$(readlink -m "$5"); cpu=$6
+    reference_macro=${7:-RK_PLAN_FINITE_SCAN_REFERENCE}; reference_macro=${reference_macro#-D}
+    [[ "$reference_macro" =~ ^[A-Z][A-Z0-9_]*$ ]] || exit 2
     mkdir -p "$fast" "$reference" "$source_root/build-logs" "$source_root/artifacts"
     set +e
     cmake -S "$source_root/custom-ops" -B "$fast" \
@@ -22,7 +24,7 @@ case "${1:-}" in
     cmake -S "$source_root/custom-ops" -B "$reference" \
       -DUPSTREAM_ROOT="$source_root/upstream-components" -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-      -DCMAKE_C_FLAGS=-DRK_PLAN_FINITE_SCAN_REFERENCE \
+      "-DCMAKE_C_FLAGS=-D$reference_macro" \
       > "$source_root/build-logs/reference-config.stdout" 2> "$source_root/build-logs/reference-config.stderr"
     rc=$?; echo "$rc" > "$source_root/build-logs/reference-config.exit"
     ((rc==0)) || exit "$rc"
@@ -37,30 +39,11 @@ case "${1:-}" in
     cp "$reference/compile_commands.json" "$source_root/artifacts/reference-compile_commands.json"
     cp "$fast/CMakeFiles/rk_plan_runtime_obj.dir/flags.make" "$source_root/artifacts/fast-runtime-flags.make"
     cp "$reference/CMakeFiles/rk_plan_runtime_obj.dir/flags.make" "$source_root/artifacts/reference-runtime-flags.make"
-    python3 - "$source_root/artifacts/fast-runtime-flags.make" \
-      "$source_root/artifacts/reference-runtime-flags.make" \
-      > "$source_root/artifacts/compile-flag-comparison.txt" <<'PY'
-import re,sys
-def fields(path):
-    out={}
-    for line in open(path):
-        m=re.match(r'(C_DEFINES|C_INCLUDES|C_FLAGS) = (.*)',line.rstrip())
-        if m: out[m.group(1)]=m.group(2)
-    return out
-a,b=map(fields,sys.argv[1:])
-keys=sorted(set(a)|set(b))
-macro='-DRK_PLAN_FINITE_SCAN_REFERENCE'
-fast_text=' '.join(a.values()); reference_text=' '.join(b.values())
-if macro in fast_text or macro not in reference_text:
-    print('macro assertion failed: fast must omit, reference must contain RK_PLAN_FINITE_SCAN_REFERENCE')
-    raise SystemExit(1)
-for k in keys:
-    av,bv=a.get(k,''),b.get(k,'')
-    normalized=re.sub(r'\s*-DRK_PLAN_FINITE_SCAN_REFERENCE\b','',bv).strip()
-    print(f'{k}: '+('ONLY_REFERENCE_HAS_RK_PLAN_FINITE_SCAN_REFERENCE' if av==normalized and av!=bv else 'MATCH' if av==bv else 'MISMATCH'))
-if any(a.get(k,'') != re.sub(r'\s*-DRK_PLAN_FINITE_SCAN_REFERENCE\b','',b.get(k,'')).strip() for k in keys):
-    raise SystemExit(1)
-PY
+    python3 "$source_root/tilelang-rknpu/tools/runtime_layers/validate_finite_scan_build.py" \
+      --artifacts "$source_root/artifacts" --macro "$reference_macro" \
+      --out "$source_root/artifacts/compile-flag-comparison.json" \
+      > "$source_root/build-logs/compile-flag-check.stdout" \
+      2> "$source_root/build-logs/compile-flag-check.stderr"
     rc=$?; echo "$rc" > "$source_root/build-logs/compile-flag-check.exit"
     ((rc==0)) || exit "$rc"
     sha256sum "$fast/librknpu_plan.so" > "$source_root/artifacts/fast-library.sha256"
@@ -112,11 +95,27 @@ PY
       > "$result.stdout" 2> "$result.stderr"
     rc=$?; echo "$rc" > "$result.exit"; exit "$rc"
     ;;
-  full)
-    [[ $# == 9 ]] || exit 2
+  profile)
+    [[ $# == 10 ]] || exit 2
     source_root=$(readlink -f "$2"); campaign=$(readlink -f "$3")
     fast=$(readlink -m "$4"); reference=$(readlink -m "$5")
-    batch=$6; cpu=$7; mask=$8; out=$9
+    case_name=$6; arm=$7; cpu=$8; mask=$9; out=${10}
+    case "$arm" in fast) libdir=$fast;; reference) libdir=$reference;; *) exit 2;; esac
+    mkdir -p "$out/$case_name"
+    result="$out/$case_name/$arm"
+    probe="$source_root/artifacts/runtime_layer_probe"
+    set +e
+    taskset -c "$cpu" env RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 \
+      RKNPU_CORE_MASK="$mask" RK_PLAN_PREPARED_VALIDATION=0 \
+      LD_LIBRARY_PATH="$libdir" "$probe" "$campaign/cases/$case_name" battr 1 "$result.bin" \
+      > "$result.stdout" 2> "$result.stderr"
+    rc=$?; echo "$rc" > "$result.exit"; exit "$rc"
+    ;;
+  full)
+    [[ $# == 9 || $# == 10 ]] || exit 2
+    source_root=$(readlink -f "$2"); campaign=$(readlink -f "$3")
+    fast=$(readlink -m "$4"); reference=$(readlink -m "$5")
+    batch=$6; cpu=$7; mask=$8; out=$9; experiment=${10:-finite-scan}
     dir="$out/b$batch"; mkdir -p "$dir"
     set +e
     taskset -c "$cpu" env RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 \
@@ -126,9 +125,9 @@ PY
       python3 "$source_root/tilelang-rknpu/tools/runtime_layers/full_model_finite_scan_ab.py" \
         --plans-dir "$campaign" --weights-dir "$campaign" --data-dir "$campaign" \
         --lib-fast "$fast/librknpu_plan.so" --lib-reference "$reference/librknpu_plan.so" \
-        --batch "$batch" --limit 256 --rounds 7 --out "$dir/result.json" \
+        --batch "$batch" --limit 256 --rounds 7 --experiment "$experiment" --out "$dir/result.json" \
         > "$dir/run.stdout" 2> "$dir/run.stderr"
     rc=$?; echo "$rc" > "$dir/run.exit"; exit "$rc"
     ;;
-  *) echo 'usage: build|isolated|full ...' >&2; exit 2;;
+  *) echo 'usage: build|isolated|profile|full ...' >&2; exit 2;;
 esac

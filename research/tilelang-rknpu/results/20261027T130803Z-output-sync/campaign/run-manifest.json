@@ -1,0 +1,29 @@
+{
+  "cases": [
+    "qk_b8",
+    "pv_b8"
+  ],
+  "cpu_pin": 6,
+  "created_utc": "2026-10-27T13:08:04.088736+00:00",
+  "kind": "output-sync-ab",
+  "npu_core_mask": 1,
+  "prepared_validation": 0,
+  "reference_macro": "CO_OUTPUT_SYNC_REFERENCE",
+  "rounds": 7,
+  "source_hashes": {
+    "../custom-ops/CMakeLists.txt": "b338e0f2dbde51399f66de49ba7da7cecae22543c6754775cff4305b56e2ff91",
+    "../custom-ops/src/custom_ops.c": "cec430900429e1e94dd596c353f81672df15bec689ed64723ac076ffa43d16ec",
+    "../custom-ops/src/rk_plan_download.h": "2bed0c246954f6a71410884532a2af5c45f433f15ada9697585a27d4b7ca63a8",
+    "../custom-ops/src/rk_plan_runtime.c": "3f807a406575e282cfb02d2b130a0992569a89864d8ba1ff8fdd3dd35ab77302",
+    "../custom-ops/tests/c/output_sync_test.c": "b2d5b36b2d31e0188f5d17cfe0041b8d1f43624e2afc1dfb3c065d9129d8e252",
+    "models/compiled/manifest.json": "16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869",
+    "models/compiled/tiny_vit_b8.rkhybrid.json": "d715e483c303461c21f0458c2ba089e6195322c4eac49ccafa9bae07b4d08993",
+    "models/tiny_vit.npz": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f",
+    "scripts/run-finite-scan-ab-native.sh": "1255d87d379d0f62b3f8d30f8a5e03b8a8abeb3b750e16f3b32399139b59f1da",
+    "scripts/run-finite-scan-ab.sh": "97f1018482dd374fdfdd200c8fac5712bf1f326a006a9951937e791a3c2059f8",
+    "tools/runtime_layers/analyze_finite_scan_ab.py": "e4848bdabaeb11c1107492ed2edbec2cb133b0f0c2ca166d36286447e917ac0b",
+    "tools/runtime_layers/benchmark_python_layers.py": "8791eb98ab51db720db4b45b2404754d5c447e9555b41f53d55c08d464cd6d17",
+    "tools/runtime_layers/full_model_finite_scan_ab.py": "8511ef42ad0c4c3784629c94135fcac4ae3468576a4da0f56d3044cc7d7ef04a",
+    "tools/runtime_layers/runtime_layer_probe.c": "b398c144f522947fd8d9f18d1c544ed30bec7c74d4e492f09f6472c2c61186b6"
+  }
+}

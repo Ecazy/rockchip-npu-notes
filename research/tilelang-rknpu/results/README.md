@@ -5,6 +5,22 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Output BO synchronization checkpoint (2026-10-27)
+
+- `results/20261027T130803Z-output-sync/`: same-source dual-library A/B for
+  output PREP/FINI deduplication by unique BO. QK/PV b8 per-round ratios are
+  **1.231x / 1.250x**; complete Tiny ViT b8/b1 are **1.050x / 1.031x**. All
+  seven paired round ratios per case are positive and all logits/case outputs
+  compare bitwise.
+- Independent attribution measures QK/PV `output_sync_us` at **3.50 µs** in
+  the deduplicated path versus **94.79/98.87 µs** in the reference. The Host
+  real `execute_impl` test proves one output pair for two views in one BO under
+  `CO_CHAIN`, while separate submits and distinct BOs retain their own pairs.
+- Frozen packed numeric replay: **PASS / 0 problems**, no recalibration.
+- Report: [RUNTIME-OUTPUT-SYNC.md](../RUNTIME-OUTPUT-SYNC.md); artifact map:
+  [README](20261027T130803Z-output-sync/README.md); replay:
+  [20261027T131044Z-numeric-replay](20261027T131044Z-numeric-replay/).
+
 ## Binary16 finite-scan checkpoint (2026-10-27)
 
 - `results/20261027T122305Z-finite-scan/`: same-source fast/reference scan A/B,

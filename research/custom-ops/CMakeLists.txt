@@ -221,6 +221,23 @@ target_link_options(rk_mock_scenarios PRIVATE
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
   -Wl,--wrap=rocket_context_faulted)
 
+# Exercise execute_impl's production submit/output-sync loop.  The submit stub
+# only substitutes the device ioctl; command construction, recursion and BO
+# prep/fini sequencing remain the real custom_ops.c implementation.
+add_executable(output_sync_test tests/c/output_sync_test.c tests/mock/npu_mock.c)
+target_include_directories(output_sync_test PRIVATE include src tests/mock)
+target_link_libraries(output_sync_test PRIVATE custom_ops m)
+target_compile_options(output_sync_test PRIVATE -Wall -Wextra -Werror)
+target_link_options(output_sync_test PRIVATE
+  -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
+  -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
+  -Wl,--wrap=rocket_batched_submit_supported
+  -Wl,--wrap=rocket_submit_tasks_flags
+  -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew -Wl,--wrap=co_emit_ew_max
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=rocket_context_faulted)
+add_test(NAME output_sync COMMAND output_sync_test)
+
 # Guard-scan coverage: the vectorised scan must keep byte-exact coverage.
 add_executable(guard_scan_test tests/c/guard_scan_test.c tests/mock/npu_mock.c)
 target_include_directories(guard_scan_test PRIVATE include src tests/mock)
