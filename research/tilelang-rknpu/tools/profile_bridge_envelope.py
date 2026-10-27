@@ -341,7 +341,7 @@ def main() -> int:
                          "frozen 88-byte rk_workspace_run report and is only "
                          "valid for graphs without static-repeat nodes")
     ap.add_argument("--execution-mode",
-                    choices=("auto", "generic", "prepared"), default="auto",
+                    choices=("auto", "generic", "prepared", "graph"), default="auto",
                     help="Host binding strategy for this measurement arm")
     args = ap.parse_args()
     if args.runs < 1:

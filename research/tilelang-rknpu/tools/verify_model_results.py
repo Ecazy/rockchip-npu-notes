@@ -278,13 +278,16 @@ def _verify_timing(row: dict, row_key: str, n: int, problems: list[str]
         expected_actions = {
             "patchify", "patch_pad", "position_add", "rmsnorm1",
             "softmax", "merge_heads", "residual_attention", "rmsnorm2",
-            "swiglu", "residual_ffn", "reshape_tokens", "mean_pool",
-            "export_logits",
+            "swiglu", "residual_ffn", "mean_pool", "export_logits",
         }
         expected_plans = {"patch", "qkv", "qk", "pv", "attn_out",
                           "gate_up", "down", "classifier"}
     if not expected_actions <= action_names:
         problems.append(f"{row_key}: missing measured Host action nodes")
+    if "mnist_mlp" not in row_key and "reshape_tokens" not in action_names and \
+            int(stats.get("graph_view_ops", 0)) < 1:
+        problems.append(f"{row_key}: reshape was neither executed nor lowered "
+                        "to a graph view")
     if not expected_plans <= plan_names:
         problems.append(f"{row_key}: missing measured RKPlan nodes")
     schedule = row.get("batch_schedule", {})

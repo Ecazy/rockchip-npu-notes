@@ -212,6 +212,10 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
                                  for runner in runners.values()})
         result["execution_mode"] = (selected_modes[0]
                                     if len(selected_modes) == 1 else "mixed")
+        backends = sorted({runner.execution_backend
+                           for runner in runners.values()})
+        result["execution_backend"] = (
+            backends[0] if len(backends) == 1 else "mixed")
         result["host_residency_bytes"] = sum(
             runner.residency.total_bytes for runner in runners.values()
             if runner.residency is not None)
@@ -330,6 +334,7 @@ def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
             int(batch): runner.execution_selection,
         }
         result["execution_mode"] = runner.execution_mode
+        result["execution_backend"] = runner.execution_backend
         result["host_residency_bytes"] = (
             runner.residency.total_bytes if runner.residency is not None else 0)
         timing = {
@@ -460,7 +465,7 @@ def main() -> int:
     ap.add_argument("--fd", type=int, default=None,
                     help="use this already-open device fd; otherwise mock fd=0")
     ap.add_argument("--backend", choices=("mock", "board"), default="mock")
-    ap.add_argument("--execution-mode", choices=("auto", "generic", "prepared"),
+    ap.add_argument("--execution-mode", choices=("auto", "generic", "prepared", "graph"),
                     default="auto",
                     help="Host binding strategy; prepared binds stable resident "
                          "buffers once and relies on the C per-run guards")

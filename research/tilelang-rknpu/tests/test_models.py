@@ -241,6 +241,11 @@ class CompleteModelTests(unittest.TestCase):
             try:
                 self.assertEqual(runner.requested_execution_mode, "auto")
                 self.assertEqual(runner.execution_mode, expected)
+                expected_backend = ("compiled_graph" if expected == "prepared"
+                                    else "generic_loop")
+                self.assertEqual(runner.execution_backend, expected_backend)
+                self.assertEqual(
+                    runner.execution_selection["backend"], expected_backend)
                 self.assertEqual(
                     runner.execution_selection["static_binding_slots"], slots)
                 self.assertEqual(
@@ -248,6 +253,19 @@ class CompleteModelTests(unittest.TestCase):
                     MIN_PREPARED_BINDING_SLOTS)
                 self.assertEqual(runner.residency is not None,
                                  expected == "prepared")
+                stats = __import__("rknpu_backend.models",
+                                   fromlist=["RunStats"]).RunStats()
+                raw = self.x[:8] if "b8" in key else self.x[:1]
+                runner.run(raw, stats=stats)
+                if expected_backend == "compiled_graph":
+                    self.assertEqual(stats.graph_view_ops, 1)
+                    self.assertEqual(stats.graph_skipped_trace_output_writes, 2)
+                    self.assertNotIn(
+                        "reshape_tokens",
+                        [row["name"] for row in stats.host_actions])
+                else:
+                    self.assertEqual(stats.graph_view_ops, 0)
+                    self.assertEqual(stats.graph_skipped_trace_output_writes, 0)
             finally:
                 runner.close()
 
@@ -267,7 +285,7 @@ class CompleteModelTests(unittest.TestCase):
             program = load_hybrid_program(self._hybrid(key),
                                           plans_dir=PLANS)
             arm = {}
-            for mode in ("generic", "prepared"):
+            for mode in ("generic", "prepared", "graph"):
                 runner = HybridRunner(
                     self.lib, program, self.vit_weights,
                     weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
@@ -290,7 +308,7 @@ class CompleteModelTests(unittest.TestCase):
                 self.assertFalse(np.shares_memory(
                     first.outputs["logits"], second.outputs["logits"]))
                 arm[mode] = (first_logits, trace, stats, second.outputs["logits"])
-                if mode == "prepared":
+                if mode in ("prepared", "graph"):
                     self.assertIsNotNone(runner.residency)
                     self.assertGreater(runner.residency.total_bytes, 0)
                     self.assertIn("qkv", runner.resident_values)
@@ -301,19 +319,65 @@ class CompleteModelTests(unittest.TestCase):
                         # noqa: SLF001 - this test pins the compiler result
                         self.assertTrue(
                             call._prepared_single or call._prepared_group)
-            generic, prepared = arm["generic"], arm["prepared"]
-            np.testing.assert_array_equal(generic[0], prepared[0])
-            np.testing.assert_array_equal(generic[3], prepared[3])
-            self.assertEqual(set(generic[1]), set(prepared[1]))
-            for name in generic[1]:
-                np.testing.assert_array_equal(generic[1][name],
-                                              prepared[1][name])
-            g, p = generic[2].to_dict(), prepared[2].to_dict()
-            for field in ("task_count", "submit_count", "upload_calls",
-                          "download_calls", "upload_bytes", "download_bytes"):
-                self.assertEqual(g[field], p[field], field)
-            self.assertEqual([row["name"] for row in g["host_actions"]],
-                             [row["name"] for row in p["host_actions"]])
+                if mode == "graph" and key != "mnist_mlp_b8":
+                    self.assertEqual(runner.execution_backend, "compiled_graph")
+                    self.assertEqual(stats.graph_view_ops, 2)  # two runs
+                    self.assertEqual(
+                        stats.graph_skipped_trace_output_writes, 0)
+            generic = arm["generic"]
+            for mode in ("prepared", "graph"):
+                other = arm[mode]
+                np.testing.assert_array_equal(generic[0], other[0])
+                np.testing.assert_array_equal(generic[3], other[3])
+                self.assertEqual(set(generic[1]), set(other[1]))
+                for name in generic[1]:
+                    np.testing.assert_array_equal(generic[1][name],
+                                                  other[1][name])
+                g, p = generic[2].to_dict(), other[2].to_dict()
+                for field in ("task_count", "submit_count", "upload_calls",
+                              "download_calls", "upload_bytes",
+                              "download_bytes"):
+                    self.assertEqual(g[field], p[field], field)
+                if mode == "prepared":
+                    self.assertEqual(
+                        [row["name"] for row in g["host_actions"]],
+                        [row["name"] for row in p["host_actions"]])
+                else:
+                    self.assertTrue(p["graph_view_ops"] > 0)
+                    self.assertNotIn(
+                        "reshape_tokens",
+                        [row["name"] for row in p["host_actions"]])
+
+    def test_graph_execution_boundary_ledger_and_view_alias(self):
+        from rknpu_backend.hybrid import load_hybrid_program
+        from rknpu_backend.passes.graph_execution import (
+            analyze_graph_execution)
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"),
+                                      plans_dir=PLANS)
+        plan = analyze_graph_execution(program)
+        self.assertEqual(len(plan.view_aliases), 1)
+        alias = plan.view_aliases[0]
+        self.assertEqual((alias.node_id, alias.input_tensor,
+                          alias.output_tensor),
+                         ("reshape_tokens", "h2", "h2_tokens"))
+        self.assertEqual(alias.shape, (8, 16, 64))
+        self.assertIn("gate", plan.trace_only_tensors)
+        self.assertIn("up", plan.trace_only_tensors)
+        self.assertIn("h2_tokens", plan.production_tensors)
+        causes = {
+            "numeric_semantics", "missing_device_operator",
+            "physical_layout", "resource_interface",
+            "current_implementation",
+        }
+        actions = [row for row in plan.boundaries if not row.capture_only]
+        self.assertEqual(len(actions), 13)
+        for row in actions:
+            self.assertTrue(row.causes)
+            self.assertLessEqual(set(row.causes), causes)
+        reshape = next(row for row in actions
+                       if row.node_id == "reshape_tokens")
+        self.assertTrue(reshape.lowered_as_view)
+        self.assertEqual(reshape.causes, ("physical_layout",))
 
     def test_prepared_finite_gate_stays_at_the_c_plan_boundary(self):
         """A poisoned Host output must still be rejected by the C runtime."""
@@ -338,16 +402,17 @@ class CompleteModelTests(unittest.TestCase):
                 node = replace(node, action=replace(action, func=poisoned))
             polluted.append(node)
         program = replace(program, nodes=tuple(polluted))
-        runner = HybridRunner(self.lib, program, self.vit_weights,
-                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
-                              execution_mode="prepared")
-        try:
-            with self.assertRaises(BackendError) as ctx:
-                runner.run(self.x[:8])
-        finally:
-            runner.close()
-        self.assertEqual(ctx.exception.diagnostics[0].code,
-                         RK_E_NUMERIC_CONTRACT)
+        for mode in ("prepared", "graph"):
+            runner = HybridRunner(self.lib, program, self.vit_weights,
+                                  weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
+                                  execution_mode=mode)
+            try:
+                with self.assertRaises(BackendError) as ctx:
+                    runner.run(self.x[:8])
+            finally:
+                runner.close()
+            self.assertEqual(ctx.exception.diagnostics[0].code,
+                             RK_E_NUMERIC_CONTRACT)
 
     def test_static_batch_schedule_matches_compiled_tails(self):
         spec = importlib.util.spec_from_file_location(
@@ -435,9 +500,10 @@ class CompleteModelTests(unittest.TestCase):
             for name in ("patchify", "patch_pad", "position_add", "rmsnorm1",
                          "split_heads", "softmax", "merge_heads",
                          "residual_attention", "rmsnorm2", "swiglu",
-                         "residual_ffn", "reshape_tokens", "mean_pool",
-                         "export_logits"):
+                         "residual_ffn", "mean_pool", "export_logits"):
                 self.assertIn(name, actions)
+            self.assertNotIn("reshape_tokens", actions)
+            self.assertEqual(stats.graph_view_ops, 1)
             plans = {row["name"]: row for row in stats.to_dict()["plans"]}
             # QK/PV stay per-(batch,head) work: 32 repeats each, and the device
             # submit count is unchanged.  What changed is that the static repeat

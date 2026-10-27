@@ -43,6 +43,7 @@ CUSTOM_STATS = (
     "plan_download_us", "plan_guard_us", "task_count", "submit_count",
     "upload_calls", "download_calls", "upload_bytes", "download_bytes",
     "preprocess_us", "postprocess_us",
+    "graph_view_ops", "graph_skipped_trace_output_writes",
 )
 
 
@@ -87,6 +88,8 @@ def _profile_rows(path: Path, arm: str) -> tuple[dict[str, Any], str]:
                 },
                 "execution_mode": result.get(
                     "execution_mode", payload.get("execution_mode", "generic")),
+                "execution_backend": result.get(
+                    "execution_backend", "generic_loop"),
                 "execution_selection": result.get("execution_selection"),
                 "host_residency_bytes": int(
                     result.get("host_residency_bytes", 0)),
@@ -119,6 +122,7 @@ def _profile_rows(path: Path, arm: str) -> tuple[dict[str, Any], str]:
                     "per_call": {},
                     "host_actions": {},
                     "execution_mode": payload.get("backend", family),
+                    "execution_backend": "external",
                     "execution_selection": None,
                     "host_residency_bytes": 0,
                     "hybrid_suffix": "",
@@ -165,6 +169,7 @@ def _arm_table(results: Path, arm: str) -> dict:
             tag: float(row["warm_ms"]) for tag, row in zip(round_tags, rows)
         }
         prof["execution_mode"] = rows[0].get("execution_mode")
+        prof["execution_backend"] = rows[0].get("execution_backend")
         prof["execution_selection"] = rows[0].get("execution_selection")
         prof["per_call"] = {
             field: _median(row["per_call"].get(field) for row in rows)
@@ -361,9 +366,9 @@ def _write_markdown(summary: dict, path: Path) -> None:
             "",
             "## Auto selection by static binding fanout",
             "",
-            "| profile | selected path | binding slots | threshold | "
+            "| profile | selected path | backend | binding slots | threshold | "
             "resident bytes |",
-            "|---|---|---:|---:|---:|",
+            "|---|---|---|---:|---:|---:|",
         ]
         for key in PROFILE_KEYS:
             row = profiles[key]["auto"]
@@ -375,6 +380,7 @@ def _write_markdown(summary: dict, path: Path) -> None:
             threshold = first.get("threshold")
             lines.append(
                 f"| {key} | {row.get('execution_mode', '-')} | "
+                f"{row.get('execution_backend', '-')} | "
                 f"{slots if slots is not None else '-'} | "
                 f"{threshold if threshold is not None else '-'} | "
                 f"{int(row.get('host_residency_bytes', 0))} |")
@@ -389,8 +395,8 @@ def _write_markdown(summary: dict, path: Path) -> None:
         "## Prepared lowering cost decomposition",
         "",
         "| profile | arm | warm ms | Python plan-node ms | Host actions ms | "
-        "C workspace ms | executor ms | submit/call | tasks/call |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|",
+        "C workspace ms | executor ms | submit/call | tasks/call | view ops |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for key in PROFILE_KEYS:
         for arm in custom:
@@ -406,7 +412,8 @@ def _write_markdown(summary: dict, path: Path) -> None:
                 f"{pc.get('plan_workspace_us', 0.0)/1e3:.3f} | "
                 f"{pc.get('executor_overhead_us', 0.0)/1e3:.3f} | "
                 f"{pc.get('submit_count', 0.0):.1f} | "
-                f"{pc.get('task_count', 0.0):.1f} |")
+                f"{pc.get('task_count', 0.0):.1f} | "
+                f"{pc.get('graph_view_ops', 0.0):.1f} |")
     lines += [
         "",
         "## Numeric equality against the same-policy reference",

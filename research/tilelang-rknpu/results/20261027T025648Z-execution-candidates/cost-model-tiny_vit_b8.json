@@ -22,7 +22,7 @@
           "modeled_download_us": 248.20501708984375,
           "modeled_saving_us": 376.53629557291663,
           "modeled_upload_pack_us": 128.3312784830729,
-          "notes": "The bound excludes any device reorder cost.  Host Softmax after QK means scores/probabilities still cross the Host boundary, so this candidate does not collapse the whole attention segment.",
+          "notes": "This is a coefficient-based estimate, not a strict upper bound.  It excludes any device reorder cost.  Host Softmax after QK means scores/probabilities still cross the Host boundary, so this candidate does not collapse the whole attention segment.",
           "producer": "qkv",
           "removed_consumer_upload_bytes": 163840,
           "removed_producer_download_bytes": 49152,

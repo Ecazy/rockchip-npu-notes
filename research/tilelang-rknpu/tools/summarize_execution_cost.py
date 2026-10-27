@@ -54,7 +54,7 @@ def main() -> int:
         "",
         "| profile | binding slots | auto choice | generic ms | prepared ms | "
         "measured saving ms | modeled saving ms | error ms | host-fusion model ms | "
-        "device-QKV bound ms |",
+        "device-QKV screen ms |",
         "|---|---:|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in rows:
@@ -69,20 +69,21 @@ def main() -> int:
         "Notes:",
         "",
         "- Tiny ViT binding surfaces (42 and 210 slots) are above the 32-slot "
-        "threshold; the model follows the prepared candidate there. MLP has 13 "
-        "slots, where the modeled prepared gain is at or below the observed noise "
-        "and the measured campaign reverses its sign; auto keeps it on the generic "
-        "path.",
+        "cut used by these samples; it is an empirical selector, not a proven "
+        "general performance crossover. MLP has 13 slots, where the modeled "
+        "prepared gain is at or below observed noise and the measured campaign "
+        "reverses its sign; auto keeps it on the generic path.",
         "- The Host-fusion control removes only a boundary, not a submit or "
         "transfer. Its modeled saving is a few microseconds and the campaign shows "
         "no stable additive gain.",
-        "- The device-QKV screen is a transfer-only upper bound. It excludes device "
-        "reorder cost, keeps all eight submits and still leaves Host Softmax "
-        "between QK and PV. Missing binding/layout templates are listed in each "
-        "per-profile JSON.",
-        "- For Tiny ViT b8 the bound removes 49,152 bytes of QKV download and "
-        "163,840 bytes of QKV-attributable QK/PV upload, yet models only about "
-        "0.38 ms out of the multi-millisecond vendor gap.",
+        "- The device-QKV screen is a coefficient-based transfer estimate, not a "
+        "strict upper bound. It excludes device reorder cost, does not reduce the "
+        "current Host RKPlan submit calls and still leaves Host Softmax between QK "
+        "and PV. Missing binding/layout templates are listed in each profile JSON.",
+        "- For Tiny ViT b8 the screen removes 49,152 bytes of QKV download and "
+        "163,840 bytes of QKV-attributable QK/PV upload, yet estimates only about "
+        "0.38 ms. This is not a strict upper bound and does not explain the vendor "
+        "gap on its own.",
     ]
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text("\n".join(lines) + "\n")

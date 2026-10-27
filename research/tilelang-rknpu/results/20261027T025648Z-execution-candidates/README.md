@@ -16,12 +16,24 @@ Kernel `6.1.43-rockchip-rk3588-rknpu098`, driver `v0.9.8`, NPU frequency
 | prepared | same graph | stable Host slots + prebound ctypes/RKPlan I/O | packed per-logit; bit-identical |
 | auto | same graph | static binding-fanout selector: `<32` generic, `>=32` prepared | packed per-logit; bit-identical |
 | hostfused | opt-in mapped-QKV graph with residual+RMSNorm fused Host action | prepared | packed per-logit; bit-identical |
-| vendor | RKNN-Toolkit2/Lite2 2.3.2, non-quantized FP16, one core | one runtime invocation per static batch | classification-preserving; ViT max logit error exceeds 0.0625 |
+| vendor | RKNN-Toolkit2/Lite2 2.3.2, non-quantized FP16, one core | one Host-side `rknn_run` per static batch; internal device submit count unknown | classification-preserving; ViT max logit error exceeds 0.0625 |
 | CPU | NumPy FP32 model reference | same batch schedule | FP32 reference, separate numeric contract |
 
 The selected `auto` path chooses **generic** for all MLP profiles (13 static
 binding slots) and **prepared** for Tiny ViT b1 (42 slots) and b8 (210 slots).
 The threshold is 32 and is a graph/layout predicate, not a model-name branch.
+
+## Measurement correction
+
+The custom-arm warm intervals in this campaign include per-call `RunStats`
+bookkeeping because the evaluator requested attribution. A later bounded probe
+measured about **0.70 ms/call** extra at ViT b8 and **0.37 ms/call** at b1 from
+that instrumentation; the vendor and CPU harnesses do not have an equivalent
+per-node collector. The numbers here remain valid for comparing the
+same-instrumentation custom arms and for the frozen campaign record, but they
+must not be treated as uninstrumented application time in an absolute ranking
+against vendor/CPU. The graph-stage follow-up uses `stats=None` for application
+timing and records instrumentation separately.
 
 ## Results
 
@@ -78,9 +90,12 @@ validation and the unpriced device-QKV screen.  Tiny ViT b8 is predicted at
 2.795 ms saving and measured at 2.796 ms saving in this campaign.
 
 The device-QKV screen removes 49,152 bytes of QKV download plus 163,840 bytes of
-QKV-attributable QK/PV upload at b8 and models only **0.377 ms**, excluding any
-device CUBE/bank reorder.  It keeps all 8 submits and the Host Softmax boundary,
-so it is not selected.
+QKV-attributable QK/PV upload at b8 and screens only **0.377 ms** with current
+component coefficients, excluding any device CUBE/bank reorder.  This is a
+screening estimate, not a strict upper bound.  The Host Softmax boundary remains,
+and the vendor's one Host `rknn_run` does not expose its internal Submit count.
+The 32-slot fanout cut is an empirical rule supported by these samples, not a
+proven general crossover.
 
 ## Identity and replay
 

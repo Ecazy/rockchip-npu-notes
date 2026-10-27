@@ -60,7 +60,7 @@ def main() -> int:
     ap.add_argument("--manifest-key", action="append", default=[],
                     metavar="OLD=NEW",
                     help="override an rkhybrid manifest stem for this observation")
-    ap.add_argument("--execution-mode", choices=("auto", "generic", "prepared"),
+    ap.add_argument("--execution-mode", choices=("auto", "generic", "prepared", "graph"),
                     default="auto")
     args = ap.parse_args()
     plans_dir = Path(args.plans_dir).resolve()

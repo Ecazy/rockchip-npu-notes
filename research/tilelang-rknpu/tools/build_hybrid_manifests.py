@@ -667,6 +667,9 @@ def main() -> int:
                     help="also emit the opt-in mapped-QKV + fused "
                          "residual/RMSNorm experiment; off by default so a "
                          "normal package rebuild preserves the frozen set")
+    ap.add_argument("--include-deviceffn-qkv", action="store_true",
+                    help="also emit the opt-in mapped-QKV + device FFN "
+                         "independent-policy candidate; off by default")
     args = ap.parse_args()
     plans_dir = Path(args.plans_dir).resolve()
     weights_dir = Path(args.weights_dir).resolve()
@@ -722,6 +725,24 @@ def main() -> int:
                         "rmsnorm_mode": "fused",
                         "sha256": sha256(path)}
         print("wrote", path, flush=True)
+        if args.include_deviceffn_qkv:
+            # Independent-policy candidate for graph-level comparison only.
+            # Mapped QKV removes the materialised split; the FFN remains the
+            # existing validated device-resident plan with its own numeric
+            # policy.  This is not part of the default package.
+            key = f"tiny_vit_b{batch}_deviceffn_qkv"
+            path = plans_dir / f"{key}.rkhybrid.json"
+            data = vit_manifest(batch, compiled, weights["tiny_vit"],
+                                weights_sha["tiny_vit"],
+                                compiled["profile_hash"], ffn_mode="device",
+                                attn_layout="qkv")
+            path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+            written[key] = {"path": path.name, "model": "tiny_vit",
+                            "batch": batch, "ffn_mode": "device",
+                            "rmsnorm_mode": "host", "attn_layout": "qkv",
+                            "numeric_policy": "independent device FFN",
+                            "sha256": sha256(path)}
+            print("wrote", path, flush=True)
         if args.include_hostfused:
             # Host-fusion candidate on the production mapped-QKV layout: the
             # residual and RMSNorm are one registered, bit-preserving Host action

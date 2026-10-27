@@ -146,6 +146,10 @@ class RunStats:
     # independent executions of the same immutable plan.
     plan_group_calls: int = 0
     plan_repeats: int = 0
+    # Compiled graph execution: metadata-only view nodes and trace-only writes
+    # elided from the production path.  These are structural counters, not time.
+    graph_view_ops: int = 0
+    graph_skipped_trace_output_writes: int = 0
     host_action_bytes: int = 0
     plans: list[dict[str, Any]] = field(default_factory=list)
     host_actions: list[dict[str, Any]] = field(default_factory=list)
@@ -360,6 +364,9 @@ class RunStats:
             "task_count": self.task_count,
             "submit_count": self.submit_count,
             "host_action_bytes": self.host_action_bytes,
+            "graph_view_ops": int(self.graph_view_ops),
+            "graph_skipped_trace_output_writes":
+                int(self.graph_skipped_trace_output_writes),
             "bridge_bytes": self.upload_bytes + self.download_bytes,
             "plans": list(self.plans),
             "host_actions": list(self.host_actions),

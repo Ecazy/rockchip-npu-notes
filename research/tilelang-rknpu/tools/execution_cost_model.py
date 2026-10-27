@@ -25,8 +25,9 @@ Candidate groups:
     Keep the QKV output in a device BO for QK/PV consumers.  The model removes
     the measured QKV download and the QK/PV uploads attributable to QKV.  Device
     reorder/recipe cost and required contract work are deliberately left
-    unpriced and marked missing; this is a screening bound, not an implementation
-    claim.
+    unpriced and marked missing.  The resulting number is a screening estimate
+    from current component coefficients, not a strict upper bound or an
+    implementation claim.
 """
 from __future__ import annotations
 
@@ -181,7 +182,8 @@ def _device_qkv_candidate(program, run: dict[str, Any]) -> dict[str, Any]:
                 "rounding",
             ],
             "notes": (
-                "The bound excludes any device reorder cost.  Host Softmax after "
+                "This is a coefficient-based estimate, not a strict upper bound.  "
+                "It excludes any device reorder cost.  Host Softmax after "
                 "QK means scores/probabilities still cross the Host boundary, so "
                 "this candidate does not collapse the whole attention segment."
             ),

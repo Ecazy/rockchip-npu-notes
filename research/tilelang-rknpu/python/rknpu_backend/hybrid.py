@@ -22,6 +22,8 @@ import numpy as np
 from .errors import (RK_E_INVALID, RK_E_NUMERIC_CONTRACT, RK_E_SCHEMA,
                      RK_E_SHAPE, RK_E_UNSUPPORTED, reject)
 from .models import PlanCall, RunStats
+from .passes.graph_execution import (GraphExecutionPlan,
+                                     analyze_graph_execution)
 from .passes.residency import (MIN_PREPARED_BINDING_SLOTS, analyze_residency,
                                recommends_prepared, static_binding_slot_count)
 from .plan import Plan
@@ -1613,6 +1615,57 @@ def _materialize_constant(desc: dict[str, Any], plan_spec: Any,
     return np.ascontiguousarray(arr, dtype=np.float16)
 
 
+@dataclass(frozen=True)
+class _GraphHostOutput:
+    action_name: str
+    tensor: str
+    target: np.ndarray
+    dtype: np.dtype
+    shape: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class _GraphHostOp:
+    node_id: str
+    action_id: str
+    func: Callable
+    attrs: dict[str, Any]
+    inputs: dict[str, np.ndarray]
+    raw_keys: tuple[str, ...]
+    outputs: tuple[_GraphHostOutput, ...]
+    action_output_names: frozenset[str]
+    phase: str
+
+
+@dataclass(frozen=True)
+class _GraphNpuOp:
+    node_id: str
+    kind: str
+    call: PlanCall
+    binding_key: str
+    repeats: int
+    phase: str
+    output_tensors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _GraphViewOp:
+    node_id: str
+    output_tensors: tuple[str, ...]
+
+
+_GraphOp = _GraphHostOp | _GraphNpuOp | _GraphViewOp
+
+
+@dataclass(frozen=True)
+class _CompiledGraph:
+    ops: tuple[_GraphOp, ...]
+    produced_tensors: frozenset[str]
+    view_ops: int
+    skipped_trace_output_writes: int
+    capture: bool
+
+
 class HybridRunner:
     """Execute one frozen rkhybrid graph with plan reuse and explicit stats."""
 
@@ -1630,7 +1683,7 @@ class HybridRunner:
                                  "chain_shared"):
             reject(RK_E_INVALID, f"unknown repeat_submit {repeat_submit!r}",
                    stage="model")
-        if execution_mode not in ("auto", "generic", "prepared"):
+        if execution_mode not in ("auto", "generic", "prepared", "graph"):
             reject(RK_E_UNSUPPORTED, f"unknown execution_mode {execution_mode!r}",
                    stage="model")
         self.plan_entry = plan_entry
@@ -1638,6 +1691,7 @@ class HybridRunner:
         self.reuse_bindings = bool(reuse_bindings)
         self.requested_execution_mode = execution_mode
         self.execution_mode = execution_mode
+        self.execution_backend = "generic_loop"
         self.execution_selection: dict[str, Any] = {
             "requested": execution_mode,
             "selected": execution_mode,
@@ -1648,6 +1702,9 @@ class HybridRunner:
         self.residency = None
         self.resident_values: dict[str, np.ndarray] | None = None
         self.prepared_nodes: dict[str, tuple[Any, ...]] = {}
+        self.graph_plan: GraphExecutionPlan | None = None
+        self._compiled_production: _CompiledGraph | None = None
+        self._compiled_capture: _CompiledGraph | None = None
         t0 = time.perf_counter()
         self.lib = lib
         self.program = program
@@ -1703,23 +1760,52 @@ class HybridRunner:
                     "HybridRunner static binding-plan cleanup also failed: " +
                     "; ".join(repr(e) for e in cleanup_errors))
             raise
+        binding_slots = static_binding_slot_count(
+            self.program, self.node_plans)
         if self.requested_execution_mode == "auto":
             use_prepared, selection = recommends_prepared(
                 self.program, self.node_plans)
             self.execution_mode = "prepared" if use_prepared else "generic"
+            self.execution_backend = (
+                "compiled_graph" if use_prepared else "generic_loop")
+            selection["backend"] = self.execution_backend
             self.execution_selection = selection
+        elif self.requested_execution_mode == "graph":
+            self.execution_mode = "prepared"
+            self.execution_backend = "compiled_graph"
+            self.execution_selection = {
+                "requested": "graph",
+                "selected": "prepared",
+                "backend": "compiled_graph",
+                "static_binding_slots": binding_slots,
+                "threshold": MIN_PREPARED_BINDING_SLOTS,
+                "reason": "explicit compiled graph executor",
+            }
         else:
+            self.execution_backend = (
+                "prepared_loop" if self.execution_mode == "prepared"
+                else "generic_loop")
             self.execution_selection = {
                 "requested": self.requested_execution_mode,
                 "selected": self.execution_mode,
-                "static_binding_slots": static_binding_slot_count(
-                    self.program, self.node_plans),
+                "backend": self.execution_backend,
+                "static_binding_slots": binding_slots,
                 "threshold": MIN_PREPARED_BINDING_SLOTS,
                 "reason": "explicit mode",
             }
+        graph_plan = None
         try:
             if self.execution_mode == "prepared":
-                self._prepare_resident_execution()
+                if self.execution_backend == "compiled_graph":
+                    graph_plan = analyze_graph_execution(self.program)
+                    self.graph_plan = graph_plan
+                self._prepare_resident_execution(graph_plan)
+                if graph_plan is not None:
+                    self._prepare_compiled_executor(graph_plan)
+                    self.execution_selection["graph_view_nodes"] = len(
+                        graph_plan.view_aliases)
+                    self.execution_selection["trace_only_outputs"] = len(
+                        graph_plan.trace_only_tensors)
         except BaseException as exc:
             cleanup_errors = self._cleanup_calls()
             if cleanup_errors:
@@ -1747,7 +1833,8 @@ class HybridRunner:
             value = value[ref.row_start:ref.row_start + int(ref.row_extent)]
         return value
 
-    def _prepare_resident_execution(self) -> None:
+    def _prepare_resident_execution(
+            self, graph_plan: GraphExecutionPlan | None = None) -> None:
         """Lower immutable graph slots and all RKPlan I/O views exactly once.
 
         The pass proves one producer per slot and one stable allocation per
@@ -1776,6 +1863,30 @@ class HybridRunner:
                 reject(RK_E_SCHEMA, "resident slot collides with Host constant",
                        stage="lowering", actual=name)
             values[name] = array
+        # Metadata-only reshapes become stable views of their source slot.  The
+        # check is against the actual allocation, so a non-contiguous runtime
+        # layout falls back to a construction error instead of claiming a view.
+        if graph_plan is not None:
+            for alias in graph_plan.view_aliases:
+                source = values.get(alias.input_tensor)
+                target_spec = self.program.tensors.get(alias.output_tensor)
+                if source is None or target_spec is None:
+                    reject(RK_E_SCHEMA, "graph view names an unavailable tensor",
+                           stage="lowering", actual=alias.node_id)
+                try:
+                    view = source.reshape(alias.shape)
+                except ValueError as exc:
+                    reject(RK_E_SHAPE,
+                           f"graph view cannot reshape {alias.input_tensor!r}: "
+                           f"{exc}", stage="lowering")
+                if view.dtype != np.dtype(DTYPES[target_spec.dtype]) or \
+                        tuple(view.shape) != tuple(target_spec.shape) or \
+                        not view.flags.c_contiguous or \
+                        not np.shares_memory(source, view):
+                    reject(RK_E_SHAPE,
+                           "graph reshape did not produce the declared contiguous "
+                           "view", stage="lowering", actual=alias.node_id)
+                values[alias.output_tensor] = view
         # Resolve all prebound views against the same stable allocation table.
         self.resident_values = values
 
@@ -1833,6 +1944,209 @@ class HybridRunner:
         self.resident_values = values
         self.prepared_nodes = prepared
         self._node_output_tensors = output_tensors
+
+    def _compile_graph_ops(self, graph_plan: GraphExecutionPlan, *,
+                           capture: bool) -> _CompiledGraph:
+        """Lower the graph topology into a flat tuple of prebound operations."""
+        if self.resident_values is None or self.prepared_nodes is None:
+            reject(RK_E_INVALID, "graph executor has no prepared residency",
+                   stage="lowering")
+        raw_name = self.program.input_spec.name
+        compile_values = dict(self.resident_values)
+        compile_values[raw_name] = np.empty(
+            tuple(self.program.input_spec.shape),
+            dtype=DTYPES[self.program.input_spec.dtype])
+        needed = set(graph_plan.production_tensors)
+        ops: list[_GraphOp] = []
+        produced: set[str] = set()
+        skipped_outputs = 0
+        view_ops = 0
+        for node in self.program.nodes:
+            is_capture_node = bool(getattr(node, "capture_only", False))
+            if is_capture_node and not capture:
+                continue
+            alias = graph_plan.alias_for_node(node.id)
+            if alias is not None and isinstance(node, HostNode):
+                output_tensors = tuple(sorted(
+                    {ref.tensor for ref in node.outputs.values()}))
+                ops.append(_GraphViewOp(node.id, output_tensors))
+                produced.update(output_tensors)
+                view_ops += 1
+                continue
+            if isinstance(node, HostNode):
+                inputs = {
+                    name: self._resolve(ref, compile_values, {},
+                                        f"{node.id}.inputs.{name}")
+                    for name, ref in node.inputs.items()
+                }
+                raw_keys = tuple(
+                    name for name, ref in node.inputs.items()
+                    if ref.tensor == raw_name)
+                outputs: list[_GraphHostOutput] = []
+                for name, ref in node.outputs.items():
+                    spec = self.program.tensors[ref.tensor]
+                    keep = capture or ref.tensor in needed
+                    if not keep:
+                        skipped_outputs += 1
+                        continue
+                    target = self.resident_values.get(ref.tensor)
+                    if target is None:
+                        reject(RK_E_SCHEMA,
+                               "Host output has no resident target",
+                               stage="lowering", actual=node.id)
+                    outputs.append(_GraphHostOutput(
+                        action_name=name, tensor=ref.tensor, target=target,
+                        dtype=np.dtype(DTYPES[spec.dtype]),
+                        shape=tuple(spec.shape)))
+                    produced.add(ref.tensor)
+                ops.append(_GraphHostOp(
+                    node_id=node.id, action_id=node.action.action_id,
+                    func=node.action.func, attrs=dict(node.attrs),
+                    inputs=inputs, raw_keys=raw_keys,
+                    outputs=tuple(outputs),
+                    action_output_names=frozenset(node.action.output_names),
+                    phase=node.phase))
+                continue
+            prepared = self.prepared_nodes.get(node.id)
+            if prepared is None:
+                reject(RK_E_INVALID,
+                       f"graph node {node.id!r} was not prepared",
+                       stage="lowering")
+            kind, call, repeats, _, _ = prepared
+            output_tensors = self._node_output_tensors[node.id]
+            ops.append(_GraphNpuOp(
+                node_id=node.id, kind=kind, call=call,
+                binding_key=node.id, repeats=repeats, phase=node.phase,
+                output_tensors=output_tensors))
+            produced.update(output_tensors)
+        return _CompiledGraph(
+            ops=tuple(ops), produced_tensors=frozenset(produced),
+            view_ops=view_ops,
+            skipped_trace_output_writes=skipped_outputs,
+            capture=capture)
+
+    def _prepare_compiled_executor(self, graph_plan: GraphExecutionPlan) -> None:
+        """Compile production and capture executions once, without JSON I/O."""
+        self._compiled_production = self._compile_graph_ops(
+            graph_plan, capture=False)
+        self._compiled_capture = self._compile_graph_ops(
+            graph_plan, capture=True)
+
+    def _run_graph(self, arr: np.ndarray, *, stats: RunStats | None,
+                   capture: bool) -> HybridResult:
+        """Execute the flattened prepared graph with stable Host call templates."""
+        if self.resident_values is None:
+            reject(RK_E_INVALID, "graph executor has no resident values",
+                   stage="model")
+        planned = self._compiled_capture if capture else self._compiled_production
+        if planned is None:
+            reject(RK_E_INVALID, "graph executor was not compiled",
+                   stage="lowering")
+        raw_name = self.program.input_spec.name
+        self.resident_values[raw_name] = arr
+        phase_before_us = (stats.preprocess_us + stats.execution_us +
+                           stats.postprocess_us) if stats is not None else 0.0
+        t_run = time.perf_counter()
+        if stats is not None:
+            stats.graph_view_ops += planned.view_ops
+            stats.graph_skipped_trace_output_writes += \
+                planned.skipped_trace_output_writes
+
+        for op in planned.ops:
+            if isinstance(op, _GraphViewOp):
+                continue
+            if isinstance(op, _GraphHostOp):
+                for key in op.raw_keys:
+                    op.inputs[key] = arr
+                t0 = time.perf_counter() if stats is not None else None
+                outputs = op.func(op.inputs, op.attrs)
+                if not isinstance(outputs, dict) or \
+                        set(outputs) != op.action_output_names:
+                    reject(RK_E_SCHEMA,
+                           f"Host action {op.action_id!r} returned wrong "
+                           "output keys", stage="host_action")
+                kept: list[np.ndarray] = []
+                for spec in op.outputs:
+                    value = np.asarray(outputs[spec.action_name])
+                    if value.dtype != spec.dtype or \
+                            tuple(value.shape) != spec.shape:
+                        reject(RK_E_INVALID,
+                               f"{op.node_id}.{spec.action_name} output "
+                               "envelope changed", stage="host_action",
+                               actual={"dtype": str(value.dtype),
+                                       "shape": list(value.shape)},
+                               required={"dtype": str(spec.dtype),
+                                         "shape": list(spec.shape)})
+                    if not value.flags.c_contiguous:
+                        value = np.ascontiguousarray(value)
+                    if value is not spec.target:
+                        np.copyto(spec.target, value, casting="no")
+                    kept.append(spec.target)
+                if stats is not None:
+                    elapsed_us = (time.perf_counter() - t0) * 1e6
+                    stats.add_host_action(
+                        op.node_id, op.phase, elapsed_us,
+                        inputs=tuple(op.inputs.values()),
+                        outputs=tuple(kept))
+                continue
+            if not isinstance(op, _GraphNpuOp):
+                reject(RK_E_SCHEMA, "unknown compiled graph operation",
+                       stage="lowering")
+            t_node = time.perf_counter()
+            if op.kind == "single":
+                report, workspace_us = op.call.run_prepared(
+                    binding_key=op.binding_key)
+            elif op.kind == "group":
+                report, workspace_us = op.call.run_group_prepared(
+                    binding_key=op.binding_key)
+            else:
+                reject(RK_E_SCHEMA,
+                       f"graph node {op.node_id!r} has unknown lowering kind",
+                       stage="lowering", actual=op.kind)
+            node_us = (time.perf_counter() - t_node) * 1e6
+            if stats is not None:
+                if op.kind == "group":
+                    stats.add_group_report(op.node_id, report, node_us,
+                                           repeats=op.repeats, phase=op.phase,
+                                           workspace_us=workspace_us)
+                else:
+                    stats.add_report(op.node_id, report, node_us,
+                                     phase=op.phase,
+                                     workspace_us=workspace_us)
+
+        public_outputs: dict[str, np.ndarray] = {}
+        for public, tensor in self.program.outputs.items():
+            if tensor not in planned.produced_tensors:
+                reject(RK_E_SCHEMA,
+                       f"graph output {tensor!r} was not produced",
+                       stage="model")
+            value = self.resident_values[tensor]
+            spec = self.program.tensors[tensor]
+            if value.shape != spec.shape or \
+                    value.dtype != np.dtype(DTYPES[spec.dtype]):
+                reject(RK_E_SHAPE, f"graph output {tensor!r} invalid",
+                       stage="model")
+            if not np.isfinite(value).all():
+                reject(RK_E_NUMERIC_CONTRACT,
+                       f"graph output {tensor!r} contains non-finite values",
+                       stage="model")
+            public_outputs[public] = np.array(
+                value, dtype=DTYPES[spec.dtype], order="C", copy=True)
+        trace: dict[str, np.ndarray] = {}
+        if capture:
+            for name in self.program.trace_tensors:
+                if name in planned.produced_tensors:
+                    trace[name] = np.array(self.resident_values[name], copy=True)
+        if stats is not None:
+            elapsed_us = (time.perf_counter() - t_run) * 1e6
+            phase_now_us = (stats.preprocess_us + stats.execution_us +
+                            stats.postprocess_us)
+            residual_us = max(0.0, elapsed_us -
+                              (phase_now_us - phase_before_us))
+            if residual_us > 0.0:
+                stats.add_executor_overhead(residual_us)
+            stats.record_run(elapsed_us)
+        return HybridResult(public_outputs, trace)
 
     def _run_prepared(self, arr: np.ndarray, *, stats: RunStats | None,
                       capture: bool) -> HybridResult:
@@ -2321,6 +2635,8 @@ class HybridRunner:
         if not arr.flags.c_contiguous:
             reject(RK_E_INVALID, "hybrid graph input must be C-contiguous",
                    stage="model")
+        if self.execution_backend == "compiled_graph":
+            return self._run_graph(arr, stats=stats, capture=capture)
         if self.execution_mode == "prepared":
             return self._run_prepared(arr, stats=stats, capture=capture)
         values: dict[str, np.ndarray] = {spec.name: arr}

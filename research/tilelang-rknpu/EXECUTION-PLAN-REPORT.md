@@ -18,15 +18,36 @@ CPU、厂商 RKNN 与自研 RKPlan 的差距，再在**不改变冻结数值政�
   layer trace **逐位相同**；冻结 packed numeric spec 重放 **PASS / 0
   problems**。
 - Host residual+RMSNorm 融合实测无稳定叠加收益，撤回为 opt-in control；
-  device-resident QKV 的传输-only 上界在 ViT b8 仅 **0.377 ms**，且缺少
-  device CUBE/bank reorder、跨 workspace BO 生命周期与 layout 模板，不进入实现。
+  device-resident QKV 的传输-only 筛选估计在 ViT b8 仅 **0.377 ms**。该数字
+  使用当前组件系数、未计 device CUBE/bank reorder，不是严格收益上界；同时
+  缺少跨 workspace BO 生命周期与 layout 模板，因此不进入实现。
 - 优化后仍有明显差距：厂商在 b8 仍快 **1.71x**、b1 快 **2.31x**；CPU
   FP32 在 ViT b8/b1 分别快 **1.24x/2.70x**（CPU 是独立数值政策，不直接排名）。
-  剩余主因是每个 batch 仍有 **8 次 submit**、Host Softmax/RMSNorm/SwiGLU
-  边界以及逐个 RKPlan 的 C workspace 包络，而不是 QKV 单段搬运。
+  当前测得差距中可见的因素包括 8 次 Host 侧 RKPlan submit 调用、Host
+  Softmax/RMSNorm/SwiGLU 边界和逐个 RKPlan 的 C workspace 包络；但厂商一次
+  `rknn_run` **不是一次设备 Submit 的计数**，厂商内部提交粒度未知，不能据此
+  认定提交粒度就是差距主因。厂商 ViT 又不满足 packed per-logit 门限，其性能
+  只能作为不同数值政策下的参考，不能整体视为可由编译规划消除的损失。
 
 完整机器可读结果、成本模型和重放命令在
 [结果目录](results/20261027T025648Z-execution-candidates/README.md)。
+
+> **后续归因修正（同名报告 v2）**：本报告保留该轮 campaign 的原始数字，但
+> 对归因强度作如下限定，后续图级阶段以
+> [GRAPH-EXECUTION-PLAN.md](GRAPH-EXECUTION-PLAN.md) 为准：
+>
+> 1. 厂商一次 Host 侧 `rknn_run` 不等于一次设备 Submit；厂商内部 Submit
+>    数量未知，不能把“提交粒度”认定为主因。
+> 2. 厂商 ViT 未通过 packed per-logit 门限；其性能属于不同数值政策下的
+>    参考，不能全部归因于可由编译规划消除的损失。
+> 3. device-resident QKV 的 0.377 ms 是基于当前组件系数的筛选估计，未计
+>    device reorder，不是严格收益上界。
+> 4. `fanout >= 32` 是当前样本支持的经验选择规则，不宣称已证明一般性的
+>    性能交叉点。
+> 5. 该 campaign 的 custom arm warm interval 含每 call 的 `RunStats` 记录；
+>    vendor/CPU harness 没有等价插桩。故它适合同插桩 compiler arms 的相对
+>    比较，不应直接当作无插桩应用时间与外部绝对排名。后续图级 campaign
+>    主计时使用 `stats=None`，另做独立 instrumented 采样。
 
 ## 1. 比较口径
 
@@ -97,9 +118,10 @@ ViT b8 的 prepared 成本账本（每 call）：
 
 prepared 确实消除了 Python 重复 binding 解析/有限值扫描和 ctypes 描述符重建；
 但它没有消除任何 submit、upload/download 或 Host action。C workspace 仍在
-4 ms 量级，ViT b8 的 8 次 submit 与厂商每个 batch 一次 runtime call 仍是结构性差别。
-厂商内部具体如何融合/放置只能由 `vendor-perf` 探针观察到（50 NPU + 5 CPU 层等），
-其 compiler/driver 内部机制不得在无证据时猜测归因。
+4 ms 量级。厂商每个 batch 只有一次 Host 侧 `rknn_run` 调用，但这不等于设备
+内部只有一次 Submit；厂商内部提交数没有公开/探针证据，不能据此认定提交粒度
+是差距主因。`vendor-perf` 只能观察到层落点（如 50 NPU + 5 CPU 层等），不能
+证明其 compiler/driver 内部融合机制。
 
 ## 3. 候选执行方案比较
 
@@ -108,7 +130,7 @@ prepared 确实消除了 Python 重复 binding 解析/有限值扫描和 ctypes 
 | **C0 generic** | 原 22 节点 hybrid，QKV mapped group | 无跨 plan 驻留；8 submit | 无 | 每 plan Python binding/validation | 当前冻结政策 | 控制组 |
 | **C1 prepared Host residency** | 同 C0；按图分配稳定 Host slot | 设备侧仍 8 submit；无跨 plan BO | ViT b8 Python plan-node 2.861→0.135 ms；b1 0.637→0.100 ms | 输出回写、resident 内存、setup；无 transfer 改变 | 需一 producer/slot、稳定 view、无 Host alias；C 每 run 仍验 finite/binding | **采用为 ViT 默认路径；auto 只在 fanout≥32 启用** |
 | **C2 host boundary fusion** | residual.add + rmsnorm 合并为已注册动作；mapped QKV 控制 | 无改变；仍 8 submit | 一个 Host action 边界 | 同一遍读写与回写；无 submit/transfer 收益 | 已有 `tensor.add_rmsnorm.last_axis.v1`，经 mock/board 逐位验证 | **撤回为 control**：b8 7.550 vs prepared 7.442，无可复现叠加收益 |
-| **C3 device-resident QKV** | QKV→QK/PV 直接消费；Softmax 仍 Host | 需跨 workspace/plan BO 生命周期；submit 仍 8 | b8 省 49,152 B qkv download + 163,840 B qkv-attributable upload，模型上界 0.377 ms | 未实现的 device reorder、BO owner/lifetime/alias 检查；若改变映射需独立数值验证 | 缺 CUBE bank→QK/PV WEIGHT/tile reorder 模板；缺 public BO 契约 | **不实现**：上界不足以解释差距，且不能减 submit/Host Softmax |
+| **C3 device-resident QKV** | QKV→QK/PV 直接消费；Softmax 仍 Host | 需跨 workspace/plan BO 生命周期；当前计划的 8 次 Host submit 不变 | b8 按当前实测系数筛选约 49,152 B qkv download + 163,840 B qkv-attributable upload，估计 0.377 ms；未计 reorder，不是严格上界 | 未实现的 device reorder、BO owner/lifetime/alias 检查；若改变映射需独立数值验证 | 缺 CUBE bank→QK/PV WEIGHT/tile reorder 模板；缺 public BO 契约 | **不实现为优先项**：筛选估计不足以解释差距，且不能减少 Host Softmax 边界；后续可作为 graph candidate 重新计费 |
 | **C4 CPU placement** | 整个模型或部分算子在 CPU | N/A | 可免 NPU submit/transfer | 改变内部精度与执行语义 | FP32 reference 与 packed FP16 不同政策 | 单列为外部基线，不排名 |
 
 ### C1 规则为何不是模型名分支
@@ -152,9 +174,11 @@ MLP 的小正预测在实测中反号，说明模型在低 fanout 区没有足�
 “模型预测正收益就 blanket 启用”，而是要求收益幅度高于阈值并保留 generic
 control。ViT 的预测误差小于 25 us。
 
-device-QKV 筛选把 213 KiB 的桥接字节按实测 download/pack 系数折算为 b8
-**0.377 ms**，并明确不计任何 reorder；这低于 auto 与 vendor 在 b8 的约
-2.9 ms 差距，因此不支持“先做 QKV 驻留”。
+device-QKV 筛选把 213 KiB 的桥接字节按当前实测 download/pack 系数折算为
+b8 **0.377 ms**，并明确不计任何 reorder。它是**筛选估计，不是严格收益上界**：
+新增 device 布局转换可能使结果更差，host Softmax 和 submit 边界也没有消除。
+它低于 auto 与 vendor 在 b8 的可见差距，因此不足以单独支持“先做 QKV 驻留”；
+厂商差距中的设备图/数值政策部分不可由这一同政策子图直接回收。
 
 ## 5. 编译器与运行时实现
 
@@ -212,8 +236,11 @@ prepared setup / resident memory：
 - 不宣称自研路径追平厂商；b8/b1 仍分别慢 1.71x/2.31x。
 - 不把 CPU FP32 的提升直接算作 same-policy 优化；CPU 是独立数值政策。
 - 不宣称厂商图内部每个融合/调度的细节；探针只能观察层落点与包络。
+- 不把一次 `rknn_run` 等同于一次设备 Submit，也不把厂商 ViT 的不同数值政策
+  性能全部计入可由编译规划消除的 loss。
 - 不宣称 prepared 减少 submit 或设备传输；tasks 70、submits 8、bridge 字节均未变。
-- 不宣称 device QKV 已实现；它只有有界成本筛选和缺口清单。
+- 不宣称 device QKV 已实现；它只有基于当前组件系数的筛选估计和缺口清单，
+  该估计不是严格收益上界。
 - 不宣称多核、异步 lifetime、任意 layout、任意 stride 或 KV cache 支持。
 - CPU/NPU 频率没有硬件锁频；绝对时间使用同 campaign 中位数，收益优先使用
   交错轮配对比值，单跑离群值不进入宣称。
