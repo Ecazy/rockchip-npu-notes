@@ -2,8 +2,8 @@
 
 日期：2026-10-26。本文汇总当前默认路径、已采用/已撤回方案、最终完整模型
 验收结果和明确的非声明。各优化包的实现细节仍以
-[OPTIMIZATION-RESULTS-1.md](OPTIMIZATION-RESULTS-1.md) 至
-[OPTIMIZATION-RESULTS-7.md](OPTIMIZATION-RESULTS-7.md) 为准；本文不把历次局部
+[OPTIMIZATION-RESULTS-1.md](archive/optimization-history.md#round-1) 至
+[OPTIMIZATION-RESULTS-7.md](archive/optimization-history.md#round-7) 为准；本文不把历次局部
 campaign 的加速比串接成累计数字。
 
 ## 0. 最终身份与入口
@@ -261,7 +261,7 @@ collapse**：
   - `verify-packed-summary.json`
   - `README.md`（身份、哈希、重放命令）
 - 完整 MNIST：五个 profile 各 10,000 张，3 个逐轮交替 round；
-- 旧优化结果：`OPTIMIZATION-RESULTS-1.md` … `OPTIMIZATION-RESULTS-7.md`；
+- 原始方案与第 1–7 轮过程：[优化历史](archive/optimization-history.md)；
 - 厂商 baseline：`results/20261027T015302Z-vendor/`
   - `analysis.json`、`analysis.md`
   - `model-results/rN-{current,vendor,cpu}/`

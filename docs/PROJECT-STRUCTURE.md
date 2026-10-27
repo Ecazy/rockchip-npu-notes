@@ -1,6 +1,6 @@
 # 项目结构与扩展约定
 
-2026-10-14。当前实现按职责组织，历史证据和上游主题笔记保持原位。
+结构约定始于 2026-10-14；文档导航于 2026-10-26 整理。历史证据和上游主题笔记保持原位，阅读入口见 [文档导航](README.md)。
 
 ## 目录
 
@@ -9,6 +9,7 @@ rockchip-npu-notes/
 ├── README.md                    # 中文首页与当前能力入口
 ├── CMakeLists.txt               # 整个工作区的构建/CTest入口
 ├── docs/
+│   ├── README.md                # 按用途选择文档的统一导航
 │   ├── CAPABILITIES.md          # 支持范围、证据等级、缺口
 │   ├── PROJECT-STRUCTURE.md     # 本文
 │   └── archive/LEGACY-README.md # 原长首页快照与完整主题索引
@@ -29,7 +30,9 @@ rockchip-npu-notes/
 │   │   └── build*/artifacts/   # 生成物（忽略Git）
 │   ├── rknpu-vendor/           # 历史逆向与旧发射器，保持原位
 │   ├── upstream-components/   # 版本清单 + 独立外部checkout
-│   └── *-*.md                 # 当前专项实验报告
+│   ├── tilelang-rknpu/        # 后端、完整模型及优化；README为模块导航
+│   ├── kernels/graphs/        # 算子与静态图专题报告（两个同级目录）
+│   └── scheduling/            # 调度、并发、成本与观测专题报告
 ├── chips/encodings/perf/guide/ # 上游按主题组织的知识与历史数据
 └── RKNPU-STATUS.md             # 早期本地进展快照
 ```

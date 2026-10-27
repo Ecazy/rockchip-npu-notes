@@ -228,7 +228,7 @@ for root in roots:
             path.read_bytes()).hexdigest()
 for rel in ("research/custom-ops/CMakeLists.txt",
             "research/tilelang-rknpu/provenance.json",
-            "research/tilelang-rknpu/IMPLEMENTATION-STATUS.md",
+            "research/tilelang-rknpu/archive/development-history.md",
             "research/tilelang-rknpu/scripts/run-verification.sh"):
     path = repo / rel
     if path.is_file():

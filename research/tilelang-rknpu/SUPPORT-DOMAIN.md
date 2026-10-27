@@ -117,7 +117,7 @@ reported.
 ## Next-milestone model bridge
 
 The complete-model milestone is documented in
-[MODEL-MILESTONE-STATUS.md](MODEL-MILESTONE-STATUS.md).  It adds a learned
+[MODEL-MILESTONE-STATUS.md](ACCEPTANCE.md#models).  It adds a learned
 784→256→128→10 MLP with exact NPU ReLU and bias, and a 16-token/64-wide/4-head
 one-layer image Transformer.  A bounded versioned `rkhybrid` manifest records
 shape/axes, dependencies, numeric contracts and bridge accounting.  Transformer

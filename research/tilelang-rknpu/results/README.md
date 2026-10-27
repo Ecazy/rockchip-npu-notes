@@ -43,7 +43,7 @@ payloads needed for independent numerical replay.
 ## QKV mapped-input checkpoint (2026-10-26, v13)
 
 Seventh optimisation package; report:
-[OPTIMIZATION-RESULTS-7.md](../OPTIMIZATION-RESULTS-7.md).
+[OPTIMIZATION-RESULTS-7.md](../archive/optimization-history.md#round-7).
 
 - `results/20261026T113808Z-qkvmap/`: split_heads materialization vs mapped
   QKV input, 4 rounds x 32 runs.  b8 10.784 -> **10.760 ms** (1.0022x, mixed
@@ -60,7 +60,7 @@ Seventh optimisation package; report:
 ## Python binding-reuse checkpoint (2026-10-26, v12)
 
 Sixth optimisation package; report:
-[OPTIMIZATION-RESULTS-6.md](../OPTIMIZATION-RESULTS-6.md).
+[OPTIMIZATION-RESULTS-6.md](../archive/optimization-history.md#round-6).
 
 - `results/20261026T105439Z-pybind/`: ctypes binding descriptor reuse vs
   per-call `make_binding`, 4 rounds x 32 runs, same payload/source.
@@ -87,7 +87,7 @@ Sixth optimisation package; report:
 ## Upload-policy contract and layout checkpoint (2026-10-26, v11)
 
 Fifth optimisation package; report:
-[OPTIMIZATION-RESULTS-5.md](../OPTIMIZATION-RESULTS-5.md).
+[OPTIMIZATION-RESULTS-5.md](../archive/optimization-history.md#round-5).
 
 - `results/20261026T094847Z-layout/`: fixed 16x16 CUBE/WEIGHT pack vs generic,
   coalescing on, 4 rounds x 32 runs.  b8 11.637 -> **11.414 ms** (1.0195x);
@@ -102,7 +102,7 @@ Fifth optimisation package; report:
 ## QK/PV upload-sync checkpoint (2026-10-26, v10)
 
 Fourth optimisation package, shared-group upload preparation; report:
-[OPTIMIZATION-RESULTS-4.md](../OPTIMIZATION-RESULTS-4.md).
+[OPTIMIZATION-RESULTS-4.md](../archive/optimization-history.md#round-4).
 
 - `results/20261026T093305Z-upload/`: coalesced vs per-slice prep/fini,
   4 rounds x 32 runs.  b8 11.969 -> **11.721 ms** (1.021x), b1 3.718 ->
@@ -117,7 +117,7 @@ Fourth optimisation package, shared-group upload preparation; report:
 ## RMSNorm-boundary checkpoint (2026-10-26, v9)
 
 Third optimisation package, RMSNorm portion of plan section 6/7 D; report:
-[OPTIMIZATION-RESULTS-3.md](../OPTIMIZATION-RESULTS-3.md).
+[OPTIMIZATION-RESULTS-3.md](../archive/optimization-history.md#round-3).
 
 - `results/20261026T091322Z-rmsnorm/`: default packed FFN + chain_shared,
   `control` vs fused residual+RMSNorm Host action, 4 rounds x 32 runs.
@@ -151,9 +151,9 @@ Third optimisation package, RMSNorm portion of plan section 6/7 D; report:
 ## FFN boundary checkpoint (2026-10-26, v7)
 
 Second optimisation package from
-[TRANSFORMER-OPTIMIZATION-PLAN.md](../TRANSFORMER-OPTIMIZATION-PLAN.md) section 6;
+[TRANSFORMER-OPTIMIZATION-PLAN.md](../archive/optimization-history.md#plan) section 6;
 the implementation report is
-[OPTIMIZATION-RESULTS-2.md](../OPTIMIZATION-RESULTS-2.md).
+[OPTIMIZATION-RESULTS-2.md](../archive/optimization-history.md#round-2).
 
 - `results/20261026T085009Z-ffn/`: RK3588 core 1, three interleaved arms
   (packed / device / host), 4 rounds x 32 runs, pinned CPU.  Default packed FFN:
@@ -174,9 +174,9 @@ the implementation report is
 ## Bridge-envelope optimisation checkpoint (2026-10-26, v5)
 
 First optimisation package from
-[TRANSFORMER-OPTIMIZATION-PLAN.md](../TRANSFORMER-OPTIMIZATION-PLAN.md); the
+[TRANSFORMER-OPTIMIZATION-PLAN.md](../archive/optimization-history.md#plan); the
 implementation report (v5, after four read-only reviews) is
-[OPTIMIZATION-RESULTS-1.md](../OPTIMIZATION-RESULTS-1.md).
+[OPTIMIZATION-RESULTS-1.md](../archive/optimization-history.md#round-1).
 
 - `results/20261026T055654Z-envelope/`: RK3588 core 1, three arms measured
   **round by round** (4 rounds x 32 runs, pooled to 128 samples) on a pinned CPU,
@@ -322,7 +322,7 @@ Guarantees encoded in `scripts/run-verification.sh`:
   `PERFORMANCE-RETRACTION.md`.
 - **Single-core scope:** masks 1/2/4 are serial, not concurrent throughput.
   The first-round Transformer Host bridge cost is reported in
-  `MODEL-MILESTONE-STATUS.md`.
+  `../ACCEPTANCE.md#models`.
 
 ## P0 / regression records
 

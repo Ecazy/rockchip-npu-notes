@@ -1,8 +1,8 @@
 # TileLang 的 RKNPU IR 与专用后端：顶层设计
 
-日期：2026-10-20。状态：目标架构；已有部分 TileLang/RKPlan 主机原型，尚未达到本文目标。实际进度与阻断项见 [复核报告](REVIEW-2026-10-20.md)。配套：[Coding Agent 开发细则](specific.md)。下文的能力范围是设计目标，不能替代实施验收。
+日期：2026-10-20。状态：目标架构；已有部分 TileLang/RKPlan 主机原型，尚未达到本文目标。实际进度与阻断项见 [复核报告](archive/development-history.md#review-2026-10-20)。配套：[Coding Agent 开发细则](specific.md)。下文的能力范围是设计目标，不能替代实施验收。
 
-范围修订：2026-10-23。项目复用 TileLang 语言、前端及其 TVM IR，新增面向 RKNPU 的语义接入、RKIR、lowering、计划与运行后端。工作重点是 NPU IR 与后端；不从零开发替代 TileLang 的语言前端。2026-10-20 的复核报告和文末版本号为历史快照，当前进度以 `IMPLEMENTATION-STATUS.md` 及实际代码、日志为准。
+范围修订：2026-10-23。项目复用 TileLang 语言、前端及其 TVM IR，新增面向 RKNPU 的语义接入、RKIR、lowering、计划与运行后端。工作重点是 NPU IR 与后端；不从零开发替代 TileLang 的语言前端。2026-10-20 的复核报告和文末版本号为历史快照，当前进度以 `archive/development-history.md#implementation-status` 及实际代码、日志为准。
 
 ## 1. 审查结论与目标
 
