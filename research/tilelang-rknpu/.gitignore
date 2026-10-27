@@ -276,3 +276,18 @@ results/20261026T081153Z-numeric/campaign.tgz
 results/20261026T120625Z-final/campaign/plans/
 results/20261026T120625Z-final/campaign/weights/
 results/20261026T120625Z-final/campaign/data/
+
+# Vendor RKNN baseline campaign: keep round reports, reference/jit manifests,
+# wall times and vendor/CPU raw logits.  Regenerable campaign payloads stay out.
+!results/20261027T015302Z-vendor/
+!results/20261027T015302Z-vendor/model-results/r*-*/
+!results/20261027T015302Z-vendor/model-results/r*-*/*.json
+!results/20261027T015302Z-vendor/model-results/r*-*/*.log
+!results/20261027T015302Z-vendor/model-results/r*-*/*.txt
+!results/20261027T015302Z-vendor/model-results/r*-*/*.sha256
+!results/20261027T015302Z-vendor/model-results/r*-*/vendor.*.logits.npy
+!results/20261027T015302Z-vendor/model-results/r*-*/cpu.*.logits.npy
+!results/20261027T015302Z-vendor/campaign/manifest.json
+!results/20261027T015302Z-vendor/campaign/current-final-campaign-manifest.json
+!results/20261027T015302Z-vendor/campaign/numeric/
+!results/20261027T015302Z-vendor/campaign/numeric/*.json

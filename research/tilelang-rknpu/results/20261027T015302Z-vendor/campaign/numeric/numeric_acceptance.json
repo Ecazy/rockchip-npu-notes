@@ -1,0 +1,467 @@
+{
+  "calibration": {
+    "basis": "Limits are frozen from deterministic layer outputs and raw task-logit comparisons; the same limits are used by the independent verifier.",
+    "observed_layer_traces": [
+      {
+        "path": "evidence/numeric-calibration/core-1/model_eval.layers.npz",
+        "sample_indices": [
+          10,
+          73,
+          171,
+          249,
+          279,
+          349,
+          383,
+          405
+        ],
+        "sha256": "52684282ccfdf06e583b7366406f8ea6da61e79152829750d14a9bcf1f022bb4"
+      },
+      {
+        "path": "evidence/numeric-calibration/core-2/model_eval.layers.npz",
+        "sample_indices": [
+          10,
+          73,
+          171,
+          249,
+          279,
+          349,
+          383,
+          405
+        ],
+        "sha256": "52684282ccfdf06e583b7366406f8ea6da61e79152829750d14a9bcf1f022bb4"
+      },
+      {
+        "path": "evidence/numeric-calibration/core-4/model_eval.layers.npz",
+        "sample_indices": [
+          10,
+          73,
+          171,
+          249,
+          279,
+          349,
+          383,
+          405
+        ],
+        "sha256": "52684282ccfdf06e583b7366406f8ea6da61e79152829750d14a9bcf1f022bb4"
+      }
+    ],
+    "observed_results": [
+      {
+        "path": "evidence/numeric-calibration/core-1/model_eval.json",
+        "sha256": "f1fec312428b9958787437c3c7c79a28c898ea8255a551fcb9c720edcaeb16c4"
+      },
+      {
+        "path": "evidence/numeric-calibration/core-2/model_eval.json",
+        "sha256": "f2a810bd3dafc053bac066307e3fbb5e2fed221a20a5ac7a056db5acbb18e17d"
+      },
+      {
+        "path": "evidence/numeric-calibration/core-4/model_eval.json",
+        "sha256": "969e679099eb5add1ce4c3975d11e9c052c2faa159c6cf7e9e28666bdf69ed8c"
+      }
+    ],
+    "rule": "atol=ceil_2^-12(2*max_observed_abs_error); rtol=0",
+    "status": "frozen",
+    "uses_classification_metric": false
+  },
+  "golden_file": "numeric_golden.npz",
+  "golden_sha256": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
+  "kind": "complete-model-numeric-acceptance",
+  "layer_tolerances": {
+    "mlp.logits": {
+      "atol": 0.0,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0
+      },
+      "rtol": 0.0
+    },
+    "mlp.x_padded": {
+      "atol": 0.0,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0
+      },
+      "rtol": 0.0
+    },
+    "relu_probe.output": {
+      "atol": 0.0,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.act": {
+      "atol": 0.03125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.015625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.attn_heads": {
+      "atol": 0.0009765625,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.00048828125,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.00048828125,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.00048828125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.attn_merged": {
+      "atol": 0.0009765625,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.00048828125,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.00048828125,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.00048828125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.attn_projection": {
+      "atol": 0.00390625,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.001953125,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.001953125,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.001953125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.ffn": {
+      "atol": 0.03125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.015625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.gate": {
+      "atol": 0.0078125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.00390625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.00390625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.00390625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.h1": {
+      "atol": 0.00390625,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.001953125,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.001953125,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.001953125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.h2": {
+      "atol": 0.03125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.015625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.h2_tokens": {
+      "atol": 0.03125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.015625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.k_t_heads": {
+      "atol": 0.00048828125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.000244140625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.000244140625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.000244140625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.logits": {
+      "atol": 0.03125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.015625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.logits_padded": {
+      "atol": 0.03125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.015625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.015625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.norm1": {
+      "atol": 0.000244140625,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0001220703125,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0001220703125,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0001220703125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.norm2": {
+      "atol": 0.00390625,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.001953125,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.001953125,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.001953125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.patch_flat": {
+      "atol": 0.0,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.patch_projection": {
+      "atol": 0.00048828125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.000244140625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.000244140625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.000244140625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.patches": {
+      "atol": 0.0,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.pooled": {
+      "atol": 0.0078125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.00390625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.00390625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.00390625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.positioned": {
+      "atol": 0.00048828125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.000244140625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.000244140625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.000244140625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.probs_heads": {
+      "atol": 0.00048828125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.000244140625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.000244140625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.000244140625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.q_heads": {
+      "atol": 0.001953125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0009765625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0009765625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0009765625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.qkv": {
+      "atol": 0.001953125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0009765625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0009765625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0009765625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.scores_heads": {
+      "atol": 0.015625,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0078125,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0078125,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0078125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.up": {
+      "atol": 0.0078125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.00390625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.00390625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.00390625
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.v_heads": {
+      "atol": 0.001953125,
+      "basis": "2x max observed |hardware-declared| over mock and all core masks, rounded up to 2^-12; rtol=0; no top-1 data used",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.layers.npz": 0.0009765625,
+        "evidence/numeric-calibration/core-2/model_eval.layers.npz": 0.0009765625,
+        "evidence/numeric-calibration/core-4/model_eval.layers.npz": 0.0009765625
+      },
+      "rtol": 0.0
+    }
+  },
+  "sample_policy": {
+    "count": 8,
+    "indices": [
+      10,
+      73,
+      171,
+      249,
+      279,
+      349,
+      383,
+      405
+    ],
+    "labels_used_for_selection": false,
+    "method": "numpy_default_rng_choice_without_replacement",
+    "population": "first 512 images of the MNIST test split",
+    "seed": 20261024
+  },
+  "schema_version": 1,
+  "status": "frozen",
+  "task_logit_tolerances": {
+    "mnist_mlp.b1": {
+      "atol": 0.015625,
+      "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.json": 0.0078125,
+        "evidence/numeric-calibration/core-2/model_eval.json": 0.0078125,
+        "evidence/numeric-calibration/core-4/model_eval.json": 0.0078125
+      },
+      "rtol": 0.0
+    },
+    "mnist_mlp.b32": {
+      "atol": 0.03125,
+      "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.json": 0.015625,
+        "evidence/numeric-calibration/core-2/model_eval.json": 0.0078125,
+        "evidence/numeric-calibration/core-4/model_eval.json": 0.0078125
+      },
+      "rtol": 0.0
+    },
+    "mnist_mlp.b8": {
+      "atol": 0.015625,
+      "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.json": 0.0078125,
+        "evidence/numeric-calibration/core-2/model_eval.json": 0.0078125,
+        "evidence/numeric-calibration/core-4/model_eval.json": 0.0078125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.b1": {
+      "atol": 0.0625,
+      "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.json": 0.03125,
+        "evidence/numeric-calibration/core-2/model_eval.json": 0.03125,
+        "evidence/numeric-calibration/core-4/model_eval.json": 0.03125
+      },
+      "rtol": 0.0
+    },
+    "tiny_vit.b8": {
+      "atol": 0.0625,
+      "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+      "observed_max_abs_by_source": {
+        "evidence/numeric-calibration/core-1/model_eval.json": 0.03125,
+        "evidence/numeric-calibration/core-2/model_eval.json": 0.03125,
+        "evidence/numeric-calibration/core-4/model_eval.json": 0.03125
+      },
+      "rtol": 0.0
+    }
+  },
+  "trace_contract": {
+    "mlp": {
+      "keys": [
+        "mlp.x_padded",
+        "mlp.logits"
+      ],
+      "profile": "mnist_mlp_b8"
+    },
+    "relu_probe": {
+      "keys": [
+        "relu_probe.output"
+      ],
+      "plan": "mnist_relu_probe"
+    },
+    "tiny_vit": {
+      "keys": [
+        "tiny_vit.patches",
+        "tiny_vit.patch_flat",
+        "tiny_vit.patch_projection",
+        "tiny_vit.positioned",
+        "tiny_vit.norm1",
+        "tiny_vit.qkv",
+        "tiny_vit.q_heads",
+        "tiny_vit.k_t_heads",
+        "tiny_vit.v_heads",
+        "tiny_vit.scores_heads",
+        "tiny_vit.probs_heads",
+        "tiny_vit.attn_heads",
+        "tiny_vit.attn_merged",
+        "tiny_vit.attn_projection",
+        "tiny_vit.h1",
+        "tiny_vit.norm2",
+        "tiny_vit.gate",
+        "tiny_vit.up",
+        "tiny_vit.act",
+        "tiny_vit.ffn",
+        "tiny_vit.h2",
+        "tiny_vit.h2_tokens",
+        "tiny_vit.pooled",
+        "tiny_vit.logits_padded",
+        "tiny_vit.logits"
+      ],
+      "profile": "tiny_vit_b8"
+    }
+  }
+}

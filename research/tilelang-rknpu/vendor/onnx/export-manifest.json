@@ -1,0 +1,45 @@
+{
+  "profiles": {
+    "mnist_mlp_b1": {
+      "batch": 1,
+      "check_max_abs": 3.814697265625e-06,
+      "check_top1_match": true,
+      "model": "mnist_mlp",
+      "onnx_sha256": "662653494abb890c1b392d2911a6a04763577d60e3d2445a4cc885fb9ad625e2",
+      "path": "mnist_mlp_b1.onnx"
+    },
+    "mnist_mlp_b32": {
+      "batch": 32,
+      "check_max_abs": 1.1444091796875e-05,
+      "check_top1_match": true,
+      "model": "mnist_mlp",
+      "onnx_sha256": "6c364a02d8a563b83c7621dedff6fe094b22a82bf2590bc98d326964372f3881",
+      "path": "mnist_mlp_b32.onnx"
+    },
+    "mnist_mlp_b8": {
+      "batch": 8,
+      "check_max_abs": 7.62939453125e-06,
+      "check_top1_match": true,
+      "model": "mnist_mlp",
+      "onnx_sha256": "3b08dc2f7be32f3728b081d752f6fc9e7a9166b7cf09dce3c2fd2276515915ea",
+      "path": "mnist_mlp_b8.onnx"
+    },
+    "tiny_vit_b1": {
+      "batch": 1,
+      "check_max_abs": 3.814697265625e-06,
+      "check_top1_match": true,
+      "model": "tiny_vit",
+      "onnx_sha256": "831a40844d298d46011fc1c21697cbb76789836374a63626534ccfc332d79a40",
+      "path": "tiny_vit_b1.onnx"
+    },
+    "tiny_vit_b8": {
+      "batch": 8,
+      "check_max_abs": 9.5367431640625e-06,
+      "check_top1_match": true,
+      "model": "tiny_vit",
+      "onnx_sha256": "4b0afdbe8dc78486d6a623d91d0099d7060b04007f9152645905a8937fc2bff0",
+      "path": "tiny_vit_b8.onnx"
+    }
+  },
+  "schema_version": 1
+}

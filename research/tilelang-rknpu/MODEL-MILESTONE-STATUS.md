@@ -17,7 +17,9 @@ MLP accuracy 0.98310 and Tiny ViT accuracy 0.98210, top-1 agreement 1.00000, and
 the current build passed the frozen packed numeric replay.  See
 [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md) and
 `results/20261026T120625Z-final/`.  This does not redefine or add conditions to
-N0-N3.
+N0-N3.  A separate 2026-10-27 vendor RKNN / CPU comparison is recorded in
+`results/20261027T015302Z-vendor/`; it is performance evidence, not a replacement
+for this milestone's packed numeric acceptance.
 
 ## Delivered models
 

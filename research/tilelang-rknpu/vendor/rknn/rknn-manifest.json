@@ -1,0 +1,70 @@
+{
+  "profiles": {
+    "mnist_mlp_b1": {
+      "batch": 1,
+      "float_dtype": "float16",
+      "model": "mnist_mlp",
+      "onnx": "mnist_mlp_b1.onnx",
+      "onnx_sha256": "662653494abb890c1b392d2911a6a04763577d60e3d2445a4cc885fb9ad625e2",
+      "quantization": "none",
+      "rknn": "mnist_mlp_b1.rknn",
+      "rknn_bytes": 508778,
+      "rknn_sha256": "64658057c1adfdaaf3f393fe40ec903d149e688f5eff080674bf09bf559487d9",
+      "single_core_mode": true,
+      "target": "rk3588"
+    },
+    "mnist_mlp_b32": {
+      "batch": 32,
+      "float_dtype": "float16",
+      "model": "mnist_mlp",
+      "onnx": "mnist_mlp_b32.onnx",
+      "onnx_sha256": "6c364a02d8a563b83c7621dedff6fe094b22a82bf2590bc98d326964372f3881",
+      "quantization": "none",
+      "rknn": "mnist_mlp_b32.rknn",
+      "rknn_bytes": 528108,
+      "rknn_sha256": "13d9570defefb28591251aa5ea672831543bded88fc03ea25f214f9f0bd7c095",
+      "single_core_mode": true,
+      "target": "rk3588"
+    },
+    "mnist_mlp_b8": {
+      "batch": 8,
+      "float_dtype": "float16",
+      "model": "mnist_mlp",
+      "onnx": "mnist_mlp_b8.onnx",
+      "onnx_sha256": "3b08dc2f7be32f3728b081d752f6fc9e7a9166b7cf09dce3c2fd2276515915ea",
+      "quantization": "none",
+      "rknn": "mnist_mlp_b8.rknn",
+      "rknn_bytes": 526186,
+      "rknn_sha256": "66a9e099ddde55a5dfcf86a16096bc925c7730a298a3edc5d7f60288a6f2b551",
+      "single_core_mode": true,
+      "target": "rk3588"
+    },
+    "tiny_vit_b1": {
+      "batch": 1,
+      "float_dtype": "float16",
+      "model": "tiny_vit",
+      "onnx": "tiny_vit_b1.onnx",
+      "onnx_sha256": "831a40844d298d46011fc1c21697cbb76789836374a63626534ccfc332d79a40",
+      "quantization": "none",
+      "rknn": "tiny_vit_b1.rknn",
+      "rknn_bytes": 260458,
+      "rknn_sha256": "8b77a42ebe3644a2573c235f44c3c22b3fd2e053645eab405e77646407575fa9",
+      "single_core_mode": true,
+      "target": "rk3588"
+    },
+    "tiny_vit_b8": {
+      "batch": 8,
+      "float_dtype": "float16",
+      "model": "tiny_vit",
+      "onnx": "tiny_vit_b8.onnx",
+      "onnx_sha256": "4b0afdbe8dc78486d6a623d91d0099d7060b04007f9152645905a8937fc2bff0",
+      "quantization": "none",
+      "rknn": "tiny_vit_b8.rknn",
+      "rknn_bytes": 728682,
+      "rknn_sha256": "52f7260d9f0ec7d91fc1214be507bb9416ffa2cb35d7855e148859e3ec584678",
+      "single_core_mode": true,
+      "target": "rk3588"
+    }
+  },
+  "schema_version": 1
+}

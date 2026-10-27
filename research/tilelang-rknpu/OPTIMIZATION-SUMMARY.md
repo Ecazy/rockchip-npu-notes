@@ -173,33 +173,88 @@ Tiny ViT b8 上传调用从 168,750 降至 167,500、上传字节 391.04 MB → 
 - 不宣称冷启动更快；Tiny ViT runner 创建成本当前高于基线。
 - 不宣称 device FFN、通用 Softmax/RMSNorm 下沉、任意 stride、多核并发、
   KV cache 或未知故障恢复已支持。
+- 不宣称厂商 RKNN 路径与当前 packed per-logit 阈值等价；ViT 误差已超过
+  0.0625，只能按分类保持性单独描述。
 - 三层核心串行准入、数值冻结阈值和原模型里程碑条件均未被重新定义。
 
-## 7. 下一阶段最值得投入的一项
+## 7. 厂商 RKNN 基线与三类对照（2026-10-27）
 
-按最终 b8 成本：per-call plan workspace 约 **4.71 ms**、Host actions 约
-**2.13 ms**、executor 约 **0.68 ms**；其中最大单个 Host action 是 SwiGLU
-约 **0.46 ms**，Softmax 约 0.35 ms。但单纯继续做 Host action 融合已经进入
-低收益区。
+新增厂商基线 campaign：`results/20261027T015302Z-vendor/`。同一 board、
+同一 10,000 张 test split、同一 weights、同一 batch/tail 调度、NPU core 1、
+CPU affinity 6、单线程 BLAS。厂商路径使用 RKNN-Toolkit2 **2.3.2** 编译，
+RKNN Runtime **2.3.2** 执行，非量化 FP16、`single_core_mode=True`、runtime
+core 0；ONNX 图输入 raw `[B,784]`，归一化和 patchify 在厂商图内完成。
+当前自研路径和 CPU 参考在同一 vendor campaign 中重跑两轮。
 
-下一阶段建议优先做 **device-resident QKV → QK/PV handoff**，而不是继续加
-Host 映射分支：
+| profile | 优化前基线* | 当前自研 | 厂商 RKNN | CPU FP32 | 厂商 speedup | CPU speedup |
+|---|---:|---:|---:|---:|---:|---:|
+| mlp b32 | 2.881 ms | 1.968 ms | **0.819 ms** | 6.838 ms | **2.40×** | 0.29× |
+| mlp b8 | 2.027 ms | 1.366 ms | **0.537 ms** | 1.752 ms | **2.54×** | 0.78× |
+| mlp b1 | 2.031 ms | 1.235 ms | **0.432 ms** | **0.254 ms** | **2.86×** | **4.86×** |
+| vit b8 | 34.631 ms | 10.421 ms | **4.120 ms** | 5.867 ms | **2.53×** | 1.78× |
+| vit b1 | 7.138 ms | 3.065 ms | **1.018 ms** | **0.872 ms** | **3.01×** | **3.51×** |
 
-- 目标：让 QKV 输出留在设备 BO，QK/PV 的上传直接消费设备侧 QKV 切片，
-  消除 `qkv` 下载和 QK/PV 的 Host 重新上传边界；不改变现有 FP16 位模式。
-- 契约变化：
-  - plan/action schema 增加 `device_source` binding 与显式 device slice/
-    transpose 描述，版本化；
-  - C validator 独立检查设备 BO 所有权、容量、offset/stride、别名/重叠和
-    整数溢出；
-  - runtime 需要 graph-level BO lifetime/ownership，跨 QK/PV 计划保持
-    producer BO，失败/关闭路径明确释放；仍保持同步、非异步资源生命周期；
-  - manifest 的 `group_layout` 升版本，保留 host mapped QKV 作为对照；
-  - 需要新的逐位一致性和 packed 数值重放，但不新增数值语义。
-- 不先做 device SwiGLU/Softmax 下沉：那会引入新的设备数值政策和独立阈值，
-  应在上述无算术变化的设备数据路径验证后再评估。
+speedup 定义为 `当前 warm ms / arm warm ms`；>1 表示该 arm 更快。
+\* 优化前基线来自此前完整模型 campaign
+`results/20261026T120625Z-final/`；其余三列来自本 vendor campaign，不能把
+星号列与本 campaign 的绝对值逐项串接。
 
-## 8. 证据索引
+完整五 profile × 10,000 张评估进程墙钟（包含参考计算/trace，不是纯应用侧）：
+
+| arm | wall |
+|---|---:|
+| current | 143.777 s |
+| vendor | 106.519 s |
+| CPU | 85.009 s |
+
+厂商/当前 warm 差异明显大于此前的局部布局优化：厂商在每个 batch chunk 只有
+一次 RKNN runtime 调用；当前默认仍要多次 submit 和多个 Host action。CPU 在
+MLP b1 和 ViT b1 上比当前自研 NPU 快，说明“上 NPU”本身并不是 b1 的充分收益
+条件。这里比较的是应用侧 raw→preprocess→inference→argmax；CPU arm 的
+`setup` 不包含等价的 plan/compiler 创建。
+
+精度：
+
+- 厂商与 CPU 的 accuracy/top-1 在五个 profile 全部一致：MLP 0.98310、
+  Tiny ViT 0.98210、top-1 agreement 1.00000。
+- 厂商最大 logit 误差：MLP 0.03049；ViT b8 0.12277、b1 0.10715。
+- packed task-logit 阈值是 0.0625：MLP 在阈值内，ViT **超出**。因此厂商路径
+  是 classification-preserving，但不是 packed per-logit 等价路径；若部署
+  RKNN，必须建立独立 numeric policy，不能把它当作当前冻结门限的替代。
+- `results/20261027T015302Z-vendor/vendor-perf/` 的逐层 placement 探针显示：
+  MLP 有 6–7 个 NPU 层 + 3 个 CPU 边界层；Tiny ViT b8 有 50 个 NPU 层 +
+  5 个 CPU 层。Tiny ViT 的 attention 使用 `exSDPAttention`，FFN 使用
+  `ConvExSwish`/`ConvMul`，RMSNorm 仅剩两个 CPU `Div`；也就是厂商把大量
+  Host action 边界吸收进了设备图。这解释了 warm gap 主要不是 QKV 单段搬运。
+  探针开启 `COLLECT_PERF_MASK`，其绝对时间只用于相对排序，不作为 benchmark。
+
+## 8. 下一阶段最值得投入的一项
+
+最终成本仍显示 per-call b8 plan workspace 约 **4.71 ms**、Host actions 约
+**2.13 ms**、executor 约 **0.68 ms**；但厂商 baseline 已证明，仅做
+QKV/QK/PV 的局部 device handoff 无法解释当前与厂商约 **2.4–3.0×** 的
+warm gap。当前默认仍是多个 submit、多个 Host action；厂商路径是编译器生成的
+整图 runtime 调用。因此**暂停把 device-resident QKV 作为独立下一项**；它是
+未来整图驻留方案的一个子组件，不是足够的首要方案。
+
+下一阶段最值得投入的是 **whole-model device-resident graph / Host-boundary
+collapse**：
+
+- 目标：把 QKV→attention→FFN 的中间结果保持在 runtime 管理的设备 BO 中，
+  只有模型输入和最终 logits 跨 Host 边界；减少每次调用的 submit/Host action
+  数量，而不是只优化某一段 QKV 搬运。
+- 契约变化（先设计/探针，不直接实施）：
+  - 版本化 graph-level plan/recipe，声明跨节点的 device BO 生命周期和
+    producer/consumer 关系；
+  - C 独立检查 owner、domain、容量、alias/重叠、offset/stride、整数溢出和
+    quarantine；仍不开放裸 IOVA，不支持异步资源生命周期；
+  - 若包含 device RMSNorm/Softmax/SwiGLU，必须新增独立数值契约、冻结阈值和
+    calibration/acceptance evidence；不能继承当前 packed Host 阈值；
+  - 保留当前 mapped QKV 和 Host 路径作为 control，便于逐位/精度归因。
+- 不预设能追平厂商；厂商 ViT 的 per-logit 误差已超出 packed 阈值，说明其
+  图融合也改变了数值语义，必须单独验收。
+
+## 9. 证据索引
 
 - 最终 campaign：`results/20261026T120625Z-final/`
   - `analysis.json`、`analysis.md`
@@ -207,4 +262,8 @@ Host 映射分支：
   - `README.md`（身份、哈希、重放命令）
 - 完整 MNIST：五个 profile 各 10,000 张，3 个逐轮交替 round；
 - 旧优化结果：`OPTIMIZATION-RESULTS-1.md` … `OPTIMIZATION-RESULTS-7.md`；
+- 厂商 baseline：`results/20261027T015302Z-vendor/`
+  - `analysis.json`、`analysis.md`
+  - `model-results/rN-{current,vendor,cpu}/`
+  - `vendor/README.md`（RKNN 编译与板端重放命令、runtime/wheel SHA）
 - 当前原始证据索引：`results/README.md`。

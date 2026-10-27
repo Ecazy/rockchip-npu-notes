@@ -5,6 +5,26 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Vendor RKNN baseline checkpoint (2026-10-27, v14)
+
+- `results/20261027T015302Z-vendor/`: two rounds, full 10,000-image test split
+  for all five profiles, current custom backend vs vendor RKNN 2.3.2 vs CPU
+  FP32.  Vendor warm latency is **2.40x/2.54x/2.86x** faster than current on
+  MLP b32/b8/b1 and **2.53x/3.01x** faster on Tiny ViT b8/b1.
+- CPU is faster than current on MLP b1 (4.86x) and Tiny ViT b1 (3.51x); the
+  multi-submit/Host-boundary gap remains the main issue.
+- Vendor accuracy/top-1 match CPU for all five profiles.  Vendor MLP max logit
+  error 0.03049 is within packed 0.0625; Tiny ViT 0.12277/0.10715 exceeds it,
+  so vendor fusion is not a drop-in packed per-logit equivalent.
+- Artifacts/commands: [vendor/README.md](../vendor/README.md); analysis:
+  `analysis.md` / `analysis.json` inside the result directory.
+- `vendor-perf/`: per-layer placement probe; Tiny ViT b8 is 50 NPU layers +
+  5 CPU layers (input/output, final reshape, two RMSNorm Div), showing that the
+  vendor compiler absorbs most of the Host boundaries.
+- The pre-optimisation baseline row in that analysis is from
+  `results/20261026T120625Z-final/`; the current/vendor/CPU columns share the
+  vendor campaign.
+
 ## Final model delivery checkpoint (2026-10-26, final)
 
 - `results/20261026T120625Z-final/`: three interleaved rounds, full 10,000-image

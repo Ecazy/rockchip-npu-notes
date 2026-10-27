@@ -1,0 +1,115 @@
+{
+  "all_five_profiles_full": true,
+  "baseline": {
+    "final_campaign": "results/20261026T120625Z-final",
+    "final_campaign_analysis_sha256": "ada09ca9171ca6224afab3e801c447d6820c44ccfccdd95b62236d62b6586e85",
+    "git_ref": "42f870f"
+  },
+  "core_mask": 1,
+  "cpu": {
+    "implementation": "numpy float32 model_reference, same schedule and weights"
+  },
+  "cpu_affinity_pin": 6,
+  "current": {
+    "compiled_manifest_sha256": "72f898e989240ad45a864d88596838a21e9c5e7d0f74feb416efef97c20ddadd",
+    "final_campaign_manifest": "results/20261026T120625Z-final/campaign/manifest.json",
+    "final_campaign_manifest_sha256": "26e30f88868940248c7fa9e458d8d2f36f4f810efdf70ce9585e2771aeab32da",
+    "runtime_source_commit": "60f4a82"
+  },
+  "data": {
+    "t10k-images-idx3-ubyte.gz": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+    "t10k-labels-idx1-ubyte.gz": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6",
+    "train-images-idx3-ubyte.gz": "440fcabf73cc546fa21475e81ea370265605f56be210a4024d2ca8f203523609"
+  },
+  "environment": {
+    "board_model": "RK3588 OPi 5 Plus",
+    "cpu_affinity": "6",
+    "driver": "RKNPU driver: v0.9.8",
+    "kernel": "Linux 6.1.43-rockchip-rk3588-rknpu098 aarch64",
+    "npu_core_mask": 1,
+    "npu_freq_hz": 1000000000,
+    "python": "3.10.12",
+    "thread_env": {
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1"
+    }
+  },
+  "evaluation_images_per_profile": 10000,
+  "expected_rows": [
+    {
+      "batch": 32,
+      "model": "mnist_mlp"
+    },
+    {
+      "batch": 8,
+      "model": "mnist_mlp"
+    },
+    {
+      "batch": 1,
+      "model": "mnist_mlp"
+    },
+    {
+      "batch": 8,
+      "model": "tiny_vit"
+    },
+    {
+      "batch": 1,
+      "model": "tiny_vit"
+    }
+  ],
+  "full_test_images": 10000,
+  "host_threads": {
+    "MKL_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "interleaved": false,
+  "kind": "vendor-baseline-campaign",
+  "numeric": {
+    "evaluator_spec": {
+      "file": "numeric/numeric_acceptance.json",
+      "sha256": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f"
+    },
+    "golden": {
+      "file": "numeric/numeric_golden.npz",
+      "sha256": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910"
+    },
+    "packed_spec": {
+      "file": "numeric/numeric_acceptance_packed.json",
+      "sha256": "f49d876b724b07ea417472ea1ac0c2b271c904e2cd6c7081e9a4c87cb3ddbe66"
+    }
+  },
+  "rounds": 2,
+  "schema_version": 1,
+  "thresholds": {
+    "accuracy_drop_max": 0.005,
+    "mnist_mlp_accuracy": 0.97,
+    "tiny_vit_accuracy": 0.95,
+    "top1_agreement_min": 0.99
+  },
+  "vendor": {
+    "float_dtype": "float16",
+    "lite2_wheel_sha256": "821e80c95e6838308c133915660b1a6ae78bb8d079b2cbbd46a02dae61192d33",
+    "onnx_manifest_sha256": "3871b7e3c2a19f8b1738eabd4d569d5a20202c54b711af2242590398eb81427f",
+    "quantization": "none",
+    "rknn_files": {
+      "mnist_mlp_b1.rknn": "64658057c1adfdaaf3f393fe40ec903d149e688f5eff080674bf09bf559487d9",
+      "mnist_mlp_b32.rknn": "13d9570defefb28591251aa5ea672831543bded88fc03ea25f214f9f0bd7c095",
+      "mnist_mlp_b8.rknn": "66a9e099ddde55a5dfcf86a16096bc925c7730a298a3edc5d7f60288a6f2b551",
+      "tiny_vit_b1.rknn": "8b77a42ebe3644a2573c235f44c3c22b3fd2e053645eab405e77646407575fa9",
+      "tiny_vit_b8.rknn": "52f7260d9f0ec7d91fc1214be507bb9416ffa2cb35d7855e148859e3ec584678"
+    },
+    "rknn_manifest_sha256": "ea90de3d888f8799beb6edf7e1931752161d5ed732823d09cc6de8bfd3137874",
+    "runtime": "rknn runtime 2.3.2",
+    "runtime_core_mask": 1,
+    "runtime_sha256": "d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8",
+    "single_core_mode": true,
+    "target_platform": "rk3588",
+    "toolkit": "rknn-toolkit2 2.3.2"
+  },
+  "weights": {
+    "mnist_mlp.npz": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+    "tiny_vit.npz": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+  }
+}

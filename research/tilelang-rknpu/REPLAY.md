@@ -56,6 +56,10 @@ Current evidence: `results/20261026T120625Z-final/` (`analysis.json`,
 `analysis.md`, `verify-packed-summary.json`, raw per-round logits/traces).
 Summary and explicit non-claims: [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md).
 
+Vendor RKNN baseline build and board replay instructions are in
+[vendor/README.md](vendor/README.md).  Recorded result:
+`results/20261027T015302Z-vendor/` (`analysis.md`, `analysis.json`).
+
 Current evidence: `results/20261024T071144Z-models/` (core 1 full 10,000-image
 test split for MLP and Transformer; masks 2/4 fixed 512-image subset; independent
 verifier PASS).  The report keeps raw logits and deterministic layer traces.
