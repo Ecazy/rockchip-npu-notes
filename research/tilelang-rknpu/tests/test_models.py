@@ -139,9 +139,10 @@ class CompleteModelTests(unittest.TestCase):
         results = {}
         reports = {}
         for mode in ("manifest", "b1", "separate", "chain_shared"):
-            # ``separate`` deliberately re-enters PlanCall once per repeat, so
-            # it remains a generic-binding control rather than a prepared group.
-            execution_mode = ("generic" if mode == "separate" else "prepared")
+            # ``separate`` deliberately re-enters PlanCall once per repeat.  Auto
+            # must reject prepared binding for that resolved repeat mode and stay
+            # generic; the other controls explicitly exercise prepared.
+            execution_mode = ("auto" if mode == "separate" else "prepared")
             runner = HybridRunner(self.lib, program, self.vit_weights,
                                   weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
                                   repeat_submit=mode,
@@ -151,6 +152,9 @@ class CompleteModelTests(unittest.TestCase):
             try:
                 results[mode] = runner.run(self.x[:8], stats=stats).outputs["logits"]
                 reports[mode] = (stats.submit_count, stats.task_count)
+                if mode == "separate":
+                    self.assertEqual(runner.requested_execution_mode, "auto")
+                    self.assertEqual(runner.execution_mode, "generic")
             finally:
                 runner.close()
         for mode in ("b1", "separate", "chain_shared"):
