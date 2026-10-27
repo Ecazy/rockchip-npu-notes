@@ -5,6 +5,22 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Runtime layer isolation checkpoint (2026-10-27)
+
+- `results/20261027T093259Z-template-gap/runtime-layers/`: seven-round
+  A0/A1/B/C/D isolation on MLP b1/b32, QKV b8 and QK/PV group b8, with changing
+  inputs, separate setup/first/warm and separate attribution samples.
+- Prepared Python to native C (A1→B) is **0–5.5 µs** on MLP/QKV and
+  **54–63 µs** on QK/PV groups. Generic Python group validation (A0→A1) is
+  large but is not the current compiled-graph path.
+- RKPlan generic group cost (B→C) is **367.5/205.9 µs** on QK/PV but the
+  direct C path is slower on MLP b32/QKV; all A/B/C/D outputs are bitwise equal.
+- A targeted full Tiny ViT b8 qk/pv direct-C substitution is bitwise equal but
+  app p10 is **3954.7→4352.5 µs** (slower); local group savings do not transmit.
+  No runtime redesign or validation/guard batching is adopted.
+- Report: [RUNTIME-LAYER-ISOLATION.md](../RUNTIME-LAYER-ISOLATION.md);
+  evidence: [README](20261027T093259Z-template-gap/runtime-layers/README.md).
+
 ## Hardware-template and granularity checkpoint (2026-10-27)
 
 - `results/20261027T093259Z-template-gap/`: fixed-frequency geometry and

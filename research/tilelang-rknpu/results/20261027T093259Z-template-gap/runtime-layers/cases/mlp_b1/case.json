@@ -1,0 +1,137 @@
+{
+  "bundle": "bundle.bin",
+  "constants": [
+    {
+      "id": 1,
+      "name": "W1",
+      "nbytes": 524288,
+      "shape": [
+        1024,
+        256
+      ]
+    },
+    {
+      "id": 2,
+      "name": "B1",
+      "nbytes": 512,
+      "shape": [
+        1,
+        256
+      ]
+    },
+    {
+      "id": 3,
+      "name": "W2",
+      "nbytes": 65536,
+      "shape": [
+        256,
+        128
+      ]
+    },
+    {
+      "id": 4,
+      "name": "B2",
+      "nbytes": 256,
+      "shape": [
+        1,
+        128
+      ]
+    },
+    {
+      "id": 5,
+      "name": "W3",
+      "nbytes": 4096,
+      "shape": [
+        128,
+        16
+      ]
+    },
+    {
+      "id": 6,
+      "name": "B3",
+      "nbytes": 32,
+      "shape": [
+        1,
+        16
+      ]
+    },
+    {
+      "id": 8,
+      "name": "__identity_32",
+      "nbytes": 2048,
+      "shape": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": 9,
+      "name": "__identity_128",
+      "nbytes": 32768,
+      "shape": [
+        128,
+        128
+      ]
+    },
+    {
+      "id": 10,
+      "name": "__identity_256",
+      "nbytes": 131072,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    {
+      "id": 11,
+      "name": "__zero_1x256",
+      "nbytes": 512,
+      "shape": [
+        1,
+        256
+      ]
+    },
+    {
+      "id": 12,
+      "name": "__zero_1x128",
+      "nbytes": 256,
+      "shape": [
+        1,
+        128
+      ]
+    }
+  ],
+  "def_file": "case.def",
+  "frame_file": "frames.bin",
+  "frames": 64,
+  "inputs": [
+    {
+      "id": 0,
+      "name": "X",
+      "nbytes": 2048,
+      "role": 0,
+      "shape": [
+        1,
+        1024
+      ]
+    }
+  ],
+  "kind": "single",
+  "manifest_key": "mnist_mlp_b1",
+  "name": "mlp_b1",
+  "outputs": [
+    {
+      "id": 7,
+      "name": "Y",
+      "nbytes": 32,
+      "role": 2,
+      "shape": [
+        1,
+        16
+      ]
+    }
+  ],
+  "plan_key": "mlp",
+  "plans_dir": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/compiled",
+  "weights_dir": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models"
+}
