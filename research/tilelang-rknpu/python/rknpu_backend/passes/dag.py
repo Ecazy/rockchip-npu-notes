@@ -13,8 +13,8 @@ from ..options import CompileOptions
 from ..plan import (Action, Binding, ConstantSpec, Publish, TensorLayout, View)
 from ..serialize import sha256_json
 from .legalize import LegalizedGraph
-from .tile import K_TILE, cube_layout, input_layout, k_slices, lut_chunks, \
-    output_tiles, weight_layout
+from .tile import K_TILE, TILE_LIMIT, cube_layout, input_layout, k_slices, \
+    lut_chunks, output_tiles, round_up, weight_layout
 
 CUBE_LAYOUT = "co.cube.f16.v1"
 WEIGHT_LAYOUT = "co.weight.f16.v1"
@@ -576,8 +576,13 @@ class _Builder:
                     out.append(item)
             return tuple(out)
 
-        # 1. Upload every external rank-2 cube tile.  Weight operands are packed
-        # separately below because their layout is [N,K], not [K,N].
+        # 1. Upload every external rank-2 cube value.  A value wider than one
+        # 256-column tile is packed once per 256-row tile and reused through
+        # stable column-offset views.  The previous shape-per-tile uploads
+        # multiplied BO slots, cache prep/fini calls and publication-gate scan
+        # work without changing bytes or math.  Column offset n0*physical_rows*2
+        # is the canonical K-major CUBE offset because every tile boundary is
+        # 256 columns, a multiple of the 8-element atom.
         for value in self.module.values:
             if value.role not in {"input", "constant"}:
                 continue
@@ -585,29 +590,49 @@ class _Builder:
             if kind != "cube" or value.type.rank != 2:
                 continue
             binding = self.binding_by_value[value.id]
-            for tile in value_tiles[value.id]:
-                cr, cc, cbytes = cube_layout(tile.rows, tile.cols)
-                layout = TensorLayout("float16", CUBE_LAYOUT, tile.rows,
-                                      tile.cols, cr, cc, 8, cbytes)
+            value_rows, value_cols = value.type.shape
+            for m0 in range(0, value_rows, TILE_LIMIT):
+                tile_rows = min(TILE_LIMIT, value_rows - m0)
+                physical_rows = round_up(max(tile_rows, 12), 4)
+                physical_cols = round_up(value_cols, 32)
+                full_bytes = physical_rows * physical_cols * 2
+                full_layout = TensorLayout(
+                    "float16", CUBE_LAYOUT, tile_rows, value_cols,
+                    physical_rows, physical_cols, 8, full_bytes)
                 buffer_id = self.add_buffer(
-                    role="input_slice", capacity=cbytes,
+                    role="input_slice", capacity=full_bytes,
                     layout_id=CUBE_LAYOUT, reuse=False, padding_state="zero")
-                view = self.add_view(buffer_id, 0, layout)
+                full_view = self.add_view(buffer_id, 0, full_layout)
                 upload = self.add_action(
-                    "upload", outputs=(view,),
+                    "upload", outputs=(full_view,),
                     origin="host_pack:dataflow_tiled:cube",
                     attrs={
                         "source_binding": binding,
-                        "src_row_offset": tile.m0,
-                        "src_col_offset": tile.n0,
-                        "src_row_stride": value.type.shape[1],
+                        "src_row_offset": m0,
+                        "src_col_offset": 0,
+                        "src_row_stride": value_cols,
                         "transpose_source": False,
                         "cache": ("constant" if value.role == "constant"
                                   else "input"),
                     })
-                key = (tile.m0, tile.n0)
-                tile_views[value.id][key] = view
-                tile_actions[value.id][key] = upload
+                for n0 in range(0, value_cols, TILE_LIMIT):
+                    cols = min(TILE_LIMIT, value_cols - n0)
+                    cr, cc, cbytes = cube_layout(tile_rows, cols)
+                    # cube_layout's physical rows must agree with the full
+                    # buffer: rows are rounded to 4 with a 12-row floor.
+                    if cr != physical_rows:
+                        reject(RK_E_SHAPE,
+                               "external tile row layout drifted from its "
+                               "packed buffer", stage="dag",
+                               actual={"value": value.name,
+                                       "tile": cr, "buffer": physical_rows})
+                    layout = TensorLayout("float16", CUBE_LAYOUT, tile_rows,
+                                          cols, cr, cc, 8, cbytes)
+                    view = self.add_view(
+                        buffer_id, n0 * physical_rows * 2, layout)
+                    key = (m0, n0)
+                    tile_views[value.id][key] = view
+                    tile_actions[value.id][key] = upload
 
         # 2. Pack every (N tile, K slice) weight rectangle needed by a matmul.
         weight_views: dict[tuple, int] = {}
@@ -1091,6 +1116,11 @@ class _Builder:
             w_buffers: list[int] = []
             w_views: list[int] = []
             upload_ids: list[int] = []
+            x_buffers: list[int] = []
+            x_views: list[int] = []
+            w_buffers: list[int] = []
+            w_views: list[int] = []
+            upload_ids: list[int] = []
             for kslice in ktiles:
                 pr, pc, pbytes = input_layout(rows, kslice.extent)
                 x_layout = TensorLayout("float16", CUBE_LAYOUT, rows,
@@ -1109,7 +1139,7 @@ class _Builder:
                            "src_row_stride": k,
                            "transpose_source": False,
                            "cache": "input"}))
-
+            for kslice in ktiles:
                 wr, wc, wbytes = weight_layout(cols, kslice.extent)
                 w_layout = TensorLayout("float16", WEIGHT_LAYOUT, cols,
                                         kslice.extent, wr, wc, 32, wbytes)
@@ -1397,8 +1427,9 @@ class _Builder:
                                       count, 1, count * 2)
                 byte_offset = offset * 2  # lut_chunks counts FP16 elements
                 input_linear_views.append(
-                    self.add_view(input_buffer, byte_offset, linear,
-                                  (0, 1, 0, count)))
+                    self.add_view(input_buffer,
+                                  self.views[input_view].offset_bytes + byte_offset,
+                                  linear, (0, 1, 0, count)))
                 gate_linear_views.append(
                     self.add_view(gate_buffer, byte_offset, linear,
                                   (0, 1, 0, count)))
@@ -1445,7 +1476,9 @@ class _Builder:
                                   1, count * 2)
             byte_offset = offset * 2
             input_linear_views.append(
-                self.add_view(input_buffer, byte_offset, linear, (0, 1, 0, count)))
+                self.add_view(input_buffer,
+                              self.views[input_view].offset_bytes + byte_offset,
+                              linear, (0, 1, 0, count)))
             out_linear_views.append(
                 self.add_view(out_buffer, byte_offset, linear, (0, 1, 0, count)))
         lut_tasks: list[int] = []

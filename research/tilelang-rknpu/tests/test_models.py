@@ -1188,12 +1188,12 @@ class CompleteModelTests(unittest.TestCase):
         loader_spec.loader.exec_module(verifier)
         for spec_name, result_name in (
                 ("numeric_acceptance_packed.json",
-                 "20261026T113650Z-numeric-replay"),):
+                 "20261027T093259Z-template-gap"),):
             evidence = ROOT / "results" / result_name
             summary = verifier.verify(
                 WEIGHTS / spec_name,
-                evidence / "calibration" / "observation.npz",
-                evidence / "acceptance" / "observation.npz")
+                evidence / "numeric" / "calibration" / "observation.npz",
+                evidence / "numeric" / "acceptance" / "observation.npz")
             self.assertEqual(summary["status"], "PASS", summary["problems"])
             self.assertEqual(summary["problems"], [])
             self.assertTrue(

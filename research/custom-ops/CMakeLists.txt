@@ -236,6 +236,22 @@ target_link_options(guard_scan_test PRIVATE
   -Wl,--wrap=rocket_context_faulted)
 add_test(NAME guard_scan COMMAND guard_scan_test)
 
+# CUBE-F16 -> row-major fast download: exact logical order, no padding copied.
+add_executable(download_fastpath_test tests/c/download_fastpath_test.c
+  tests/mock/npu_mock.c)
+target_include_directories(download_fastpath_test PRIVATE include src tests/mock)
+target_link_libraries(download_fastpath_test PRIVATE custom_ops m)
+target_compile_options(download_fastpath_test PRIVATE -Wall -Wextra -Werror)
+target_link_options(download_fastpath_test PRIVATE
+  -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
+  -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
+  -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
+  -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
+  -Wl,--wrap=co_emit_ew_max
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=rocket_context_faulted)
+add_test(NAME download_fastpath COMMAND download_fastpath_test)
+
 # Download helpers: exhaustive FP16 finiteness and publish-rectangle equivalence.
 add_executable(fp16_scan_test tests/c/fp16_scan_test.c)
 target_include_directories(fp16_scan_test PRIVATE src)

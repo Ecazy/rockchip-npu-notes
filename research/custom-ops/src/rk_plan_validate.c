@@ -94,6 +94,41 @@ static int same_addressing(const rk_tensor_desc *a, const rk_tensor_desc *b) {
            a->physical_cols == b->physical_cols;
 }
 
+/* A host upload may pack one canonical CUBE value wider than a single 256-column
+ * consumer tile.  The reader's slice stays byte-compatible when it starts at an
+ * atom-aligned column of the same physical-row geometry; co_index() then maps
+ * reader (r,c) exactly onto the uploader's (r,n0+c).  This is a coverage proof,
+ * not a layout reinterpretation: the uploader's full view must already cover
+ * the reader's physical byte range, and transposed/broadcast uploads are
+ * excluded.  Device writes still require identical addressing. */
+static int upload_cube_slice_covers(const rk_action_desc *writer_action,
+                                    const rk_view_desc *writer,
+                                    const rk_view_desc *reader) {
+    if (!writer_action || writer_action->kind != RK_ACTION_UPLOAD ||
+        !writer || !reader) return 0;
+    if (writer_action->flags & (RK_ACTION_FLAG_TRANSPOSE_SOURCE |
+                                RK_ACTION_FLAG_BROADCAST_SCALAR |
+                                RK_ACTION_FLAG_BROADCAST_CHANNEL)) return 0;
+    const rk_tensor_desc *w = &writer->tensor;
+    const rk_tensor_desc *r = &reader->tensor;
+    if (w->layout != RK_LAYOUT_CUBE_F16 || r->layout != RK_LAYOUT_CUBE_F16 ||
+        w->atom != 8 || r->atom != 8) return 0;
+    if (w->physical_rows != r->physical_rows ||
+        w->rows != r->rows || writer->offset_bytes > reader->offset_bytes)
+        return 0;
+    uint64_t reader_end = reader->offset_bytes + r->bytes;
+    uint64_t writer_end = writer->offset_bytes + w->bytes;
+    if (writer_end < reader_end) return 0;
+    uint64_t row_stride = (uint64_t)w->physical_rows * 2u;
+    uint64_t delta = reader->offset_bytes - writer->offset_bytes;
+    if (!row_stride || delta % row_stride) return 0;
+    uint64_t column = delta / row_stride;
+    if (column % 8u || column > w->cols) return 0;
+    if (r->cols > (uint64_t)w->cols - column) return 0;
+    if (writer->offset_bytes % 16u) return 0;
+    return 1;
+}
+
 static const rk_value_desc *value_at(const rk_plan_desc *desc, uint32_t id) {
     if (!desc || id >= desc->nvalues || !desc->values) return NULL;
     return &desc->values[id];
@@ -637,11 +672,13 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
                  * reader reinterprets packed bytes flatly; a cube/weight reader
                  * needs identical addressing, or a flat byte image produced by
                  * linear writers (the LUT segmentation contract). */
+                uint32_t writer_action = writer_view_action[first_w + w];
                 int contributes = reader_is_linear ||
                     wv->tensor.layout == RK_LAYOUT_LINEAR_F16 ||
-                    (ws == need_start && same_addressing(&wv->tensor, &rd->tensor));
+                    (ws == need_start && same_addressing(&wv->tensor, &rd->tensor)) ||
+                    upload_cube_slice_covers(
+                        action_at(desc, writer_action), wv, rd);
                 if (!contributes) continue;
-                uint32_t writer_action = writer_view_action[first_w + w];
                 if (seq[writer_action] >= seq[i]) continue; /* not yet executed */
                 if (!is_ancestor(desc, writer_action, i, visited)) {
                     rc = fail(diag, RK_E_SCHEMA, "validate",
@@ -664,11 +701,13 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
                     uint64_t ws = wv->offset_bytes;
                     uint64_t we = wv->offset_bytes + wv->tensor.bytes;
                     if (we <= need_start || ws >= need_end) continue;
+                    uint32_t writer_action = writer_view_action[first_w + w];
                     int contributes = reader_is_linear ||
                         wv->tensor.layout == RK_LAYOUT_LINEAR_F16 ||
-                        (ws == need_start && same_addressing(&wv->tensor, &rd->tensor));
+                        (ws == need_start && same_addressing(&wv->tensor, &rd->tensor)) ||
+                        upload_cube_slice_covers(
+                            action_at(desc, writer_action), wv, rd);
                     if (!contributes) continue;
-                    uint32_t writer_action = writer_view_action[first_w + w];
                     if (seq[writer_action] >= seq[i]) continue;
                     if (!is_ancestor(desc, writer_action, i, visited)) continue;
                     if (ws <= cursor && we > best) best = we;

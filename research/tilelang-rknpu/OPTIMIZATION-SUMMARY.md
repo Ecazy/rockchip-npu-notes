@@ -1,5 +1,18 @@
 # Tiny ViT 优化总报告与最终交付验收
 
+> **Package identity update (2026-10-27, template-gap stage):** the current
+> compiled package is no longer the 2026-10-26 identity listed below. Current
+> `models/compiled/manifest.json` SHA-256 is
+> `16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869`;
+> current `models/numeric_acceptance_packed.json` SHA-256 is
+> `2ccefee0d19dbb558622c67f7020331b573357c44434e7dde24e26d98514ecb2`.
+> The final board runtime for this stage is
+> `19b5263a137cda82eff215ca181d267923ca9645d4cca2378de290ab6dbcaa16`.
+> The hashes and tables below remain a historical record of the 10/26
+> milestone. See [TEMPLATE-GRANULARITY-REPORT.md](TEMPLATE-GRANULARITY-REPORT.md)
+> for the current artifact identity and the MLP upload-coalescing/campaign
+> evidence.
+
 日期：2026-10-26。本文汇总当前默认路径、已采用/已撤回方案、最终完整模型
 验收结果和明确的非声明。各优化包的实现细节仍以
 [OPTIMIZATION-RESULTS-1.md](archive/optimization-history.md#round-1) 至

@@ -137,11 +137,41 @@ int co_upload_f16(co_view *v, const _Float16 *src) {
     }
     return rocket_bo_fini(v->buffer->fd,&v->buffer->bo);
 }
+/* Fast exact download for the canonical CUBE FP16 layout.  The generic loop
+ * walks every element and evaluates co_index() per element.  CUBE stores eight
+ * consecutive logical columns as one contiguous 16-byte atom inside each row,
+ * so an atom-wise copy preserves the exact row-major output order while removing
+ * the inner index arithmetic.  The logical rows/cols loop is unchanged, so
+ * padding is neither read nor published. */
+static void download_cube_f16_rowmajor(const co_tensor *t, const char *src,
+                                       void *dst) {
+    const uint16_t *s = (const uint16_t *)src;
+    uint16_t *d = (uint16_t *)dst;
+    for (unsigned r = 0; r < t->rows; r++) {
+        for (unsigned c0 = 0; c0 < t->cols; c0 += 8u) {
+            unsigned n = t->cols - c0 < 8u ? t->cols - c0 : 8u;
+            const uint16_t *atom =
+                s + (((size_t)(c0 / 8u) * t->physical_rows + r) * 8u);
+            uint16_t *out = d + (size_t)r * t->cols + c0;
+            if (n == 8u) {
+                memcpy(out, atom, 16u);
+            } else {
+                memcpy(out, atom, (size_t)n * 2u);
+            }
+        }
+    }
+}
+
 int co_download(co_view *v, void *dst) {
     if (!dst) return ROCKET_E_SHAPE;
     int rc=begin(v,0); if(rc) return rc;
     unsigned b=width(v->tensor.type);
     char *src=(char *)v->buffer->bo.ptr+v->offset;
+    if(v->tensor.layout==CO_CUBE && v->tensor.type==CO_F16 &&
+       v->tensor.atom==8) {
+        download_cube_f16_rowmajor(&v->tensor,src,dst);
+        return rocket_bo_fini(v->buffer->fd,&v->buffer->bo);
+    }
     /* Same elements, same order, same bytes as the memcpy loop; only the copy
      * itself is specialised on the element width (2 for FP16, 4 for FP32). */
     for(unsigned r=0;r<v->tensor.rows;r++) {

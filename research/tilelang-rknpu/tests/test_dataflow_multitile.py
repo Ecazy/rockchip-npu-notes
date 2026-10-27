@@ -7,9 +7,10 @@ from pathlib import Path
 import numpy as np
 
 from rknpu_backend import (BackendError, CompileOptions, Module, Op,
-                           RK_E_SHAPE, TensorType, Value, activation_module,
-                           branch_outputs_module, compile_rkir, default_profile,
-                           projection_module, swiglu_module)
+                           RK_E_SCHEMA, RK_E_SHAPE, TensorType, Value,
+                           activation_module, branch_outputs_module,
+                           compile_rkir, default_profile, projection_module,
+                           swiglu_module)
 from rknpu_backend.plan import with_plan_hash
 from rknpu_backend.runtime.ffi import LibRKPlan, make_binding
 
@@ -237,6 +238,61 @@ class MultiTileDataflowTests(unittest.TestCase):
         with self.assertRaises(BackendError) as ctx:
             self.lib.create_plan(broken)
         self.assertEqual(ctx.exception.code, RK_E_SHAPE)
+
+    def test_k_split_external_cube_is_uploaded_once_and_read_as_slices(self):
+        m, d, h = 8, 1024, 256
+        rng = np.random.default_rng(27)
+        x = f16(rng.normal(0, 0.2, (m, d)))
+        w1 = f16(rng.normal(0, 0.1, (h, d)))
+        w2 = f16(rng.normal(0, 0.1, (d, h)))
+        plan, out = self._run(
+            projection_module(m=m, d=d, h=h),
+            {"W1": w1, "W2": w2}, {"X": x})
+        np.testing.assert_allclose(
+            out["Y"].astype(np.float64),
+            projection_reference(x, w1, w2).astype(np.float64),
+            atol=8e-3, rtol=8e-3, equal_nan=False)
+        uploads = [
+            a for a in plan.actions
+            if a.kind == "upload" and
+            plan.bindings[a.attrs["source_binding"]].name == "X"]
+        self.assertEqual(len(uploads), 1)
+        full = plan.views[uploads[0].outputs[0]]
+        self.assertEqual((full.tensor.rows, full.tensor.cols,
+                          full.tensor.physical_cols), (m, d, d))
+        input_buffer = full.buffer_id
+        mm_inputs = [
+            plan.views[a.inputs[0]] for a in plan.actions
+            if a.template_id in {"co.mm.f16.v1", "co.mm_acc.f16.v1"} and
+            plan.views[a.inputs[0]].buffer_id == input_buffer]
+        self.assertEqual([view.offset_bytes for view in mm_inputs],
+                         [0, 6144, 12288, 18432])
+        self.assertTrue(all(view.tensor.rows == m and
+                            view.tensor.physical_rows == 12
+                            for view in mm_inputs))
+
+    def test_k_split_upload_slice_requires_canonical_offset(self):
+        m, d, h = 8, 1024, 256
+        rng = np.random.default_rng(28)
+        x = f16(rng.normal(0, 0.2, (m, d)))
+        w1 = f16(rng.normal(0, 0.1, (h, d)))
+        w2 = f16(rng.normal(0, 0.1, (d, h)))
+        plan = compile_rkir(
+            projection_module(m=m, d=d, h=h),
+            profile=self.profile,
+            options=CompileOptions(numeric_mode="rk_f16_tiled",
+                                   allow_approx_lut=True)).plan
+        task = next(a for a in plan.actions
+                    if a.template_id == "co.mm_acc.f16.v1")
+        views = list(plan.views)
+        views[task.inputs[0]] = replace(
+            views[task.inputs[0]],
+            offset_bytes=views[task.inputs[0]].offset_bytes + 16)
+        broken = with_plan_hash(replace(plan, views=tuple(views),
+                                        plan_hash=""))
+        with self.assertRaises(BackendError) as ctx:
+            self.lib.create_plan(broken)
+        self.assertIn(ctx.exception.code, {RK_E_SHAPE, RK_E_SCHEMA})
 
     def test_activation_only_multi_tile(self):
         m = n = 300
