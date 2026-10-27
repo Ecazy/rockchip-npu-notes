@@ -405,3 +405,9 @@ results/20261027T025648Z-execution-candidates/campaign/vendor/
 !results/20261027T093259Z-template-gap/external/*.log
 !results/20261027T093259Z-template-gap/runtime/
 !results/20261027T093259Z-template-gap/runtime/*.so
+
+# Runtime-layer isolation checkpoint (2026-10-27): raw timing samples, phase
+# logs, output bytes, case descriptors/bundles/constants, exact harness
+# binaries and the targeted full-model result are text/checkpoint evidence.
+!results/20261027T093259Z-template-gap/runtime-layers/
+!results/20261027T093259Z-template-gap/runtime-layers/**
