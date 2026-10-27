@@ -187,6 +187,6 @@ PYTHONPATH=$PWD/python:$PWD \
 python3 tools/runtime_layers/build_cases.py --out /tmp/runtime-cases
 ```
 
-The only omitted inputs are the deterministic frame files (26 MB) and raw model
+The only omitted inputs are the deterministic frame files (~30 MB) and raw model
 weights (already in `models/`); case descriptors, constants and frame counts
 are committed here.
