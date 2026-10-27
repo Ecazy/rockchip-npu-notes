@@ -123,7 +123,7 @@ QK/PV 检查均为 **PASS**。这证明 cache 不会跳过可变 finite 检查�
    - 本轮不允许顺手改 guard/sync/publication；
    - 现有默认路径保持“每 call 全量检查”的语义。
 
-**决定：不将静态 validation 复用作为默认产品路径。**  
+**决定：不将静态 validation 复用作为默认产品路径。**
 实验 flag 保留为默认关闭的隔离设施/证据，不新增公共 ABI，不改变默认策略。
 如果未来还要继续，先做 finite-scan 等价实现和完整模型收益的独立实验，不应
 把 guard、sync、publication 和 static validation 混在一起。

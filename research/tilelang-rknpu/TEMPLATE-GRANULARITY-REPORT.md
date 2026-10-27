@@ -1,5 +1,12 @@
 # 硬件模板与执行粒度差距报告
 
+> **Prepared-validation follow-up identity:** a later default-off experiment
+> (`ca6481b`) changed the runtime identity to
+> `18dac5981ee05ade1d7d45108dc4bfcc8fbcc0d19187d9b471c56923c27fdc4d`.
+> The `19b526...` hash and tables below are the historical template-stage
+> artifact. The static-validation cache was not productized; see
+> [RUNTIME-LAYER-PREPARED-VALIDATION.md](RUNTIME-LAYER-PREPARED-VALIDATION.md).
+
 日期：2026-10-27。阶段目标是回答：当前差距中，矩阵模板本身、提交、布局和
 Host/C 边界各占多少；然后只选一个证据最强的可实施改进，不回到 Python 编排
 微优化，也不启动通用图级 BO 或整模型设备驻留平台。

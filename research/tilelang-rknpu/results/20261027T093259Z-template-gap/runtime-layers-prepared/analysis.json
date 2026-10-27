@@ -1,0 +1,394 @@
+{
+  "checks": {
+    "pv_b8": {
+      "address_revalidated": true,
+      "finite_output_unchanged": true,
+      "rejected_finite": true,
+      "rejected_shape": true,
+      "restored_output_unchanged": true,
+      "shape_output_unchanged": true,
+      "status": "PASS"
+    },
+    "qk_b8": {
+      "address_revalidated": true,
+      "finite_output_unchanged": true,
+      "rejected_finite": true,
+      "rejected_shape": true,
+      "restored_output_unchanged": true,
+      "shape_output_unchanged": true,
+      "status": "PASS"
+    }
+  },
+  "full_model": {
+    "full-model": {
+      "batch": 8,
+      "bitwise": true,
+      "call_ratio_summary": {
+        "max_us": 1.0575372224581125,
+        "median_us": 1.0153970163767472,
+        "min_us": 0.7474920438657188,
+        "n": 224,
+        "p10_us": 0.9943402988601419
+      },
+      "flag": "RK_PLAN_PREPARED_VALIDATION",
+      "kind": "full-model-prepared-validation-ab",
+      "limit": 256,
+      "note": "Both arms are the same compiled graph. Only the workspace-snapshotted prepared-validation flag differs; finite scans, guard, sync, pack, emitter, command and publication are otherwise identical.",
+      "output_files": {
+        "current": "current_logits.npy",
+        "experimental": "experimental_logits.npy"
+      },
+      "round_ratio_median": 1.016813660732757,
+      "round_ratio_p10": 1.0057560842774247,
+      "rounds": [
+        {
+          "current_median_us": 4108.657012693584,
+          "experimental_median_us": 4039.679013658315,
+          "ratio_current_over_experimental": 1.017075118790887,
+          "round": 1
+        },
+        {
+          "current_median_us": 4091.011476702988,
+          "experimental_median_us": 4026.9914898090065,
+          "ratio_current_over_experimental": 1.0158977209303757,
+          "round": 2
+        },
+        {
+          "current_median_us": 4167.864972259849,
+          "experimental_median_us": 4101.510974578559,
+          "ratio_current_over_experimental": 1.016177939811098,
+          "round": 3
+        },
+        {
+          "current_median_us": 4177.052003797144,
+          "experimental_median_us": 4100.053512956947,
+          "ratio_current_over_experimental": 1.018779874603311,
+          "round": 4
+        },
+        {
+          "current_median_us": 4155.323433224112,
+          "experimental_median_us": 4081.387014593929,
+          "ratio_current_over_experimental": 1.0181155127817594,
+          "round": 5
+        },
+        {
+          "current_median_us": 3873.1395034119487,
+          "experimental_median_us": 3850.972978398204,
+          "ratio_current_over_experimental": 1.0057560842774247,
+          "round": 6
+        },
+        {
+          "current_median_us": 4171.510576270521,
+          "experimental_median_us": 4102.5319951586425,
+          "ratio_current_over_experimental": 1.016813660732757,
+          "round": 7
+        }
+      ],
+      "schema_version": 1,
+      "setup_us": {
+        "current": 18052.483908832073,
+        "experimental": 17953.31807807088
+      },
+      "trusted_timing": {
+        "current": {
+          "max_us": 4287.1549958363175,
+          "median_us": 4126.30254868418,
+          "min_us": 3775.2860225737095,
+          "n": 224,
+          "p10_us": 3879.409981891513
+        },
+        "experimental": {
+          "max_us": 5291.349953040481,
+          "median_us": 4077.886464074254,
+          "min_us": 3714.9121053516865,
+          "n": 224,
+          "p10_us": 3851.1180318892
+        }
+      }
+    },
+    "full-model-b1": {
+      "batch": 1,
+      "bitwise": true,
+      "call_ratio_summary": {
+        "max_us": 1.7923780196317085,
+        "median_us": 1.0009317205606683,
+        "min_us": 0.7925335852330839,
+        "n": 1792,
+        "p10_us": 0.9828923122743958
+      },
+      "flag": "RK_PLAN_PREPARED_VALIDATION",
+      "kind": "full-model-prepared-validation-ab",
+      "limit": 256,
+      "note": "Both arms are the same compiled graph. Only the workspace-snapshotted prepared-validation flag differs; finite scans, guard, sync, pack, emitter, command and publication are otherwise identical.",
+      "output_files": {
+        "current": "current_logits.npy",
+        "experimental": "experimental_logits.npy"
+      },
+      "round_ratio_median": 1.0010322003663588,
+      "round_ratio_p10": 0.9999055702946432,
+      "rounds": [
+        {
+          "current_median_us": 1548.5934563912451,
+          "experimental_median_us": 1545.9685237146914,
+          "ratio_current_over_experimental": 1.0016979211648156,
+          "round": 1
+        },
+        {
+          "current_median_us": 1555.5935096926987,
+          "experimental_median_us": 1553.9894811809063,
+          "ratio_current_over_experimental": 1.0010322003663588,
+          "round": 2
+        },
+        {
+          "current_median_us": 1552.239467855543,
+          "experimental_median_us": 1550.781074911356,
+          "ratio_current_over_experimental": 1.0009404247754767,
+          "round": 3
+        },
+        {
+          "current_median_us": 1553.988957311958,
+          "experimental_median_us": 1553.4060075879097,
+          "ratio_current_over_experimental": 1.0003752719644452,
+          "round": 4
+        },
+        {
+          "current_median_us": 1551.3640246354043,
+          "experimental_median_us": 1551.5105333179235,
+          "ratio_current_over_experimental": 0.9999055702946432,
+          "round": 5
+        },
+        {
+          "current_median_us": 1550.6354975514114,
+          "experimental_median_us": 1547.572494018823,
+          "ratio_current_over_experimental": 1.0019792310501943,
+          "round": 6
+        },
+        {
+          "current_median_us": 1554.8649826087058,
+          "experimental_median_us": 1552.822533994913,
+          "ratio_current_over_experimental": 1.001315313610589,
+          "round": 7
+        }
+      ],
+      "schema_version": 1,
+      "setup_us": {
+        "current": 8621.02396786213,
+        "experimental": 7991.611957550049
+      },
+      "trusted_timing": {
+        "current": {
+          "max_us": 2784.8141035065055,
+          "median_us": 1552.5309136137366,
+          "min_us": 1221.198937855661,
+          "n": 1792,
+          "p10_us": 1286.8240009993315
+        },
+        "experimental": {
+          "max_us": 1686.112955212593,
+          "median_us": 1551.072928123176,
+          "min_us": 1216.2420898675919,
+          "n": 1792,
+          "p10_us": 1290.0320580229163
+        }
+      }
+    }
+  },
+  "kind": "prepared-validation-same-implementation",
+  "other": {
+    "mlp_b1": {
+      "first_us": {
+        "0": 536.077026,
+        "1": 529.368042
+      },
+      "round_ratio_max": 1.004005392301729,
+      "round_ratio_median": 0.9993289970371729,
+      "round_ratio_min": 0.9960211719397958,
+      "round_ratio_p10": 0.9960211719397958,
+      "round_ratios": [
+        0.9993289970371729,
+        0.9966584587971081,
+        1.0026834079895677,
+        0.9960211719397958,
+        0.9986629361215765,
+        1.004005392301729,
+        0.999333033869018
+      ],
+      "setup_us": {
+        "0": 4171.947998,
+        "1": 4166.407043
+      },
+      "static_0_median_us": 436.03595,
+      "static_1_median_us": 436.328003
+    },
+    "mlp_b32": {
+      "first_us": {
+        "0": 774.656982,
+        "1": 771.741028
+      },
+      "round_ratio_max": 1.0070506615771189,
+      "round_ratio_median": 1.0000015635342985,
+      "round_ratio_min": 0.9986841947049938,
+      "round_ratio_p10": 0.9986841947049938,
+      "round_ratios": [
+        1.0013245193428293,
+        1.004402417364377,
+        1.0000015635342985,
+        0.9986841947049938,
+        1.0,
+        1.0000000918110614,
+        1.0070506615771189
+      ],
+      "setup_us": {
+        "0": 4484.028015,
+        "1": 4420.445007
+      },
+      "static_0_median_us": 664.40802,
+      "static_1_median_us": 663.240967
+    },
+    "qkv_b8": {
+      "first_us": {
+        "0": 277.953979,
+        "1": 276.497009
+      },
+      "round_ratio_max": 1.0031734903842475,
+      "round_ratio_median": 0.9984083757982855,
+      "round_ratio_min": 0.9920345934575429,
+      "round_ratio_p10": 0.9920345934575429,
+      "round_ratios": [
+        1.0,
+        0.9984215622468786,
+        0.9984083757982855,
+        0.9984064332566839,
+        0.9968421700210178,
+        0.9920345934575429,
+        1.0031734903842475
+      ],
+      "setup_us": {
+        "0": 406.578979,
+        "1": 410.369995
+      },
+      "static_0_median_us": 184.039978,
+      "static_1_median_us": 184.039001
+    }
+  },
+  "primary": {
+    "pv_b8": {
+      "first_us": {
+        "0": 973.278992,
+        "1": 957.822021
+      },
+      "round_ratio_max": 1.0205843852819356,
+      "round_ratio_median": 1.018487021921105,
+      "round_ratio_min": 0.9401556602060667,
+      "round_ratio_p10": 0.9401556602060667,
+      "round_ratios": [
+        0.9401556602060667,
+        1.0193573606365414,
+        0.9975324196149054,
+        1.0205843852819356,
+        1.0185111281970745,
+        1.018487021921105,
+        1.0164263810234913
+      ],
+      "setup_us": {
+        "0": 1006.237,
+        "1": 1016.737976
+      },
+      "static_0_median_us": 721.866028,
+      "static_1_median_us": 709.032959
+    },
+    "qk_b8": {
+      "first_us": {
+        "0": 1142.153015,
+        "1": 1132.236023
+      },
+      "round_ratio_max": 1.017767192080968,
+      "round_ratio_median": 1.015384051599772,
+      "round_ratio_min": 0.9775774385149048,
+      "round_ratio_p10": 0.9775774385149048,
+      "round_ratios": [
+        1.017767192080968,
+        1.0150805548788935,
+        1.015384051599772,
+        1.015056454109251,
+        1.0153892031458183,
+        1.0153954803611558,
+        0.9775774385149048
+      ],
+      "setup_us": {
+        "0": 1006.237976,
+        "1": 996.612976
+      },
+      "static_0_median_us": 884.906006,
+      "static_1_median_us": 871.489014
+    }
+  },
+  "profile": {
+    "pv_b8": {
+      "0": {
+        "alloc_us": 0.0,
+        "command_us": 25.082947,
+        "download_us": 116.667023,
+        "emit_us": 46.083008,
+        "guard_us": 25.083008,
+        "output_sync_us": 98.582031,
+        "pack_layout_us": 11.9575195,
+        "pack_us": 45.208496,
+        "publish_us": 1.166016,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 60.958008,
+        "total_us": 674.328491,
+        "validate_us": 236.539978
+      },
+      "1": {
+        "alloc_us": 0.0,
+        "command_us": 25.374023,
+        "download_us": 124.687561,
+        "emit_us": 45.209472500000004,
+        "guard_us": 26.25,
+        "output_sync_us": 106.749023,
+        "pack_layout_us": 12.105957,
+        "pack_us": 46.083008,
+        "publish_us": 1.166016,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 97.26998900000001,
+        "total_us": 704.5160215,
+        "validate_us": 223.124023
+      }
+    },
+    "qk_b8": {
+      "0": {
+        "alloc_us": 0.0,
+        "command_us": 25.3745115,
+        "download_us": 117.248901,
+        "emit_us": 46.665039,
+        "guard_us": 25.375,
+        "output_sync_us": 98.58200049999999,
+        "pack_layout_us": 6.998932,
+        "pack_us": 39.958008,
+        "publish_us": 1.166992,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 61.833008,
+        "total_us": 850.3480225000001,
+        "validate_us": 422.914001
+      },
+      "1": {
+        "alloc_us": 0.0,
+        "command_us": 25.083008,
+        "download_us": 116.666992,
+        "emit_us": 45.792480499999996,
+        "guard_us": 25.375,
+        "output_sync_us": 98.291016,
+        "pack_layout_us": 6.708496,
+        "pack_us": 39.375,
+        "publish_us": 1.166992,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 98.0,
+        "total_us": 870.619019,
+        "validate_us": 409.64300549999996
+      }
+    }
+  },
+  "protocol": "B env=0 versus B env=1 in separate processes per round; same descriptor/pack/emitter/executor/guard/download/publication; 7 rounds, changed-input frames, order rotated. Primary estimate is median of per-round medians; p10 is auxiliary. Full-model arms are two compiled-graph runners in one process, env snapshotted at workspace creation; no adapter/pointer rebuilding or node proxies.",
+  "schema_version": 1
+}

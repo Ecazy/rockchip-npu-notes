@@ -1,5 +1,13 @@
 # Tiny ViT 优化总报告与最终交付验收
 
+> **Prepared-validation follow-up (2026-10-27):** source commit `ca6481b`
+> adds an experimental, **default-off** `RK_PLAN_PREPARED_VALIDATION` path.
+> The compiled default-off runtime from that source is
+> `18dac5981ee05ade1d7d45108dc4bfcc8fbcc0d19187d9b471c56923c27fdc4d`;
+> the cached static-validation path is **not productized** and does not change
+> the default safety contract. The `19b526...` identity below is the previous
+> stage's runtime. See [RUNTIME-LAYER-PREPARED-VALIDATION.md](RUNTIME-LAYER-PREPARED-VALIDATION.md).
+
 > **Package identity update (2026-10-27, template-gap stage):** the current
 > compiled package is no longer the 2026-10-26 identity listed below. Current
 > `models/compiled/manifest.json` SHA-256 is
