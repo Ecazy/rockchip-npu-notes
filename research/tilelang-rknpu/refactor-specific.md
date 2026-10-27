@@ -1,6 +1,6 @@
 # TileLang → RKNPU 后端重构：执行规范与实施记录
 
-日期：2026-10-27。初始状态：`not_started`。本文为执行智能体的任务规范；目标架构见 [refactor-overview.md](refactor-overview.md)。文中新增接口是目标要求，不代表当前代码已有实现。
+日期：2026-10-27。状态：主线 R0–R3、R6 `passed`（含一次审核后的边界修复）；R4 试点 `passed`；R5 `not_adopted`（保留薄 RKIR，理由见第 15.3 节）。本文为执行智能体的任务规范兼唯一实施记录；目标架构见 [refactor-overview.md](refactor-overview.md)。第 1–14 节保留原始要求，第 15 节记录实际实现；两者冲突时以第 15 节的实际决定为准并已在此说明。
 
 ## 1. 范围、优先级与文档规则
 
@@ -320,44 +320,521 @@ logs/                         # 实际构建/测试输出
 
 ### 15.1 基线与工作区
 
-- 实际基线 HEAD：待填写。
-- 原有 dirty/untracked 归属及隔离方式：待填写。
-- 锁定依赖与实际导入路径：待填写。
-- 基线命令、结果及原有失败：待填写。
+- 实际基线 HEAD：`2996bb65d019d18bd118a35b03779dfba9c00f41`（`chore: checkpoint workspace before refactor`）。
+  开工时 `git status --short` 为空，工作区干净，无其他会话的未提交改动；本次全部变更都在该提交之上。
+- 隔离方式：用 `git worktree add --detach /tmp/rknpu-baseline 2996bb6` 承载旧代码 oracle，
+  与工作树完全分离，未 reset/clean/覆盖任何文件，也没有复制未提交文件。证据脚本每次运行都自建
+  临时 worktree（见 15.5），因此旧侧对照可重放而不是手工快照。
+- 锁定依赖与实际导入路径（`--out` 结果的 `manifest.json` 记录机器可读版本）：
+  - Python 3.12.3（`/usr/bin/python3`）；
+  - `numpy`、`pytest`、`jsonschema` 与 `tilelang 0.1.15` 来自 `research/tilelang-rknpu/.pydeps`；
+  - `tvm 0.25.dev0` 随 `tilelang` wheel 的 `3rdparty/tvm/python` 提供（`import tvm` 必须先 `import tilelang`）；
+  - 共享库 `../custom-ops/build-host-mvp/librknpu_plan.so` 与 `librknpu_plan_mock.so` 沿用既有构建，未重建、未升级依赖。
+- 基线命令与结果（与本次改动后一致，均 0 退出）：
+  - `PYTHONPATH=.pydeps:python:. python3 -m pytest -q`：270 passed；
+  - `ctest --test-dir ../custom-ops/build-host-mvp --output-on-failure`：30/30 passed。
+  基线无既有失败项；未跳过、未 xfail、未因本次改动修改任何跳过条件。
 
 ### 15.2 工作包状态
 
 | 包 | 状态 | 改动/决定 | 证据 |
 |---|---|---|---|
-| R0 | not_started | — | — |
-| R1 | not_started | — | — |
-| R2 | not_started | — | — |
-| R3 | not_started | — | — |
-| R4 | not_started | — | — |
-| R5 | not_started | — | — |
-| R6 | not_started | — | — |
+| R0 | passed | 基线 HEAD、干净工作区、依赖路径与 Host 基线（270 pytest + 30 ctest）确认；选定旧代码 worktree 作 oracle | 本节 15.1；`results/20261027T064126Z-refactor/manifest.json` |
+| R1 | passed | 规划/编码收敛到 `codegen/`：`pipeline.py` 是唯一 normalize→plan→verify 链，`descriptor.py` 是唯一 descriptor 编码；`api.py` 变薄门面，旧计划与 descriptor 逐字段一致 | `comparison.json`：19/19 用例 plan 与 descriptor 全等，7/7 负例错误码全等 |
+| R2 | passed | `artifact.py`：`compile_artifact` / `CompiledArtifact.explain/instantiate/export_plan`，无 JSON 往返、无设备句柄、原 PrimFunc 释放后仍可实例化 | `tests/test_artifact.py`（18 项）、`tests/test_codegen_pipeline.py` |
+| R3 | passed | CLI `compile-*` 改走 artifact 并只做导出；`PlanCall`/`HybridRunner`/`Workspace.create` 共用同一编码入口与资源创建；模型与 campaign 工具无重复 planner | `tests/test_codegen_pipeline.py::test_one_descriptor_encoder`、`test_all_compile_entries_use_the_one_pipeline`；`tests/test_models.py` 等原用例全绿 |
+| R4 | passed | 真实 TileLang → `tvm.relax` 原生图（不经过 RKIR 容器），目标契约以函数级 `DictAttrs` 承载并在每次使用前校验；12 个代表性正例 plan/descriptor 与 RKIR 路径全等，8 个负例拒绝一致 | `native-ir-evaluation.json`；`tests/test_native_graph.py`（15 项） |
+| R5 | not_adopted | 第 8.3 节条件 1/2/3/5 成立、条件 4 不成立：RKIR 容器无法因本次迁移删除，适配成本净增。保留薄 RKIR 为计算表示，原生载体降为非默认试点 | 15.3 的成本对照 |
+| R6 | passed | 累积验收、证据目录、文档收敛；无新增设计/状态文档。审核后补齐四项边界与证据问题（计划只读、模型包比较器、证据脚本退出码、PrimFunc 释放测试），见 15.6；并补做 4 例真实 TileLang 输入的板端 smoke（单核串行），见 15.7 | `results/20261027T064126Z-refactor/`；`results/20261027T071045Z-artifact-smoke/`；15.5；15.6；15.7 |
 
 ### 15.3 原生图与 RKIR 决定
 
-- 选择的 TVM 表示、接入位置与依据：待填写。
-- 直接路径、保留的目标契约及 pass 传播方式：待填写。
-- 删除/简化内容与新增适配/测试成本：待填写。
-- 是否采用默认原生路径及理由：待填写。
-- legacy RKIR 的最终职责和依赖策略：待填写。
+**选择的 TVM 表示、接入位置与依据**
+
+- 表示：`tvm.relax`（`IRModule` + `relax.Function` + `BlockBuilder` dataflow）。shape、dtype、算子与
+  数据流边全部由原生节点（`relax.Var` / `relax.Call` / `VarBinding` / `TensorStructInfo`）承担，
+  未新增 dialect、未把整图 JSON 塞进 attribute。
+- 接入位置：`frontend/graph_builder.py` 是识别器的载体缝。识别逻辑（`tilelang_adapter.py`，
+  4405 行结构识别）只有一份，8 个建图点改为调用 `active_builder().value/op/finish`；
+  默认载体 `RkirBuilder` 原样产出 `ir.Value/Op/Module`，试点载体 `RecordBuilder` 产出无容器记录，
+  再由 `frontend/native_graph.py` 直接生成 Relax 节点。
+- 依据：识别器本身与图容器无关；把容器替换成上游表示只可能改变"记录与校验"成本，不改变
+  AST 语义识别，因此这是唯一能在不复制识别算法的前提下回答"是否值得迁移"的切法。
+
+**直接路径、保留的目标契约及 pass 传播方式**
+
+- 直接路径不经 RKIR：`tests/test_native_graph.py::test_no_rkir_object_is_created` 在构建期把
+  `ir.Module/Value/Op` 换成记录器，断言原生编译期间一次都没有实例化。
+- Relax 内建算子自带强类型 `Attrs`，无法附加自定义 per-node 契约；因此目标契约以函数级
+  `rknpu_contract`（`DictAttrs`）承载，且只承载普通 Relax 不能表达的部分：per-value 角色与绑定名、
+  per-op `numeric_contract`、`source_accumulator_dtype`、`source_narrowing_points`、
+  `source_k_loop`、`source_mn_tiling`、`source_tail_contract`、stage 信息、`b_layout`、源 span。
+- 契约与图的关联不用可变变量名，也不用遍历编号：`native_graph.graph_signature()` 生成
+  "参数形状/dtype + 每个算子的原生算子名 + 操作数引用（`p<k>` 参数 / `v<j>` 第 j 个算子结果）+
+  结果形状/dtype + 输出引用" 的规范签名，与图同构、与重命名和重编号无关。每次使用前
+  `validate_contract()` 重算签名并与契约比对，`cross_validate_contract()` 再验证契约内部
+  （opcode↔native_op、value_id↔producer、角色↔inputs/outputs、形状↔签名）自洽；任一不符即拒绝。
+- 允许的 pass 集合固定为 `Normalize`、`CanonicalizeBindings`、`DeadCodeElimination`，每个 pass
+  之后立即重校验；实测三者在单 MatMul 与 staged projection 上均 `preserved`，之后计划仍与
+  旧路径全等。该集合之外、或使签名改变的变换一律拒绝而不是静默接受。
+
+**删除/简化内容与新增适配/测试成本**
+
+| 项目 | 数值（实测） |
+|---|---|
+| 主线（R1–R3）代码净变化 | 跟踪的代码文件 `+238 / −554` 行（净 −316）：`runtime/ffi.py` 移除 378 行、`codegen/descriptor.py` 承接 365 行，`api.py` 173→111 行；另有新增未跟踪模块 `codegen/{__init__,pipeline}.py` 278 行、`artifact.py` 256 行、`graph.py` 45 行 |
+| 原生载体新增 | `frontend/graph_builder.py` 136 行 + `frontend/native_graph.py` 710 行 = **846 行** |
+| 原生载体新增测试 | `tests/test_native_graph.py` 377 行（15 项 + 逐例 subtest） |
+| 审核反馈修复 | `immutable.py`（135 行）冻结计划/图属性；比较器增加两侧文件集合与引用/摘要校验；证据脚本改为失败即非零退出；新增真实 PrimFunc 释放测试 |
+| 识别器改动点 | 8 个建图点（`Module(` → `_finish(`）+ 59 处 `Value(`/`Op(` 构造改经载体缝（现共 61 处经缝调用）；识别语义零改动 |
+| 需要重复的校验 | 原生侧需重做静态 shape/dtype 检查（`build_spec`）与角色合法性；RKIR 侧仍在 `ir.TensorType/Value/Op` |
+| 契约重校验 | 每个被声明的 pass 之后一次签名重算；承载 10 类目标契约键 |
+| 算子覆盖缺口 | `hardsigmoid` 在锁定 TVM 中无直接 Relax 算子，原生载体拒绝而非组合（组合会破坏一记录一节点关联） |
+| 编译耗时（中位） | 原生/旧比 = 1.17（范围 1.10–1.71，12 例各 5 次重复），含 3 个 pass 与全部签名重校验 |
+| 执行差异 | 0：12/12 计划与 descriptor 逐字段全等，8/8 负例拒绝码与 stage 全等 |
+
+**是否采用默认原生路径及理由：不采用（`not_adopted`）**
+
+对照第 8.3 节五个条件：
+
+1. 成立——12 个代表性正例（核心、激活、K 分片、ragged 尾、标量/逐通道广播、多输出、MN 分块、
+   staged projection/FFN/branch）计划与 descriptor 全等；8 个相邻负例（grid、K 分片、ragged 输出、
+   缺失收窄、未授权 LUT、跨块读、非支持算子）拒绝码与 stage 与旧路径一致。
+2. 成立——数值契约、收窄点、累加器 dtype、访问/副作用、来源 span 与支持域检查均未丢失：
+   上述全等是以完整 plan + descriptor 为判据，不是仅比较任务数。
+3. 成立——规划器未重建完整 RKIR；兼容视图只是从原生模块派生的只读投影（`values`/`ops`/`value(id)`），
+   不写入、不派生第二张可变图。
+4. **不成立**——本次无法删除或简化任何既有实现：`compile_rkir`、`ir` 的模块构造器
+   （`matmul_module` 等，模型工具与 board campaign 直接使用）、RKIR JSON 往返与 `compile-rkir` CLI
+   都必须继续可用，因此 RKIR 容器原样保留；迁移只会新增 913 行载体 + 重校验 + 算子覆盖缺口，
+   并把编译耗时提高约 17%（中位）。净收益为负。
+5. 成立——基础依赖隔离（无 TileLang/TVM 时 import/compile/explain/重放仍可用）、legacy 输入与
+   导出重放均保持。
+
+条件 4 不成立即不满足第 8.3 节"同时成立"的要求，故不切换默认，也不删除 RKIR。
+
+**legacy RKIR 的最终职责和依赖策略**
+
+- RKIR 仍是**计算表示**（薄图容器 + 类型/契约记录 + 严格 JSON schema），不是第二套后端：
+  它没有独立的 legalizer/planner/encoder，`compile_rkir` 与 `compile_tilelang` 走同一
+  `codegen.pipeline.compile_graph`。
+- 依赖策略不变：`import rknpu_backend` 不导入 TVM/TileLang；`ir` 与 `plan` 无设备依赖；
+  RKIR JSON 往返仅在显式 `compile-rkir`/`load_module` 路径使用。
+- 原生载体保留为非默认、显式选择的试点（`compile_artifact(..., carrier="native")`），供评估与回归
+  使用；它与默认路径共享 100% 的合法化、规划、存储与编码算法，因此不构成"两套生产后端"。
+  若后续不推进迁移，删除 `frontend/graph_builder.py` 与 `frontend/native_graph.py`
+  （连同 `tests/test_native_graph.py` 与 `tools/evaluate_native_graph.py`）即可，规划器无感知；
+  推进迁移的触发条件是同时改造 `compile_rkir`/`ir` 构造器/board campaign 输入，使删除 RKIR 成为
+  净简化——这属于新的授权范围，不在本次结论内。
 
 ### 15.4 最终接口与兼容范围
 
-- 实际模块安排和唯一核心调用链：待填写。
-- artifact API 与旧入口适配：待填写。
-- 权威表示、descriptor 生命周期与导出路径：待填写。
-- C ABI/schema/API 变化：待填写；无变化也明确注明。
+**实际模块安排与唯一核心调用链**
+
+```text
+python/rknpu_backend/
+  graph.py                  # 计算图访问协议（planner 与载体之间唯一的耦合点）
+  codegen/
+    pipeline.py             # 唯一核心链：normalize → legalize/plan → verify → explain
+    descriptor.py           # 唯一 plan descriptor 编码（ctypes 结构与字段映射）
+  artifact.py               # CompiledArtifact / compile_artifact
+  api.py                    # 旧入口薄门面（compile_rkir/compile_tilelang/load/save/explain）
+  frontend/tilelang_adapter.py  # 结构识别（语义唯一副本）
+  frontend/graph_builder.py     # 载体缝（默认 RKIR / 试点记录）
+  frontend/native_graph.py      # 原生 Relax 试点载体（非默认）
+  passes/                   # 既有合法化、draft、submits、storage、verify（未搬家）
+  runtime/bindings.py       # Workspace 资源生命周期（未改语义）
+  runtime/ffi.py            # ctypes ABI 桥 + codegen.descriptor 的薄重导出
+```
+
+唯一调用链：`compile_artifact` 与 `compile_tilelang`/`compile_rkir` → `codegen.pipeline.compile_graph`
+→ `passes.*` → `Plan` →（编码时）`codegen.descriptor.build_plan_descriptor` → C `rk_plan_create`。
+`tests/test_codegen_pipeline.py` 用打点断言：编译入口只经过一次 `compile_graph`，descriptor 只编码一次，
+`runtime.ffi.build_plan_descriptor is codegen.descriptor.build_plan_descriptor`，
+且 `passes/*` 不导入 runtime/ctypes、`codegen/*` 不导入 runtime。
+
+**artifact API 与旧入口适配**
+
+```python
+def compile_artifact(prim_func, *, profile, options, b_is_input=False,
+                     retain_graph=False, carrier="rkir") -> CompiledArtifact
+class CompiledArtifact:
+    plan, snapshot, profile, options, name, plan_hash, profile_hash, source_hash,
+    source, diagnostics, has_retained_graph
+    def explain(self) -> dict
+    def instantiate(self, *, fd: int, constants: dict[str, numpy.ndarray]) -> Workspace
+    def export_plan(self, path: str) -> None
+    def with_retained_graph(graph) -> CompiledArtifact
+    def release_diagnostics() -> CompiledArtifact
+```
+
+- `compile_artifact` 接受真实 `tvm.tirx.PrimFunc`（或其直接暴露 PrimFunc 的 JIT 包装），也接受
+  已归一化的 `ir.Module`（`carrier="rkir"`）。不执行 GPU pipeline、不解析源码文本。
+- 不可变快照：`CompileSnapshot(profile, options)`（两者本身是 frozen dataclass），外加来源身份
+  `source`（module 名、source_hash、numeric/submit/approx 选项、收窄点、K 循环/MN 分块/尾块契约）。
+  不保存输入数组、TVM callable、设备地址或 fd；`instantiate` 才需要 fd，且 fd 始终由调用者持有。
+- TVM 图只在 `retain_graph=True` 时以可释放诊断对象存在，`explain()`/`instantiate()`/`export_plan()`
+  都不依赖它；默认不保留。
+- 旧入口：`compile_tilelang`/`compile_rkir` 返回 `CompileResult`，`.plan/.diagnostics/.report/to_dict()`
+  语义不变，并新增 `.artifact`（同一 `Compilation` 的另一种视图，不重新规划）。
+- `Plan`/`load_plan`/`save_plan`/`explain_plan`/`Workspace.create` 保持原语义；CLI 的
+  `compile-tilelang`/`compile-rkir`/`validate`/`explain`/`run` 参数与退出码不变，`compile-*` 内部改为
+  artifact 导出。顺带修正 `cli._cmd_run` 中 `RK_E_INVALID` 未导入的既有缺陷（只在 `--fd` 为负时触发；
+  行为仍是退出码 2 的错误路径，无兼容性变化）。
+
+**权威表示、descriptor 生命周期与导出路径**
+
+- 权威表示是**一份已验证的内部 `Plan`**。`explain()` 每次从该计划重新生成报告并深拷贝，
+  `export_plan()` 写出既有 RKPlan JSON，descriptor 是投影。
+- 计划对外**逻辑上不可变**，且不只靠构造期拷贝：`plan.Action.attrs` 与 `ir.Op.attrs` 经
+  `immutable.freeze()` 递归转成 `FrozenDict`/`FrozenList`（`dict`/`list` 的只读子类：仍是
+  `isinstance(x, dict)`、仍与普通容器相等、仍可 JSON 序列化，但所有写方法抛 `TypeError`）。
+  因此 `artifact.plan.actions[i].attrs["transpose_source"] = True` 直接失败，不会出现
+  "descriptor 变了而 plan_hash 未变"的状态；`Action.to_dict()`/`Op.to_dict()` 用 `thaw()`
+  输出普通容器，磁盘 JSON 与 canonical plan hash 与冻结前逐字节一致
+  （`comparison.json` 的 19/19 仍全等即为此判据）。
+  回归：`tests/test_codegen_pipeline.py` 的 `test_authoritative_plan_refuses_mutation`、
+  `test_every_action_attribute_tree_is_read_only`、`test_recognized_graph_attributes_are_read_only`、
+  `test_caller_mapping_edits_cannot_reach_the_plan`；
+  `tests/test_artifact.py` 的 `test_descriptor_cannot_be_steered_by_editing_the_plan`
+  （逐次尝试改写后重编码 descriptor 并要求 flags/counts 不变）与
+  `test_attempted_plan_edits_do_not_change_execution`（改写尝试前后各跑一次真实 workspace，
+  逐元素相等且仍等于数值参考）。
+- descriptor 生命周期未变：编码在 `instantiate`/`create_plan` 时发生，ctypes 数组与字符串在 native
+  调用结束前由 holder 保活，地址型 descriptor 不会被跨 workspace 缓存；artifact 不持有 descriptor。
+- 每个 workspace 独立：`artifact.instantiate` 直接调用生产 `Workspace.create`，共享常量校验、
+  C plan 深拷贝与 ownership/BUSY/poisoned 规则；未新增全局 workspace 或隐式开设备。
+
+**C ABI / schema / API 变化**
+
+- C 侧 `rk_plan.h` 及实现：**零改动**（本轮未编译、未改动 custom-ops；沿用既有 `build-host-mvp`）。
+- Plan schema 版本：**未变**（仍为 schema 2 / kind `rkplan`），字段语义未变，故不新增版本号；
+  RKIR schema 仍为 1，JSON 格式与严格解码规则未变。
+- 公共 Python API：只新增（`compile_artifact`、`CompiledArtifact`、`CompileResult.artifact`、
+  `rknpu_backend.codegen`、`rknpu_backend.graph`），未删除或改名任何既有导出；
+  `runtime.ffi` 的 descriptor 类型名与常量保留为重导出。
 
 ### 15.5 验证与交接
 
-- 证据目录、实际命令与退出状态：待填写。
-- 完整差分结果与允许的身份差异：待填写。
-- Host / ABI / sanitizer / 设备结果及未测项：待填写。
-- 最终提交、关键文件、遗留项与重放命令：待填写。
+**证据目录、实际命令与退出状态**
+
+证据根：`results/20261027T064126Z-refactor/`（唯一 `*-refactor/` 目录，未新增 README/summary）：
+
+```text
+manifest.json                   # HEAD/base、环境与模块路径、各命令退出码、产物清单
+baseline/projection.json        # base_ref worktree 的 19 例计划 + descriptor 投影
+current/projection.json         # 工作树同一脚本的投影
+comparison.json                 # 逐字段差分、显式忽略清单、未解释差异
+native-ir-evaluation.json       # 原生载体覆盖、契约传播、成本与耗时
+model-package-regeneration.json # 完整模型包重编译后的逐文件等价判定
+logs/                           # 上述命令与 pytest/ctest 的原始输出
+```
+
+一条命令重放（自建 base worktree，不改工作树、不装依赖）：
+
+```bash
+cd research/tilelang-rknpu
+RK_REFACTOR_BASE_REF=2996bb65d019d18bd118a35b03779dfba9c00f41 ./scripts/run-refactor-evidence.sh
+
+# 追加完整模型包重编译对照（会临时改写 models/compiled 后自动还原）
+RK_REFACTOR_WITH_MODELS=1 \
+RK_REFACTOR_BASE_REF=2996bb65d019d18bd118a35b03779dfba9c00f41 ./scripts/run-refactor-evidence.sh
+```
+
+各步退出码均为 0：`worktree`、`baseline_projection`、`current_projection`、`comparison`、
+`native_ir_evaluation`、`model_compile`、`model_package_regeneration`、`model_restore`、
+`pytest`、`ctest`、`manifest`（见 `manifest.json.commands`）。`model_restore` 之后
+`git status --short models/compiled` 为空，模型包文件未被本次证据采集改动。
+
+**完整模型包重编译**（`tools/compile_models.py` 全量重跑后逐文件比较，
+`model-package-regeneration.json`）：53 个文件里 52 个为 `identity-only`
+（仅 `plan_hash`/`source_hash` 不同），`manifest.json` 为 `identity-cascade`
+（其差异叶子仅 `plans.*.plan_hash`、`hybrid_manifests.*.sha256`），
+`content-diff` 0 个、`failures` 0 个、`reference_problems` 0 个。
+
+`identity-cascade` 不是默认放行：比较器先做三项独立检查（见 15.6 P2-1）——两侧 `*.json`
+文件集合必须一致；`plans.<n>.path` / `hybrid_manifests.<n>.path` 必须存在且其 `plan_hash`、
+`source_hash`、`sha256` 与所指文件的真实内容相符（`sha256` 按文件字节重算）；
+每个被引用文件的自身判定必须是身份等价类。任一不满足即计入 `failures` 并返回非零。
+即：重构后重编译整个模型包，执行内容（bindings、actions、submits、publish、预算、hybrid 图）
+逐字段不变，只有那处既有身份不稳定反映到 hash 上。
+
+**完整差分结果与允许的身份差异**
+
+- 19/19 代表性用例的 `plan` 与 `descriptor` 逐字段全等；7/7 负例的错误码、stage 与消息全等。
+  用例覆盖：RKIR 5 个构造器（matmul/projection/swiglu/branch/activation）+ TileLang 单 MatMul、
+  MatMul→SiLU、K=512 分片、ragged K=257、标量/逐通道广播、多输出、MN 分块、silu_proj、
+  staged projection/FFN/branch。
+- 显式忽略清单（`comparison.json.allowed_differences`）只有三项，全部为环境位置类：
+  `environment.backend_module`、`environment.executable`、`environment.platform`。
+- descriptor 比较逐字段 + 逐有效数组元素，排除 host 指针地址与 padding；shape、容量、counts、
+  顺序、flags、slot/offset、Submit 与 publish 均参与比较。
+- 一处**先于本次重构就存在的**身份不稳定，按"不伪造一致"处理并记录：TileLang 派生计划的
+  `source_hash` 取自 `repr(Span)`，其中 `SourceName(...)` 内含 TVM 对象地址，因而**同一份旧代码
+  跨进程也会得到不同 `source_hash`**（在 base_ref worktree 里连跑两次即可复现，见下方命令）。
+  因此投影只归一化该指针子串并**重算 canonical plan hash**，其余字段不做任何遮蔽；
+  归一化前的原始串与原始 hash 一并保存在 `baseline/projection.json` 与 `current/projection.json`
+  每例的 `identity.{source_hash_raw, plan_hash_as_compiled}` 字段中，可审查。
+  复现（在 base_ref worktree 里连跑两次同一脚本，`case=tilelang_single_matmul`）：
+
+  ```bash
+  for i in 1 2; do
+    ( cd /tmp/rknpu-baseline/research/tilelang-rknpu && \
+      PYTHONPATH=$PWD/python:<tree>/.pydeps:$PWD \
+      python3 <tree>/tools/refactor_plan_projection.py --out /tmp/base_run$i.json )
+  done
+  # 归一化前：两文件里 12 个 TileLang 用例的 source_hash / plan_hash 不同（SourceName 地址不同），
+  #           7 个 RKIR 用例本来就相同；
+  # 归一化后：19/19 用例的 plan_hash 全部相同（= comparison.json 的 identical 19/19）
+  ```
+
+  这正是"不能固定旧哈希伪造一致"的实例：本次不对计划语义做任何补偿，只把该字段作为身份差异显式记录。
+- 结论：除上述身份字段外，没有未解释的执行差异（`comparison.json.summary
+  .unexplained_execution_differences` 为空）。
+
+**Host / ABI / sanitizer / 设备结果及未测项**
+
+- Host：`pytest` **348 passed + 71 subtests passed**（基线 270 → 348；新增 78 项：
+  `tests/test_artifact.py` 21、`tests/test_codegen_pipeline.py` 15、
+  `tests/test_native_graph.py` 15、`tests/test_compare_compiled_models.py` 11、
+  `tests/test_verify_artifact_smoke.py` 8、`tests/test_artifact_smoke_script.py` 8）。
+  `ctest` 30/30 passed，含 `rk_plan_contract`、`rk_plan_host`、`provider_context`、`provider_seam`。
+- 无 TileLang/TVM 环境：`tests/test_artifact.py::ArtifactIsolationTests` 在真实子进程中屏蔽
+  `tilelang/tvm/tvm_ffi`，验证 `import rknpu_backend`、`compile_rkir`、`compile_artifact(Module)`、
+  `export_plan` → `load_plan` → 运行链仍可用，且包 import 不触发 TVM。
+- 编译/explain 不得加载设备库：`tests/test_codegen_pipeline.py`
+  `test_compilation_never_constructs_the_runtime_library` 在 `LibRKPlan.__init__` 抛错的前提下完成
+  compile + explain + export/load。
+- ABI：C 侧零改动，未重跑 sanitizer/ABI 回归（本轮不涉及 C 代码或 FFI 编码语义变化；descriptor
+  字节布局由 `tests/test_ffi.py` 的 ctypes/`offsetof` 对照用例保障，且仍全绿）。
+- **板端真机**：本机无直连设备，先用根目录 `.env` 的板卡配置补做了 4 例代表性 smoke
+  （单 MatMul、MatMul→SiLU、ragged K=257、分支多输出；全部由真实 TileLang PrimFunc 在 Host 编译），
+  记录见 15.7 与 `results/20261027T071045Z-artifact-smoke/`。仍**未重跑**完整硬件 admission campaign
+  与完整模型 campaign：本次变化是组织/门面级（12 个代表性用例的计划与 descriptor 逐字段全等），
+  既有 `results/20261023T144054Z-rk3588/` 等硬件证据按当时快照解释，本节的 smoke 只补充
+  "当前代码在生产运行库上确实能跑通 artifact 路径"，不构成新的性能或整模型数值结论。
+- CLI 冒烟：`tests/test_cli.py` 覆盖 `compile-rkir → validate → explain → run`（mock 后端）与
+  `compile-tilelang` 路径，全部通过；未新增 CLI 子命令。
+
+**最终提交、关键文件、遗留项与重放命令**
+
+- 关键新增：`python/rknpu_backend/{graph.py,artifact.py,immutable.py}`、`python/rknpu_backend/
+  codegen/{__init__,pipeline,descriptor}.py`、`python/rknpu_backend/frontend/
+  {graph_builder,native_graph}.py`、`tests/{test_artifact,test_codegen_pipeline,
+  test_native_graph,test_compare_compiled_models}.py`、`tests/nodeps/sitecustomize.py`、
+  `tools/{refactor_plan_projection,compare_plan_projections,evaluate_native_graph,
+  compare_compiled_models}.py`、`scripts/run-refactor-evidence.sh`。
+- 关键修改：`api.py`（薄门面）、`cli.py`（改用 artifact 导出）、`runtime/ffi.py`（descriptor 移出并重导出）、
+  `frontend/tilelang_adapter.py`（载体缝，8 个建图点）、`passes/infer.py`（接受图协议）、
+  `plan.py`/`ir.py`（attrs 边界深拷贝）、`__init__.py`（新导出）。
+- 遗留项（均可识别、未伪装为完成）：
+  1. 原生载体为 `not_adopted` 的非默认试点；删除条件见 15.3 最后一段。
+  2. `hardsigmoid` 在原生载体无对应 Relax 算子，未组合、未扩域。
+  3. 板端真机未复验（无板卡）。
+  4. 未跑 sanitizer/ABI 重建（C 侧未改动）。
+  5. TileLang 派生 `source_hash` 的跨进程不稳定性是既有性质，本次只在证据侧归一化，未改变计划语义；
+     若日后要求跨进程可复现 hash，需单独决策（会改变既有产物身份）。
+- 重放命令：
+
+```bash
+cd research/tilelang-rknpu
+# 全量 Host 验收
+PYTHONPATH=.pydeps:python:. python3 -m pytest -q
+ctest --test-dir ../custom-ops/build-host-mvp --output-on-failure
+# 证据包（含旧代码 worktree 差分、原生图评估）
+RK_REFACTOR_BASE_REF=2996bb65d019d18bd118a35b03779dfba9c00f41 ./scripts/run-refactor-evidence.sh
+# 单一用例：编译产物 → explain → 实例化 → 运行 → 导出重放
+PYTHONPATH=.pydeps:python:. RKNPU_PLAN_LIB=../custom-ops/build-host-mvp/librknpu_plan_mock.so python3 -c "from rknpu_backend import *; import numpy as np; p=default_profile(); o=CompileOptions(numeric_mode='rk_f16_tiled', allow_approx_lut=True); a=compile_artifact(matmul_module(m=13,k=300,n=33,activation='silu'), profile=p, options=o); print(a.explain()['counts']); c={s.name: np.zeros(s.shape, np.float16) for s in a.plan.constants if s.generator is None}; w=a.instantiate(fd=0, constants=c); print(w.run({'A': np.zeros((13,300), np.float16)})['A1'].shape); w.close(); a.export_plan('/tmp/plan.json'); print(load_plan('/tmp/plan.json').plan_hash == a.plan_hash)"
+```
+
+### 15.6 审核反馈与修复记录
+
+一次独立审核给出了四条意见，全部采纳并修复。本节记录根因、改动与验证方式；审核未要求重跑
+硬件 campaign，设备项状态不变。
+
+**P1　artifact 的权威计划仍可被外部修改（已修复）**
+
+- 根因：`Plan`/`Action` 是 frozen dataclass，但 `Action.attrs` 是可变 `dict`；构造期
+  `deepcopy` 只切断调用者原字典的别名，`artifact.plan.actions[i].attrs[...] = ...` 仍可写入，
+  而 descriptor 的 flags 正是从该映射编码，于是出现"descriptor 变了、plan_hash 未变"。
+- 修复：新增 `python/rknpu_backend/immutable.py`（135 行，`FrozenDict`/`FrozenList`/`freeze`/
+  `thaw`/`is_frozen`）。`plan.Action.attrs` 与 `ir.Op.attrs` 在构造时 `freeze()` 成只读子类，
+  写方法一律 `TypeError`；`to_dict()` 用 `thaw()` 输出普通容器，**磁盘 JSON 与 canonical
+  plan hash 不变**（`comparison.json` 仍 19/19 全等、7/7 负例全等即为此判据）。
+- 验证：`test_authoritative_plan_refuses_mutation`（改写、删除、`update`、`setdefault`）、
+  `test_every_action_attribute_tree_is_read_only`（逐 action 断言 `is_frozen`）、
+  `test_recognized_graph_attributes_are_read_only`（图级 `op.attrs["numeric_contract"]`）、
+  `test_caller_mapping_edits_cannot_reach_the_plan`（含嵌套 dict/list）、
+  `test_descriptor_cannot_be_steered_by_editing_the_plan`（改写尝试前后重编码 descriptor 并要求
+  flags/source_binding/kinds/counts 完全一致）、
+  `test_attempted_plan_edits_do_not_change_execution`（改写尝试前后各实例化并运行一次，输出逐元素相等
+  且仍等于数值参考）。审核给出的复现（改 upload 的 `transpose_source`）现在抛 `TypeError`，
+  descriptor flags 与 `plan_hash` 均不变。
+
+**P2-1　模型包比较器可能把不完整包判为通过（已修复）**
+
+- 根因：只遍历 candidate 文件，看不到 reference 侧被删除的文件；`identity-cascade` 只看差异叶子
+  的名字，未逐项验证 manifest 引用与摘要是否真实。
+- 修复：`tools/compare_compiled_models.py` 现在按两侧 `*.json` 的**并集**比较
+  （`missing-candidate` / `missing-reference` 直接计入失败），并对每个 manifest 做引用一致性校验：
+  `plans.<n>.path`、`hybrid_manifests.<n>.path` 必须存在；`plan_hash`/`source_hash` 必须等于所指
+  计划文件的自身字段；`sha256` 必须等于所指文件**字节的实时 SHA-256**；
+  `mlp_hidden_diagnostics.<n>.plan_hash` 必须与 `plans.<n>.plan_hash` 一致；
+  `source_files.<path>` 的摘要必须与真实源码相符（可用 `--source-root` 指向源码树，
+  不可达时列入 `unresolved_source_checks` 而不是静默跳过）。
+  `identity-cascade` 仅在其引用的每个文件都通过校验且自身判定属于身份等价类时成立。
+- 验证：新增 `tests/test_compare_compiled_models.py`（11 项，合成包对）：删除被引用 hybrid、
+  删除未被引用的 plan、candidate 多出文件、篡改 hybrid 摘要、篡改 plan 内容、篡改 manifest 里的
+  plan_hash、篡改 source 摘要、仅身份差异应通过、目录缺失应报错。审核的两个复现
+  （删除被引用 hybrid 文件、修改 manifest 摘要）在真实 `models/compiled` 上均返回 1 并给出具体原因
+  （`hybrid_manifests.mnist_mlp_b1.path missing` / `…sha256 does not match its file`）。
+
+**P2-2　证据脚本不把失败汇总为非零退出码（已修复）**
+
+- 修复：`scripts/run-refactor-evidence.sh` 仍先跑完全部步骤（一个失败也产出完整证据包），
+  最后由状态表汇总：任一非零即 `exit 1` 并打印 `EVIDENCE FAILED`，全部成功才 `exit 0`
+  并打印 `evidence complete`；`manifest.json` 缺失时也按失败处理而不是抛栈。
+  被跳过的可选步骤记录独立的非零码，同样判定为失败（"没跑"不等于"通过"）。
+- 验证：故意传 `RK_REFACTOR_BASE_REF=deadbeef` 运行，脚本跑完所有可运行步骤后
+  打印 `worktree rc=128`、`baseline_projection rc=1` 等并以 1 退出；正常全量运行以 0 退出。
+
+**P2-3　"原 PrimFunc 释放后仍可实例化"缺少测试证明（已修复）**
+
+- 原测试只 `del` 局部名，而 fixture 模块仍持有该 `PrimFunc`，且之后没有实例化与运行。
+- 修复：新测试 `tests/test_artifact.py::test_primfunc_released_before_instantiate_and_run`
+  用 `tilelang_semantics._valid_kernel(...)`（普通工厂，返回无其他属主的全新 PrimFunc）编译，
+  持有 `weakref`，删除引用并 `gc.collect()` 后断言弱引用已失效（即 artifact 不持有源对象），
+  再用 `artifact.instantiate(fd=0, …)` 走生产 workspace 路径运行并对照 FP16 K 链数值参考。
+  同时加入负向对照：仍被引用的对象弱引用必须存活，确保断言不是因为弱引用机制失效而"通过"。
+  人工注入回归（让 artifact 持有 PrimFunc）可使该测试失败，说明它确实能捕获该缺陷。
+
+**修复后的整体状态**
+
+- 主线、原生图评估与 `not_adopted` 结论均未改变；`comparison.json` 仍 19/19 计划与 descriptor
+  全等、7/7 负例全等，`native-ir-evaluation.json` 仍 12/12 全等。
+- Host 结果更新为 `332 passed + 71 subtests`（新增 62 项）与 `ctest 30/30`。
+- 证据根更新为 `results/20261027T064126Z-refactor/`，其 `manifest.json.commands` 全部为 0，
+  脚本自身返回 0。
+
+### 15.7 板端真机 smoke（重构后新增，2026-10-27）
+
+审核后的补充验证：用仓库根 `.env` 的板卡配置，在当前代码 + 生产运行库上做一次代表性真机
+smoke。这不是完整性能 campaign，也不重新校准数值政策。
+
+**覆盖范围（4 例，单核串行）**
+
+| 用例 | 来源 | 计划 task/submit | 板端检查 |
+|---|---|---|---|
+| `single_matmul` | 真实 TileLang `_valid_kernel(16,256,16)` | 1 / 1 | 输出 `Y[16,16]` |
+| `matmul_silu` | 真实 TileLang `_silu_kernel(16,256,16)`（LUT 已授权） | 3 / 2 | 输出 `Y[16,16]` |
+| `ragged_k257` | 真实 TileLang `ragged_tail(13,33,257,16,64,256)` | 2 / 1 | 尾块 K=257，输出 `C[13,33]` |
+| `branch_outputs` | 真实 TileLang `branch_outputs(8,64,32,48)` | 2 / 2 | 多输出 `Y1[8,32]`、`Y2[8,48]` |
+
+四例**全部**由真实 TileLang PrimFunc 在 Host 编译（板端无 TileLang/TVM，见未测项），
+因此"真实 TileLang 输入编译后的板端执行"覆盖了全部用例而不仅一个。
+
+**每例在板端验证的路径**
+
+1. `Module.from_dict(host 归一化图)` → `compile_artifact()` → `explain()`：
+   板端重新编译得到的 `plan_hash` 必须等于 Host artifact 的（跨机器身份一致，4/4 通过），
+   `explain()` 的 actions/bindings/buffers/views/tasks/submits/data_bos 计数与计划一致。
+2. `artifact.instantiate(fd=…)` → `run(A)` → `run(B)` → `run(A)`：**同一 workspace** 的输入更新；
+   两次 A 输出逐字节相同，B 输出必须不同（否则"输入未更新"也会看起来正确）。
+3. 两个**同时存活**的独立实例各自 `run(A)`：输出逐字节相同且等于首次实例化结果。
+4. `artifact.export_plan()` → `load_plan()` → `Workspace.create()` → `run(A)`：离线重放路径，
+   输出与 artifact 路径逐字节相同，`plan_hash` 与 Host 一致。
+5. workspace 自报 `task_count`/`submit_count` 与计划会计一致（4/4 通过），`numeric_mode=rk_f16_tiled`。
+
+**数值结果（Host 独立核对，容差取自计划自身声明的冻结契约，未放宽）**
+
+| 用例 | 输出 | 最大绝对误差 | 允许上界 `atol+rtol·|ref|` | 结论 |
+|---|---|---|---|---|
+| `single_matmul` | `Y` | 0.000e+00（逐位一致） | 1.376e-02 | PASS |
+| `matmul_silu` | `Y` | 2.441e-04 | 1.138e-02 | PASS |
+| `ragged_k257` | `C` | 0.000e+00（逐位一致） | 1.297e-02 | PASS |
+| `branch_outputs` | `Y1` / `Y2` | 0 / 0（逐位一致） | 1.163e-02 / 1.188e-02 | PASS |
+
+- 参考值：Host 侧 float64 计算 + 每个声明收窄点显式舍入到 FP16（`ordered_k_tiles_with_f16_writeback`，
+  每 256 宽 K 分片写回），与现有执行测试一致；容差 `atol=rtol=0.008` 直接从编译图的
+  `numeric_contract.tolerance` 读取，脚本不提供任何调宽入口（同一 kernel 内出现不一致容差即报错）。
+- 除 `matmul_silu` 的 LUT sigmoid 近似（2.4e-4，远小于冻结上界）外，其余用例与参考**逐位一致**。
+- A/B 两组输入共用同一组常量，B 的参考值用同一权重重算；构建期即断言两组输入不相同。
+
+**板端环境与安全边界（只读检查，未改设备状态）**
+
+- `RK3588 OPi 5 Plus`，driver `RKNPU driver: v0.9.8`，`Python 3.10.12`，`librknpu_plan.so` 在板端
+  现场构建（sha256 `878ef3fa6c81cb651e02783db2b6bb72829cb2b0941444eaf3bc755784051d85`）。
+- 单核：`RKNPU_CORE_MASK=1`；串行；`npu_freq` 前后均为 `1000000000` Hz（只读采集，未调频），
+  `npu_load` 前后均为 `Core0: 0%, Core1: 0%, Core2: 0%`；未执行 reset，未跑性能 campaign。
+- 独立远端目录 `/mnt/ssd/workspace/tl-artifact-smoke-20261027T071045Z`（未复用既有目录）。
+  该目录与上一次运行的 `/mnt/ssd/workspace/tl-artifact-smoke-20261027T065940Z` 均保留。
+- 失败即停：runner 在第一个用例失败时立刻 `break`，不再提交后续用例；shell 侧一旦远端返回非零
+  就跳过剩余 core mask。用"篡改首例 `plan_hash`"的设备无关演练验证了该守卫：
+  退出码 1，后续 3 例均未被尝试（`logs/fail-closed-drill.log`）。
+- 凭据：沿用既有 askpass 方式，密码只出现在进程环境变量中，不进入 argv/日志/证据；
+  本次证据树对密码与板卡主机名的扫描均为 0 命中，脚本内扫描结果 `credential scan: PASS`。
+- **顺带发现（早于本次任务，未修改）**：仓库既有证据
+  `results/20261024T030615Z-models/model-results/core-1/cpu_benchmark.{log,json}` 与
+  `results/20261026T014447Z-envelope/out-{baseline,candidate}/tiny_vit_b{1,8}.json`
+  共 6 个文件中，凭据串作为**较长主机名字符串的子串**各出现 1 次（不是独立字段值）。
+  这属于既有 campaign 采集主机名时带出的暴露，非本次改动造成，本次未改动这些文件（不在本任务范围）。
+  建议对这些归档做脱敏或轮换凭据；本次新增证据不含该串，也不采集登录主机名。
+
+**实际命令**
+
+```bash
+cd research/tilelang-rknpu
+./scripts/run-artifact-smoke.sh          # 全流程：Host 编译 → 远端构建+执行 → Host 核对
+```
+
+脚本内部步骤（全部 0 退出，见证据 `manifest.json.commands`）：`build_campaign`（Host：真实
+TileLang → artifact → `export_plan` + 参考值）、`bundle_source`/`bundle_campaign`、
+`remote_mkdir`/`scp_*`/`remote_extract`、`remote_run`（板端 cmake 构建 `librknpu_plan` +
+4 例单核执行）、`scp_results`、`verify`（Host 独立核对）、`credential_scan`。
+
+**跨会话确定性（顺带得到）**：本 smoke 在同一板卡、同一构建上跑过两次独立会话
+（`…065940Z` 与 `…071045Z`，各自新的远端目录）。两次的 30 个原始输出数组
+（4 例 × {a1,a2,b,independent_1,independent_2,replay} × 各输出）**逐字节完全相同**，0 处不一致；
+计划 hash 因 TileLang 派生 `source_hash` 含进程地址而按预期不同（见 15.5），但执行结果不变。
+
+**脚本退出码修复（审核第 3 条非阻塞项）**：`scripts/run-artifact-smoke.sh` 原先记录了
+`manifest_rc` 却未纳入最终判定，且失败计数依赖重新读取 `manifest.json`——而该文件正是可能失败的
+那一步写出的，manifest 失败时可能误报成功。现改为：先从状态表（含 manifest 行）汇总失败步，
+删除表之后再对 `manifest_rc`/`remote_rc`/`verify_rc` 逐项兜底（已记录的不重复计数），
+状态表为空或不可写也算失败；失败时按步名列印 `artifact smoke: FAIL (step(rc) …)`。
+回归：`tests/test_artifact_smoke_script.py`（8 项）直接抽取脚本尾部的聚合逻辑，覆盖
+"仅 manifest 失败（其余全过）必须失败""manifest 行缺失但 `manifest_rc!=0` 仍失败"
+"任意步失败""状态表不可写"等场景；另用无法连通的传输桩跑整脚本，确认退出 1 且逐个列出失败步。
+真机重跑即为本次修复后的证据（`manifest_rc=0` 已参与判定）。
+
+**过程说明（如实记录）**：首次真机 smoke 的证据目录在清理临时文件时被误删，因此本用例的证据是
+**用同一脚本重跑一次**产生的（`…071045Z`）；被删目录对应的远端目录仍完整保留在板卡上
+（`…065940Z`），本次用其原始输出做了上面的跨会话逐字节比对。重跑同时使修复后的退出聚合逻辑
+在真机上得到验证（`manifest_rc=0` 参与判定）。板端 `librknpu_plan.so` 两次构建 sha256 相同
+（`878ef3fa…`），说明重跑不是新的构建。
+
+**证据**：`results/20261027T071045Z-artifact-smoke/`
+
+```text
+manifest.json                 # 覆盖范围、远端目录、显式未做项、各步骤退出码
+campaign/                     # 每例 plan.json / rkir.json / 输入 A,B / 常量 / Host 参考值 / meta.json
+board/core-1/summary.json     # 板端汇总：板端 plan_hash、explain 计数、workspace 会计、NPU 负载
+board/core-1/<case>/board/*   # 原始输出：a1/A、b/B、a2/A、independent_1/2、replay（.npy，未加工）
+board/{environment,configure,build}.log, library.sha256
+verify.json                   # Host 独立核对：逐输出误差、允许上界、各项一致性检查
+logs/fail-closed-drill.log    # 失败即停演练（设备无关，mock 库）
+logs/{build-campaign,verify,remote-run,scp-*}.log
+```
+
+**未测项（明确未做）**
+
+1. 未跑完整性能 campaign、未做频率/功耗标定、未做多核（仅 `RKNPU_CORE_MASK=1`）。
+2. 板端无 TileLang/TVM，因此 **PrimFunc → artifact 的归一化在 Host 完成**；板端验证的是
+   `归一化图 → artifact → explain → instantiate → run` 与 `export → load_plan → run` 两条路径，
+   两者 `plan_hash` 与 Host artifact 完全一致。板端不支持 TileLang 是环境限制，不是本次改动造成。
+3. 未覆盖全部算子/布局组合（只取 4 个代表性用例）、未覆盖并发与故障注入（这些由既有
+   `test_workspace_busy`/`test_ws_poison`/board campaign 覆盖，本次未重跑）。
+4. 未做 sanitizer 重建（C 侧零改动）；板端 `librknpu_plan.so` 为 Release 构建。
 
 ## 16. 自主执行与需要决策的边界
 

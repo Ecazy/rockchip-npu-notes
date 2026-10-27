@@ -7,7 +7,7 @@
 - 后端 MVP 已在声明支持域内完成；仍是实验性后端，不承诺未知设备故障后的恢复。
 - MNIST MLP 与显式 hybrid Tiny Transformer 完整模型里程碑已关闭，证据统一见 [ACCEPTANCE.md](ACCEPTANCE.md)。
 - 默认模型优化、最终 baseline/current 复验及厂商 RKNN 对照统一见 [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md)。不同数值政策及不同 campaign 的性能分开解释。
-- 后端重构是新的待实施任务，不代表当前代码已迁移。原始设计与重构方案各保留一对 overview/specific，按下面的适用范围阅读。
+- 后端重构主线已完成：编译边界收敛到 codegen，新增 `compile_artifact` 直接实例化入口，旧入口与持久化重放保持；TVM 原生图试点已完成但未采用为默认，计算表示继续使用薄 RKIR。结论与证据见 [refactor-specific.md](refactor-specific.md) 第 15 节。原始设计与重构方案各保留一对 overview/specific，按下面的适用范围阅读。
 
 ## 开发规范
 
