@@ -1,0 +1,4141 @@
+{
+  "arms_order": [
+    "generic",
+    "prepared",
+    "auto",
+    "hostfused",
+    "vendor",
+    "cpu"
+  ],
+  "campaign": {
+    "arms": {
+      "auto": {
+        "execution_mode": "auto",
+        "family": "custom",
+        "hybrid_suffix": "",
+        "numeric_policy": "packed per-logit; static binding-fanout selection between generic and prepared",
+        "plans": "plans/current"
+      },
+      "cpu": {
+        "backend": "numpy-fp32",
+        "family": "external",
+        "numeric_policy": "FP32 reference; not ranked with packed custom arms"
+      },
+      "generic": {
+        "execution_mode": "generic",
+        "family": "custom",
+        "hybrid_suffix": "",
+        "numeric_policy": "packed per-logit",
+        "plans": "plans/current"
+      },
+      "hostfused": {
+        "execution_mode": "prepared",
+        "family": "custom",
+        "hybrid_suffix": "_hostfused",
+        "numeric_policy": "packed per-logit; bit-preserving residual+RMSNorm Host fusion",
+        "plans": "plans/candidate"
+      },
+      "prepared": {
+        "execution_mode": "prepared",
+        "family": "custom",
+        "hybrid_suffix": "",
+        "numeric_policy": "packed per-logit",
+        "plans": "plans/current"
+      },
+      "vendor": {
+        "backend": "rknn-toolkit-lite2",
+        "family": "external",
+        "numeric_policy": "classification-preserving FP16; not ranked with packed custom arms"
+      }
+    },
+    "auto_validation": {
+      "git_head": "f54a215",
+      "overlay_sha256": "f42a64b19563b3d7e9d18b7fc2e3d33ccaa0f265a0dbd017f75e4ec5bf42ca78",
+      "paired_validation_rounds": [
+        7,
+        8
+      ],
+      "rounds": [
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "selected_modes_by_profile": {
+        "mnist_mlp.b1": "generic",
+        "mnist_mlp.b32": "generic",
+        "mnist_mlp.b8": "generic",
+        "tiny_vit.b1": "prepared",
+        "tiny_vit.b8": "prepared"
+      },
+      "selection_rule": "static_binding_slots >= 32; independent_calls repeat override forces generic"
+    },
+    "board": {
+      "cpu_affinity": 6,
+      "cpu_frequency_sample_mhz": {
+        "locked": false,
+        "max": 2304.0,
+        "mean": 1578.0,
+        "min": 408.0,
+        "source": "evaluator /proc/cpuinfo snapshot pinned CPU 6"
+      },
+      "cpu_thread_env": {
+        "MKL_NUM_THREADS": 1,
+        "OMP_NUM_THREADS": 1,
+        "OPENBLAS_NUM_THREADS": 1
+      },
+      "driver": "v0.9.8",
+      "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+      "npu_core_mask": 1,
+      "npu_frequency_hz": 1000000000,
+      "npu_frequency_hz_observed": 1000000000,
+      "npu_frequency_locked": false,
+      "target": "RK3588 OPi 5 Plus"
+    },
+    "cost_model": {
+      "b1_model": "cost-model-tiny_vit_b1.json",
+      "b8_model": "cost-model-tiny_vit_b8.json",
+      "input_dir": "model-results/profiles",
+      "input_profiles_dir": "model-results/profiles",
+      "mlp_models": [
+        "cost-model-mnist_mlp_b32.json",
+        "cost-model-mnist_mlp_b8.json",
+        "cost-model-mnist_mlp_b1.json"
+      ],
+      "models": [
+        "cost-model-mnist_mlp_b32.json",
+        "cost-model-mnist_mlp_b8.json",
+        "cost-model-mnist_mlp_b1.json",
+        "cost-model-tiny_vit_b8.json",
+        "cost-model-tiny_vit_b1.json"
+      ],
+      "summary": "cost-model.md",
+      "tool": "tools/execution_cost_model.py"
+    },
+    "created_utc": "20261027T025648Z-execution-candidates",
+    "data": {
+      "t10k-images-idx3-ubyte.gz": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+      "t10k-labels-idx1-ubyte.gz": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6",
+      "train-images-idx3-ubyte.gz": "440fcabf73cc546fa21475e81ea370265605f56be210a4024d2ca8f203523609",
+      "train-labels-idx1-ubyte.gz": "3552534a0a558bbed6aed32b30c495cca23d567ec52cac8be1a0730e8010255c"
+    },
+    "evaluation": {
+      "custom_rounds": 3,
+      "external_rounds": 2,
+      "full_mnist_test_split": true,
+      "images_per_profile": 10000,
+      "interleaved": true,
+      "profiles": [
+        "mnist_mlp.b32",
+        "mnist_mlp.b8",
+        "mnist_mlp.b1",
+        "tiny_vit.b8",
+        "tiny_vit.b1"
+      ],
+      "setup_separate": true,
+      "warm_interval": "raw preparation + model execution + output materialisation; argmax excluded"
+    },
+    "kind": "execution-candidate-campaign",
+    "library_sha256": "878ef3fa6c81cb651e02783db2b6bb72829cb2b0941444eaf3bc755784051d85",
+    "numeric": {
+      "evaluator_spec": {
+        "file": "numeric/numeric_acceptance.json",
+        "sha256": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f"
+      },
+      "packed_spec": {
+        "file": "numeric/numeric_acceptance_packed.json",
+        "sha256": "f49d876b724b07ea417472ea1ac0c2b271c904e2cd6c7081e9a4c87cb3ddbe66"
+      }
+    },
+    "plans": {
+      "candidate_compiled_manifest_sha256": "6fc2f94b2aaf8e8b18d5756fd2d2768f302be90e2727a085a7fecb391a929756",
+      "candidate_hybrid_manifest_sha256": {
+        "tiny_vit_b1_hostfused.rkhybrid.json": "67103e1ddc76b584cb456bff3d200caca1fb17e5440cbb5eefa36e82aa9c7b4d",
+        "tiny_vit_b8_hostfused.rkhybrid.json": "6cca8b36a4e2612055062c15598d7e5d08fb8e23148afbcaaf512d0f885a3b51"
+      },
+      "current_compiled_manifest_sha256": "72f898e989240ad45a864d88596838a21e9c5e7d0f74feb416efef97c20ddadd"
+    },
+    "schema_version": 1,
+    "source": {
+      "custom_ops_archive": "git archive HEAD research/custom-ops",
+      "git_head": "60bfd689d57ecdc5ddd9b622aa366974219938af",
+      "tilelang_paths": [
+        "python",
+        "tools",
+        "scripts",
+        "models",
+        "vendor"
+      ],
+      "worktree_dirty_at_stage": true
+    },
+    "thresholds": {
+      "accuracy_drop_max": 0.005,
+      "mnist_mlp_accuracy": 0.97,
+      "tiny_vit_accuracy": 0.95,
+      "top1_agreement_min": 0.99
+    },
+    "vendor": {
+      "compile_precision": "non-quantized float16",
+      "lite2_wheel_sha256": "821e80c95e6838308c133915660b1a6ae78bb8d079b2cbbd46a02dae61192d33",
+      "rknn_manifest_sha256": "ea90de3d888f8799beb6edf7e1931752161d5ed732823d09cc6de8bfd3137874",
+      "runtime_core": 0,
+      "runtime_sha256": "d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8",
+      "runtime_version": "2.3.2",
+      "single_core_mode": true,
+      "toolkit_version": "2.3.2"
+    },
+    "weights": {
+      "mnist_mlp.npz": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+      "tiny_vit.npz": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+    }
+  },
+  "custom_arms": [
+    "generic",
+    "prepared",
+    "auto",
+    "hostfused"
+  ],
+  "custom_rounds": 3,
+  "deployment_arm": "auto",
+  "external_arms": [
+    "vendor",
+    "cpu"
+  ],
+  "external_rounds": 2,
+  "full_10k_all_profiles": true,
+  "kind": "execution-candidate-comparison",
+  "max_custom_rounds": 5,
+  "numeric_compare": {
+    "auto": [
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r1-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r1-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r1-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r7-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r8-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      }
+    ],
+    "hostfused": [
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r1-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r2-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r3-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      }
+    ],
+    "prepared": [
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r1-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r2-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r3-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r7-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      },
+      {
+        "profiles": {
+          "mnist_mlp.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b32": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "mnist_mlp.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b1": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          },
+          "tiny_vit.b8": {
+            "bitwise_equal": true,
+            "max_abs": 0.0,
+            "n": 10000
+          }
+        },
+        "reference_round": "r8-generic",
+        "trace": {
+          "mlp.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "mlp.x_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "relu_probe.output": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "sample_indices": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "schema_version": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.act": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_merged": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.attn_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.ffn": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.gate": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.h2_tokens": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.k_t_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.logits_padded": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm1": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.norm2": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_flat": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patch_projection": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.patches": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.pooled": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.positioned": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.probs_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.q_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.qkv": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.scores_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.up": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          },
+          "tiny_vit.v_heads": {
+            "bitwise_equal": true,
+            "shape_equal": true
+          }
+        }
+      }
+    ]
+  },
+  "paired_speedups": {
+    "auto": {
+      "mnist_mlp.b1": {
+        "median": 1.0395993721211838,
+        "round_ratios": {
+          "r7": 1.029650986798488,
+          "r8": 1.0495477574438796
+        },
+        "rounds": [
+          "r7",
+          "r8"
+        ]
+      },
+      "mnist_mlp.b32": {
+        "median": 1.0354125343450298,
+        "round_ratios": {
+          "r7": 0.9354793859469057,
+          "r8": 1.1353456827431538
+        },
+        "rounds": [
+          "r7",
+          "r8"
+        ]
+      },
+      "mnist_mlp.b8": {
+        "median": 0.9049643087438418,
+        "round_ratios": {
+          "r7": 1.0884292415370194,
+          "r8": 0.7214993759506643
+        },
+        "rounds": [
+          "r7",
+          "r8"
+        ]
+      },
+      "tiny_vit.b1": {
+        "median": 1.3114047345401652,
+        "round_ratios": {
+          "r7": 1.3331192812172614,
+          "r8": 1.2896901878630689
+        },
+        "rounds": [
+          "r7",
+          "r8"
+        ]
+      },
+      "tiny_vit.b8": {
+        "median": 1.3829828742913541,
+        "round_ratios": {
+          "r7": 1.3487229099133162,
+          "r8": 1.4172428386693923
+        },
+        "rounds": [
+          "r7",
+          "r8"
+        ]
+      }
+    },
+    "hostfused": {
+      "mnist_mlp.b1": {
+        "median": 0.9770313613775592,
+        "round_ratios": {
+          "r1": 0.9770313613775592,
+          "r2": 0.9439429635008508,
+          "r3": 1.0838174532544573
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3"
+        ]
+      },
+      "mnist_mlp.b32": {
+        "median": 1.0369699414218354,
+        "round_ratios": {
+          "r1": 1.0369699414218354,
+          "r2": 1.0541981471866428,
+          "r3": 0.9235285741406462
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3"
+        ]
+      },
+      "mnist_mlp.b8": {
+        "median": 0.9452865952068278,
+        "round_ratios": {
+          "r1": 1.0487732264459788,
+          "r2": 0.9452865952068278,
+          "r3": 0.8684279372274893
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3"
+        ]
+      },
+      "tiny_vit.b1": {
+        "median": 1.380430333555052,
+        "round_ratios": {
+          "r1": 1.380430333555052,
+          "r2": 1.4325999671522394,
+          "r3": 1.2427077344963537
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3"
+        ]
+      },
+      "tiny_vit.b8": {
+        "median": 1.352326629379729,
+        "round_ratios": {
+          "r1": 1.4243221400333024,
+          "r2": 1.3200179411143806,
+          "r3": 1.352326629379729
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3"
+        ]
+      }
+    },
+    "prepared": {
+      "mnist_mlp.b1": {
+        "median": 0.9474718587221852,
+        "round_ratios": {
+          "r1": 1.0425815396717548,
+          "r2": 0.850938693464401,
+          "r3": 0.9474718587221852,
+          "r7": 0.9275872993020408,
+          "r8": 1.006011103251354
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3",
+          "r7",
+          "r8"
+        ]
+      },
+      "mnist_mlp.b32": {
+        "median": 0.9695219928456045,
+        "round_ratios": {
+          "r1": 0.9336176976316587,
+          "r2": 1.1739687778165206,
+          "r3": 0.9695219928456045,
+          "r7": 0.9379535863016643,
+          "r8": 1.012778596855366
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3",
+          "r7",
+          "r8"
+        ]
+      },
+      "mnist_mlp.b8": {
+        "median": 0.9481420960043183,
+        "round_ratios": {
+          "r1": 0.9481420960043183,
+          "r2": 0.8898970858640322,
+          "r3": 0.9813818757838779,
+          "r7": 0.7796944103960098,
+          "r8": 0.9571911055175223
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3",
+          "r7",
+          "r8"
+        ]
+      },
+      "tiny_vit.b1": {
+        "median": 1.2300207892367685,
+        "round_ratios": {
+          "r1": 1.2785007610200154,
+          "r2": 1.3719327609855778,
+          "r3": 1.2300207892367685,
+          "r7": 1.1993865982653762,
+          "r8": 1.2246980660034845
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3",
+          "r7",
+          "r8"
+        ]
+      },
+      "tiny_vit.b8": {
+        "median": 1.36723867385831,
+        "round_ratios": {
+          "r1": 1.4899646789313243,
+          "r2": 1.36723867385831,
+          "r3": 1.3470891676772296,
+          "r7": 1.3582960194990406,
+          "r8": 1.3998791635568038
+        },
+        "rounds": [
+          "r1",
+          "r2",
+          "r3",
+          "r7",
+          "r8"
+        ]
+      }
+    }
+  },
+  "problems": [],
+  "profiles": {
+    "mnist_mlp.b1": {
+      "auto": {
+        "accuracy": 0.9831,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 1.2057208510057535,
+        "execution_mode": "generic",
+        "execution_selection": {
+          "1": {
+            "reason": "low binding fanout; generic path has equivalent work and avoids resident Host write-back",
+            "requested": "auto",
+            "selected": "generic",
+            "static_binding_slots": 13,
+            "threshold": 32
+          }
+        },
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 27.99148572375998,
+          "normalize": 63.919789250940084,
+          "pad_k": 30.195101513527334
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 768.0,
+          "download_calls": 1.0,
+          "executor_overhead_us": 103.98477035341784,
+          "host_action_us": 122.15706826536916,
+          "plan_call_us": 962.0637126266956,
+          "plan_download_us": 4.062774029541016,
+          "plan_guard_us": 262.90419329833986,
+          "plan_pack_us": 32.12074252929688,
+          "plan_submit_wait_us": 446.77085659179687,
+          "plan_workspace_us": 895.4881122102961,
+          "postprocess_us": 27.99148572375998,
+          "preprocess_us": 94.13589691394009,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 24576.0,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r4": 1.1743514357018285,
+          "r5": 1.1763869904971216,
+          "r6": 1.2264812922978308,
+          "r7": 1.2131616138038226,
+          "r8": 1.2056752349017188
+        },
+        "round_warm_ms": [
+          1.1743514357018285,
+          1.1763869904971216,
+          1.2264812922978308,
+          1.2131616138038226,
+          1.2056752349017188
+        ],
+        "setup_ms": 18.458157021086663,
+        "top1": 1.0,
+        "warm_ms": 1.2056752349017188,
+        "weight_load_ms": 10.519693023525178
+      },
+      "cpu": {
+        "accuracy": 0.9831,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.050685882568359375,
+        "e2e_ms": 0.25537642634881197,
+        "execution_mode": "numpy-fp32",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.0,
+        "n": 10000.0,
+        "packed_atol_exceeded": false,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 0.2560510574025102,
+          "r2": 0.25462675049784594
+        },
+        "round_warm_ms": [
+          0.2560510574025102,
+          0.25462675049784594
+        ],
+        "setup_ms": 0.0,
+        "top1": 1.0,
+        "warm_ms": 0.2553389039501781,
+        "weight_load_ms": null
+      },
+      "generic": {
+        "accuracy": 0.9831,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 1.2327211507014,
+        "execution_mode": "generic",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 27.74567579617724,
+          "normalize": 65.10863485164009,
+          "pad_k": 30.229276086902246
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 768.0,
+          "download_calls": 1.0,
+          "executor_overhead_us": 103.98380797705613,
+          "host_action_us": 123.38891600375064,
+          "plan_call_us": 994.3156052788254,
+          "plan_download_us": 4.194662487792969,
+          "plan_guard_us": 265.617608984375,
+          "plan_pack_us": 32.351436029052735,
+          "plan_submit_wait_us": 485.6975557006836,
+          "plan_workspace_us": 929.59977024002,
+          "postprocess_us": 27.74567579617724,
+          "preprocess_us": 95.2406414784491,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 24576.0,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 1.2326619433006272,
+          "r2": 1.1651020953024271,
+          "r3": 1.2250975621980615,
+          "r7": 1.2491330527991522,
+          "r8": 1.2654137389967217
+        },
+        "round_warm_ms": [
+          1.2326619433006272,
+          1.1651020953024271,
+          1.2250975621980615,
+          1.2491330527991522,
+          1.2654137389967217
+        ],
+        "setup_ms": 18.492003029678017,
+        "top1": 1.0,
+        "warm_ms": 1.2326619433006272,
+        "weight_load_ms": 11.283558036666363
+      },
+      "hostfused": {
+        "accuracy": 0.9831,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 1.2343394758936483,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 35.12456768658012,
+          "normalize": 72.32230806257576,
+          "pad_k": 35.56191226816736
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 768.0,
+          "download_calls": 1.0,
+          "executor_overhead_us": 108.67633855668828,
+          "host_action_us": 143.21322545874864,
+          "plan_call_us": 963.254083879292,
+          "plan_download_us": 4.132822973632813,
+          "plan_guard_us": 267.38451791992185,
+          "plan_pack_us": 31.492296459960937,
+          "plan_submit_wait_us": 516.6442619445801,
+          "plan_workspace_us": 947.3570697242394,
+          "postprocess_us": 35.12456768658012,
+          "preprocess_us": 108.10007905820385,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 24576.0,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 1.2616400988015812,
+          "r2": 1.2342928972968366,
+          "r3": 1.130354155600071
+        },
+        "round_warm_ms": [
+          1.2616400988015812,
+          1.2342928972968366,
+          1.130354155600071
+        ],
+        "setup_ms": 18.71689799008891,
+        "top1": 1.0,
+        "warm_ms": 1.2342928972968366,
+        "weight_load_ms": 11.084047029726207
+      },
+      "packed_atol": 0.0625,
+      "prepared": {
+        "accuracy": 0.9831,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 1.293063501798315,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 37.702269142027944,
+          "normalize": 73.25103346374817,
+          "pad_k": 36.72997369430959
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 768.0,
+          "download_calls": 1.0,
+          "executor_overhead_us": 113.52237228420563,
+          "host_action_us": 147.82841916312464,
+          "plan_call_us": 1006.7824418889359,
+          "plan_download_us": 4.255901733398438,
+          "plan_guard_us": 270.92080884399417,
+          "plan_pack_us": 32.11880772094727,
+          "plan_submit_wait_us": 550.423176763916,
+          "plan_workspace_us": 989.3075560976285,
+          "postprocess_us": 37.702269142027944,
+          "preprocess_us": 110.12082599336281,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 24576.0,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 1.1823170624033081,
+          "r2": 1.3691962820012122,
+          "r3": 1.2930173608008773,
+          "r7": 1.346647430100711,
+          "r8": 1.2578526568016968
+        },
+        "round_warm_ms": [
+          1.1823170624033081,
+          1.3691962820012122,
+          1.2930173608008773,
+          1.346647430100711,
+          1.2578526568016968
+        ],
+        "setup_ms": 18.960091983899474,
+        "top1": 1.0,
+        "warm_ms": 1.2930173608008773,
+        "weight_load_ms": 11.132780986372381
+      },
+      "vendor": {
+        "accuracy": 0.9831,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.0625,
+        "e2e_ms": 0.40895838805299717,
+        "execution_mode": "rknn-toolkit-lite2",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.03049468994140625,
+        "n": 10000.0,
+        "packed_atol_exceeded": false,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 0.42545864889980295,
+          "r2": 0.392343270604033
+        },
+        "round_warm_ms": [
+          0.42545864889980295,
+          0.392343270604033
+        ],
+        "setup_ms": 61.34831748204306,
+        "top1": 1.0,
+        "warm_ms": 0.408900959751918,
+        "weight_load_ms": null
+      }
+    },
+    "mnist_mlp.b32": {
+      "auto": {
+        "accuracy": 0.9831,
+        "calls": 314.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 2.164514592417166,
+        "execution_mode": "generic",
+        "execution_selection": {
+          "32": {
+            "reason": "low binding fanout; generic path has equivalent work and avoids resident Host write-back",
+            "requested": "auto",
+            "selected": "generic",
+            "static_binding_slots": 13,
+            "threshold": 32
+          },
+          "8": {
+            "reason": "low binding fanout; generic path has equivalent work and avoids resident Host write-back",
+            "requested": "auto",
+            "selected": "generic",
+            "static_binding_slots": 13,
+            "threshold": 32
+          }
+        },
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 33.10930666774749,
+          "normalize": 340.13371929455144,
+          "pad_k": 41.48572701130323
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 2039.8471337579617,
+          "download_calls": 1.0,
+          "executor_overhead_us": 121.016282244188,
+          "host_action_us": 414.7287529736022,
+          "plan_call_us": 1604.1101906730373,
+          "plan_download_us": 11.169561106687897,
+          "plan_guard_us": 267.12547448030705,
+          "plan_pack_us": 225.4352477249826,
+          "plan_submit_wait_us": 714.8707250121292,
+          "plan_workspace_us": 1448.1775543821536,
+          "postprocess_us": 33.10930666774749,
+          "preprocess_us": 381.6194463058547,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 65275.108280254775,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r4": 1.8246982611454785,
+          "r5": 2.193191605004642,
+          "r6": 2.163168672059965,
+          "r7": 2.29993442671854,
+          "r8": 1.9510318567771703
+        },
+        "round_warm_ms": [
+          1.8246982611454785,
+          2.193191605004642,
+          2.163168672059965,
+          2.29993442671854,
+          1.9510318567771703
+        ],
+        "setup_ms": 37.08316996926442,
+        "top1": 1.0,
+        "warm_ms": 2.163168672059965,
+        "weight_load_ms": 10.519693023525178
+      },
+      "cpu": {
+        "accuracy": 0.9831,
+        "calls": 314.0,
+        "declared_max_abs_logit_error": 0.050685882568359375,
+        "e2e_ms": 6.8618020971133635,
+        "execution_mode": "numpy-fp32",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.0,
+        "n": 10000.0,
+        "packed_atol_exceeded": false,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 6.855428242013392,
+          "r2": 6.866008917145598
+        },
+        "round_warm_ms": [
+          6.855428242013392,
+          6.866008917145598
+        ],
+        "setup_ms": 0.0,
+        "top1": 1.0,
+        "warm_ms": 6.860718579579495,
+        "weight_load_ms": null
+      },
+      "generic": {
+        "accuracy": 0.9831,
+        "calls": 314.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 2.1530404300606887,
+        "execution_mode": "generic",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 33.88110262039266,
+          "normalize": 343.3550960476255,
+          "pad_k": 42.43880071362872
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 2039.8471337579617,
+          "download_calls": 1.0,
+          "executor_overhead_us": 121.49170740317719,
+          "host_action_us": 420.0731544268976,
+          "plan_call_us": 1584.2963438659053,
+          "plan_download_us": 11.125887536698846,
+          "plan_guard_us": 265.2205944668715,
+          "plan_pack_us": 224.54530596884953,
+          "plan_submit_wait_us": 696.0683933914088,
+          "plan_workspace_us": 1428.4941307372846,
+          "postprocess_us": 33.88110262039266,
+          "preprocess_us": 386.18867075705464,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 65275.108280254775,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 2.0784358278949076,
+          "r2": 2.2425897961488337,
+          "r3": 2.108565261209336,
+          "r7": 2.1515412452248084,
+          "r8": 2.2150955954863196
+        },
+        "round_warm_ms": [
+          2.0784358278949076,
+          2.2425897961488337,
+          2.108565261209336,
+          2.1515412452248084,
+          2.2150955954863196
+        ],
+        "setup_ms": 37.39140002289787,
+        "top1": 1.0,
+        "warm_ms": 2.1515412452248084,
+        "weight_load_ms": 11.283558036666363
+      },
+      "hostfused": {
+        "accuracy": 0.9831,
+        "calls": 314.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 2.1286347323352364,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 41.13235701450924,
+          "normalize": 360.62433619414026,
+          "pad_k": 51.032970726169694
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 2039.8471337579617,
+          "download_calls": 1.0,
+          "executor_overhead_us": 127.07959502419327,
+          "host_action_us": 452.6881466228159,
+          "plan_call_us": 1523.319514658136,
+          "plan_download_us": 11.529057205103005,
+          "plan_guard_us": 270.00785001523934,
+          "plan_pack_us": 230.96840847525627,
+          "plan_submit_wait_us": 760.9612617249702,
+          "plan_workspace_us": 1503.428782204427,
+          "postprocess_us": 41.13235701450924,
+          "preprocess_us": 411.55578960830667,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 65275.108280254775,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 2.004335656099223,
+          "r2": 2.1272943821175105,
+          "r3": 2.283161907763796
+        },
+        "round_warm_ms": [
+          2.004335656099223,
+          2.1272943821175105,
+          2.283161907763796
+        ],
+        "setup_ms": 38.170722022186965,
+        "top1": 1.0,
+        "warm_ms": 2.1272943821175105,
+        "weight_load_ms": 11.084047029726207
+      },
+      "packed_atol": 0.0625,
+      "prepared": {
+        "accuracy": 0.9831,
+        "calls": 314.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 2.1886470411373242,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 42.54739600304917,
+          "normalize": 365.28645821841087,
+          "pad_k": 52.12398694537485
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 2039.8471337579617,
+          "download_calls": 1.0,
+          "executor_overhead_us": 130.6823898955088,
+          "host_action_us": 460.9809750186837,
+          "plan_call_us": 1563.531715885564,
+          "plan_download_us": 11.65164651081061,
+          "plan_guard_us": 276.02776380405305,
+          "plan_pack_us": 234.99567350156747,
+          "plan_submit_wait_us": 786.0350841352134,
+          "plan_workspace_us": 1543.2881360063864,
+          "postprocess_us": 42.54739600304917,
+          "preprocess_us": 417.41044516378577,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 65275.108280254775,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 2.226217254843551,
+          "r2": 1.9102635764469433,
+          "r3": 2.174850366231066,
+          "r7": 2.2938674969070703,
+          "r8": 2.187146926647242
+        },
+        "round_warm_ms": [
+          2.226217254843551,
+          1.9102635764469433,
+          2.174850366231066,
+          2.2938674969070703,
+          2.187146926647242
+        ],
+        "setup_ms": 38.295029022265226,
+        "top1": 1.0,
+        "warm_ms": 2.187146926647242,
+        "weight_load_ms": 11.132780986372381
+      },
+      "vendor": {
+        "accuracy": 0.9831,
+        "calls": 314.0,
+        "declared_max_abs_logit_error": 0.0625,
+        "e2e_ms": 0.8354984044214522,
+        "execution_mode": "rknn-toolkit-lite2",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.03049468994140625,
+        "n": 10000.0,
+        "packed_atol_exceeded": false,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 0.8351973248319404,
+          "r2": 0.8328884299088175
+        },
+        "round_warm_ms": [
+          0.8351973248319404,
+          0.8328884299088175
+        ],
+        "setup_ms": 205.15126953250729,
+        "top1": 1.0,
+        "warm_ms": 0.834042877370379,
+        "weight_load_ms": null
+      }
+    },
+    "mnist_mlp.b8": {
+      "auto": {
+        "accuracy": 0.9831,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 1.3047602352220564,
+        "execution_mode": "generic",
+        "execution_selection": {
+          "8": {
+            "reason": "low binding fanout; generic path has equivalent work and avoids resident Host write-back",
+            "requested": "auto",
+            "selected": "generic",
+            "static_binding_slots": 13,
+            "threshold": 32
+          }
+        },
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 28.36991185322404,
+          "normalize": 123.66728009656072,
+          "pad_k": 31.675474205985665
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 768.0,
+          "download_calls": 1.0,
+          "executor_overhead_us": 103.61393974162638,
+          "host_action_us": 183.71266615577042,
+          "plan_call_us": 1005.7960878591985,
+          "plan_download_us": 5.675767578125,
+          "plan_guard_us": 278.52785947265625,
+          "plan_pack_us": 76.89744267578125,
+          "plan_submit_wait_us": 420.1788229003906,
+          "plan_workspace_us": 923.9192557055503,
+          "postprocess_us": 28.36991185322404,
+          "preprocess_us": 155.34275430254638,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 24576.0,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r4": 1.3043836399912834,
+          "r5": 1.279207461606711,
+          "r6": 1.657632991997525,
+          "r7": 1.2273637607693673,
+          "r8": 1.6436896855942904
+        },
+        "round_warm_ms": [
+          1.3043836399912834,
+          1.279207461606711,
+          1.657632991997525,
+          1.2273637607693673,
+          1.6436896855942904
+        ],
+        "setup_ms": 17.946287989616394,
+        "top1": 1.0,
+        "warm_ms": 1.3043836399912834,
+        "weight_load_ms": 10.519693023525178
+      },
+      "cpu": {
+        "accuracy": 0.9831,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.050685882568359375,
+        "e2e_ms": 1.750974306790158,
+        "execution_mode": "numpy-fp32",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.0,
+        "n": 10000.0,
+        "packed_atol_exceeded": false,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 1.751982994377613,
+          "r2": 1.7493657271843404
+        },
+        "round_warm_ms": [
+          1.751982994377613,
+          1.7493657271843404
+        ],
+        "setup_ms": 0.0,
+        "top1": 1.0,
+        "warm_ms": 1.7506743607809767,
+        "weight_load_ms": null
+      },
+      "generic": {
+        "accuracy": 0.9831,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 1.2716261559631676,
+        "execution_mode": "generic",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 27.35328539274633,
+          "normalize": 123.00939690321684,
+          "pad_k": 31.684096436947584
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 768.0,
+          "download_calls": 1.0,
+          "executor_overhead_us": 103.96149442531168,
+          "host_action_us": 183.85790367610753,
+          "plan_call_us": 978.2084626145661,
+          "plan_download_us": 5.367068115234375,
+          "plan_guard_us": 259.55223896484375,
+          "plan_pack_us": 74.21311528320312,
+          "plan_submit_wait_us": 387.82619853515627,
+          "plan_workspace_us": 898.2152559794486,
+          "postprocess_us": 27.35328539274633,
+          "preprocess_us": 154.74690292030573,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 24576.0,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 1.2712612279690803,
+          "r2": 1.2568199719768018,
+          "r3": 1.342324395989999,
+          "r7": 1.335898607224226,
+          "r8": 1.1859210824128241
+        },
+        "round_warm_ms": [
+          1.2712612279690803,
+          1.2568199719768018,
+          1.342324395989999,
+          1.335898607224226,
+          1.1859210824128241
+        ],
+        "setup_ms": 17.860552005004138,
+        "top1": 1.0,
+        "warm_ms": 1.2712612279690803,
+        "weight_load_ms": 11.283558036666363
+      },
+      "hostfused": {
+        "accuracy": 0.9831,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 1.3298965631984174,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 35.48606596887112,
+          "normalize": 135.33960687927902,
+          "pad_k": 38.730491138994694
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 768.0,
+          "download_calls": 1.0,
+          "executor_overhead_us": 111.32210968062282,
+          "host_action_us": 209.55616398714483,
+          "plan_call_us": 990.201814007014,
+          "plan_download_us": 5.48746650390625,
+          "plan_guard_us": 262.47650864257815,
+          "plan_pack_us": 74.37396787109375,
+          "plan_submit_wait_us": 484.56420673828126,
+          "plan_workspace_us": 973.641887307167,
+          "postprocess_us": 35.48606596887112,
+          "preprocess_us": 174.0700980182737,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 24576.0,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 1.2121411911677569,
+          "r2": 1.3295650000218302,
+          "r3": 1.5456946264021099
+        },
+        "round_warm_ms": [
+          1.2121411911677569,
+          1.3295650000218302,
+          1.5456946264021099
+        ],
+        "setup_ms": 18.281102005857974,
+        "top1": 1.0,
+        "warm_ms": 1.3295650000218302,
+        "weight_load_ms": 11.084047029726207
+      },
+      "packed_atol": 0.0625,
+      "prepared": {
+        "accuracy": 0.9831,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 1.3681221104227006,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 38.67048001848161,
+          "normalize": 137.26499127224088,
+          "pad_k": 39.29926925338805
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.050685882568359375,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 768.0,
+          "download_calls": 1.0,
+          "executor_overhead_us": 116.16471605375409,
+          "host_action_us": 213.95605844445527,
+          "plan_call_us": 1015.7020875718445,
+          "plan_download_us": 5.699545947265625,
+          "plan_guard_us": 265.38817602539064,
+          "plan_pack_us": 75.68555073242187,
+          "plan_submit_wait_us": 500.9243903808594,
+          "plan_workspace_us": 998.1236891821027,
+          "postprocess_us": 38.67048001848161,
+          "preprocess_us": 176.56426052562892,
+          "submit_count": 8.0,
+          "task_count": 11.0,
+          "upload_bytes": 24576.0,
+          "upload_calls": 4.0
+        },
+        "round_warm_by_tag": {
+          "r1": 1.3407918848097324,
+          "r2": 1.4123205839656294,
+          "r3": 1.3677900816313922,
+          "r7": 1.7133617856074124,
+          "r8": 1.2389595719985664
+        },
+        "round_warm_ms": [
+          1.3407918848097324,
+          1.4123205839656294,
+          1.3677900816313922,
+          1.7133617856074124,
+          1.2389595719985664
+        ],
+        "setup_ms": 18.18488200660795,
+        "top1": 1.0,
+        "warm_ms": 1.3677900816313922,
+        "weight_load_ms": 11.132780986372381
+      },
+      "vendor": {
+        "accuracy": 0.9831,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.0625,
+        "e2e_ms": 0.5277395227923989,
+        "execution_mode": "rknn-toolkit-lite2",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.03049468994140625,
+        "n": 10000.0,
+        "packed_atol_exceeded": false,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 0.5276757231913507,
+          "r2": 0.5270179335959255
+        },
+        "round_warm_ms": [
+          0.5276757231913507,
+          0.5270179335959255
+        ],
+        "setup_ms": 61.466003011446446,
+        "top1": 1.0,
+        "warm_ms": 0.5273468283936381,
+        "weight_load_ms": null
+      }
+    },
+    "tiny_vit.b1": {
+      "auto": {
+        "accuracy": 0.9821,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 2.3576056335994506,
+        "execution_mode": "prepared",
+        "execution_selection": {
+          "1": {
+            "reason": "binding fanout amortises resident write-back",
+            "requested": "auto",
+            "selected": "prepared",
+            "static_binding_slots": 42,
+            "threshold": 32
+          }
+        },
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 25.976278173038736,
+          "mean_pool": 41.176893742522225,
+          "merge_heads": 30.265916377538815,
+          "patch_pad": 30.651520186802372,
+          "patchify": 64.58596788579598,
+          "position_add": 52.8197982464917,
+          "reshape_tokens": 51.690105436136946,
+          "residual_attention": 44.214009784627706,
+          "residual_ffn": 45.10985192609951,
+          "rmsnorm1": 76.36478814529255,
+          "rmsnorm2": 77.08996118162759,
+          "softmax": 90.23156538023613,
+          "swiglu": 105.01870910520665
+        },
+        "host_residency_bytes": 63208.0,
+        "max_abs_logit_error": 0.038425445556640625,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 29440.0,
+          "download_calls": 14.0,
+          "executor_overhead_us": 465.3132439532783,
+          "host_action_us": 735.8492391882464,
+          "plan_call_us": 1142.830547253834,
+          "plan_download_us": 134.18853587646484,
+          "plan_guard_us": 230.13459646606447,
+          "plan_pack_us": 95.03673840942383,
+          "plan_submit_wait_us": 359.66030435180664,
+          "plan_workspace_us": 1049.3945235619321,
+          "postprocess_us": 25.976278173038736,
+          "preprocess_us": 94.94972896645777,
+          "submit_count": 8.0,
+          "task_count": 14.0,
+          "upload_bytes": 38400.0,
+          "upload_calls": 22.0
+        },
+        "round_warm_by_tag": {
+          "r4": 2.357562234200304,
+          "r5": 2.2976706911984364,
+          "r6": 2.484871218103217,
+          "r7": 2.2982610178005416,
+          "r8": 2.372643696598243
+        },
+        "round_warm_ms": [
+          2.357562234200304,
+          2.2976706911984364,
+          2.484871218103217,
+          2.2982610178005416,
+          2.372643696598243
+        ],
+        "setup_ms": 45.258152997121215,
+        "top1": 1.0,
+        "warm_ms": 2.357562234200304,
+        "weight_load_ms": 3.974779974669218
+      },
+      "cpu": {
+        "accuracy": 0.9821,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.038425445556640625,
+        "e2e_ms": 0.8741193855472376,
+        "execution_mode": "numpy-fp32",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.0,
+        "n": 10000.0,
+        "packed_atol_exceeded": false,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 0.8768897898960859,
+          "r2": 0.8712701447017025
+        },
+        "round_warm_ms": [
+          0.8768897898960859,
+          0.8712701447017025
+        ],
+        "setup_ms": 0.0,
+        "top1": 1.0,
+        "warm_ms": 0.8740799672988941,
+        "weight_load_ms": null
+      },
+      "generic": {
+        "accuracy": 0.9821,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 3.0752832197002133,
+        "execution_mode": "generic",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 24.077192175900564,
+          "mean_pool": 40.4933774494566,
+          "merge_heads": 28.346443630289286,
+          "patch_pad": 28.95832117064856,
+          "patchify": 65.83432930638082,
+          "position_add": 51.045129232807085,
+          "reshape_tokens": 51.09683754853904,
+          "residual_attention": 41.90304458606988,
+          "residual_ffn": 41.178491833852604,
+          "rmsnorm1": 78.27828136505559,
+          "rmsnorm2": 79.1795500961598,
+          "softmax": 92.04829953960143,
+          "swiglu": 98.27290671528317
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.038425445556640625,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 29440.0,
+          "download_calls": 14.0,
+          "executor_overhead_us": 492.9550971428398,
+          "host_action_us": 718.4721582743805,
+          "plan_call_us": 1845.73304700898,
+          "plan_download_us": 137.37106010742187,
+          "plan_guard_us": 234.26213345336913,
+          "plan_pack_us": 99.71672209472656,
+          "plan_submit_wait_us": 442.1398998168945,
+          "plan_workspace_us": 1209.0526034065988,
+          "postprocess_us": 24.077192175900564,
+          "preprocess_us": 94.70404228195548,
+          "submit_count": 8.0,
+          "task_count": 14.0,
+          "upload_bytes": 38400.0,
+          "upload_calls": 22.0
+        },
+        "round_warm_by_tag": {
+          "r1": 3.075245566101512,
+          "r2": 3.270880289998604,
+          "r3": 3.080902830202831,
+          "r7": 3.06385607609991,
+          "r8": 3.059975294797914
+        },
+        "round_warm_ms": [
+          3.075245566101512,
+          3.270880289998604,
+          3.080902830202831,
+          3.06385607609991,
+          3.059975294797914
+        ],
+        "setup_ms": 43.977203022222966,
+        "top1": 1.0,
+        "warm_ms": 3.075245566101512,
+        "weight_load_ms": 3.641991992481053
+      },
+      "hostfused": {
+        "accuracy": 0.9821,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 2.2832142397994177,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 25.81255700206384,
+          "mean_pool": 40.93373109353706,
+          "merge_heads": 30.679280345793813,
+          "patch_pad": 29.85726247425191,
+          "patchify": 66.06855186983012,
+          "position_add": 51.77364050759934,
+          "reshape_tokens": 50.79114600084722,
+          "residual_ffn": 45.06877903477289,
+          "residual_rmsnorm2": 111.82160108000971,
+          "rmsnorm1": 76.81470058159903,
+          "softmax": 90.42647223104723,
+          "swiglu": 104.77694508736022
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.038425445556640625,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 29440.0,
+          "download_calls": 14.0,
+          "executor_overhead_us": 451.8498995283153,
+          "host_action_us": 721.1507902480662,
+          "plan_call_us": 1092.9910952516366,
+          "plan_download_us": 134.78055731811523,
+          "plan_guard_us": 226.5830277770996,
+          "plan_pack_us": 93.20084516601563,
+          "plan_submit_wait_us": 332.2755116760254,
+          "plan_workspace_us": 1004.2406963882968,
+          "postprocess_us": 25.81255700206384,
+          "preprocess_us": 95.48814636655152,
+          "submit_count": 8.0,
+          "task_count": 14.0,
+          "upload_bytes": 38400.0,
+          "upload_calls": 22.0
+        },
+        "round_warm_by_tag": {
+          "r1": 2.2277441254002044,
+          "r2": 2.2831776943989097,
+          "r3": 2.4791853665024974
+        },
+        "round_warm_ms": [
+          2.2277441254002044,
+          2.2831776943989097,
+          2.4791853665024974
+        ],
+        "setup_ms": 47.35267598880455,
+        "top1": 1.0,
+        "warm_ms": 2.2831776943989097,
+        "weight_load_ms": 3.9782850071787834
+      },
+      "packed_atol": 0.0625,
+      "prepared": {
+        "accuracy": 0.9821,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 2.498596880398691,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 28.632667334750295,
+          "mean_pool": 42.714488704223186,
+          "merge_heads": 31.862136424751952,
+          "patch_pad": 30.86047906544991,
+          "patchify": 67.20434384187683,
+          "position_add": 54.54580470104702,
+          "reshape_tokens": 53.10446337098256,
+          "residual_attention": 46.05603473610245,
+          "residual_ffn": 48.37425677687861,
+          "rmsnorm1": 79.21813856810331,
+          "rmsnorm2": 78.84472572477534,
+          "softmax": 94.01670399820432,
+          "swiglu": 106.67776192422025
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.038425445556640625,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 29440.0,
+          "download_calls": 14.0,
+          "executor_overhead_us": 495.11405759258196,
+          "host_action_us": 759.3699901364744,
+          "plan_call_us": 1192.5603218260221,
+          "plan_download_us": 136.71246365356444,
+          "plan_guard_us": 233.08085083007813,
+          "plan_pack_us": 95.53425736694336,
+          "plan_submit_wait_us": 406.95712709960935,
+          "plan_workspace_us": 1092.7472719864454,
+          "postprocess_us": 28.632667334750295,
+          "preprocess_us": 97.9336510063149,
+          "submit_count": 8.0,
+          "task_count": 14.0,
+          "upload_bytes": 38400.0,
+          "upload_calls": 22.0
+        },
+        "round_warm_by_tag": {
+          "r1": 2.4053529413999057,
+          "r2": 2.384140377002768,
+          "r3": 2.5047567140019966,
+          "r7": 2.554519185499521,
+          "r8": 2.4985548517957796
+        },
+        "round_warm_ms": [
+          2.4053529413999057,
+          2.384140377002768,
+          2.5047567140019966,
+          2.554519185499521,
+          2.4985548517957796
+        ],
+        "setup_ms": 45.56115303421393,
+        "top1": 1.0,
+        "warm_ms": 2.4985548517957796,
+        "weight_load_ms": 3.6209929967299104
+      },
+      "vendor": {
+        "accuracy": 0.9821,
+        "calls": 10000.0,
+        "declared_max_abs_logit_error": 0.09765625,
+        "e2e_ms": 1.0216924095962896,
+        "execution_mode": "rknn-toolkit-lite2",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.10714578628540039,
+        "n": 10000.0,
+        "packed_atol_exceeded": true,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 0.960331325000152,
+          "r2": 1.0829273208975791
+        },
+        "round_warm_ms": [
+          0.960331325000152,
+          1.0829273208975791
+        ],
+        "setup_ms": 61.818649992346764,
+        "top1": 1.0,
+        "warm_ms": 1.0216293229488655,
+        "weight_load_ms": null
+      }
+    },
+    "tiny_vit.b8": {
+      "auto": {
+        "accuracy": 0.9821,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 7.303473010426387,
+        "execution_mode": "prepared",
+        "execution_selection": {
+          "8": {
+            "reason": "binding fanout amortises resident write-back",
+            "requested": "auto",
+            "selected": "prepared",
+            "static_binding_slots": 210,
+            "threshold": 32
+          }
+        },
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 43.04587924852967,
+          "mean_pool": 96.2871456053108,
+          "merge_heads": 61.4125142339617,
+          "patch_pad": 55.309075489640236,
+          "patchify": 169.748996803537,
+          "position_add": 141.90489244647324,
+          "reshape_tokens": 102.03359993174672,
+          "residual_attention": 149.3914400227368,
+          "residual_ffn": 147.6546086370945,
+          "rmsnorm1": 191.77957721985877,
+          "rmsnorm2": 211.20728929527104,
+          "softmax": 342.2998445574194,
+          "swiglu": 459.7554459236562
+        },
+        "host_residency_bytes": 505664.0,
+        "max_abs_logit_error": 0.038425445556640625,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 230144.0,
+          "download_calls": 70.0,
+          "executor_overhead_us": 669.3965474609286,
+          "host_action_us": 2175.95201455988,
+          "plan_call_us": 4409.216832323,
+          "plan_download_us": 1150.258372216797,
+          "plan_guard_us": 269.2506624511719,
+          "plan_pack_us": 475.8469712402344,
+          "plan_submit_wait_us": 1282.1138302734375,
+          "plan_workspace_us": 4268.109497660771,
+          "postprocess_us": 43.04587924852967,
+          "preprocess_us": 224.43171055056155,
+          "submit_count": 8.0,
+          "task_count": 70.0,
+          "upload_bytes": 296448.0,
+          "upload_calls": 134.0
+        },
+        "round_warm_by_tag": {
+          "r4": 7.1704884191975,
+          "r5": 7.299869227176532,
+          "r6": 7.3031577816233035,
+          "r7": 7.591238492028788,
+          "r8": 7.3511165080126375
+        },
+        "round_warm_ms": [
+          7.1704884191975,
+          7.299869227176532,
+          7.3031577816233035,
+          7.591238492028788,
+          7.3511165080126375
+        ],
+        "setup_ms": 64.30109299253672,
+        "top1": 1.0,
+        "warm_ms": 7.3031577816233035,
+        "weight_load_ms": 3.974779974669218
+      },
+      "cpu": {
+        "accuracy": 0.9821,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.038425445556640625,
+        "e2e_ms": 5.872958472394385,
+        "execution_mode": "numpy-fp32",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.0,
+        "n": 10000.0,
+        "packed_atol_exceeded": false,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 5.894296534406021,
+          "r2": 5.851051551196724
+        },
+        "round_warm_ms": [
+          5.894296534406021,
+          5.851051551196724
+        ],
+        "setup_ms": 0.0,
+        "top1": 1.0,
+        "warm_ms": 5.872674042801373,
+        "weight_load_ms": null
+      },
+      "generic": {
+        "accuracy": 0.9821,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 10.23881536484696,
+        "execution_mode": "generic",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 35.7160828076303,
+          "mean_pool": 95.32900140620768,
+          "merge_heads": 67.16501996852458,
+          "patch_pad": 48.72028920799494,
+          "patchify": 164.15035701356828,
+          "position_add": 137.22169855609536,
+          "reshape_tokens": 89.9476564489305,
+          "residual_attention": 138.72087285853922,
+          "residual_ffn": 135.99626696668565,
+          "rmsnorm1": 194.41072600893676,
+          "rmsnorm2": 220.4490992706269,
+          "softmax": 340.1301262900233,
+          "swiglu": 448.02247057668865
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.038425445556640625,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 230144.0,
+          "download_calls": 70.0,
+          "executor_overhead_us": 689.853863697499,
+          "host_action_us": 2130.5339292623103,
+          "plan_call_us": 7371.869324101135,
+          "plan_download_us": 1158.9858862304689,
+          "plan_guard_us": 265.1555888671875,
+          "plan_pack_us": 465.4095150390625,
+          "plan_submit_wait_us": 1405.2766235351562,
+          "plan_workspace_us": 4510.8112858608365,
+          "postprocess_us": 35.7160828076303,
+          "preprocess_us": 213.0070383194834,
+          "submit_count": 8.0,
+          "task_count": 70.0,
+          "upload_bytes": 296448.0,
+          "upload_calls": 134.0
+        },
+        "round_warm_by_tag": {
+          "r1": 10.679991251183674,
+          "r2": 10.010205237567424,
+          "r3": 10.209966156026349,
+          "r7": 10.238477268815041,
+          "r8": 10.41831722720526
+        },
+        "round_warm_ms": [
+          10.679991251183674,
+          10.010205237567424,
+          10.209966156026349,
+          10.238477268815041,
+          10.41831722720526
+        ],
+        "setup_ms": 60.87672698777169,
+        "top1": 1.0,
+        "warm_ms": 10.238477268815041,
+        "weight_load_ms": 3.641991992481053
+      },
+      "hostfused": {
+        "accuracy": 0.9821,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 7.550243225647137,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 45.823566941544414,
+          "mean_pool": 102.48412396758795,
+          "merge_heads": 70.0321109034121,
+          "patch_pad": 56.26656576059759,
+          "patchify": 175.39429576136172,
+          "position_add": 146.05486071668565,
+          "reshape_tokens": 103.94029165618122,
+          "residual_ffn": 155.03271999768913,
+          "residual_rmsnorm2": 363.4586954023689,
+          "rmsnorm1": 203.7646286189556,
+          "softmax": 348.68205948732793,
+          "swiglu": 468.29417990520597
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.038425445556640625,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 230144.0,
+          "download_calls": 70.0,
+          "executor_overhead_us": 697.4491262808442,
+          "host_action_us": 2245.979982241988,
+          "plan_call_us": 4552.92696733959,
+          "plan_download_us": 1161.3357908203125,
+          "plan_guard_us": 267.7810627929687,
+          "plan_pack_us": 473.85924306640624,
+          "plan_submit_wait_us": 1370.681780908203,
+          "plan_workspace_us": 4398.216812545434,
+          "postprocess_us": 45.823566941544414,
+          "preprocess_us": 231.75719608552754,
+          "submit_count": 8.0,
+          "task_count": 70.0,
+          "upload_bytes": 296448.0,
+          "upload_calls": 134.0
+        },
+        "round_warm_by_tag": {
+          "r1": 7.498297576792538,
+          "r2": 7.5833857448305935,
+          "r3": 7.549926130427048
+        },
+        "round_warm_ms": [
+          7.498297576792538,
+          7.5833857448305935,
+          7.549926130427048
+        ],
+        "setup_ms": 64.64158999733627,
+        "top1": 1.0,
+        "warm_ms": 7.549926130427048,
+        "weight_load_ms": 3.9782850071787834
+      },
+      "packed_atol": 0.0625,
+      "prepared": {
+        "accuracy": 0.9821,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.03125,
+        "e2e_ms": 7.442625115998089,
+        "execution_mode": "prepared",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {
+          "export_logits": 43.09375584125519,
+          "mean_pool": 99.13594513200223,
+          "merge_heads": 65.81466253846884,
+          "patch_pad": 55.16907423734665,
+          "patchify": 171.51799337007105,
+          "position_add": 145.78192764893174,
+          "reshape_tokens": 100.36675347946584,
+          "residual_attention": 151.66698866523802,
+          "residual_ffn": 151.33845279924572,
+          "rmsnorm1": 198.76375370658934,
+          "rmsnorm2": 216.6693955194205,
+          "softmax": 341.36295625939965,
+          "swiglu": 461.16012185811996
+        },
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.038425445556640625,
+        "n": 10000.0,
+        "per_call": {
+          "download_bytes": 230144.0,
+          "download_calls": 70.0,
+          "executor_overhead_us": 677.2552988491952,
+          "host_action_us": 2218.63932791166,
+          "plan_call_us": 4468.353235721588,
+          "plan_download_us": 1169.7361787109376,
+          "plan_guard_us": 268.9931255859375,
+          "plan_pack_us": 472.0538645019531,
+          "plan_submit_wait_us": 1319.3256077148437,
+          "plan_workspace_us": 4332.954477332532,
+          "postprocess_us": 43.09375584125519,
+          "preprocess_us": 227.1273402031511,
+          "submit_count": 8.0,
+          "task_count": 70.0,
+          "upload_bytes": 296448.0,
+          "upload_calls": 134.0
+        },
+        "round_warm_by_tag": {
+          "r1": 7.167949282424525,
+          "r2": 7.321476073609665,
+          "r3": 7.579280125629157,
+          "r7": 7.537736341590062,
+          "r8": 7.4422975199762735
+        },
+        "round_warm_ms": [
+          7.167949282424525,
+          7.321476073609665,
+          7.579280125629157,
+          7.537736341590062,
+          7.4422975199762735
+        ],
+        "setup_ms": 63.285498006735,
+        "top1": 1.0,
+        "warm_ms": 7.4422975199762735,
+        "weight_load_ms": 3.6209929967299104
+      },
+      "vendor": {
+        "accuracy": 0.9821,
+        "calls": 1250.0,
+        "declared_max_abs_logit_error": 0.11328125,
+        "e2e_ms": 4.2733130664099015,
+        "execution_mode": "rknn-toolkit-lite2",
+        "execution_selection": null,
+        "full_test_split": true,
+        "host_actions": {},
+        "host_residency_bytes": 0.0,
+        "max_abs_logit_error": 0.12277078628540039,
+        "n": 10000.0,
+        "packed_atol_exceeded": true,
+        "per_call": {
+          "download_bytes": null,
+          "download_calls": null,
+          "executor_overhead_us": null,
+          "host_action_us": null,
+          "plan_call_us": null,
+          "plan_download_us": null,
+          "plan_guard_us": null,
+          "plan_pack_us": null,
+          "plan_submit_wait_us": null,
+          "plan_workspace_us": null,
+          "postprocess_us": null,
+          "preprocess_us": null,
+          "submit_count": null,
+          "task_count": null,
+          "upload_bytes": null,
+          "upload_calls": null
+        },
+        "round_warm_by_tag": {
+          "r1": 4.250485883187503,
+          "r2": 4.2944661056157205
+        },
+        "round_warm_ms": [
+          4.250485883187503,
+          4.2944661056157205
+        ],
+        "setup_ms": 64.1968420241028,
+        "top1": 1.0,
+        "warm_ms": 4.272475994401612,
+        "weight_load_ms": null
+      }
+    }
+  },
+  "reference_arm": "generic",
+  "rounds_by_arm": {
+    "auto": 5,
+    "cpu": 2,
+    "generic": 5,
+    "hostfused": 3,
+    "prepared": 5,
+    "vendor": 2
+  },
+  "schema_version": 1,
+  "speedup_summary": {
+    "auto": {
+      "geomean": 1.1262861507374975,
+      "max": 1.4019246981871027,
+      "min": 0.9746068480110465,
+      "paired_geomean": 1.1147082495210594,
+      "paired_profile_ratios": {
+        "mnist_mlp.b1": 1.0395993721211838,
+        "mnist_mlp.b32": 1.0354125343450298,
+        "mnist_mlp.b8": 0.9049643087438418,
+        "tiny_vit.b1": 1.3114047345401652,
+        "tiny_vit.b8": 1.3829828742913541
+      },
+      "paired_rounds": [
+        "r7",
+        "r8"
+      ],
+      "profile_ratios": {
+        "mnist_mlp.b1": 1.0223830660344517,
+        "mnist_mlp.b32": 0.9946248172944905,
+        "mnist_mlp.b8": 0.9746068480110465,
+        "tiny_vit.b1": 1.3044175553417148,
+        "tiny_vit.b8": 1.4019246981871027
+      }
+    },
+    "hostfused": {
+      "geomean": 1.1202144356581638,
+      "max": 1.3561029726572862,
+      "min": 0.9561482349100701,
+      "paired_geomean": 1.119387384290168,
+      "paired_profile_ratios": {
+        "mnist_mlp.b1": 0.9770313613775592,
+        "mnist_mlp.b32": 1.0369699414218354,
+        "mnist_mlp.b8": 0.9452865952068278,
+        "tiny_vit.b1": 1.380430333555052,
+        "tiny_vit.b8": 1.352326629379729
+      },
+      "paired_rounds": [
+        "r1",
+        "r2",
+        "r3"
+      ],
+      "profile_ratios": {
+        "mnist_mlp.b1": 0.9986786329243397,
+        "mnist_mlp.b32": 1.0113979820146766,
+        "mnist_mlp.b8": 0.9561482349100701,
+        "tiny_vit.b1": 1.3469146854604015,
+        "tiny_vit.b8": 1.3561029726572862
+      }
+    },
+    "prepared": {
+      "geomean": 1.0809589239671913,
+      "max": 1.3757145883154214,
+      "min": 0.9294271431277087,
+      "paired_geomean": 1.0872286080724416,
+      "paired_profile_ratios": {
+        "mnist_mlp.b1": 0.9474718587221852,
+        "mnist_mlp.b32": 0.9695219928456045,
+        "mnist_mlp.b8": 0.9481420960043183,
+        "tiny_vit.b1": 1.2300207892367685,
+        "tiny_vit.b8": 1.36723867385831
+      },
+      "paired_rounds": [
+        "r1",
+        "r2",
+        "r3",
+        "r7",
+        "r8"
+      ],
+      "profile_ratios": {
+        "mnist_mlp.b1": 0.9533220362463913,
+        "mnist_mlp.b32": 0.983720489470264,
+        "mnist_mlp.b8": 0.9294271431277087,
+        "tiny_vit.b1": 1.2308097074159685,
+        "tiny_vit.b8": 1.3757145883154214
+      }
+    }
+  },
+  "speedups_vs_reference": {
+    "auto": {
+      "mnist_mlp.b1": 1.0223830660344517,
+      "mnist_mlp.b32": 0.9946248172944905,
+      "mnist_mlp.b8": 0.9746068480110465,
+      "tiny_vit.b1": 1.3044175553417148,
+      "tiny_vit.b8": 1.4019246981871027
+    },
+    "hostfused": {
+      "mnist_mlp.b1": 0.9986786329243397,
+      "mnist_mlp.b32": 1.0113979820146766,
+      "mnist_mlp.b8": 0.9561482349100701,
+      "tiny_vit.b1": 1.3469146854604015,
+      "tiny_vit.b8": 1.3561029726572862
+    },
+    "prepared": {
+      "mnist_mlp.b1": 0.9533220362463913,
+      "mnist_mlp.b32": 0.983720489470264,
+      "mnist_mlp.b8": 0.9294271431277087,
+      "tiny_vit.b1": 1.2308097074159685,
+      "tiny_vit.b8": 1.3757145883154214
+    }
+  },
+  "status": "PASS"
+}

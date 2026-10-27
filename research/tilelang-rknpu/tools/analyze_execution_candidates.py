@@ -42,6 +42,7 @@ CUSTOM_STATS = (
     "executor_overhead_us", "plan_pack_us", "plan_submit_wait_us",
     "plan_download_us", "plan_guard_us", "task_count", "submit_count",
     "upload_calls", "download_calls", "upload_bytes", "download_bytes",
+    "preprocess_us", "postprocess_us",
 )
 
 
@@ -139,6 +140,7 @@ def _arm_table(results: Path, arm: str) -> dict:
     if not rounds:
         raise FileNotFoundError(f"no rounds for arm {arm!r} under {results}")
     parsed = [_profile_rows(path, arm) for path in rounds]
+    round_tags = [path.name.split("-", 1)[0] for path in rounds]
     family = parsed[0][1]
     if any(item[1] != family for item in parsed):
         raise RuntimeError(f"arm {arm!r} mixes custom and external schemas")
@@ -159,6 +161,9 @@ def _arm_table(results: Path, arm: str) -> dict:
         prof["full_test_split"] = all(bool(row["full_test_split"])
                                       for row in rows)
         prof["round_warm_ms"] = [float(row["warm_ms"]) for row in rows]
+        prof["round_warm_by_tag"] = {
+            tag: float(row["warm_ms"]) for tag, row in zip(round_tags, rows)
+        }
         prof["execution_mode"] = rows[0].get("execution_mode")
         prof["execution_selection"] = rows[0].get("execution_selection")
         prof["per_call"] = {
@@ -187,15 +192,29 @@ def _logits_path(path: Path, arm: str, key: str) -> Path | None:
 def _numeric_comparison(results: Path, arms: list[str],
                         reference_arm: str) -> dict:
     cmp: dict[str, Any] = {}
+    reference_dirs = _round_dirs(results, reference_arm)
+    if not reference_dirs:
+        raise FileNotFoundError(f"no reference rounds for {reference_arm!r}")
     for arm in arms:
         if arm == reference_arm:
             continue
         rounds = []
-        for ref_dir in _round_dirs(results, reference_arm):
-            suffix = ref_dir.name.split("-", 1)[1]
-            arm_dir = ref_dir.with_name(ref_dir.name[:-len(suffix)] + arm)
-            if not arm_dir.is_dir():
+        for arm_dir in _round_dirs(results, arm):
+            # A curated checkpoint may retain round JSON but only a subset of
+            # large raw-logit sidecars.  Compare rounds whose arrays are present
+            # instead of treating an intentionally omitted binary as a mismatch.
+            if not any(_logits_path(arm_dir, arm, key) is not None
+                       for key in PROFILE_KEYS):
                 continue
+            # Round directories are named rN-arm.  An additional final arm may
+            # have been added after the original interleaved rounds; in that case
+            # pair it with the first reference round because every arm consumes
+            # the same immutable 10k payload in deterministic order.
+            round_tag = arm_dir.name.split("-", 1)[0]
+            ref_dir = next(
+                (path for path in reference_dirs
+                 if path.name.split("-", 1)[0] == round_tag),
+                reference_dirs[0])
             profile_rows = {}
             for key in PROFILE_KEYS:
                 ref_path = _logits_path(ref_dir, reference_arm, key)
@@ -252,14 +271,16 @@ def _write_markdown(summary: dict, path: Path) -> None:
         "# Execution-plan candidate comparison",
         "",
         f"- status: **{summary['status']}**",
-        f"- rounds: {summary['custom_rounds']} custom, "
+        f"- rounds: up to {summary['max_custom_rounds']} custom arms "
+        f"(minimum {summary['custom_rounds']}), "
         f"{summary['external_rounds']} external",
         f"- full 10,000-image profiles: {summary['full_10k_all_profiles']}",
         f"- same-policy reference arm: `{reference}`",
         "",
         "Warm latency is per static batch call: raw preparation + execution + "
-        "output materialisation, excluding argmax and references.  Speedup is "
-        "`reference_ms / arm_ms`; >1 means the arm is faster.",
+        "output materialisation, excluding argmax and references.  Ratio columns "
+        "use the median of paired round ratios (`reference_ms / arm_ms`); >1 "
+        "means the arm is faster.",
         "",
         "## Same-policy compiler arms",
         "",
@@ -270,9 +291,14 @@ def _write_markdown(summary: dict, path: Path) -> None:
     ]
     for key in PROFILE_KEYS:
         vals = [profiles[key][arm]["warm_ms"] for arm in custom]
-        ratios = [profiles[key][reference]["warm_ms"] /
-                  profiles[key][arm]["warm_ms"]
-                  for arm in custom if arm != reference]
+        ratios = []
+        for arm in custom:
+            if arm == reference:
+                continue
+            paired = summary["paired_speedups"][arm][key]["median"]
+            ratios.append(paired if paired is not None else
+                          profiles[key][reference]["warm_ms"] /
+                          profiles[key][arm]["warm_ms"])
         lines.append("| " + key + " | " +
                      " | ".join(f"{v:.3f}" for v in vals) + " | " +
                      " | ".join(f"{v:.3f}x" for v in ratios) + " |")
@@ -280,12 +306,12 @@ def _write_markdown(summary: dict, path: Path) -> None:
         "",
         "## External baselines (separate numeric contracts)",
         "",
-        "| profile | same-policy reference ms | vendor ms | CPU ms | "
-        "vendor/ref | CPU/ref | vendor max err | packed atol |",
+        f"| profile | {summary['deployment_arm']} ms | vendor ms | CPU ms | "
+        "vendor/deploy | CPU/deploy | vendor max err | packed atol |",
         "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for key in PROFILE_KEYS:
-        ref = profiles[key][reference]["warm_ms"]
+        ref = profiles[key][summary["deployment_arm"]]["warm_ms"]
         v = profiles[key].get("vendor")
         c = profiles[key].get("cpu")
         atol = profiles[key].get("packed_atol")
@@ -301,6 +327,64 @@ def _write_markdown(summary: dict, path: Path) -> None:
         "Vendor is class-preserving but uses non-quantized FP16 graph fusion; "
         "its per-logit contract is not the custom packed policy.  CPU is FP32 "
         "reference math.  Neither is ranked against the custom arms.",
+    ]
+    lines += [
+        "",
+        "## Setup and application end-to-end",
+        "",
+        "| profile | arm | setup ms | preprocess ms | model-call ms | "
+        "argmax-inclusive e2e ms |",
+        "|---|---|---:|---:|---:|---:|",
+    ]
+    for key in PROFILE_KEYS:
+        for arm in summary["arms_order"]:
+            row = profiles[key].get(arm)
+            if row is None:
+                continue
+            preprocess = row.get("per_call", {}).get("preprocess_us")
+            lines.append(
+                f"| {key} | {arm} | {row['setup_ms']:.3f} | "
+                f"{preprocess / 1e3:.3f} | {row['warm_ms']:.3f} | "
+                f"{row['e2e_ms']:.3f} |" if preprocess is not None else
+                f"| {key} | {arm} | {row['setup_ms']:.3f} | - | "
+                f"{row['warm_ms']:.3f} | {row['e2e_ms']:.3f} |")
+    lines += [
+        "",
+        "Vendor and CPU expose no separate per-call preprocessing bucket in their "
+        "application harness; raw preparation is inside their model-call interval. "
+        "Custom preprocessing and Host layout conversion are measured separately. "
+        "Setup is one-time and excluded from warm latency; the MLP entry builds its "
+        "declared b32/b8/b1 runners once and reports that aggregate.",
+    ]
+    if "auto" in custom:
+        lines += [
+            "",
+            "## Auto selection by static binding fanout",
+            "",
+            "| profile | selected path | binding slots | threshold | "
+            "resident bytes |",
+            "|---|---|---:|---:|---:|",
+        ]
+        for key in PROFILE_KEYS:
+            row = profiles[key]["auto"]
+            selection = row.get("execution_selection") or {}
+            # MLP b32 builds its declared tail profiles too; all of them make
+            # the same decision, so any entry is representative.
+            first = next(iter(selection.values()), selection)
+            slots = first.get("static_binding_slots")
+            threshold = first.get("threshold")
+            lines.append(
+                f"| {key} | {row.get('execution_mode', '-')} | "
+                f"{slots if slots is not None else '-'} | "
+                f"{threshold if threshold is not None else '-'} | "
+                f"{int(row.get('host_residency_bytes', 0))} |")
+        lines += [
+            "",
+            "MLP auto rows execute the generic path unchanged; their small "
+            "round-to-round ratio spread is measurement variance, not a code-path "
+            "change. Tiny ViT auto rows execute prepared residency.",
+        ]
+    lines += [
         "",
         "## Prepared lowering cost decomposition",
         "",
@@ -352,6 +436,8 @@ def main() -> int:
                     default=["generic", "prepared", "auto", "hostfused",
                              "vendor", "cpu"])
     ap.add_argument("--reference-arm", default="generic")
+    ap.add_argument("--deployment-arm", default="auto",
+                    help="optimized arm used in the external-baseline table")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--markdown", type=Path, required=True)
     args = ap.parse_args()
@@ -362,6 +448,8 @@ def main() -> int:
     external = [arm for arm in args.arms if rows[arm]["family"] == "external"]
     if args.reference_arm not in custom:
         raise SystemExit("reference arm must be a custom arm")
+    deployment_arm = (args.deployment_arm if args.deployment_arm in custom
+                      else args.reference_arm)
 
     packed_path = args.campaign / campaign["numeric"]["packed_spec"]["file"]
     packed = json.loads(packed_path.read_text())
@@ -444,12 +532,40 @@ def main() -> int:
             for key in PROFILE_KEYS
         }
     speed_summary = {}
+    paired_speedups = {}
     for arm, values in ratios.items():
         samples = [float(v) for v in values.values()]
+        paired_speedups[arm] = {}
+        paired_all = []
+        for key in PROFILE_KEYS:
+            ref_by_round = rows[args.reference_arm]["profiles"][key][
+                "round_warm_by_tag"]
+            arm_by_round = rows[arm]["profiles"][key]["round_warm_by_tag"]
+            common = sorted(set(ref_by_round) & set(arm_by_round),
+                            key=lambda tag: int(tag[1:]))
+            round_ratios = {
+                tag: ref_by_round[tag] / arm_by_round[tag] for tag in common
+            }
+            paired_speedups[arm][key] = {
+                "rounds": common,
+                "round_ratios": round_ratios,
+                "median": (statistics.median(round_ratios.values())
+                           if round_ratios else None),
+            }
+            paired_all.extend(round_ratios.values())
+        geom = (math.exp(sum(math.log(v) for v in paired_all) /
+                         len(paired_all)) if paired_all else None)
         speed_summary[arm] = {
             "profile_ratios": values,
+            "paired_profile_ratios": {
+                key: row["median"] for key, row in paired_speedups[arm].items()
+            },
+            "paired_rounds": sorted({
+                tag for row in paired_speedups[arm].values()
+                for tag in row["rounds"]}, key=lambda tag: int(tag[1:])),
             "geomean": math.exp(sum(math.log(v) for v in samples) /
                                 len(samples)) if samples else None,
+            "paired_geomean": geom,
             "min": min(samples) if samples else None,
             "max": max(samples) if samples else None,
         }
@@ -462,15 +578,20 @@ def main() -> int:
         "status": status,
         "campaign": campaign,
         "custom_arms": custom,
+        "arms_order": args.arms,
         "external_arms": external,
         "reference_arm": args.reference_arm,
+        "deployment_arm": deployment_arm,
         "custom_rounds": min((rows[a]["rounds"] for a in custom), default=0),
+        "max_custom_rounds": max((rows[a]["rounds"] for a in custom), default=0),
+        "rounds_by_arm": {arm: rows[arm]["rounds"] for arm in args.arms},
         "external_rounds": min((rows[a]["rounds"] for a in external),
                                default=0),
         "full_10k_all_profiles": bool(full_10k),
         "profiles": profiles,
         "speedups_vs_reference": ratios,
         "speedup_summary": speed_summary,
+        "paired_speedups": paired_speedups,
         "numeric_compare": numeric,
         "problems": problems,
     }

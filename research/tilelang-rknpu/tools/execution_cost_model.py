@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Any
 
 from rknpu_backend.hybrid import HostNode, NpuNode, load_hybrid_program
+from rknpu_backend.passes.residency import MIN_PREPARED_BINDING_SLOTS
 from rknpu_backend.plan import Plan
 
 
@@ -279,6 +280,11 @@ def main() -> int:
                     help="rkhybrid manifest stem inside --plans-dir")
     ap.add_argument("--prepared-profile", type=Path,
                     help="optional measured prepared profile for model validation")
+    ap.add_argument("--campaign-analysis", type=Path,
+                    help="optional same-payload campaign analysis.json; compares "
+                         "the modeled saving with interleaved round medians")
+    ap.add_argument("--profile-key", default="",
+                    help="profile key for --campaign-analysis, e.g. tiny_vit.b8")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     profile = json.loads(args.profile.read_text())
@@ -299,6 +305,12 @@ def main() -> int:
         resolver.repeat_submit = "manifest"
         binding_spec = HybridRunner._static_binding_plan(resolver, node)
         runner_plans[node.id] = binding_spec
+    binding_slots = _npu_binding_count(program, runner_plans)
+    prepared_estimate = _prepared_candidate(
+        program, run, args.prepared_profile)
+    auto_selected = ("prepared"
+                     if binding_slots >= MIN_PREPARED_BINDING_SLOTS
+                     else "generic")
     summary = {
         "schema_version": 1,
         "kind": "execution-cost-screening",
@@ -317,7 +329,7 @@ def main() -> int:
             "guard": _ms(run["envelope"]["guard_us"]),
         },
         "structure": {
-            "npu_binding_slots": _npu_binding_count(program, runner_plans),
+            "npu_binding_slots": binding_slots,
             "npu_plan_nodes": sum(isinstance(n, NpuNode) for n in program.nodes),
             "npu_submits": int(run["envelope"]["submit_count"]),
             "host_action_count": sum(
@@ -326,12 +338,52 @@ def main() -> int:
             "host_output_bytes": _host_output_bytes(program),
         },
         "candidates": {
-            "prepared_host_residency": _prepared_candidate(
-                program, run, args.prepared_profile),
+            "prepared_host_residency": prepared_estimate,
+            "auto_selection": {
+                "selected": auto_selected,
+                "rule": ("static_binding_slots >= "
+                         f"{MIN_PREPARED_BINDING_SLOTS}"),
+                "binding_slots": binding_slots,
+                "modeled_total_ms": (
+                    prepared_estimate["modeled_total_ms"]
+                    if auto_selected == "prepared" else _ms(run["run_us"])),
+                "modeled_saving_ms": (
+                    prepared_estimate["modeled_saving_ms"]
+                    if auto_selected == "prepared" else 0.0),
+            },
             "host_boundary_fusion": _host_fusion_candidate(program, run),
             "device_resident_qkv": _device_qkv_candidate(program, run),
         },
     }
+    if args.campaign_analysis is not None:
+        analysis = json.loads(args.campaign_analysis.read_text())
+        profile_key = (args.profile_key or
+                       f"{program.model}.b{program.batch}")
+        profile = analysis.get("profiles", {}).get(profile_key)
+        if profile is None:
+            raise SystemExit(
+                f"campaign analysis has no profile {profile_key!r}")
+        reference = float(profile["generic"]["warm_ms"])
+        prepared = float(profile["prepared"]["warm_ms"])
+        modeled_total = float(
+            summary["candidates"]["prepared_host_residency"]["modeled_total_ms"])
+        modeled_saving = float(
+            summary["candidates"]["prepared_host_residency"]["modeled_saving_ms"])
+        summary["same_campaign_validation"] = {
+            "profile": profile_key,
+            "reference_arm": "generic",
+            "prepared_arm": "prepared",
+            "reference_ms": reference,
+            "prepared_ms": prepared,
+            "measured_saving_ms": reference - prepared,
+            "modeled_saving_ms": modeled_saving,
+            "modeled_total_ms": modeled_total,
+            "prediction_error_total_ms": modeled_total - prepared,
+            "prediction_error_saving_ms": modeled_saving - (reference - prepared),
+            "note": "The profile JSON supplies component coefficients; this "
+                    "validation uses interleaved campaign medians to avoid "
+                    "sequential-run frequency drift.",
+        }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
     print(json.dumps(summary, indent=2, sort_keys=True))

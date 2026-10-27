@@ -5,6 +5,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.agents/
 
 # Large or binary campaign payloads stay local; the small text evidence
 # (commands.log, manifest.json, summary.md, source-hashes.json, *.log) is
@@ -291,3 +292,46 @@ results/20261026T120625Z-final/campaign/data/
 !results/20261027T015302Z-vendor/campaign/current-final-campaign-manifest.json
 !results/20261027T015302Z-vendor/campaign/numeric/
 !results/20261027T015302Z-vendor/campaign/numeric/*.json
+
+# Execution-plan candidate campaign (2026-10-27): keep the manifest/analysis,
+# per-round JSON, the cost-model inputs, selected raw logits/layer traces and
+# frozen numeric observations.  Regenerable plans/weights/data, source bundles,
+# reference sidecars and the full 68 MiB logit matrix stay local.
+!results/20261027T025648Z-execution-candidates/
+!results/20261027T025648Z-execution-candidates/*.json
+!results/20261027T025648Z-execution-candidates/*.md
+!results/20261027T025648Z-execution-candidates/*.log
+!results/20261027T025648Z-execution-candidates/*.txt
+!results/20261027T025648Z-execution-candidates/*.sha256
+!results/20261027T025648Z-execution-candidates/*.wall
+!results/20261027T025648Z-execution-candidates/*.exit
+!results/20261027T025648Z-execution-candidates/campaign/manifest.json
+!results/20261027T025648Z-execution-candidates/campaign/SHA256SUMS
+!results/20261027T025648Z-execution-candidates/campaign/numeric/
+!results/20261027T025648Z-execution-candidates/campaign/numeric/*.json
+!results/20261027T025648Z-execution-candidates/campaign/numeric/*.npz
+!results/20261027T025648Z-execution-candidates/model-results/r*-*/
+!results/20261027T025648Z-execution-candidates/model-results/r*-*/*.json
+!results/20261027T025648Z-execution-candidates/model-results/r*-*/*.log
+!results/20261027T025648Z-execution-candidates/model-results/r*-*/*.txt
+!results/20261027T025648Z-execution-candidates/model-results/r*-*/*.sha256
+!results/20261027T025648Z-execution-candidates/model-results/r*-*/model_eval.layers.npz
+!results/20261027T025648Z-execution-candidates/model-results/r1-generic/model_eval.*.logits.npy
+!results/20261027T025648Z-execution-candidates/model-results/r1-hostfused/model_eval.*.logits.npy
+!results/20261027T025648Z-execution-candidates/model-results/r7-generic/model_eval.*.logits.npy
+!results/20261027T025648Z-execution-candidates/model-results/r7-auto/model_eval.*.logits.npy
+!results/20261027T025648Z-execution-candidates/model-results/r7-prepared/model_eval.*.logits.npy
+!results/20261027T025648Z-execution-candidates/model-results/r8-generic/model_eval.*.logits.npy
+!results/20261027T025648Z-execution-candidates/model-results/r8-auto/model_eval.*.logits.npy
+!results/20261027T025648Z-execution-candidates/model-results/r8-prepared/model_eval.*.logits.npy
+!results/20261027T025648Z-execution-candidates/model-results/profiles/
+!results/20261027T025648Z-execution-candidates/model-results/profiles/*.json
+!results/20261027T025648Z-execution-candidates/model-results/profiles/*.log
+!results/20261027T025648Z-execution-candidates/model-results/numeric-auto*/
+!results/20261027T025648Z-execution-candidates/model-results/numeric-auto*/*.json
+!results/20261027T025648Z-execution-candidates/model-results/numeric-auto*/*.log
+!results/20261027T025648Z-execution-candidates/model-results/numeric-auto*/observation.npz
+results/20261027T025648Z-execution-candidates/campaign/plans/
+results/20261027T025648Z-execution-candidates/campaign/weights/
+results/20261027T025648Z-execution-candidates/campaign/data/
+results/20261027T025648Z-execution-candidates/campaign/vendor/

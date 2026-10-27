@@ -1,0 +1,20 @@
+model=tiny_vit batch=8 backend=board runs=300
+  median wall       0.010703 s  747.4 img/s
+  python dwell      0.004842 s
+  C total           0.004544 s
+  attributed        0.004461 s
+  residual          0.000082 s  (1.8% of C total)
+  instrumentation   0.000042 s  (0.9%)
+    validate_us       0.000303 s    6.7%
+    pack_us           0.000487 s   10.7%
+    emit_us           0.000228 s    5.0%
+    command_us        0.000113 s    2.5%
+    submit_alloc_us   0.000001 s    0.0%
+    submit_wait_us    0.001635 s   36.0%
+    output_sync_us    0.000265 s    5.8%
+    download_us       0.001140 s   25.1%
+    guard_us          0.000274 s    6.0%
+    publish_us        0.000017 s    0.4%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    70 / 8
+wrote /mnt/ssd/workspace/tl-exec-20261027T025648Z/out/profiles/tiny_vit_b8.generic.json

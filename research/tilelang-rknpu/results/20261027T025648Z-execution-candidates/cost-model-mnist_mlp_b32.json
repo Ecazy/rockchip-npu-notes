@@ -1,0 +1,82 @@
+{
+  "candidates": {
+    "auto_selection": {
+      "binding_slots": 13,
+      "modeled_saving_ms": 0.0,
+      "modeled_total_ms": 2.1721594966948032,
+      "rule": "static_binding_slots >= 32",
+      "selected": "generic"
+    },
+    "device_resident_qkv": {
+      "candidates": []
+    },
+    "host_boundary_fusion": {
+      "candidates": [],
+      "note": "Host fusion can remove a Host boundary but no RKPlan submit or bridge transfer; prepared residency already reduces the Python plan-node surface."
+    },
+    "prepared_host_residency": {
+      "components": {
+        "generic_python_plan_node_us": 144.37298523262143,
+        "modeled_residual_python_us": 7.218649261631072,
+        "modeled_writeback_us": 14.624,
+        "resident_host_output_bytes": 116992,
+        "submit_change": 0,
+        "transfer_change": 0
+      },
+      "conditions": [
+        "one producer per resident tensor and no Host-slot aliasing",
+        "all RKPlan views resolve against stable buffers for runner lifetime",
+        "C per-run binding, finite, alias and publication checks remain",
+        "public outputs copied so caller retention does not alias residency"
+      ],
+      "measured": {
+        "host_action_ms": 0.43632800225168467,
+        "python_plan_node_ms": 0.020417035557329655,
+        "saving_ms": 0.4544114926829934,
+        "total_ms": 1.7177480040118098,
+        "workspace_ms": 1.1153179802931845
+      },
+      "missing": [],
+      "modeled_saving_ms": 0.12253033597099057,
+      "modeled_total_ms": 2.049629160723813,
+      "prediction_error_ms": 0.33188115671200286,
+      "status": "candidate"
+    }
+  },
+  "generic_profile": "mnist_mlp_b32.generic.json",
+  "kind": "execution-cost-screening",
+  "ledger_ms": {
+    "c_total": 1.4702720336914064,
+    "download": 0.011375,
+    "executor": 0.12658204650506377,
+    "guard": 0.25958001708984374,
+    "host_actions": 0.39286998799070716,
+    "pack": 0.21524798583984375,
+    "python_plan_node": 0.14437298523262143,
+    "rkplan_workspace": 1.4938969979994,
+    "submit_wait": 0.791572021484375,
+    "whole_run": 2.1721594966948032
+  },
+  "manifest": "mnist_mlp_b32",
+  "same_campaign_validation": {
+    "measured_saving_ms": -0.03560568142243348,
+    "modeled_saving_ms": 0.12253033597099057,
+    "modeled_total_ms": 2.049629160723813,
+    "note": "The profile JSON supplies component coefficients; this validation uses interleaved campaign medians to avoid sequential-run frequency drift.",
+    "prediction_error_saving_ms": 0.15813601739342403,
+    "prediction_error_total_ms": -0.13751776592342901,
+    "prepared_arm": "prepared",
+    "prepared_ms": 2.187146926647242,
+    "profile": "mnist_mlp.b32",
+    "reference_arm": "generic",
+    "reference_ms": 2.1515412452248084
+  },
+  "schema_version": 1,
+  "structure": {
+    "host_action_count": 3,
+    "host_output_bytes": 116992,
+    "npu_binding_slots": 13,
+    "npu_plan_nodes": 1,
+    "npu_submits": 8
+  }
+}

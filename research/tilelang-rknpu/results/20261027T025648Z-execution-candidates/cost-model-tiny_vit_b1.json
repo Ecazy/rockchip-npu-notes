@@ -1,0 +1,117 @@
+{
+  "candidates": {
+    "auto_selection": {
+      "binding_slots": 42,
+      "modeled_saving_ms": 0.600593984196149,
+      "modeled_total_ms": 2.2959065343493594,
+      "rule": "static_binding_slots >= 32",
+      "selected": "prepared"
+    },
+    "device_resident_qkv": {
+      "candidates": [
+        {
+          "consumers": [
+            "qk",
+            "pv"
+          ],
+          "missing": [
+            "device-source binding with versioned BO lifetime/owner checks",
+            "C layout proof or device CUBE->WEIGHT/tile reorder template",
+            "numeric contract for the resident boundary if conversion changes rounding"
+          ],
+          "modeled_download_us": 23.3330078125,
+          "modeled_saving_us": 48.610026041666664,
+          "modeled_upload_pack_us": 25.277018229166664,
+          "notes": "The bound excludes any device reorder cost.  Host Softmax after QK means scores/probabilities still cross the Host boundary, so this candidate does not collapse the whole attention segment.",
+          "producer": "qkv",
+          "removed_consumer_upload_bytes": 20480,
+          "removed_producer_download_bytes": 6144,
+          "status": "screened_only",
+          "submit_count_change": 0
+        }
+      ]
+    },
+    "host_boundary_fusion": {
+      "candidates": [
+        {
+          "modeled_added_us": 116.04674509726465,
+          "modeled_removed_us": 118.41504601761699,
+          "modeled_saving_us": 2.3683009203523397,
+          "replace": [
+            "residual_attention",
+            "rmsnorm2"
+          ],
+          "status": "screened_only",
+          "submit_count_change": 0,
+          "transfer_change": 0,
+          "with": "tensor.add_rmsnorm.last_axis.v1"
+        }
+      ],
+      "note": "Host fusion can remove a Host boundary but no RKPlan submit or bridge transfer; prepared residency already reduces the Python plan-node surface."
+    },
+    "prepared_host_residency": {
+      "components": {
+        "generic_python_plan_node_us": 637.283141259104,
+        "modeled_residual_python_us": 31.8641570629552,
+        "modeled_writeback_us": 4.825,
+        "resident_host_output_bytes": 38600,
+        "submit_change": 0,
+        "transfer_change": 0
+      },
+      "conditions": [
+        "one producer per resident tensor and no Host-slot aliasing",
+        "all RKPlan views resolve against stable buffers for runner lifetime",
+        "C per-run binding, finite, alias and publication checks remain",
+        "public outputs copied so caller retention does not alias residency"
+      ],
+      "measured": {
+        "host_action_ms": 0.7139879162423313,
+        "python_plan_node_ms": 0.09012088412418962,
+        "saving_ms": 0.6980945472605526,
+        "total_ms": 2.1984059712849557,
+        "workspace_ms": 0.8729490218684077
+      },
+      "missing": [],
+      "modeled_saving_ms": 0.600593984196149,
+      "modeled_total_ms": 2.2959065343493594,
+      "prediction_error_ms": 0.09750056306440365,
+      "status": "candidate"
+    }
+  },
+  "generic_profile": "tiny_vit_b1.generic.json",
+  "kind": "execution-cost-screening",
+  "ledger_ms": {
+    "c_total": 0.830655029296875,
+    "download": 0.13212298583984375,
+    "executor": 0.546575989574194,
+    "guard": 0.23537103271484375,
+    "host_actions": 0.726821948774159,
+    "pack": 0.094791015625,
+    "python_plan_node": 0.637283141259104,
+    "rkplan_workspace": 0.9668619022704661,
+    "submit_wait": 0.20533197021484376,
+    "whole_run": 2.8965005185455084
+  },
+  "manifest": "tiny_vit_b1",
+  "same_campaign_validation": {
+    "measured_saving_ms": 0.5766907143057325,
+    "modeled_saving_ms": 0.600593984196149,
+    "modeled_total_ms": 2.2959065343493594,
+    "note": "The profile JSON supplies component coefficients; this validation uses interleaved campaign medians to avoid sequential-run frequency drift.",
+    "prediction_error_saving_ms": 0.023903269890416468,
+    "prediction_error_total_ms": -0.2026483174464202,
+    "prepared_arm": "prepared",
+    "prepared_ms": 2.4985548517957796,
+    "profile": "tiny_vit.b1",
+    "reference_arm": "generic",
+    "reference_ms": 3.075245566101512
+  },
+  "schema_version": 1,
+  "structure": {
+    "host_action_count": 13,
+    "host_output_bytes": 38600,
+    "npu_binding_slots": 42,
+    "npu_plan_nodes": 8,
+    "npu_submits": 8
+  }
+}

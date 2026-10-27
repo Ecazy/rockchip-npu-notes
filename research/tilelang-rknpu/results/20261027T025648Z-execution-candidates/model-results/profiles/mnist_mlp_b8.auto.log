@@ -1,0 +1,20 @@
+model=mnist_mlp batch=8 backend=board runs=500
+  median wall       0.001748 s  4577.6 img/s
+  python dwell      0.001306 s
+  C total           0.001283 s
+  attributed        0.001277 s
+  residual          0.000007 s  (0.5% of C total)
+  instrumentation   0.000003 s  (0.2%)
+    validate_us       0.000025 s    1.9%
+    pack_us           0.000078 s    6.1%
+    emit_us           0.000023 s    1.8%
+    command_us        0.000049 s    3.8%
+    submit_alloc_us   0.000001 s    0.1%
+    submit_wait_us    0.000784 s   61.1%
+    output_sync_us    0.000035 s    2.7%
+    download_us       0.000006 s    0.5%
+    guard_us          0.000275 s   21.4%
+    publish_us        0.000000 s    0.0%
+    alloc_us          0.000000 s    0.0%
+  tasks/submits    11 / 8
+wrote /mnt/ssd/workspace/tl-exec-20261027T025648Z/out/profiles/mnist_mlp_b8.auto.json

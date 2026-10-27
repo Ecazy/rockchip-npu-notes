@@ -71,8 +71,15 @@ def sha(path):
     return h.hexdigest()
 head = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'],
                                text=True).strip()
+runtime_paths = ['research/custom-ops',
+                 'research/tilelang-rknpu/python',
+                 'research/tilelang-rknpu/tools',
+                 'research/tilelang-rknpu/scripts',
+                 'research/tilelang-rknpu/models',
+                 'research/tilelang-rknpu/vendor']
 dirty = bool(subprocess.check_output(
-    ['git', '-C', str(repo), 'status', '--porcelain'], text=True).strip())
+    ['git', '-C', str(repo), 'status', '--porcelain', '--', *runtime_paths],
+    text=True).strip())
 packed = camp / 'numeric/numeric_acceptance_packed.json'
 manifest = {
     'schema_version': 1,
@@ -81,6 +88,7 @@ manifest = {
     'source': {
         'git_head': head,
         'worktree_dirty_at_stage': dirty,
+        'worktree_dirty_scope': runtime_paths,
         'custom_ops_archive': 'git archive HEAD research/custom-ops',
         'tilelang_paths': ['python', 'tools', 'scripts', 'models', 'vendor'],
     },
@@ -152,6 +160,15 @@ manifest = {
         'compile_precision': 'non-quantized float16',
         'single_core_mode': True,
         'runtime_core': 0,
+    },
+    'cost_model': {
+        'tool': 'tools/execution_cost_model.py',
+        'summary_tool': 'tools/summarize_execution_cost.py',
+        'profiles': [f'{m}.b{b}' for m, b in (
+            ('mnist_mlp', 32), ('mnist_mlp', 8), ('mnist_mlp', 1),
+            ('tiny_vit', 8), ('tiny_vit', 1))],
+        'profile_modes': ['generic', 'prepared'],
+        'input_dir': 'model-results/cost-profiles',
     },
     'plans': {
         'current_compiled_manifest_sha256':
@@ -308,6 +325,14 @@ done
     '$REMOTE/campaign/numeric/numeric_acceptance_packed.json' \
     '$REMOTE/out/numeric-auto' '$CPU'" \
   > "$LOCAL/numeric-auto.log" 2>&1
+# ---- paired cost-model profile ledgers ------------------------------------
+"${SSH[@]}" "mkdir -p '$REMOTE/out/cost-profiles'"
+for spec in 'mnist_mlp 32 200 20' 'mnist_mlp 8 500 50'             'mnist_mlp 1 1000 100' 'tiny_vit 8 300 30'             'tiny_vit 1 500 50'; do
+  read -r model batch runs warm <<< "$spec"
+  for mode in generic prepared; do
+    "${SSH[@]}" "cd '$REMOTE/source/tilelang-rknpu' &&       PYTHONPATH='$REMOTE/source/tilelang-rknpu/python' RKNPU_CORE_MASK=1       taskset -c '$CPU' python3 tools/profile_bridge_envelope.py --backend board         --lib '$REMOTE/build/librknpu_plan.so'         --plans-dir '$REMOTE/campaign/plans/current'         --weights-dir '$REMOTE/campaign/weights'         --data-dir '$REMOTE/campaign/data'         --model '$model' --batch '$batch' --runs '$runs' --warmup '$warm'         --execution-mode '$mode' --label '$mode'         --out '$REMOTE/out/cost-profiles/${model}_b${batch}.${mode}.json'         > '$REMOTE/out/cost-profiles/${model}_b${batch}.${mode}.log' 2>&1"
+  done
+done
 "${SSH[@]}" "{ date -u +%FT%TZ; uname -srm; tr -d '\\0' </proc/device-tree/model; \
   echo; cat /sys/kernel/debug/rknpu/version; cat /sys/kernel/debug/rknpu/freq; \
   cat /sys/kernel/debug/rknpu/load; cat /proc/loadavg; } \
@@ -324,6 +349,21 @@ PYTHONPATH="$HERE/python:$HERE" python3 "$HERE/tools/analyze_execution_candidate
   --arms generic prepared auto hostfused vendor cpu \
   --out "$LOCAL/analysis.json" --markdown "$LOCAL/analysis.md" \
   > "$LOCAL/analysis.log" 2>&1 || true
+for spec in 'mnist_mlp 32' 'mnist_mlp 8' 'mnist_mlp 1' \
+            'tiny_vit 8' 'tiny_vit 1'; do
+  read -r model batch <<< "$spec"
+  PYTHONPATH="$HERE/python:$HERE" python3 "$HERE/tools/execution_cost_model.py" \
+    --profile "$LOCAL/model-results/cost-profiles/${model}_b${batch}.generic.json" \
+    --plans-dir "$LOCAL/campaign/plans/current" \
+    --manifest "${model}_b${batch}" \
+    --prepared-profile "$LOCAL/model-results/cost-profiles/${model}_b${batch}.prepared.json" \
+    --campaign-analysis "$LOCAL/analysis.json" \
+    --profile-key "${model}.b${batch}" \
+    --out "$LOCAL/cost-model-${model}_b${batch}.json" \
+    > "$LOCAL/cost-model-${model}_b${batch}.log" 2>&1
+done
+PYTHONPATH="$HERE/python:$HERE" python3 "$HERE/tools/summarize_execution_cost.py" \
+  --results "$LOCAL" --out "$LOCAL/cost-model.md" > "$LOCAL/cost-model-summary.log" 2>&1
 PYTHONPATH="$HERE/python:$HERE" python3 "$HERE/tools/verify_numeric_acceptance.py" \
   --spec "$LOCAL/campaign/numeric/numeric_acceptance_packed.json" \
   --calibration-observation \
