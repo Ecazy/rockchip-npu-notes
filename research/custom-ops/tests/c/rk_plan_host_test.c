@@ -302,6 +302,32 @@ static void multitile_publish_case(void) {
     EXPECT(report.task_count == 2 && report.download_calls == 2);
     EXPECT(!memcmp(y, ref, (size_t)MM * NN * 2));
 
+    /* Input finiteness is rechecked on every call, even when the pointer and
+     * binding metadata are unchanged.  Reject before execution/publication. */
+    {
+        const unsigned execs_before = execs;
+        const unsigned char marker = 0x23;
+        const _Float16 nonfinite[] = {
+            (_Float16)NAN, (_Float16)INFINITY, (_Float16)-INFINITY
+        };
+        for (size_t bad = 0; bad < sizeof(nonfinite) / sizeof(nonfinite[0]); bad++) {
+            memset(y, marker, (size_t)MM * NN * 2);
+            x[0] = nonfinite[bad];
+            EXPECT(rk_workspace_run(ws, inputs, 1, outputs, 1, &report, &diag) ==
+                   RK_E_NUMERIC_CONTRACT);
+            EXPECT(execs == execs_before);
+            {
+                int untouched = 1;
+                for (size_t i = 0; i < (size_t)MM * NN * 2; i++)
+                    if (((unsigned char *)y)[i] != marker) untouched = 0;
+                EXPECT(untouched);
+            }
+        }
+        x[0] = value(0, 5);
+        EXPECT(rk_workspace_run(ws, inputs, 1, outputs, 1, &report, &diag) == 0);
+        EXPECT(!memcmp(y, ref, (size_t)MM * NN * 2));
+    }
+
     /* A non-finite device result must never reach the published output. */
     rk_mock_inject_nan(1);
     memset(y, 0x23, (size_t)MM * NN * 2);

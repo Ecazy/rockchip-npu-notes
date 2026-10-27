@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tools/runtime_layers/validate_finite_scan_build.py", line 80, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tools/runtime_layers/validate_finite_scan_build.py", line 59, in main
+    assert normalized == fast["command"].strip(), f"compile command differs beyond macro at entry {index}"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: compile command differs beyond macro at entry 26

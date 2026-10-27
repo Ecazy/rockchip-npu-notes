@@ -24,18 +24,25 @@ static inline int rk_f16_word_all_finite(uint64_t word) {
     return (z & 0x8000800080008000ull) == 0;
 }
 
-static inline int rk_f16_all_finite(const uint16_t *data, uint64_t count) {
+static inline int rk_f16_all_finite(const void *data, uint64_t count) {
+    const unsigned char *bytes = (const unsigned char *)data;
     uint64_t i = 0;
     for (; i + 4u <= count; i += 4u) {
         uint64_t word;
-        memcpy(&word, data + i, sizeof(word));
+        memcpy(&word, bytes + (size_t)i * sizeof(uint16_t), sizeof(word));
         if (!rk_f16_word_all_finite(word)) {
-            for (unsigned k = 0; k < 4; k++)
-                if ((data[i + k] & 0x7c00u) == 0x7c00u) return 0;
+            for (unsigned k = 0; k < 4; k++) {
+                uint16_t lane;
+                memcpy(&lane, bytes + ((size_t)i + k) * sizeof(lane), sizeof(lane));
+                if ((lane & 0x7c00u) == 0x7c00u) return 0;
+            }
         }
     }
-    for (; i < count; i++)
-        if ((data[i] & 0x7c00u) == 0x7c00u) return 0;
+    for (; i < count; i++) {
+        uint16_t lane;
+        memcpy(&lane, bytes + (size_t)i * sizeof(lane), sizeof(lane));
+        if ((lane & 0x7c00u) == 0x7c00u) return 0;
+    }
     return 1;
 }
 

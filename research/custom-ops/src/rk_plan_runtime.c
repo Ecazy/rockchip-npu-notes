@@ -98,6 +98,7 @@ static int binding_matches(const rk_value_desc *v, const rk_binding *b,
 }
 
 static int check_finite_binding(const rk_binding *b, rk_diag *diag) {
+#ifdef RK_PLAN_FINITE_SCAN_REFERENCE
     const _Float16 *data = (const _Float16 *)b->data;
     size_t count = (size_t)(b->nbytes / 2u);
     for (size_t i = 0; i < count; i++) {
@@ -108,6 +109,14 @@ static int check_finite_binding(const rk_binding *b, rk_diag *diag) {
             return RK_E_NUMERIC_CONTRACT;
         }
     }
+#else
+    if (!rk_f16_all_finite(b->data, b->nbytes / 2u)) {
+        rk_diag_set(diag, RK_E_NUMERIC_CONTRACT, "run",
+                    "non-finite FP16 input/constant is rejected before upload",
+                    "", UINT32_MAX, 0);
+        return RK_E_NUMERIC_CONTRACT;
+    }
+#endif
     return 0;
 }
 

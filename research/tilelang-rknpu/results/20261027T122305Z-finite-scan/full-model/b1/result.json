@@ -1,0 +1,77 @@
+{
+  "batch": 1,
+  "bitwise": true,
+  "kind": "full-model-finite-scan-ab",
+  "limit": 256,
+  "output_files": {
+    "fast": "fast_logits.npy",
+    "reference": "reference_logits.npy"
+  },
+  "prepared_validation": 0,
+  "round_ratio_max": 1.032282199264173,
+  "round_ratio_median": 1.024392664021608,
+  "round_ratio_min": 1.0209288660998708,
+  "round_ratio_p10": 1.0209288660998708,
+  "rounds": 7,
+  "rounds_detail": [
+    {
+      "fast": 1544.9384809471667,
+      "ratio_reference_over_fast": 1.032282199264173,
+      "reference": 1594.812492839992,
+      "round": 1
+    },
+    {
+      "fast": 1535.750983748585,
+      "ratio_reference_over_fast": 1.0242142198220807,
+      "reference": 1572.93799566105,
+      "round": 2
+    },
+    {
+      "fast": 1529.481029137969,
+      "ratio_reference_over_fast": 1.025171291343936,
+      "reference": 1567.9800417274237,
+      "round": 3
+    },
+    {
+      "fast": 1526.2720407918096,
+      "ratio_reference_over_fast": 1.0230266753324435,
+      "reference": 1561.4170115441084,
+      "round": 4
+    },
+    {
+      "fast": 1530.5010019801557,
+      "ratio_reference_over_fast": 1.024392664021608,
+      "reference": 1567.8339987061918,
+      "round": 5
+    },
+    {
+      "fast": 1532.5425192713737,
+      "ratio_reference_over_fast": 1.0314973139761356,
+      "reference": 1580.8134921826422,
+      "round": 6
+    },
+    {
+      "fast": 1525.9799547493458,
+      "ratio_reference_over_fast": 1.0209288660998708,
+      "reference": 1557.9169848933816,
+      "round": 7
+    }
+  ],
+  "schema_version": 1,
+  "timing": {
+    "fast": {
+      "max_us": 1581.104937940836,
+      "median_us": 1531.5220225602388,
+      "min_us": 1204.8589996993542,
+      "n": 1792,
+      "p10_us": 1495.6470113247633
+    },
+    "reference": {
+      "max_us": 1675.0199720263481,
+      "median_us": 1570.8959545008838,
+      "min_us": 1236.942014656961,
+      "n": 1792,
+      "p10_us": 1533.5630159825087
+    }
+  }
+}

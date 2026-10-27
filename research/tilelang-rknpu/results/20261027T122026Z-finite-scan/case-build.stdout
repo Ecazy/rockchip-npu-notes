@@ -1,0 +1,5 @@
+mlp_b1 mnist_mlp_b1 mlp inputs 1 constants 11 outputs 1 frames 64
+mlp_b32 mnist_mlp_b32 mlp inputs 1 constants 11 outputs 1 frames 64
+qkv_b8 tiny_vit_b8 qkv inputs 1 constants 1 outputs 1 frames 64
+qk_b8 tiny_vit_b8 attn_qk_qkv_group inputs 64 constants 0 outputs 32 frames 32
+pv_b8 tiny_vit_b8 attn_pv_qkv_group inputs 64 constants 0 outputs 32 frames 32

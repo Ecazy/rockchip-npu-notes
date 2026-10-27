@@ -1,0 +1,26 @@
+{
+  "cases": [
+    "qk_b8",
+    "pv_b8"
+  ],
+  "cpu_pin": 6,
+  "created_utc": "2026-10-27T12:23:06.133886+00:00",
+  "kind": "finite-scan-ab",
+  "macro_control": "RK_PLAN_FINITE_SCAN_REFERENCE selects old scalar FP16 scan; unset selects new binary16 bit scan",
+  "npu_core_mask": 1,
+  "prepared_validation": 0,
+  "rounds": 7,
+  "source_hashes": {
+    "../custom-ops/src/rk_plan_download.h": "2bed0c246954f6a71410884532a2af5c45f433f15ada9697585a27d4b7ca63a8",
+    "../custom-ops/src/rk_plan_runtime.c": "3f807a406575e282cfb02d2b130a0992569a89864d8ba1ff8fdd3dd35ab77302",
+    "models/compiled/manifest.json": "16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869",
+    "models/compiled/tiny_vit_b8.rkhybrid.json": "d715e483c303461c21f0458c2ba089e6195322c4eac49ccafa9bae07b4d08993",
+    "models/tiny_vit.npz": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f",
+    "scripts/run-finite-scan-ab-native.sh": "7f14b8fff6475d79434f295009cd80fd253cadb137086b811ee2bc727561e483",
+    "scripts/run-finite-scan-ab.sh": "4a6a55230dd74d6b8a3d466b762da98d713f123942e738617b604f5cf2b8c570",
+    "tools/runtime_layers/analyze_finite_scan_ab.py": "96dc4994b123cb55ad55967679a94ebd8412c638ba2b5cc106aeb99d84daee78",
+    "tools/runtime_layers/benchmark_python_layers.py": "8791eb98ab51db720db4b45b2404754d5c447e9555b41f53d55c08d464cd6d17",
+    "tools/runtime_layers/full_model_finite_scan_ab.py": "411eaa52ef15f949c2a1f6bde0df2094d701f5453a985b4b391c99e3266c0c2d",
+    "tools/runtime_layers/runtime_layer_probe.c": "b398c144f522947fd8d9f18d1c544ed30bec7c74d4e492f09f6472c2c61186b6"
+  }
+}

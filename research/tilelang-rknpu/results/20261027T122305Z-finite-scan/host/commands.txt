@@ -1,0 +1,4 @@
+repo root: cmake --build research/custom-ops/build-host-mvp -j4 > /tmp/rknpu-finite-scan-host-build.log 2>&1
+repo root: ctest --test-dir research/custom-ops/build-host-mvp --output-on-failure > /tmp/rknpu-finite-scan-ctest.log 2>&1
+cwd=research/tilelang-rknpu: PYTHONPATH=.pydeps:python:. python3 -m pytest -q -o addopts='' --junitxml=/tmp/rknpu-finite-scan-pytest.xml > /tmp/rknpu-finite-scan-pytest.log 2>&1
+repo root: ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ctest --test-dir research/custom-ops/build-sanitize-rk -R 'fp16_scan|rk_plan_host' --output-on-failure

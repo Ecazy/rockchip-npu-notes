@@ -85,7 +85,8 @@ report = {
 (camp / 'run-manifest.json').write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')
 print(camp / 'run-manifest.json')
 PY
-(cd "$CAMPAIGN" && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+(cd "$CAMPAIGN" && find . -type f ! -name SHA256SUMS -print0 | sort -z | \
+  xargs -0 sha256sum > SHA256SUMS)
 
 askpass=$(mktemp /tmp/rk-replay-askpass-XXXXXX)
 source_bundle=$(mktemp /tmp/rk-replay-source-XXXXXX.tgz)

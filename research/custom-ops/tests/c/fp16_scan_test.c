@@ -69,6 +69,29 @@ static void word_lane_independence(void) {
     EXPECT(rk_f16_all_finite(finite, 8) == 1);
 }
 
+static void unaligned_and_tail_access(void) {
+    /* Deliberately start at an odd byte address.  Exercise every tail length
+     * around the four-lane word path, with the non-finite value at each lane. */
+    unsigned char storage[2 * 13 + 2];
+    unsigned char *raw = storage + 1;
+    for (unsigned count = 0; count <= 13; count++) {
+        for (unsigned i = 0; i < count; i++) {
+            const uint16_t h = 0x3c00u;
+            memcpy(raw + 2u * i, &h, sizeof(h));
+        }
+        EXPECT(rk_f16_all_finite(raw, count) == 1);
+        for (unsigned lane = 0; lane < count; lane++) {
+            const uint16_t bad = 0xfc00u;
+            memcpy(raw + 2u * lane, &bad, sizeof(bad));
+            EXPECT(rk_f16_all_finite(raw, count) == 0);
+            {
+                const uint16_t good = 0x3c00u;
+                memcpy(raw + 2u * lane, &good, sizeof(good));
+            }
+        }
+    }
+}
+
 /* Copy of the historical publish element loop, used as the reference. */
 static void reference_publish(uint16_t *dst, const uint16_t *tile,
                               unsigned rows, unsigned cols,
@@ -108,6 +131,7 @@ static void publish_matches_element_loop(void) {
 int main(void) {
     exhaustive_finiteness();
     word_lane_independence();
+    unaligned_and_tail_access();
     publish_matches_element_loop();
     printf("FP16_SCAN checks=%d failures=%d\n", checks, failures);
     return failures ? 1 : 0;

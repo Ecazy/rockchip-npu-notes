@@ -1,0 +1,159 @@
+{
+  "cases": {
+    "pv_b8": {
+      "all_bitwise": true,
+      "fast_median_us": 477.160034,
+      "ratio_max": 1.4087516779588893,
+      "ratio_min": 1.4003645630769186,
+      "ratio_p10_aux": 1.4003645630769186,
+      "ratio_reference_over_fast_median": 1.4077037118326639,
+      "reference_median_us": 669.950012,
+      "rounds": [
+        {
+          "bitwise": true,
+          "fast_median_us": 478.618958,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.4003645630769186,
+          "reference_median_us": 670.241028,
+          "reference_n": 31,
+          "round": 1
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 478.03595,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.4039028403616924,
+          "reference_median_us": 671.116028,
+          "reference_n": 31,
+          "round": 2
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 477.160034,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.4077037118326639,
+          "reference_median_us": 671.699951,
+          "reference_n": 31,
+          "round": 3
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 477.744019,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.4023200403477998,
+          "reference_median_us": 669.950012,
+          "reference_n": 31,
+          "round": 4
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 464.911011,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.4077790986111964,
+          "reference_median_us": 654.492004,
+          "reference_n": 31,
+          "round": 5
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 466.661011,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.408124931182648,
+          "reference_median_us": 657.117004,
+          "reference_n": 31,
+          "round": 6
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 466.659973,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.4087516779588893,
+          "reference_median_us": 657.40802,
+          "reference_n": 31,
+          "round": 7
+        }
+      ],
+      "stable_positive_gain": true
+    },
+    "qk_b8": {
+      "all_bitwise": true,
+      "fast_median_us": 486.786011,
+      "ratio_max": 1.8053902713301173,
+      "ratio_min": 1.7122381383672454,
+      "ratio_p10_aux": 1.7122381383672454,
+      "ratio_reference_over_fast_median": 1.738195697193268,
+      "reference_median_us": 848.156006,
+      "rounds": [
+        {
+          "bitwise": true,
+          "fast_median_us": 487.951965,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.738195697193268,
+          "reference_median_us": 848.156006,
+          "reference_n": 31,
+          "round": 1
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 488.536011,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.7122381383672454,
+          "reference_median_us": 836.48999,
+          "reference_n": 31,
+          "round": 2
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 486.786011,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.8052695602216065,
+          "reference_median_us": 878.779968,
+          "reference_n": 31,
+          "round": 3
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 487.076965,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.8053902713301173,
+          "reference_median_us": 879.364014,
+          "reference_n": 31,
+          "round": 4
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 482.411011,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.8035036704417182,
+          "reference_median_us": 870.030029,
+          "reference_n": 31,
+          "round": 5
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 482.41095,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.7236984483872102,
+          "reference_median_us": 831.531006,
+          "reference_n": 31,
+          "round": 6
+        },
+        {
+          "bitwise": true,
+          "fast_median_us": 483.286011,
+          "fast_n": 31,
+          "ratio_reference_over_fast": 1.7368721355354937,
+          "reference_median_us": 839.406006,
+          "reference_n": 31,
+          "round": 7
+        }
+      ],
+      "stable_positive_gain": true
+    }
+  },
+  "failures": [],
+  "kind": "finite-scan-isolated-summary",
+  "p10_role": "auxiliary only",
+  "primary": "median of per-round medians and corresponding ratios",
+  "status": "PASS"
+}

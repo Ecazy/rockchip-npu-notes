@@ -5,6 +5,21 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Binary16 finite-scan checkpoint (2026-10-27)
+
+- `results/20261027T122305Z-finite-scan/`: same-source fast/reference scan A/B,
+  static prepared-validation cache forced off. QK/PV group gains are 1.738x /
+  1.408x; the raw-sample complete Tiny ViT gains are 1.041x (b8) / 1.033x
+  (b1). All seven paired-round ratios per case are positive and all outputs
+  compare bitwise. The frozen packed numeric replay passed with 0 problems and
+  no recalibration.
+- Report: [RUNTIME-FINITE-SCAN.md](../RUNTIME-FINITE-SCAN.md); artifacts:
+  [README](20261027T122305Z-finite-scan/README.md); replay:
+  [20261027T122757Z-numeric-replay](20261027T122757Z-numeric-replay/).
+- The compile-flag audit confirms the reference library differs only by
+  `RK_PLAN_FINITE_SCAN_REFERENCE`; Host pytest is 351 passed plus 71 subtests,
+  and CTest is 31/31.
+
 ## Prepared-validation same-implementation checkpoint (2026-10-27)
 
 - `results/20261027T093259Z-template-gap/runtime-layers-prepared/`: corrected
