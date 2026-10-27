@@ -1,74 +1,66 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Public compile/load/save/explain API.  No device is opened here."""
+"""Legacy compile/load/save/explain API.  No device is opened here.
+
+These entry points are compatibility spellings.  They all call the one pipeline in
+:mod:`rknpu_backend.codegen.pipeline`; nothing here legalizes, plans or encodes a
+second time.  New code should prefer
+:func:`rknpu_backend.artifact.compile_artifact`.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
 
 from .capabilities import TargetProfile
+from .codegen import pipeline as codegen
+from .codegen.pipeline import Compilation, explain_plan
 from .errors import RK_E_UNSUPPORTED, reject
 from .ir import Module
 from .options import CompileOptions
-from .passes.dag import build_draft
-from .passes.infer import infer_and_verify
-from .passes.legalize import legalize
-from .passes.schedule import build_submits
-from .passes.storage import assign_storage
-from .passes.verify import verify_plan
 from .plan import Plan
 from .serialize import load_plan as _load_plan
 from .serialize import save_plan as _save_plan
 
+__all__ = ["CompileResult", "compile_rkir", "compile_tilelang", "explain_plan",
+           "load_plan", "save_plan"]
+
 
 @dataclass
 class CompileResult:
+    """Compatibility result: the plan, its diagnostics and an explain report.
+
+    ``artifact`` exposes the same compilation through the artifact facade; it is
+    derived from the stored :class:`Compilation`, never re-planned.
+    """
+
     plan: Plan
     diagnostics: list[dict[str, Any]] = field(default_factory=list)
     report: dict[str, Any] = field(default_factory=dict)
+    _compilation: Compilation | None = field(default=None, repr=False,
+                                             compare=False)
 
     def to_dict(self) -> dict[str, Any]:
         return {"plan": self.plan.to_dict(),
-                "diagnostics": list(self.diagnostics),
+                "diagnostics": [dict(item) for item in self.diagnostics],
                 "report": dict(self.report)}
 
+    @property
+    def artifact(self):
+        """The same compilation as a :class:`~rknpu_backend.artifact.CompiledArtifact`."""
+        from .artifact import CompiledArtifact
 
-def _compile_module(module: Module, *, profile: TargetProfile,
-                    options: CompileOptions) -> CompileResult:
-    if not isinstance(profile, TargetProfile):
-        reject(RK_E_UNSUPPORTED, "compile requires a TargetProfile", stage="api")
-    if not isinstance(options, CompileOptions):
-        reject(RK_E_UNSUPPORTED, "compile requires CompileOptions", stage="api")
-    profile.validate_environment()
-    verified = infer_and_verify(module)
-    legalized = legalize(verified, profile=profile, options=options)
-    draft = build_draft(verified, legalized, profile=profile, options=options)
-    submits = build_submits(draft, options=options)
-    plan = assign_storage(draft, profile=profile, options=options,
-                          submits=submits)
-    plan = verify_plan(plan)
-    report = explain_plan(plan)
-    matmul = next((op for op in module.ops if op.opcode == "matmul"), None)
-    narrowing: list[str] = []
-    for op in module.ops:
-        declared = op.attrs.get("source_narrowing_points")
-        if isinstance(declared, (list, tuple)):
-            for point in declared:
-                if isinstance(point, str) and point not in narrowing:
-                    narrowing.append(point)
-    report["source"] = {"module": module.name,
-                        "source_hash": module.source_hash,
-                        "numeric_mode": options.numeric_mode,
-                        "submit_mode": options.submit_mode,
-                        "approx_lut": options.allow_approx_lut,
-                        "narrowing_points": narrowing,
-                        "source_k_loop": (matmul.attrs.get("source_k_loop")
-                                          if matmul is not None else None),
-                        "source_mn_tiling": (matmul.attrs.get("source_mn_tiling")
-                                             if matmul is not None else None),
-                        "source_tail_contract": (
-                            matmul.attrs.get("source_tail_contract")
-                            if matmul is not None else None)}
-    return CompileResult(plan=plan, diagnostics=[], report=report)
+        if self._compilation is None:
+            reject(RK_E_UNSUPPORTED,
+                   "this CompileResult was not produced by the compile pipeline",
+                   stage="api")
+        return CompiledArtifact.from_compilation(self._compilation)
+
+
+def _result(compilation: Compilation) -> CompileResult:
+    return CompileResult(plan=compilation.plan,
+                         diagnostics=[dict(item) for item in compilation.diagnostics],
+                         report=dict(compilation.report),
+                         _compilation=compilation)
 
 
 def compile_rkir(module: Module, *, profile: TargetProfile,
@@ -76,7 +68,8 @@ def compile_rkir(module: Module, *, profile: TargetProfile,
     """Compile already-normalized RKIR to an immutable RKPlan offline."""
     if not isinstance(module, Module):
         reject(RK_E_UNSUPPORTED, "compile_rkir expects an ir.Module", stage="api")
-    return _compile_module(module, profile=profile, options=options)
+    return _result(codegen.compile_graph(module, profile=profile,
+                                        options=options, stage="api"))
 
 
 def compile_tilelang(prim_func: Any, *, profile: TargetProfile,
@@ -102,10 +95,10 @@ def compile_tilelang(prim_func: Any, *, profile: TargetProfile,
             if candidate is not None and hasattr(candidate, "buffer_map"):
                 prim_func = candidate
                 break
-    module = tilelang_adapter.extract(prim_func, options=options,
-                                      profile_hash=profile.profile_hash,
-                                      b_is_input=b_is_input)
-    return _compile_module(module, profile=profile, options=options)
+    graph = codegen.normalize_tilelang(prim_func, profile=profile,
+                                       options=options, b_is_input=b_is_input)
+    return _result(codegen.compile_graph(graph, profile=profile, options=options,
+                                         stage="frontend"))
 
 
 def load_plan(path: str) -> Plan:
@@ -116,58 +109,3 @@ def save_plan(plan: Plan, path: str) -> None:
     if not isinstance(plan, Plan):
         reject(RK_E_UNSUPPORTED, "save_plan expects a Plan", stage="api")
     _save_plan(plan, path)
-
-
-def explain_plan(plan: Plan) -> dict[str, Any]:
-    if not isinstance(plan, Plan):
-        reject(RK_E_UNSUPPORTED, "explain_plan expects a Plan", stage="api")
-    slot_payload: dict[int, int] = {}
-    slot_buffers: dict[int, list[int]] = {}
-    for buffer in plan.buffers:
-        slot_payload[buffer.slot_id] = max(slot_payload.get(buffer.slot_id, 0),
-                                           buffer.offset + buffer.capacity)
-        slot_buffers.setdefault(buffer.slot_id, []).append(buffer.id)
-    return {
-        "schema_version": plan.schema_version,
-        "kind": plan.kind,
-        "name": plan.name,
-        "plan_hash": plan.plan_hash,
-        "profile_hash": plan.profile_hash,
-        "source_hash": plan.source_hash,
-        "bindings": [b.to_dict() for b in plan.bindings],
-        "constants": [c.to_dict() for c in plan.constants],
-        "counts": {
-            "bindings": len(plan.bindings),
-            "buffers": len(plan.buffers),
-            "views": len(plan.views),
-            "actions": len(plan.actions),
-            "tasks": plan.accounting.task_count,
-            "submits": plan.accounting.submit_count,
-            "data_bos": plan.accounting.data_bo_count,
-            "broadcast_expand_actions": sum(
-                1 for action in plan.actions
-                if action.kind == "upload" and
-                action.attrs.get("broadcast") is not None),
-        },
-        "broadcast": {
-            "expanded_bytes": plan.accounting.broadcast_expand_bytes,
-            "kinds": sorted({str(action.attrs.get("broadcast"))
-                             for action in plan.actions
-                             if action.kind == "upload" and
-                             action.attrs.get("broadcast") is not None}),
-        },
-        "slots": [
-            {"slot_id": slot_id, "payload_bytes": payload,
-             "buffer_ids": sorted(slot_buffers[slot_id])}
-            for slot_id, payload in sorted(slot_payload.items())
-        ],
-        "actions": [a.to_dict() for a in plan.actions],
-        "submits": [s.to_dict() for s in plan.submits],
-        "publish": [p.to_dict() for p in plan.publish],
-        "accounting": plan.accounting.to_dict(),
-        "policy": {
-            "numeric_mode": "rk_f16_tiled",
-            "fallback": "error",
-            "device_access": "none (compile/explain)",
-        },
-    }

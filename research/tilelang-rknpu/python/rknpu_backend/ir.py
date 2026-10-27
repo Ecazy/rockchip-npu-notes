@@ -13,6 +13,7 @@ from typing import Any, Iterable
 
 from .errors import (RK_E_INVALID, RK_E_SCHEMA, RK_E_SHAPE,
                      RK_E_UNSUPPORTED, reject)
+from .immutable import freeze, thaw
 
 SCHEMA_VERSION = 1
 KIND = "rkir"
@@ -330,6 +331,10 @@ class Op:
         if self.side_effects:
             reject(RK_E_UNSUPPORTED, "side-effecting ops are not supported by the MVP",
                    stage="frontend", op=self.opcode, source=self.source)
+        # Same boundary as plan.Action: copy the caller's mapping and make the
+        # result read-only, so a recognized graph cannot be edited behind the
+        # planner's back.
+        object.__setattr__(self, "attrs", freeze(dict(self.attrs)))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -363,7 +368,7 @@ def _jsonable_attrs(attrs: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, NumericContract):
             out[key] = value.to_dict()
         else:
-            out[key] = value
+            out[key] = thaw(value)
     return out
 
 

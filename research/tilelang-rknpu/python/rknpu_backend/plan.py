@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .errors import RK_E_ALIAS, RK_E_SCHEMA, RK_E_SHAPE, reject
+from .immutable import freeze, thaw
 from .serialize import sha256_json
 
 PLAN_SCHEMA_VERSION = 2
@@ -444,13 +445,23 @@ class Action:
         if self.kind not in {"npu_task", "host_compute", "commit", "host_pack",
                              "host_expand", "host_check", "upload", "download"}:
             reject(RK_E_SCHEMA, "unknown action kind", stage="schema")
+        # ``frozen=True`` only stops attribute assignment.  Two separate aliasing
+        # paths remain, and both are closed here:
+        #   * the caller keeps the mapping it passed in and edits it later,
+        #   * a caller edits this mapping afterwards through ``plan.actions[i]``.
+        # ``freeze`` copies the whole tree and returns read-only containers, so a
+        # descriptor can never be encoded from attributes that changed after the
+        # plan hash was computed.
+        object.__setattr__(self, "attrs", freeze(dict(self.attrs)))
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id, "kind": self.kind, "template_id": self.template_id,
             "inputs": list(self.inputs), "outputs": list(self.outputs),
             "deps": list(self.deps), "origin": self.origin,
-            "attrs": dict(sorted(self.attrs.items())),
+            # Plain (thawed) projection: JSON and the canonical plan hash are
+            # unchanged by the read-only in-memory representation.
+            "attrs": thaw(dict(sorted(self.attrs.items()))),
         }
 
     @classmethod

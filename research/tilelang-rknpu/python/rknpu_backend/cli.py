@@ -1,5 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Command line entry point.  ``validate`` and ``explain`` never import kernels."""
+"""Command line entry point.  ``validate`` and ``explain`` never import kernels.
+
+``compile-tilelang``/``compile-rkir`` build a :class:`CompiledArtifact` and only
+*export* it, so the CLI, the model tools and the Python API all run the same
+legalization/planning/encoding code.  ``run`` remains the offline replay path: it
+loads an exported RKPlan and executes it, which is what deployment does.
+"""
 from __future__ import annotations
 
 import argparse
@@ -14,11 +20,12 @@ from typing import Any
 
 import numpy as np
 
-from .api import compile_rkir, compile_tilelang, explain_plan, load_plan, save_plan
-from .capabilities import load_profile
-from .errors import (BackendError, RK_E_BUSY, RK_E_DEVICE, RK_E_NOMEM,
-                     RK_E_POISONED, RK_E_UNSUPPORTED, code_name)
+from .api import explain_plan, load_plan
+from .artifact import compile_artifact
 from .ir import Module
+from .capabilities import load_profile
+from .errors import (BackendError, RK_E_BUSY, RK_E_DEVICE, RK_E_INVALID,
+                     RK_E_NOMEM, RK_E_POISONED, RK_E_UNSUPPORTED)
 from .options import CompileOptions
 from .serialize import canonical_json, load_json_safe, loads
 
@@ -69,23 +76,19 @@ def _load_module_from_file(path: str, symbol: str) -> Any:
     return getattr(module, symbol)
 
 
-def _write_plan(result: Any, out: str) -> None:
-    save_plan(result.plan, out)
-
-
 def _cmd_compile_tilelang(args: argparse.Namespace) -> int:
     prim_func = _load_module_from_file(args.file, args.symbol)
-    result = compile_tilelang(prim_func, profile=_profile(args.profile),
-                              options=_options(args))
-    _write_plan(result, args.out)
+    artifact = compile_artifact(prim_func, profile=_profile(args.profile),
+                                options=_options(args))
+    artifact.export_plan(args.out)
     return 0
 
 
 def _cmd_compile_rkir(args: argparse.Namespace) -> int:
     module = Module.from_dict(load_json_safe(args.path))
-    result = compile_rkir(module, profile=_profile(args.profile),
-                          options=_options(args))
-    _write_plan(result, args.out)
+    artifact = compile_artifact(module, profile=_profile(args.profile),
+                                options=_options(args))
+    artifact.export_plan(args.out)
     return 0
 
 
