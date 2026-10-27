@@ -78,6 +78,16 @@ typedef struct rk_workspace {
      * not change this workspace's execution policy. */
     uint32_t upload_coalesce;
     uint32_t upload_fast_pack;
+    /* Experimental prepared-binding validation.  Off by default.  When
+     * enabled, the workspace caches the exact binding signatures after one
+     * full validation; later calls with identical signatures scan input
+     * finiteness but skip the repeated static shape/alias checks. */
+    uint32_t prepared_validation;
+    uint32_t prepared_validation_ready;
+    rk_binding *prepared_inputs;
+    rk_binding *prepared_outputs;
+    uint32_t prepared_ninputs;
+    uint32_t prepared_noutputs;
     /* Pre-allocated per-run Host scratch.  The single-run gate gives exclusive
      * ownership of these buffers to whichever entry point runs, so a plan call
      * no longer allocates or frees the emission array, the per-output tile

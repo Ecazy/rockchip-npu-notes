@@ -1,5 +1,14 @@
 # Runtime 分层隔离实验
 
+> **同实现修正（2026-10-27，后续 bounded experiment）：** 本文旧的
+> B/C、C−D 和完整模型 direct-adapter 数字是历史控制，不再作为因果结论。
+> B/C 使用了不同的 upload pack 实现（以及不同 finite-scan helper）；C−D
+> 包含实验路径差异，不能全部归为必要成本；direct adapter 每次重建 ctypes
+> 指针数组并使用节点代理，其回退只说明那种接线方式无收益。新的同实现
+> prepared-validation A/B 见
+> [RUNTIME-LAYER-PREPARED-VALIDATION.md](RUNTIME-LAYER-PREPARED-VALIDATION.md)
+> 和 `results/20261027T093259Z-template-gap/runtime-layers-prepared/`。
+
 日期：2026-10-27。目标是判断当前应用路径中 **Python/FFI、RKPlan 通用层、
 custom-ops/provider、当前执行粒度** 各自增加了多少成本；这是隔离实验，
 不是新的默认优化，也不是 validation/guard/publication batching 的实现。

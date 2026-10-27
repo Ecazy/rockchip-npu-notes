@@ -5,6 +5,23 @@ committed; tensor payloads, source bundles and local archives stay local (see
 `.gitignore`). A text checkpoint is a report, not a replacement for the raw
 payloads needed for independent numerical replay.
 
+## Prepared-validation same-implementation checkpoint (2026-10-27)
+
+- `results/20261027T093259Z-template-gap/runtime-layers-prepared/`: corrected
+  causal A/B on the same RKPlan implementation. Only the workspace-snapshotted
+  experimental `RK_PLAN_PREPARED_VALIDATION` flag changes; finite scans, pack,
+  submit, guard, download and publication are identical.
+- QK/PV static-validation reuse saves **1.54%/1.85%** (about 13–14 µs); MLP
+  b1/b32 and QKV are neutral. Full Tiny ViT b8 gains **1.68%** (round-median),
+  b1 only **0.10%**. All outputs are bitwise equal; wrong shape/non-finite/
+  address-change checks pass with no failed publication.
+- The remaining runtime `validate` time is dominated by the per-call finite
+  scan, not metadata/alias checks. The experimental flag remains default-off;
+  static validation reuse is **not productized**.
+- Report: [RUNTIME-LAYER-PREPARED-VALIDATION.md](../RUNTIME-LAYER-PREPARED-VALIDATION.md);
+  evidence: [README](20261027T093259Z-template-gap/runtime-layers-prepared/README.md).
+
+## Runtime layer isolation checkpoint (2026-10-27)
 ## Runtime layer isolation checkpoint (2026-10-27)
 
 - `results/20261027T093259Z-template-gap/runtime-layers/`: seven-round

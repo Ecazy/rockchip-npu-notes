@@ -363,6 +363,8 @@ int rk_workspace_create(int fd, const rk_plan *plan,
         "RK_PLAN_UPLOAD_COALESCE", 1);
     ws->upload_fast_pack = (uint32_t)env_flag_enabled(
         "RK_PLAN_UPLOAD_FAST_PACK", 1);
+    ws->prepared_validation = (uint32_t)env_flag_enabled(
+        "RK_PLAN_PREPARED_VALIDATION", 0);
     atomic_init(&ws->busy, 0);
     atomic_init(&ws->poisoned, 0);
     if (rk_plan_clone_plan(plan, &ws->plan, diag)) {
@@ -526,6 +528,8 @@ fail:
     free(ws->staging_arena);
     free(ws->tile_scratch);
     free(ws->emit_index);
+    free(ws->prepared_inputs);
+    free(ws->prepared_outputs);
     rk_plan_free(ws->plan);
     free(ws);
     return diag && diag->code ? diag->code : RK_E_INVALID;
@@ -796,6 +800,82 @@ static int run_gate(rk_workspace *ws, rk_run_state *st, rk_diag *diag) {
     return 0;
 }
 
+/* Finite-input scan shared by the full and prepared-validation paths.  This
+ * remains a per-call, value-dependent check; it is never cached. */
+static int check_finite_inputs(const rk_binding *inputs, uint32_t ninputs,
+                               rk_diag *diag) {
+    const void *seen_data[128];
+    uint64_t seen_bytes[128];
+    uint32_t seen_count = 0;
+    for (uint32_t i = 0; i < ninputs; i++) {
+        int seen = 0;
+        for (uint32_t q = 0; q < seen_count; q++)
+            if (seen_data[q] == inputs[i].data &&
+                seen_bytes[q] == inputs[i].nbytes) { seen = 1; break; }
+        if (seen) continue;
+        int rc = check_finite_binding(&inputs[i], diag);
+        if (rc) return rc;
+        if (seen_count < sizeof(seen_data) / sizeof(seen_data[0])) {
+            seen_data[seen_count] = inputs[i].data;
+            seen_bytes[seen_count] = inputs[i].nbytes;
+            seen_count++;
+        }
+    }
+    return 0;
+}
+
+static int same_static_binding(const rk_binding *a, const rk_binding *b) {
+    return a->id == b->id && a->dtype == b->dtype && a->rank == b->rank &&
+           a->shape[0] == b->shape[0] && a->shape[1] == b->shape[1] &&
+           a->data == b->data && a->nbytes == b->nbytes;
+}
+
+static int try_prepared_validate(rk_workspace *ws,
+                                 const rk_binding *inputs, uint32_t ninputs,
+                                 const rk_binding *outputs, uint32_t noutputs,
+                                 rk_diag *diag, int *used) {
+    *used = 0;
+    if (!ws->prepared_validation || !ws->prepared_validation_ready)
+        return 0;
+    if (ninputs != ws->prepared_ninputs || noutputs != ws->prepared_noutputs ||
+        (ninputs && (!inputs || !ws->prepared_inputs)) ||
+        (noutputs && (!outputs || !ws->prepared_outputs)))
+        return 0;
+    for (uint32_t i = 0; i < ninputs; i++)
+        if (!same_static_binding(&inputs[i], &ws->prepared_inputs[i]))
+            return 0;
+    for (uint32_t i = 0; i < noutputs; i++)
+        if (!same_static_binding(&outputs[i], &ws->prepared_outputs[i]))
+            return 0;
+    *used = 1;
+    return check_finite_inputs(inputs, ninputs, diag);
+}
+
+static void cache_prepared_bindings(rk_workspace *ws,
+                                    const rk_binding *inputs, uint32_t ninputs,
+                                    const rk_binding *outputs,
+                                    uint32_t noutputs) {
+    if (!ws->prepared_validation) return;
+    rk_binding *ni = NULL, *no = NULL;
+    if (ninputs) {
+        ni = malloc((size_t)ninputs * sizeof(*ni));
+        if (!ni) { ws->prepared_validation_ready = 0; return; }
+    }
+    if (noutputs) {
+        no = malloc((size_t)noutputs * sizeof(*no));
+        if (!no) { free(ni); ws->prepared_validation_ready = 0; return; }
+    }
+    if (ninputs) memcpy(ni, inputs, (size_t)ninputs * sizeof(*ni));
+    if (noutputs) memcpy(no, outputs, (size_t)noutputs * sizeof(*no));
+    free(ws->prepared_inputs);
+    free(ws->prepared_outputs);
+    ws->prepared_inputs = ni;
+    ws->prepared_outputs = no;
+    ws->prepared_ninputs = ninputs;
+    ws->prepared_noutputs = noutputs;
+    ws->prepared_validation_ready = 1;
+}
+
 /* Validates caller bindings for one repeat: arity, roles, dtype/rank/shape/
  * nbytes, input finiteness and host alias rules.  Every check that
  * ``rk_workspace_run`` performed per call is still performed per repeat, so the
@@ -1040,8 +1120,18 @@ static int run_repeat(rk_workspace *ws, const rk_binding *inputs,
                       uint32_t ninputs, const rk_binding *outputs,
                       uint32_t noutputs, rk_run_state *st, rk_diag *diag) {
     double t0 = now_us();
-    int rc = validate_repeat_bindings(ws, inputs, ninputs, outputs, noutputs,
+    int used_prepared = 0;
+    int rc = try_prepared_validate(ws, inputs, ninputs, outputs, noutputs,
+                                   diag, &used_prepared);
+    if (!used_prepared) {
+        /* Any changed pointer/metadata takes the full path, including alias
+         * checks, before the cache is refreshed. */
+        ws->prepared_validation_ready = 0;
+        rc = validate_repeat_bindings(ws, inputs, ninputs, outputs, noutputs,
                                       diag);
+        if (!rc) cache_prepared_bindings(ws, inputs, ninputs, outputs,
+                                         noutputs);
+    }
     st->validate_us += now_us() - t0;
     if (rc) return rc;
 
@@ -1453,6 +1543,8 @@ int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag) {
     free(ws->staging_arena);
     free(ws->tile_scratch);
     free(ws->emit_index);
+    free(ws->prepared_inputs);
+    free(ws->prepared_outputs);
     rk_plan_free(ws->plan);
     free(ws);
     return 0;

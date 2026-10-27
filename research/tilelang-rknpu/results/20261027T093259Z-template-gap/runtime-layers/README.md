@@ -1,5 +1,11 @@
 # Runtime layer isolation checkpoint
 
+> **Causal correction:** the B/C, C−D and direct-adapter comparisons in this
+> directory are historical controls. They used different pack/finite-scan
+> implementations and a per-call pointer-rebuilding adapter. Use the
+> same-implementation A/B in
+> [../runtime-layers-prepared/README.md](../runtime-layers-prepared/README.md).
+
 Date: 2026-10-27. Implementation/tool source: `136e2ba`.
 
 This result answers one question: when the same RKPlan descriptor, program

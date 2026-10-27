@@ -772,8 +772,14 @@ static int b_run(bctx *bc) {
     rk_run_report report;
     memset(&diag, 0, sizeof(diag));
     memset(&report, 0, sizeof(report));
-    return rk_workspace_run(bc->ws, bc->inputs, bc->ninputs,
-                            bc->outputs, bc->noutputs, &report, &diag);
+    int rc = rk_workspace_run(bc->ws, bc->inputs, bc->ninputs,
+                              bc->outputs, bc->noutputs, &report, &diag);
+    if (getenv("RL_DEBUG"))
+        fprintf(stderr, "RL_DEBUG static=%u ready=%u n=%u/%u rc=%d\n",
+                bc->ws->prepared_validation,
+                bc->ws->prepared_validation_ready,
+                bc->ws->prepared_ninputs, bc->ws->prepared_noutputs, rc);
+    return rc;
 }
 
 static int b_attr_run(bctx *bc, rk_run_attribution *attr) {
@@ -1039,6 +1045,7 @@ int main(int argc, char **argv) {
     return run_mode(argv[1], argv[2], rounds, out);
 }
 
+#ifdef RL_DIRECT_SHARED
 static void load_case_adapter_data(const char *dir, bundle *b, case_def *def,
                                      host_data *hd) {
     /* The full-model adapter receives Host pointers on every run; do not
@@ -1063,6 +1070,7 @@ static void load_case_adapter_data(const char *dir, bundle *b, case_def *def,
         hd->const_data[def->constants[i].id] = p;
     }
 }
+#endif
 
 #ifdef RL_DIRECT_SHARED
 /* Experimental full-model adapter: expose one direct group context to Python.
