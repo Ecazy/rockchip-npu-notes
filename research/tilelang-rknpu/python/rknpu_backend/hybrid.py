@@ -22,7 +22,8 @@ import numpy as np
 from .errors import (RK_E_INVALID, RK_E_NUMERIC_CONTRACT, RK_E_SCHEMA,
                      RK_E_SHAPE, RK_E_UNSUPPORTED, reject)
 from .models import PlanCall, RunStats
-from .passes.residency import analyze_residency
+from .passes.residency import (MIN_PREPARED_BINDING_SLOTS, analyze_residency,
+                               recommends_prepared, static_binding_slot_count)
 from .plan import Plan
 from .runtime.ffi import LibRKPlan
 
@@ -1621,7 +1622,7 @@ class HybridRunner:
                  plan_entry: str = "attributed",
                  repeat_submit: str = "manifest",
                  reuse_bindings: bool = True,
-                 execution_mode: str = "prepared"):
+                 execution_mode: str = "auto"):
         if plan_entry not in ("attributed", "legacy"):
             reject(RK_E_INVALID, f"unknown plan entry {plan_entry!r}",
                    stage="model")
@@ -1629,13 +1630,21 @@ class HybridRunner:
                                  "chain_shared"):
             reject(RK_E_INVALID, f"unknown repeat_submit {repeat_submit!r}",
                    stage="model")
-        if execution_mode not in ("generic", "prepared"):
+        if execution_mode not in ("auto", "generic", "prepared"):
             reject(RK_E_UNSUPPORTED, f"unknown execution_mode {execution_mode!r}",
                    stage="model")
         self.plan_entry = plan_entry
         self.repeat_submit = repeat_submit
         self.reuse_bindings = bool(reuse_bindings)
+        self.requested_execution_mode = execution_mode
         self.execution_mode = execution_mode
+        self.execution_selection: dict[str, Any] = {
+            "requested": execution_mode,
+            "selected": execution_mode,
+            "static_binding_slots": None,
+            "threshold": MIN_PREPARED_BINDING_SLOTS,
+            "reason": "explicit mode",
+        }
         self.residency = None
         self.resident_values: dict[str, np.ndarray] | None = None
         self.prepared_nodes: dict[str, tuple[Any, ...]] = {}
@@ -1694,6 +1703,20 @@ class HybridRunner:
                     "HybridRunner static binding-plan cleanup also failed: " +
                     "; ".join(repr(e) for e in cleanup_errors))
             raise
+        if self.requested_execution_mode == "auto":
+            use_prepared, selection = recommends_prepared(
+                self.program, self.node_plans)
+            self.execution_mode = "prepared" if use_prepared else "generic"
+            self.execution_selection = selection
+        else:
+            self.execution_selection = {
+                "requested": self.requested_execution_mode,
+                "selected": self.execution_mode,
+                "static_binding_slots": static_binding_slot_count(
+                    self.program, self.node_plans),
+                "threshold": MIN_PREPARED_BINDING_SLOTS,
+                "reason": "explicit mode",
+            }
         try:
             if self.execution_mode == "prepared":
                 self._prepare_resident_execution()

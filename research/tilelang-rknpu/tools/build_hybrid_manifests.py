@@ -663,6 +663,10 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--plans-dir", default=str(ROOT / "models" / "compiled"))
     ap.add_argument("--weights-dir", default=str(ROOT / "models"))
+    ap.add_argument("--include-hostfused", action="store_true",
+                    help="also emit the opt-in mapped-QKV + fused "
+                         "residual/RMSNorm experiment; off by default so a "
+                         "normal package rebuild preserves the frozen set")
     args = ap.parse_args()
     plans_dir = Path(args.plans_dir).resolve()
     weights_dir = Path(args.weights_dir).resolve()
@@ -718,22 +722,24 @@ def main() -> int:
                         "rmsnorm_mode": "fused",
                         "sha256": sha256(path)}
         print("wrote", path, flush=True)
-        # Host-fusion candidate on the production mapped-QKV layout: the residual
-        # and RMSNorm are one registered, bit-preserving Host action while the
-        # QK/PV plans still consume QKV directly.  This isolates Host-boundary
-        # fusion from the materialised-QKV control above.
-        key = f"tiny_vit_b{batch}_hostfused"
-        path = plans_dir / f"{key}.rkhybrid.json"
-        data = vit_manifest(batch, compiled, weights["tiny_vit"],
-                            weights_sha["tiny_vit"],
-                            compiled["profile_hash"], ffn_mode="packed",
-                            rmsnorm_mode="fused", attn_layout="qkv")
-        path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
-        written[key] = {"path": path.name, "model": "tiny_vit",
-                        "batch": batch, "ffn_mode": "packed",
-                        "rmsnorm_mode": "fused", "attn_layout": "qkv",
-                        "sha256": sha256(path)}
-        print("wrote", path, flush=True)
+        if args.include_hostfused:
+            # Host-fusion candidate on the production mapped-QKV layout: the
+            # residual and RMSNorm are one registered, bit-preserving Host action
+            # while QK/PV still consume QKV directly.  Opt-in so rebuilding the
+            # frozen default package does not silently add another deployment
+            # manifest or change the numeric spec's package hash.
+            key = f"tiny_vit_b{batch}_hostfused"
+            path = plans_dir / f"{key}.rkhybrid.json"
+            data = vit_manifest(batch, compiled, weights["tiny_vit"],
+                                weights_sha["tiny_vit"],
+                                compiled["profile_hash"], ffn_mode="packed",
+                                rmsnorm_mode="fused", attn_layout="qkv")
+            path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+            written[key] = {"path": path.name, "model": "tiny_vit",
+                            "batch": batch, "ffn_mode": "packed",
+                            "rmsnorm_mode": "fused", "attn_layout": "qkv",
+                            "sha256": sha256(path)}
+            print("wrote", path, flush=True)
     compiled["hybrid_schema_version"] = HYBRID_SCHEMA_VERSION
     compiled["hybrid_manifests"] = written
     compiled["hybrid_policy"] = {

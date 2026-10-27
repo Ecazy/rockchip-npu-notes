@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 from pathlib import Path
 from typing import Any
@@ -73,7 +74,7 @@ def _profile_rows(path: Path, arm: str) -> tuple[dict[str, Any], str]:
                 "declared_max_abs_logit_error": float(
                     result.get("declared_max_abs_logit_error", 0.0)),
                 "n": int(result["n"]),
-                "full_test_split": bool(result["full_test_split"]),
+                "full_test_split": int(result["n"]) >= 10000,
                 "calls": calls,
                 "setup_ms": 1e3 * float(timing.get("runner_setup_seconds", 0.0)),
                 "weight_load_ms": 1e3 * float(
@@ -83,7 +84,11 @@ def _profile_rows(path: Path, arm: str) -> tuple[dict[str, Any], str]:
                     row["name"]: float(row["elapsed_us"]) / calls
                     for row in stats.get("host_actions", [])
                 },
-                "execution_mode": payload.get("execution_mode", "generic"),
+                "execution_mode": result.get(
+                    "execution_mode", payload.get("execution_mode", "generic")),
+                "execution_selection": result.get("execution_selection"),
+                "host_residency_bytes": int(
+                    result.get("host_residency_bytes", 0)),
                 "hybrid_suffix": payload.get("hybrid_suffix", ""),
             }
         return out, "custom"
@@ -113,6 +118,8 @@ def _profile_rows(path: Path, arm: str) -> tuple[dict[str, Any], str]:
                     "per_call": {},
                     "host_actions": {},
                     "execution_mode": payload.get("backend", family),
+                    "execution_selection": None,
+                    "host_residency_bytes": 0,
                     "hybrid_suffix": "",
                 }
             return out, family
@@ -146,12 +153,14 @@ def _arm_table(results: Path, arm: str) -> dict:
             for field in (
                 "warm_ms", "e2e_ms", "accuracy", "top1",
                 "max_abs_logit_error", "declared_max_abs_logit_error",
-                "n", "calls", "setup_ms", "weight_load_ms")
+                "n", "calls", "setup_ms", "weight_load_ms",
+                "host_residency_bytes")
         }
         prof["full_test_split"] = all(bool(row["full_test_split"])
                                       for row in rows)
         prof["round_warm_ms"] = [float(row["warm_ms"]) for row in rows]
         prof["execution_mode"] = rows[0].get("execution_mode")
+        prof["execution_selection"] = rows[0].get("execution_selection")
         prof["per_call"] = {
             field: _median(row["per_call"].get(field) for row in rows)
             for field in CUSTOM_STATS
@@ -340,7 +349,8 @@ def main() -> int:
     ap.add_argument("--campaign", type=Path, required=True)
     ap.add_argument("--results", type=Path, required=True)
     ap.add_argument("--arms", nargs="+",
-                    default=["generic", "prepared", "hostfused", "vendor", "cpu"])
+                    default=["generic", "prepared", "auto", "hostfused",
+                             "vendor", "cpu"])
     ap.add_argument("--reference-arm", default="generic")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--markdown", type=Path, required=True)
@@ -383,6 +393,28 @@ def main() -> int:
             got = profiles[key][arm]
             if got["n"] != 10000:
                 problems.append(f"{key}: {arm} sample count is not 10000")
+            got["packed_atol_exceeded"] = bool(
+                profiles[key]["packed_atol"] is not None and
+                got["max_abs_logit_error"] > profiles[key]["packed_atol"])
+
+    thresholds = campaign.get("thresholds", {})
+    for key in PROFILE_KEYS:
+        model = key.split(".b", 1)[0]
+        threshold = thresholds.get(f"{model}_accuracy")
+        for arm in custom:
+            got = profiles[key][arm]
+            if threshold is not None and got["accuracy"] + 1e-12 < float(threshold):
+                problems.append(
+                    f"{key}: {arm} accuracy {got['accuracy']:.5f} is below "
+                    f"{float(threshold):.5f}")
+            if got["top1"] + 1e-12 < float(
+                    thresholds.get("top1_agreement_min", 0.99)):
+                problems.append(f"{key}: {arm} top-1 agreement is below threshold")
+        packed_atol = profiles[key]["packed_atol"]
+        ref = profiles[key][args.reference_arm]
+        if packed_atol is not None and ref["max_abs_logit_error"] > packed_atol:
+            problems.append(
+                f"{key}: reference CPU max logit error exceeds packed atol")
 
     numeric = _numeric_comparison(results, custom, args.reference_arm)
     for arm, rounds in numeric.items():
@@ -411,6 +443,16 @@ def main() -> int:
                  profiles[key][arm]["warm_ms"]
             for key in PROFILE_KEYS
         }
+    speed_summary = {}
+    for arm, values in ratios.items():
+        samples = [float(v) for v in values.values()]
+        speed_summary[arm] = {
+            "profile_ratios": values,
+            "geomean": math.exp(sum(math.log(v) for v in samples) /
+                                len(samples)) if samples else None,
+            "min": min(samples) if samples else None,
+            "max": max(samples) if samples else None,
+        }
     full_10k = all(rows[arm]["profiles"][key]["full_test_split"]
                    for arm in args.arms for key in PROFILE_KEYS)
     status = "PASS" if not problems else "FAIL"
@@ -428,6 +470,7 @@ def main() -> int:
         "full_10k_all_profiles": bool(full_10k),
         "profiles": profiles,
         "speedups_vs_reference": ratios,
+        "speedup_summary": speed_summary,
         "numeric_compare": numeric,
         "problems": problems,
     }

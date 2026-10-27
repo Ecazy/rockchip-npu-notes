@@ -55,7 +55,7 @@ def _run_profile(lib: LibRKPlan, manifest: dict[str, Any], plans_dir: Path,
                  model: str, batch: int, weights: dict[str, np.ndarray],
                  weights_path: Path | None, images: np.ndarray,
                  fd: int, manifest_keys: dict[str, str] | None = None,
-                 execution_mode: str = "prepared") -> np.ndarray:
+                 execution_mode: str = "auto") -> np.ndarray:
     key = f"{model}_b{batch}"
     if manifest_keys:
         key = manifest_keys.get(key, key)
@@ -75,7 +75,7 @@ def _run_profile(lib: LibRKPlan, manifest: dict[str, Any], plans_dir: Path,
 def _run_mlp_trace(lib: LibRKPlan, manifest: dict[str, Any], plans_dir: Path,
                    weights: dict[str, np.ndarray], weights_path: Path,
                    images: np.ndarray, fd: int,
-                   execution_mode: str = "prepared") -> dict[str, np.ndarray]:
+                   execution_mode: str = "auto") -> dict[str, np.ndarray]:
     program = load_hybrid_program(
         _hybrid_path(manifest, plans_dir, "mnist_mlp_b8"),
         plans_dir=plans_dir)
@@ -137,7 +137,7 @@ def _run_vit_trace(lib: LibRKPlan, manifest: dict[str, Any], plans_dir: Path,
                    weights: dict[str, np.ndarray], weights_path: Path,
                    images: np.ndarray, fd: int,
                    manifest_keys: dict[str, str] | None = None,
-                   execution_mode: str = "prepared") -> dict[str, np.ndarray]:
+                   execution_mode: str = "auto") -> dict[str, np.ndarray]:
     key = (manifest_keys or {}).get("tiny_vit_b8", "tiny_vit_b8")
     program = load_hybrid_program(
         _hybrid_path(manifest, plans_dir, key),
@@ -158,7 +158,7 @@ def observe_split(lib: LibRKPlan, plans_dir: str | Path,
                   weights_dir: str | Path, raw_images: np.ndarray,
                   split: str, *, fd: int = 0,
                   manifest_keys: dict[str, str] | None = None,
-                  execution_mode: str = "prepared"
+                  execution_mode: str = "auto"
                   ) -> dict[str, np.ndarray]:
     """Return all fixed observations for one split in one NPZ-like mapping."""
     plans_dir = Path(plans_dir).resolve()

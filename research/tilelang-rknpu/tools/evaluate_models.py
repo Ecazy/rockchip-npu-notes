@@ -132,7 +132,7 @@ def _hybrid_path(manifest: dict, plans_dir: Path, key: str) -> Path:
 
 
 def _build_mlp_runners(lib, plans_dir, manifest, weights, weights_path,
-                       schedule, fd, execution_mode="prepared"):
+                       schedule, fd, execution_mode="auto"):
     t0 = time.perf_counter()
     profiles = sorted({row["profile"] for row in schedule}, reverse=True)
     runners = {}
@@ -160,7 +160,7 @@ def _build_mlp_runners(lib, plans_dir, manifest, weights, weights_path,
 
 def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
                      *, weight_load_seconds: float, primary_full: bool,
-                     weights_path: Path, execution_mode: str = "prepared"):
+                     weights_path: Path, execution_mode: str = "auto"):
     """Evaluate one static MLP profile; reference time is outside the interval."""
     schedule = make_batch_schedule(len(x), batch, tail_profiles=(8, 1))
     runners, setup_seconds = _build_mlp_runners(
@@ -204,6 +204,17 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
         declared_reference_seconds = time.perf_counter() - t_ref
 
         result = metrics(logits, ref, y, declared)
+        result["execution_selection"] = {
+            int(batch_id): runner.execution_selection
+            for batch_id, runner in runners.items()
+        }
+        selected_modes = sorted({runner.execution_mode
+                                 for runner in runners.values()})
+        result["execution_mode"] = (selected_modes[0]
+                                    if len(selected_modes) == 1 else "mixed")
+        result["host_residency_bytes"] = sum(
+            runner.residency.total_bytes for runner in runners.values()
+            if runner.residency is not None)
         timing = {
             "timing_schema_version": TIMING_SCHEMA_VERSION,
             "reference_timing": "excluded_from_model_interval",
@@ -264,7 +275,7 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
 
 
 def _build_vit_runners(lib, plans_dir, manifest, weights, weights_path,
-                       batch, fd, execution_mode="prepared",
+                       batch, fd, execution_mode="auto",
                        hybrid_suffix=""):
     t0 = time.perf_counter()
     program = load_hybrid_program(
@@ -278,7 +289,7 @@ def _build_vit_runners(lib, plans_dir, manifest, weights, weights_path,
 
 def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
                      *, weight_load_seconds: float, primary_full: bool,
-                     weights_path: Path, execution_mode: str = "prepared",
+                     weights_path: Path, execution_mode: str = "auto",
                      hybrid_suffix: str = ""):
     schedule = make_batch_schedule(len(x), batch, tail_profiles=())
     runner, setup_seconds = _build_vit_runners(
@@ -315,6 +326,12 @@ def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
         declared_reference_seconds = time.perf_counter() - t_ref
 
         result = metrics(logits, ref, y, declared)
+        result["execution_selection"] = {
+            int(batch): runner.execution_selection,
+        }
+        result["execution_mode"] = runner.execution_mode
+        result["host_residency_bytes"] = (
+            runner.residency.total_bytes if runner.residency is not None else 0)
         timing = {
             "timing_schema_version": TIMING_SCHEMA_VERSION,
             "reference_timing": "excluded_from_model_interval",
@@ -375,7 +392,7 @@ def _layer_trace_path(out: Path) -> Path:
 
 def _run_layer_traces(lib, plans_dir, manifest, *, weights_dir: Path,
                       x: np.ndarray, numeric_spec: dict, fd: int,
-                      models: str, execution_mode: str = "prepared",
+                      models: str, execution_mode: str = "auto",
                       hybrid_suffix: str = "") -> dict:
     """Capture the deterministic subset from the same planized graph nodes."""
     indices = [int(v) for v in numeric_spec["sample_policy"]["indices"]]
@@ -443,8 +460,8 @@ def main() -> int:
     ap.add_argument("--fd", type=int, default=None,
                     help="use this already-open device fd; otherwise mock fd=0")
     ap.add_argument("--backend", choices=("mock", "board"), default="mock")
-    ap.add_argument("--execution-mode", choices=("generic", "prepared"),
-                    default="prepared",
+    ap.add_argument("--execution-mode", choices=("auto", "generic", "prepared"),
+                    default="auto",
                     help="Host binding strategy; prepared binds stable resident "
                          "buffers once and relies on the C per-run guards")
     ap.add_argument("--hybrid-suffix", default="",

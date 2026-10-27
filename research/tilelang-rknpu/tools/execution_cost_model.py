@@ -306,7 +306,7 @@ def main() -> int:
         "generic_profile": args.profile.name,
         "ledger_ms": {
             "whole_run": _ms(run["run_us"]),
-            "prepared_total": _ms(run["envelope"]["plan_total_us"]),
+            "c_total": _ms(run["envelope"]["plan_total_us"]),
             "rkplan_workspace": _ms(run["envelope"]["plan_workspace_us"]),
             "python_plan_node": _ms(run["envelope"]["python_plan_node_us"]),
             "host_actions": _ms(run["envelope"]["host_action_us"]),

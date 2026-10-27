@@ -829,7 +829,7 @@ class HybridModelRunner:
     def __init__(self, lib: LibRKPlan, program: Any,
                  weights: dict[str, np.ndarray], batch: int, *,
                  weights_path: str | Path | None = None, fd: int = 0,
-                 execution_mode: str = "prepared"):
+                 execution_mode: str = "auto"):
         from .hybrid import HybridRunner, HybridProgram, load_hybrid_program
         if isinstance(program, (str, Path)):
             program = load_hybrid_program(program)

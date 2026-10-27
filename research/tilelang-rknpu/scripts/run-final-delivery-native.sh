@@ -19,8 +19,8 @@ record_env() {
     echo "gcc=$(gcc --version | head -1)"
     echo "cmake=$(cmake --version | head -1)"
     echo "python=$(python3 -V 2>&1)"
-    echo "execution_mode=${RK_EXECUTION_MODE:-prepared}"
-    echo "hybrid_suffix=${RK_HYBRID_SUFFIX:-}"
+    echo "execution_mode_env=${RK_EXECUTION_MODE:-<default>}"
+    echo "hybrid_suffix_env=${RK_HYBRID_SUFFIX:-<default>}"
   } > "$out"
 }
 
@@ -56,8 +56,9 @@ case "${1:-}" in
     lib="$build/librknpu_plan.so"
     [[ -f "$lib" ]] || { echo "missing $lib" >&2; exit 1; }
     sha256sum "$lib" > "$out/library.sha256"
-    execution_mode=${RK_EXECUTION_MODE:-prepared}
-    hybrid_suffix=${RK_HYBRID_SUFFIX:-}
+    eval_args=()
+    [[ -z "${RK_EXECUTION_MODE:-}" ]] ||       eval_args+=(--execution-mode "$RK_EXECUTION_MODE")
+    [[ -z "${RK_HYBRID_SUFFIX:-}" ]] ||       eval_args+=(--hybrid-suffix "$RK_HYBRID_SUFFIX")
     set +e
     start_ns=$(date +%s%N)
     taskset -c "$cpu" env \
@@ -69,7 +70,7 @@ case "${1:-}" in
         --backend board --lib "$lib" \
         --plans-dir "$plans" --weights-dir "$weights" --data-dir "$data" \
         --global-limit "$limit" --profile-samples "$limit" \
-        --execution-mode "$execution_mode" --hybrid-suffix "$hybrid_suffix" \
+        "${eval_args[@]}" \
         --numeric-spec "$numeric" --out "$out/model_eval.json" \
         > "$out/runner.log" 2>&1
     rc=$?
@@ -101,14 +102,16 @@ PY
     mkdir -p "$out"
     record_env "$out/environment.log"
     lib="$build/librknpu_plan.so"
+    numeric_args=()
+    [[ -z "${RK_EXECUTION_MODE:-}" ]] || \
+      numeric_args+=(--execution-mode "$RK_EXECUTION_MODE")
     taskset -c "$cpu" env \
       RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 \
       RKNPU_PLAN_LIB="$lib" LD_LIBRARY_PATH="$build${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
       PYTHONPATH="$source_root/tilelang-rknpu/python${PYTHONPATH:+:$PYTHONPATH}" \
       python3 "$source_root/tilelang-rknpu/tools/run_numeric_observation.py" \
         --mode calibration --plans-dir "$plans" --weights-dir "$weights" \
-        --data-dir "$data" --lib "$lib" \
-        --execution-mode "${RK_EXECUTION_MODE:-prepared}" \
+        --data-dir "$data" --lib "$lib" "${numeric_args[@]}" \
         --out "$out/observation.npz" > "$out/runner.log" 2>&1
     ;;
   observe)
@@ -129,14 +132,16 @@ PY
     mkdir -p "$out"
     record_env "$out/environment.log"
     lib="$build/librknpu_plan.so"
+    numeric_args=()
+    [[ -z "${RK_EXECUTION_MODE:-}" ]] || \
+      numeric_args+=(--execution-mode "$RK_EXECUTION_MODE")
     taskset -c "$cpu" env \
       RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 \
       RKNPU_PLAN_LIB="$lib" LD_LIBRARY_PATH="$build${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
       PYTHONPATH="$source_root/tilelang-rknpu/python${PYTHONPATH:+:$PYTHONPATH}" \
       python3 "$source_root/tilelang-rknpu/tools/run_numeric_observation.py" \
         --mode acceptance --plans-dir "$plans" --weights-dir "$weights" \
-        --data-dir "$data" --spec "$spec" --lib "$lib" \
-        --execution-mode "${RK_EXECUTION_MODE:-prepared}" \
+        --data-dir "$data" --spec "$spec" --lib "$lib" "${numeric_args[@]}" \
         --out "$out/observation.npz" > "$out/runner.log" 2>&1
     ;;
   *)

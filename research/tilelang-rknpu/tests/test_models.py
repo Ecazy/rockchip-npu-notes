@@ -211,6 +211,42 @@ class CompleteModelTests(unittest.TestCase):
                                stats.plan_submit_wait_us, places=3)
         self.assertAlmostEqual(data["plan_pack_us"], stats.plan_pack_us, places=3)
 
+    def test_auto_residency_selects_by_static_binding_fanout(self):
+        """Auto mode uses binding/layout facts, never a model-name branch.
+
+        One MLP plan exposes 13 ctypes binding slots and stays on the generic
+        path; Tiny ViT exposes 42 (b1) or 210 (b8) because its static repeat
+        groups are pre-expanded, so prepared residency has enough Python binding
+        work to amortise the resident write-back.
+        """
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.passes.residency import (
+            MIN_PREPARED_BINDING_SLOTS)
+        cases = (
+            ("mnist_mlp_b8", self.mlp_weights, WEIGHTS / "mnist_mlp.npz",
+             "generic", 13),
+            ("tiny_vit_b1", self.vit_weights, WEIGHTS / "tiny_vit.npz",
+             "prepared", 42),
+            ("tiny_vit_b8", self.vit_weights, WEIGHTS / "tiny_vit.npz",
+             "prepared", 210),
+        )
+        for key, weights, weights_path, expected, slots in cases:
+            program = load_hybrid_program(self._hybrid(key), plans_dir=PLANS)
+            runner = HybridRunner(self.lib, program, weights,
+                                  weights_path=weights_path, fd=0)
+            try:
+                self.assertEqual(runner.requested_execution_mode, "auto")
+                self.assertEqual(runner.execution_mode, expected)
+                self.assertEqual(
+                    runner.execution_selection["static_binding_slots"], slots)
+                self.assertEqual(
+                    runner.execution_selection["threshold"],
+                    MIN_PREPARED_BINDING_SLOTS)
+                self.assertEqual(runner.residency is not None,
+                                 expected == "prepared")
+            finally:
+                runner.close()
+
     def test_prepared_residency_matches_generic_bitwise_and_reuses_buffers(self):
         """The compiled lowering may remove repeated binding work, not arithmetic.
 

@@ -46,6 +46,7 @@ cp -a "$HERE/models/compiled/." "$CAMPAIGN/plans/current/"
 cp -a "$CAMPAIGN/plans/current/." "$CAMPAIGN/plans/candidate/"
 PYTHONPATH="$HERE/python" python3 "$HERE/tools/build_hybrid_manifests.py" \
   --plans-dir "$CAMPAIGN/plans/candidate" --weights-dir "$HERE/models" \
+  --include-hostfused \
   > "$LOCAL/candidate-manifest-build.log" 2>&1
 cp "$HERE/models/mnist_mlp.npz" "$HERE/models/tiny_vit.npz" \
    "$CAMPAIGN/weights/"
@@ -113,6 +114,10 @@ manifest = {
         'prepared': {'family': 'custom', 'plans': 'plans/current',
                      'execution_mode': 'prepared', 'hybrid_suffix': '',
                      'numeric_policy': 'packed per-logit'},
+        'auto': {'family': 'custom', 'plans': 'plans/current',
+                 'execution_mode': 'auto', 'hybrid_suffix': '',
+                 'numeric_policy': 'packed per-logit; static binding-fanout '
+                                   'selection between generic and prepared'},
         'hostfused': {'family': 'custom', 'plans': 'plans/candidate',
                       'execution_mode': 'prepared', 'hybrid_suffix': '_hostfused',
                       'numeric_policy': 'packed per-logit; bit-preserving '
@@ -213,6 +218,7 @@ run_custom() {
   case "$arm" in
     generic) plans="$REMOTE/campaign/plans/current"; mode=generic; suffix="";;
     prepared) plans="$REMOTE/campaign/plans/current"; mode=prepared; suffix="";;
+    auto) plans="$REMOTE/campaign/plans/current"; mode=auto; suffix="";;
     hostfused) plans="$REMOTE/campaign/plans/candidate"; mode=prepared; suffix=_hostfused;;
     *) echo "unknown custom arm $arm" >&2; return 2;;
   esac
@@ -225,13 +231,11 @@ run_custom() {
     > "$LOCAL/round-${round}-${arm}.log" 2>&1
 }
 for ((round = 1; round <= CUSTOM_ROUNDS; round++)); do
-  case $((round % 6)) in
-    1) arms=(generic prepared hostfused);;
-    2) arms=(hostfused prepared generic);;
-    3) arms=(prepared generic hostfused);;
-    4) arms=(hostfused generic prepared);;
-    5) arms=(generic hostfused prepared);;
-    0) arms=(prepared hostfused generic);;
+  case $((round % 4)) in
+    1) arms=(generic prepared auto hostfused);;
+    2) arms=(hostfused auto prepared generic);;
+    3) arms=(prepared generic hostfused auto);;
+    0) arms=(auto hostfused generic prepared);;
   esac
   for arm in "${arms[@]}"; do
     echo "custom round $round $arm" | tee -a "$LOCAL/progress.log"
@@ -289,21 +293,21 @@ for ((round = 1; round <= EXTERNAL_ROUNDS; round++)); do
   done
 done
 
-# ---- prepared-path frozen numeric observation ------------------------------
-"${SSH[@]}" "RK_EXECUTION_MODE=prepared \
+# ---- auto/default-path frozen numeric observation --------------------------
+"${SSH[@]}" "RK_EXECUTION_MODE=auto \
   bash '$REMOTE/source/tilelang-rknpu/scripts/run-final-delivery-native.sh' \
     calibrate '$REMOTE/source' '$REMOTE/build' \
     '$REMOTE/campaign/plans/current' '$REMOTE/campaign/weights' \
-    '$REMOTE/campaign/data' '$REMOTE/out/numeric-prepared-calibration' '$CPU'" \
-  > "$LOCAL/numeric-prepared-calibration.log" 2>&1
-"${SSH[@]}" "RK_EXECUTION_MODE=prepared \
+    '$REMOTE/campaign/data' '$REMOTE/out/numeric-auto-calibration' '$CPU'" \
+  > "$LOCAL/numeric-auto-calibration.log" 2>&1
+"${SSH[@]}" "RK_EXECUTION_MODE=auto \
   bash '$REMOTE/source/tilelang-rknpu/scripts/run-final-delivery-native.sh' \
     observe '$REMOTE/source' '$REMOTE/build' \
     '$REMOTE/campaign/plans/current' '$REMOTE/campaign/weights' \
     '$REMOTE/campaign/data' \
     '$REMOTE/campaign/numeric/numeric_acceptance_packed.json' \
-    '$REMOTE/out/numeric-prepared' '$CPU'" \
-  > "$LOCAL/numeric-prepared.log" 2>&1
+    '$REMOTE/out/numeric-auto' '$CPU'" \
+  > "$LOCAL/numeric-auto.log" 2>&1
 "${SSH[@]}" "{ date -u +%FT%TZ; uname -srm; tr -d '\\0' </proc/device-tree/model; \
   echo; cat /sys/kernel/debug/rknpu/version; cat /sys/kernel/debug/rknpu/freq; \
   cat /sys/kernel/debug/rknpu/load; cat /proc/loadavg; } \
@@ -317,17 +321,17 @@ mkdir -p "$LOCAL/model-results"
   "$TARGET:$REMOTE/campaign/vendor-site.log" "$LOCAL/"
 PYTHONPATH="$HERE/python:$HERE" python3 "$HERE/tools/analyze_execution_candidates.py" \
   --campaign "$LOCAL/campaign" --results "$LOCAL/model-results" \
-  --arms generic prepared hostfused vendor cpu \
+  --arms generic prepared auto hostfused vendor cpu \
   --out "$LOCAL/analysis.json" --markdown "$LOCAL/analysis.md" \
   > "$LOCAL/analysis.log" 2>&1 || true
 PYTHONPATH="$HERE/python:$HERE" python3 "$HERE/tools/verify_numeric_acceptance.py" \
   --spec "$LOCAL/campaign/numeric/numeric_acceptance_packed.json" \
   --calibration-observation \
-    "$LOCAL/model-results/numeric-prepared-calibration/observation.npz" \
+    "$LOCAL/model-results/numeric-auto-calibration/observation.npz" \
   --acceptance-observation \
-    "$LOCAL/model-results/numeric-prepared/observation.npz" \
-  --out "$LOCAL/verify-prepared-summary.json" \
-  > "$LOCAL/verify-prepared.log" 2>&1 || true
+    "$LOCAL/model-results/numeric-auto/observation.npz" \
+  --out "$LOCAL/verify-auto-summary.json" \
+  > "$LOCAL/verify-auto.log" 2>&1 || true
 if grep -R -l -F -- "$ORANGE_PI_PASSWORD" "$LOCAL" > /dev/null 2>&1; then
   echo 'credential scan: FAIL (value found in artifacts)' >&2
   exit 1

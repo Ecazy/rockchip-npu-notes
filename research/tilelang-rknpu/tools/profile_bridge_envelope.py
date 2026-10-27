@@ -3,7 +3,7 @@
 """Attribute the RKPlan/Host envelope of a frozen hybrid model profile.
 
 This is the measurement instrument for the first optimisation package in
-``TRANSFORMER-OPTIMIZATION-PLAN.md``:
+``archive/optimization-history.md#plan``:
 
 * it runs one frozen ``rkhybrid`` profile (default: Tiny Transformer batch 8)
   over a fixed, deterministic input set;
@@ -211,7 +211,7 @@ def run_profile(args) -> dict:
     runner = HybridRunner(lib, program, weights, fd=fd,
                           reuse_bindings=reuse_bindings,
                           execution_mode=getattr(args, "execution_mode",
-                                                 "prepared"), **extra)
+                                                 "auto"), **extra)
     runner_setup_us = (time.perf_counter() - t_setup) * 1e6
     plan_call_count = len(runner.calls)
     per_run = []
@@ -263,7 +263,7 @@ def run_profile(args) -> dict:
         "plan_entry": getattr(args, "plan_entry", "attributed"),
         "repeat_submit": getattr(args, "repeat_submit", "manifest"),
         "reuse_bindings": reuse_bindings,
-        "execution_mode": getattr(args, "execution_mode", "prepared"),
+        "execution_mode": getattr(args, "execution_mode", "auto"),
         "creation": {
             "manifest_load_us": manifest_load_us,
             "runner_setup_us": runner_setup_us,
@@ -340,8 +340,8 @@ def main() -> int:
                     help="attributed uses rk_workspace_run_ex; legacy uses the "
                          "frozen 88-byte rk_workspace_run report and is only "
                          "valid for graphs without static-repeat nodes")
-    ap.add_argument("--execution-mode", choices=("generic", "prepared"),
-                    default="prepared",
+    ap.add_argument("--execution-mode",
+                    choices=("auto", "generic", "prepared"), default="auto",
                     help="Host binding strategy for this measurement arm")
     args = ap.parse_args()
     if args.runs < 1:

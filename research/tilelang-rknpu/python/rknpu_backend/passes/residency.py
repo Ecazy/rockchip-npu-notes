@@ -35,6 +35,14 @@ _DTYPES = {
 }
 ProducerKind = Literal["host_action", "rkplan"]
 
+# A prepared lowering removes Python validation/descriptor construction but adds
+# one Host write-back for every produced tensor.  The measured crossover is
+# dominated by the number of static RKPlan binding slots, not by model identity:
+# Tiny ViT b1 has 42 slots and wins, the one-plan MLP profiles have 13 and do
+# not.  Keep the rule explicit and shared by the runtime selector and the cost
+# model rather than embedding model names.
+MIN_PREPARED_BINDING_SLOTS = 32
+
 
 @dataclass(frozen=True)
 class ResidentSlot:
@@ -110,6 +118,68 @@ def _node_refs(node) -> tuple[tuple[str, ...], tuple[str, ...]]:
     outputs = tuple(ref.tensor for ref in node.outputs.values())
     return inputs, outputs
 
+
+
+
+def static_binding_slot_count(program, binding_plans=None) -> int:
+    """Count ctypes binding slots touched by one graph invocation.
+
+    ``binding_plans`` may be the runner's resolved ``_NpuBindingPlan`` mapping.
+    When omitted, the manifest's declared repeat policy is used.  This is a pure
+    layout/dependency predicate: mapped/shared groups count their pre-expanded
+    binding list once, while per-repeat submissions count every repeat.
+    """
+    total = 0
+    for node in program.nodes:
+        if not hasattr(node, "plan"):
+            continue
+        resolved = binding_plans.get(node.id) if binding_plans else None
+        if resolved is not None:
+            if resolved.mode == "shared_group":
+                group = getattr(node, "group_plan", None)
+                if group is None:
+                    reject(RK_E_SCHEMA,
+                           "shared-group plan lacks group_plan", stage="lowering",
+                           actual=node.id)
+                total += len(program.plans[group].plan.bindings)
+                continue
+            repeat_count = max(1, len(resolved.repeats))
+        else:
+            repeat_count = 1
+            for axis in node.repeat:
+                repeat_count *= int(axis.extent)
+            if getattr(node, "group_plan", None) is not None and \
+                    node.repeat_submit == "mapped_group":
+                total += len(program.plans[node.group_plan].plan.bindings)
+                continue
+        total += len(program.plans[node.plan].plan.bindings) * repeat_count
+    return total
+
+
+def recommends_prepared(program, binding_plans=None) -> tuple[bool, dict]:
+    """Return the static auto-selection decision and its inspectable evidence."""
+    if binding_plans is not None:
+        for node_id, plan in binding_plans.items():
+            if plan.mode == "independent_calls" and len(plan.repeats) > 1:
+                return False, {
+                    "requested": "auto", "selected": "generic",
+                    "static_binding_slots": static_binding_slot_count(
+                        program, binding_plans),
+                    "threshold": MIN_PREPARED_BINDING_SLOTS,
+                    "reason": "independent_calls requires per-call rebinding",
+                }
+    slots = static_binding_slot_count(program, binding_plans)
+    prepared = slots >= MIN_PREPARED_BINDING_SLOTS
+    return prepared, {
+        "requested": "auto",
+        "selected": "prepared" if prepared else "generic",
+        "static_binding_slots": slots,
+        "threshold": MIN_PREPARED_BINDING_SLOTS,
+        "reason": ("binding fanout amortises resident write-back"
+                   if prepared else
+                   "low binding fanout; generic path has equivalent work and "
+                   "avoids resident Host write-back"),
+    }
 
 def analyze_residency(program) -> ResidencyPlan:
     """Prove and describe stable Host residency for a frozen hybrid graph.
