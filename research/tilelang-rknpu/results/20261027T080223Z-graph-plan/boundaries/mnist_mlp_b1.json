@@ -1,0 +1,86 @@
+{
+  "boundaries": [
+    {
+      "action": "mnist.normalize_flatten.v1",
+      "causes": [
+        "numeric_semantics",
+        "current_implementation"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.06391978925094008,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "normalize",
+      "outputs": [
+        "x_flat"
+      ],
+      "phase": "preprocess",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "tensor.pad_2d.v1",
+      "causes": [
+        "physical_layout",
+        "current_implementation"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.030195101513527334,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "pad_k",
+      "outputs": [
+        "x_padded"
+      ],
+      "phase": "preprocess",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "logits.prefix.v1",
+      "causes": [
+        "numeric_semantics",
+        "resource_interface"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.02799148572375998,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "export_logits",
+      "outputs": [
+        "logits"
+      ],
+      "phase": "postprocess",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    }
+  ],
+  "disclosure": "Host total is the observed action dwell, not a recoverable bound. Only metadata-only view elimination is counted as same-policy removal here; numeric Host work remains unless a new validated device recipe and numeric policy are accepted.",
+  "host_action_count": 3,
+  "kind": "graph-host-boundary-ledger",
+  "manifest": "mnist_mlp_b1",
+  "measured_host_total_ms": 0.12210637648822739,
+  "production_tensors": [
+    "logits",
+    "logits_padded",
+    "raw",
+    "x_flat",
+    "x_padded"
+  ],
+  "profile_key": "mnist_mlp.b1",
+  "same_policy_removed_total_ms": 0.0,
+  "schema_version": 1,
+  "trace_only_output_bytes": 0,
+  "trace_only_tensors": [],
+  "trace_only_write_estimate_ms": 0.0,
+  "view_aliases": []
+}

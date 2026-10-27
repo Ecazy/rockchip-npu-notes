@@ -1,0 +1,348 @@
+{
+  "boundaries": [
+    {
+      "action": "mnist.patchify_norm.v1",
+      "causes": [
+        "numeric_semantics",
+        "physical_layout",
+        "current_implementation"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.06260832189582288,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "patchify",
+      "outputs": [
+        "patches"
+      ],
+      "phase": "preprocess",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "tensor.pad_2d.v1",
+      "causes": [
+        "physical_layout",
+        "current_implementation"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.029058338841423392,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "patch_pad",
+      "outputs": [
+        "patch_flat"
+      ],
+      "phase": "preprocess",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "tiny_vit.position_add.v1",
+      "causes": [
+        "numeric_semantics",
+        "missing_device_operator"
+      ],
+      "device_missing": [
+        "exact-shape FP16 FW add is available; broadcast position-add is not"
+      ],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.05100892158225179,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "position_add",
+      "outputs": [
+        "positioned"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "rmsnorm.last_axis.v1",
+      "causes": [
+        "numeric_semantics",
+        "missing_device_operator"
+      ],
+      "device_missing": [
+        "device row reduction + rsqrt + coefficient materialisation recipe"
+      ],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.07138746790587902,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "rmsnorm1",
+      "outputs": [
+        "norm1"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "attention.scaled_softmax.v1",
+      "causes": [
+        "numeric_semantics",
+        "missing_device_operator"
+      ],
+      "device_missing": [
+        "device stable max/exp/sum/normalize row reduction and bounded-domain numeric contract"
+      ],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.08580720925237983,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "softmax",
+      "outputs": [
+        "probs_heads"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "tiny_vit.merge_heads.v1",
+      "causes": [
+        "physical_layout",
+        "current_implementation"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.029697067802771926,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "merge_heads",
+      "outputs": [
+        "attn_merged"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "tensor.add.v1",
+      "causes": [
+        "numeric_semantics"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.04297071893233806,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "residual_attention",
+      "outputs": [
+        "h1"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "rmsnorm.last_axis.v1",
+      "causes": [
+        "numeric_semantics",
+        "missing_device_operator"
+      ],
+      "device_missing": [
+        "device row reduction + rsqrt + coefficient materialisation recipe"
+      ],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.07290694920811802,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "rmsnorm2",
+      "outputs": [
+        "norm2"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "swiglu.packed_gate_up.v1",
+      "causes": [
+        "numeric_semantics",
+        "missing_device_operator"
+      ],
+      "device_missing": [
+        "device exact sigmoid/SwiGLU or an independently accepted approximate recipe; current LUT path has a separate numeric policy"
+      ],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.09823494008742273,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "swiglu",
+      "outputs": [
+        "act",
+        "gate",
+        "up"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [
+        "gate",
+        "up"
+      ],
+      "trace_only_write_bytes": 8192,
+      "trace_only_write_estimate_ms": 0.001024
+    },
+    {
+      "action": "tensor.add.v1",
+      "causes": [
+        "numeric_semantics"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.04403814033139497,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "residual_ffn",
+      "outputs": [
+        "h2"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "tensor.reshape.v1",
+      "causes": [
+        "physical_layout"
+      ],
+      "device_missing": [],
+      "lowered_as_view": true,
+      "measured_host_ms": 0.04779182781931013,
+      "necessary_added_cost": "one-time view construction; no per-call arithmetic/copy",
+      "node": "reshape_tokens",
+      "outputs": [
+        "h2_tokens"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": false,
+      "same_policy_removable_ms": 0.04779182781931013,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "tensor.mean_axis.v1",
+      "causes": [
+        "numeric_semantics",
+        "missing_device_operator"
+      ],
+      "device_missing": [
+        "device FP32-preserving token reduction then one FP16 writeback"
+      ],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.039473677752539515,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "mean_pool",
+      "outputs": [
+        "pooled"
+      ],
+      "phase": "execution",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    },
+    {
+      "action": "logits.prefix.v1",
+      "causes": [
+        "numeric_semantics",
+        "resource_interface"
+      ],
+      "device_missing": [],
+      "lowered_as_view": false,
+      "measured_host_ms": 0.0263313390314579,
+      "necessary_added_cost": "unpriced without a validated device/layout recipe; current Host compute and any required conversion/submit remain",
+      "node": "export_logits",
+      "outputs": [
+        "logits"
+      ],
+      "phase": "postprocess",
+      "retained_numeric_work": true,
+      "same_policy_removable_ms": 0.0,
+      "trace_only_outputs": [],
+      "trace_only_write_bytes": 0,
+      "trace_only_write_estimate_ms": 0.0
+    }
+  ],
+  "disclosure": "Host total is the observed action dwell, not a recoverable bound. Only metadata-only view elimination is counted as same-policy removal here; numeric Host work remains unless a new validated device recipe and numeric policy are accepted.",
+  "host_action_count": 13,
+  "kind": "graph-host-boundary-ledger",
+  "manifest": "tiny_vit_b1",
+  "measured_host_total_ms": 0.7013149204431102,
+  "production_tensors": [
+    "act",
+    "attn_heads",
+    "attn_merged",
+    "attn_projection",
+    "ffn",
+    "gate_up",
+    "h1",
+    "h2",
+    "h2_tokens",
+    "logits",
+    "logits_padded",
+    "norm1",
+    "norm1_gamma",
+    "norm2",
+    "norm2_gamma",
+    "patch_flat",
+    "patch_projection",
+    "patches",
+    "pooled",
+    "pos",
+    "positioned",
+    "probs_heads",
+    "qkv",
+    "raw",
+    "scores_heads"
+  ],
+  "profile_key": "tiny_vit.b1",
+  "same_policy_removed_total_ms": 0.04779182781931013,
+  "schema_version": 1,
+  "trace_only_output_bytes": 8192,
+  "trace_only_tensors": [
+    "gate",
+    "k_t_heads",
+    "q_heads",
+    "up",
+    "v_heads"
+  ],
+  "trace_only_write_estimate_ms": 0.001024,
+  "view_aliases": [
+    {
+      "input": "h2",
+      "node": "reshape_tokens",
+      "output": "h2_tokens",
+      "shape": [
+        1,
+        16,
+        64
+      ]
+    }
+  ]
+}

@@ -335,3 +335,42 @@ results/20261027T025648Z-execution-candidates/campaign/plans/
 results/20261027T025648Z-execution-candidates/campaign/weights/
 results/20261027T025648Z-execution-candidates/campaign/data/
 results/20261027T025648Z-execution-candidates/campaign/vendor/
+
+# Graph-execution prototype (2026-10-27): keep application/instrumented JSON,
+# boundary ledgers, external reports, selected same-policy raw logits, frozen
+# numeric observations and opt-in manifest identities.  External logits and the
+# independent-policy raw-logit matrix remain local; their summaries are in the
+# campaign JSON.
+!results/20261027T080223Z-graph-plan/
+!results/20261027T080223Z-graph-plan/*.json
+!results/20261027T080223Z-graph-plan/*.md
+!results/20261027T080223Z-graph-plan/*.log
+!results/20261027T080223Z-graph-plan/*.txt
+!results/20261027T080223Z-graph-plan/*.sha256
+!results/20261027T080223Z-graph-plan/benchmark.vit_b*.logits.npy
+!results/20261027T080223Z-graph-plan/boundaries/
+!results/20261027T080223Z-graph-plan/boundaries/*.json
+!results/20261027T080223Z-graph-plan/boundaries/*.md
+!results/20261027T080223Z-graph-plan/boundaries/*.log
+!results/20261027T080223Z-graph-plan/numeric-auto/
+!results/20261027T080223Z-graph-plan/numeric-auto/*.json
+!results/20261027T080223Z-graph-plan/numeric-auto/*.log
+!results/20261027T080223Z-graph-plan/numeric-auto/observation.npz
+!results/20261027T080223Z-graph-plan/numeric-auto-calibration/
+!results/20261027T080223Z-graph-plan/numeric-auto-calibration/*.json
+!results/20261027T080223Z-graph-plan/numeric-auto-calibration/*.log
+!results/20261027T080223Z-graph-plan/numeric-auto-calibration/observation.npz
+!results/20261027T080223Z-graph-plan/external/
+!results/20261027T080223Z-graph-plan/external/*.log
+!results/20261027T080223Z-graph-plan/external/r*-*/
+!results/20261027T080223Z-graph-plan/external/r*-*/*.json
+!results/20261027T080223Z-graph-plan/external/r*-*/*.log
+!results/20261027T080223Z-graph-plan/external/r*-*/*.txt
+!results/20261027T080223Z-graph-plan/deviceffn/
+!results/20261027T080223Z-graph-plan/deviceffn/*.json
+!results/20261027T080223Z-graph-plan/deviceffn/*.log
+!results/20261027T080223Z-graph-plan/deviceffn/manifests/
+!results/20261027T080223Z-graph-plan/deviceffn/manifests/*.json
+!results/20261027T080223Z-graph-plan/deviceffn/manifests/SHA256SUMS
+
+!results/20261027T080223Z-graph-plan/SHA256SUMS

@@ -1,0 +1,115 @@
+{
+  "artifacts": {
+    "analysis": "analysis.json",
+    "benchmark": "benchmark.json",
+    "boundaries": "boundaries/",
+    "external": "external/",
+    "independent_candidate": "deviceffn/",
+    "numeric_verification": "verify-auto-summary.json"
+  },
+  "board": {
+    "cpu_affinity": 6,
+    "cpu_frequency_khz_observed": 2304000,
+    "cpu_governor": "performance",
+    "cpu_governor_locked_by_campaign": true,
+    "cpu_thread_env": {
+      "MKL_NUM_THREADS": 1,
+      "OMP_NUM_THREADS": 1,
+      "OPENBLAS_NUM_THREADS": 1
+    },
+    "driver": "v0.9.8",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "npu_core_mask": 1,
+    "npu_frequency_hz_observed": 1000000000,
+    "npu_frequency_locked": false,
+    "target": "RK3588 OPi 5 Plus"
+  },
+  "external": {
+    "cpu": {
+      "backend": "numpy-fp32",
+      "cpu_governor": "performance",
+      "rounds": 2,
+      "same_packed_logit_policy": false,
+      "threads": 1
+    },
+    "vendor": {
+      "cpu_governor": "performance",
+      "max_abs_logit_error": {
+        "tiny_vit.b1": 0.10714578630542755,
+        "tiny_vit.b8": 0.12277078628540039
+      },
+      "precision": "non-quantized float16",
+      "rounds": 2,
+      "runtime_core": 0,
+      "runtime_version": "2.3.2",
+      "same_packed_logit_policy": false,
+      "single_core_mode": true,
+      "toolkit_version": "2.3.2"
+    }
+  },
+  "identities": {
+    "compiled_manifest_sha256": "72f898e989240ad45a864d88596838a21e9c5e7d0f74feb416efef97c20ddadd",
+    "librknpu_plan_sha256": "878ef3fa6c81cb651e02783db2b6bb72829cb2b0941444eaf3bc755784051d85",
+    "packed_numeric_spec_sha256": "f49d876b724b07ea417472ea1ac0c2b271c904e2cd6c7081e9a4c87cb3ddbe66",
+    "test_images_sha256": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+    "test_labels_sha256": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6",
+    "tiny_vit_weights_sha256": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+  },
+  "independent_policy_candidate": {
+    "decision": "not adopted: b8 faster but b1 slower; requires independent numeric policy and uniform profile decision",
+    "existing_policy": "models/numeric_acceptance_device_ffn.json; act/ffn/h2/h2_tokens atol=0.125",
+    "manifests": {
+      "tiny_vit_b1_deviceffn_qkv.rkhybrid.json": "3b5ca614e163e6b2a5cf4b0a32977705e77537cadf002f3b48d0389a828abcfd",
+      "tiny_vit_b8_deviceffn_qkv.rkhybrid.json": "3467c4256954079d206f940374c8bec59b98f75a118b9187d7a19a64569625eb"
+    },
+    "name": "deviceffn_qkv",
+    "result": "deviceffn/benchmark.json",
+    "subgraph": "device gate/up+SiLU+gated-mul+down+residual FFN, mapped QKV"
+  },
+  "kind": "tiny-vit-graph-execution-campaign",
+  "measurement": {
+    "application_interval": "runner.run(..., stats=None): raw preparation + execution + output materialisation",
+    "argmax": "excluded from same-policy timing; identical postprocess",
+    "arms": [
+      {
+        "name": "generic",
+        "requested_mode": "generic"
+      },
+      {
+        "name": "prepared",
+        "requested_mode": "prepared"
+      },
+      {
+        "name": "auto",
+        "requested_mode": "auto"
+      }
+    ],
+    "batches": [
+      8,
+      1
+    ],
+    "full_test_split": true,
+    "instrumented_interval": "separate RunStats sample; excluded from application timing",
+    "limit": 10000,
+    "order": "round-robin per static batch with rotated arm order",
+    "rounds": 3,
+    "stats_calls": 100
+  },
+  "schema_version": 1,
+  "source": {
+    "custom_ops_source_commit": "60f4a82",
+    "git_head": "a37ca6e49586ffafceffb7e76d7d8c18cbd2e04c",
+    "runtime_paths": [
+      "research/tilelang-rknpu/python",
+      "tools"
+    ]
+  },
+  "tools": {
+    "tools/analyze_graph_boundaries.py": "b8dc00adc7d0c1ad63c1a52a9b8e869a9096c69a9f2f46b32e145ae775874543",
+    "tools/analyze_graph_execution.py": "7bab4c4454ad895a2c0a910303bd7e39dd6bd4c9133468ca0dde1859ec407d97",
+    "tools/benchmark_graph_execution.py": "2c9ddd9137b185cb38307d371f88d0bd64322fcd43a93d60544a764b894fc401",
+    "tools/build_hybrid_manifests.py": "9c108558c0d55694470de4eb7509aba1425cf3bad564ebd154a5323c9512c8c5",
+    "tools/run_numeric_observation.py": "00c7f1ded73754430ed1b7ee1c16a9a57b1d3acbd13691471af3e8a634c70c97",
+    "tools/verify_numeric_acceptance.py": "856be14948ab7c1162cac3bef1828234ddb45dc31417cbdbb98b0309ad1d7a55"
+  }
+}
