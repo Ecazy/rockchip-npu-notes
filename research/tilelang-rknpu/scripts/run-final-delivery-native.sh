@@ -19,6 +19,8 @@ record_env() {
     echo "gcc=$(gcc --version | head -1)"
     echo "cmake=$(cmake --version | head -1)"
     echo "python=$(python3 -V 2>&1)"
+    echo "execution_mode=${RK_EXECUTION_MODE:-prepared}"
+    echo "hybrid_suffix=${RK_HYBRID_SUFFIX:-}"
   } > "$out"
 }
 
@@ -54,6 +56,8 @@ case "${1:-}" in
     lib="$build/librknpu_plan.so"
     [[ -f "$lib" ]] || { echo "missing $lib" >&2; exit 1; }
     sha256sum "$lib" > "$out/library.sha256"
+    execution_mode=${RK_EXECUTION_MODE:-prepared}
+    hybrid_suffix=${RK_HYBRID_SUFFIX:-}
     set +e
     start_ns=$(date +%s%N)
     taskset -c "$cpu" env \
@@ -65,6 +69,7 @@ case "${1:-}" in
         --backend board --lib "$lib" \
         --plans-dir "$plans" --weights-dir "$weights" --data-dir "$data" \
         --global-limit "$limit" --profile-samples "$limit" \
+        --execution-mode "$execution_mode" --hybrid-suffix "$hybrid_suffix" \
         --numeric-spec "$numeric" --out "$out/model_eval.json" \
         > "$out/runner.log" 2>&1
     rc=$?
@@ -103,6 +108,7 @@ PY
       python3 "$source_root/tilelang-rknpu/tools/run_numeric_observation.py" \
         --mode calibration --plans-dir "$plans" --weights-dir "$weights" \
         --data-dir "$data" --lib "$lib" \
+        --execution-mode "${RK_EXECUTION_MODE:-prepared}" \
         --out "$out/observation.npz" > "$out/runner.log" 2>&1
     ;;
   observe)
@@ -130,6 +136,7 @@ PY
       python3 "$source_root/tilelang-rknpu/tools/run_numeric_observation.py" \
         --mode acceptance --plans-dir "$plans" --weights-dir "$weights" \
         --data-dir "$data" --spec "$spec" --lib "$lib" \
+        --execution-mode "${RK_EXECUTION_MODE:-prepared}" \
         --out "$out/observation.npz" > "$out/runner.log" 2>&1
     ;;
   *)

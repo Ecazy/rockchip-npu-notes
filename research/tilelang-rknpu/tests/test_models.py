@@ -139,9 +139,13 @@ class CompleteModelTests(unittest.TestCase):
         results = {}
         reports = {}
         for mode in ("manifest", "b1", "separate", "chain_shared"):
+            # ``separate`` deliberately re-enters PlanCall once per repeat, so
+            # it remains a generic-binding control rather than a prepared group.
+            execution_mode = ("generic" if mode == "separate" else "prepared")
             runner = HybridRunner(self.lib, program, self.vit_weights,
                                   weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
-                                  repeat_submit=mode)
+                                  repeat_submit=mode,
+                                  execution_mode=execution_mode)
             stats = __import__("rknpu_backend.models",
                                fromlist=["RunStats"]).RunStats()
             try:
@@ -206,6 +210,104 @@ class CompleteModelTests(unittest.TestCase):
         self.assertAlmostEqual(data["plan_submit_wait_us"],
                                stats.plan_submit_wait_us, places=3)
         self.assertAlmostEqual(data["plan_pack_us"], stats.plan_pack_us, places=3)
+
+    def test_prepared_residency_matches_generic_bitwise_and_reuses_buffers(self):
+        """The compiled lowering may remove repeated binding work, not arithmetic.
+
+        It binds stable resident buffers once, while the C runtime continues to
+        validate every binding and finite input.  The observable logits and all
+        captured layer values must stay bit-identical to the generic path.
+        """
+        from rknpu_backend.hybrid import HybridRunner, load_hybrid_program
+        from rknpu_backend.models import RunStats
+        outcomes = {}
+        for key, batch in (("tiny_vit_b8", 8), ("tiny_vit_b1", 1),
+                           ("tiny_vit_b8_splitheads", 8),
+                           ("tiny_vit_b8_deviceffn", 8)):
+            program = load_hybrid_program(self._hybrid(key),
+                                          plans_dir=PLANS)
+            arm = {}
+            for mode in ("generic", "prepared"):
+                runner = HybridRunner(
+                    self.lib, program, self.vit_weights,
+                    weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
+                    execution_mode=mode)
+                stats = RunStats()
+                try:
+                    first = runner.run(self.x[:batch], stats=stats,
+                                       capture=True)
+                    first_logits = first.outputs["logits"].copy()
+                    trace = {name: value.copy()
+                             for name, value in first.trace.items()}
+                    second = runner.run(self.x[batch:2 * batch], stats=stats,
+                                        capture=True)
+                finally:
+                    runner.close()
+                # Public outputs are fresh copies, so a later run cannot mutate
+                # an array the caller retained.
+                self.assertTrue(np.array_equal(
+                    first_logits, first.outputs["logits"]))
+                self.assertFalse(np.shares_memory(
+                    first.outputs["logits"], second.outputs["logits"]))
+                arm[mode] = (first_logits, trace, stats, second.outputs["logits"])
+                if mode == "prepared":
+                    self.assertIsNotNone(runner.residency)
+                    self.assertGreater(runner.residency.total_bytes, 0)
+                    self.assertIn("qkv", runner.resident_values)
+                    qkv_ptr = runner.resident_values["qkv"].ctypes.data
+                    self.assertEqual(
+                        qkv_ptr, runner.resident_values["qkv"].ctypes.data)
+                    for call in runner.calls.values():
+                        # noqa: SLF001 - this test pins the compiler result
+                        self.assertTrue(
+                            call._prepared_single or call._prepared_group)
+            generic, prepared = arm["generic"], arm["prepared"]
+            np.testing.assert_array_equal(generic[0], prepared[0])
+            np.testing.assert_array_equal(generic[3], prepared[3])
+            self.assertEqual(set(generic[1]), set(prepared[1]))
+            for name in generic[1]:
+                np.testing.assert_array_equal(generic[1][name],
+                                              prepared[1][name])
+            g, p = generic[2].to_dict(), prepared[2].to_dict()
+            for field in ("task_count", "submit_count", "upload_calls",
+                          "download_calls", "upload_bytes", "download_bytes"):
+                self.assertEqual(g[field], p[field], field)
+            self.assertEqual([row["name"] for row in g["host_actions"]],
+                             [row["name"] for row in p["host_actions"]])
+
+    def test_prepared_finite_gate_stays_at_the_c_plan_boundary(self):
+        """A poisoned Host output must still be rejected by the C runtime."""
+        from dataclasses import replace
+        from rknpu_backend.errors import BackendError, RK_E_NUMERIC_CONTRACT
+        from rknpu_backend.hybrid import (HOST_ACTIONS, HostNode,
+                                          HybridRunner,
+                                          load_hybrid_program)
+        program = load_hybrid_program(self._hybrid("tiny_vit_b8"),
+                                      plans_dir=PLANS)
+        polluted = []
+        for node in program.nodes:
+            if isinstance(node, HostNode) and node.id == "rmsnorm1":
+                action = HOST_ACTIONS[node.action.action_id]
+                original = action.func
+
+                def poisoned(inputs, attrs, _original=original):
+                    outputs = _original(inputs, attrs)
+                    outputs["y"] = np.full_like(outputs["y"], np.nan)
+                    return outputs
+
+                node = replace(node, action=replace(action, func=poisoned))
+            polluted.append(node)
+        program = replace(program, nodes=tuple(polluted))
+        runner = HybridRunner(self.lib, program, self.vit_weights,
+                              weights_path=WEIGHTS / "tiny_vit.npz", fd=0,
+                              execution_mode="prepared")
+        try:
+            with self.assertRaises(BackendError) as ctx:
+                runner.run(self.x[:8])
+        finally:
+            runner.close()
+        self.assertEqual(ctx.exception.diagnostics[0].code,
+                         RK_E_NUMERIC_CONTRACT)
 
     def test_static_batch_schedule_matches_compiled_tails(self):
         spec = importlib.util.spec_from_file_location(

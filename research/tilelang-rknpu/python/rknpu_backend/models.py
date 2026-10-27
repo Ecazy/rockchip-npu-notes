@@ -440,6 +440,11 @@ class PlanCall:
         # through the synchronous C call.  Non-blocking acquisition preserves
         # the established BUSY result for concurrent users of one PlanCall.
         self._descriptor_lock = threading.Lock()
+        # A compiled runner can bind stable resident arrays once.  Keeping the
+        # arrays here also keeps the ctypes pointers and their backing storage
+        # alive for the whole workspace lifetime.
+        self._prepared_single: dict[str, tuple[Any, ...]] = {}
+        self._prepared_group: dict[str, tuple[Any, ...]] = {}
 
     def _lock_descriptors(self) -> None:
         if not self._descriptor_lock.acquire(blocking=False):
@@ -461,7 +466,8 @@ class PlanCall:
             nbytes=spec.nbytes)
 
     def _prepare_inputs(self, inputs: list[np.ndarray],
-                        finite_cache: set[tuple[int, int, str]] | None = None
+                        finite_cache: set[tuple[int, int, str]] | None = None,
+                        *, check_finite: bool = True
                         ) -> list[np.ndarray]:
         if len(inputs) != len(self.inputs):
             reject(RK_E_SHAPE, "model plan input count mismatch", stage="model",
@@ -479,14 +485,14 @@ class PlanCall:
             if arr.shape != tuple(spec.shape):
                 reject(RK_E_SHAPE, "model plan input shape mismatch", stage="model",
                        actual=list(arr.shape), required=list(spec.shape))
-            check_finite = True
-            if finite_cache is not None:
+            should_check = bool(check_finite)
+            if should_check and finite_cache is not None:
                 key = (int(arr.ctypes.data), int(arr.nbytes), arr.dtype.str)
-                check_finite = key not in finite_cache
+                should_check = key not in finite_cache
                 finite_cache.add(key)
             prepared.append(validate_numpy_binding(
                 arr, tuple(spec.shape), writable=False, name=spec.name,
-                check_finite=check_finite))
+                check_finite=should_check))
         return prepared
 
     def _prepare_outputs(self, outputs: list[np.ndarray]) -> list[np.ndarray]:
@@ -528,8 +534,11 @@ class PlanCall:
             self._descriptor_lock.release()
 
     def _run_into_locked(self, inputs: list[np.ndarray],
-                         outputs: list[np.ndarray]) -> tuple[Any, float]:
-        in_arrays = self._prepare_inputs(inputs, finite_cache=set())
+                         outputs: list[np.ndarray],
+                         *, check_finite: bool = True
+                         ) -> tuple[Any, float]:
+        in_arrays = self._prepare_inputs(inputs, finite_cache=set(),
+                                         check_finite=check_finite)
         out_arrays = self._prepare_outputs(outputs)
         if self.reuse_bindings:
             in_bind = self._input_bind_cache
@@ -556,6 +565,79 @@ class PlanCall:
             report = self.workspace.run_attributed(in_bind, out_bind)
         elapsed_us = (time.perf_counter() - t0) * 1e6
         return report, elapsed_us
+
+    def bind_prepared_into(self, inputs: list[np.ndarray],
+                           outputs: list[np.ndarray], *,
+                           binding_key: str = "default") -> None:
+        """Validate stable resident views once and prebuild their descriptors.
+
+        This is an internal compiler-facing entry.  It does *not* weaken the
+        per-run guard: every C workspace run still checks binding ids, dtypes,
+        shapes, storage extents, aliases and finite inputs.  Python skips only
+        the duplicate shape/dtype/finite scans that a compiled graph has already
+        discharged over immutable internal buffers.
+        """
+        if self.workspace is None:
+            reject(RK_E_INVALID, "model plan workspace is already closed",
+                   stage="model")
+        in_arrays = tuple(self._prepare_inputs(
+            inputs, finite_cache=None, check_finite=False))
+        out_arrays = tuple(self._prepare_outputs(outputs))
+        if self.reuse_bindings:
+            in_bind = self._input_bind_cache
+            out_bind = self._output_bind_cache
+        else:
+            in_bind = [make_binding(spec.id, arr)
+                       for spec, arr in zip(self.inputs, in_arrays)]
+            out_bind = [make_binding(spec.id, arr)
+                        for spec, arr in zip(self.outputs, out_arrays)]
+        for bind, arr in zip(in_bind, in_arrays):
+            bind.data = arr.ctypes.data
+            bind.nbytes = arr.nbytes
+        for bind, arr in zip(out_bind, out_arrays):
+            bind.data = arr.ctypes.data
+            bind.nbytes = arr.nbytes
+        in_bound = (RKBinding * max(len(in_bind), 1))()
+        out_bound = (RKBinding * max(len(out_bind), 1))()
+        for i, binding in enumerate(in_bind):
+            in_bound[i] = binding
+        for i, binding in enumerate(out_bind):
+            out_bound[i] = binding
+        if binding_key in self._prepared_single:
+            reject(RK_E_INVALID,
+                   f"prepared binding key {binding_key!r} is already installed",
+                   stage="model")
+        self._prepared_single[binding_key] = (
+            in_arrays, out_arrays, in_bound, out_bound)
+
+    def run_prepared(self, *, binding_key: str = "default"
+                     ) -> tuple[Any, float]:
+        """Run a workspace whose stable Host bindings were compiled once."""
+        if self.workspace is None:
+            reject(RK_E_INVALID, "model plan workspace is already closed",
+                   stage="model")
+        if binding_key not in self._prepared_single:
+            reject(RK_E_INVALID,
+                   f"prepared binding key {binding_key!r} is not installed",
+                   stage="model")
+        if self.entry == "legacy":
+            reject(RK_E_UNSUPPORTED,
+                   "prepared bindings require the attributed execution entry",
+                   stage="model")
+        self._lock_descriptors()
+        try:
+            in_arrays, out_arrays, in_bind, out_bind = \
+                self._prepared_single[binding_key]
+            if hasattr(self.lib.cdll, "rk_mock_reset_tags"):
+                self.lib.mock_control("rk_mock_reset_tags")
+            t0 = time.perf_counter()
+            report = self.lib.workspace_run_attributed_bound(
+                self.workspace, in_bind, out_bind,
+                len(in_arrays), len(out_arrays))
+            elapsed_us = (time.perf_counter() - t0) * 1e6
+            return report, elapsed_us
+        finally:
+            self._descriptor_lock.release()
 
     def _group_binding_slots(self, nrepeat: int):
         """Cache one flat binding array for ``nrepeat`` repeats of this plan.
@@ -627,6 +709,70 @@ class PlanCall:
         elapsed_us = (time.perf_counter() - t0) * 1e6
         return report, elapsed_us
 
+    def bind_group_prepared_into(
+            self, inputs_list: list[list[np.ndarray]],
+            outputs_list: list[list[np.ndarray]], *,
+            binding_key: str = "default") -> None:
+        """Build one stable repeat-major binding array for a compiled group.
+
+        Structural shape/dtype/contiguity checks run once here.  The C group
+        entry still performs all per-repeat binding, finite-value, alias and
+        publication checks on every execution.
+        """
+        if self.workspace is None:
+            reject(RK_E_INVALID, "model plan workspace is already closed",
+                   stage="model")
+        nrepeat = len(inputs_list)
+        if nrepeat < 1 or nrepeat != len(outputs_list):
+            reject(RK_E_SHAPE, "group entry needs matching, non-empty input and "
+                   "output repeat lists", stage="model",
+                   actual={"inputs": nrepeat, "outputs": len(outputs_list)})
+        specs = self.inputs + self.outputs
+        flat = (RKBinding * (nrepeat * len(specs)))()
+        flat_inputs: list[np.ndarray] = []
+        flat_outputs: list[np.ndarray] = []
+        step = len(specs)
+        for r in range(nrepeat):
+            in_arrays = self._prepare_inputs(
+                inputs_list[r], finite_cache=None, check_finite=False)
+            out_arrays = self._prepare_outputs(outputs_list[r])
+            base = r * step
+            flat_inputs.extend(in_arrays)
+            flat_outputs.extend(out_arrays)
+            for k, (spec, arr) in enumerate(zip(self.inputs, in_arrays)):
+                flat[base + k] = make_binding(spec.id, arr)
+            for k, (spec, arr) in enumerate(zip(self.outputs, out_arrays)):
+                flat[base + len(self.inputs) + k] = make_binding(spec.id, arr)
+        if binding_key in self._prepared_group:
+            reject(RK_E_INVALID,
+                   f"prepared group key {binding_key!r} is already installed",
+                   stage="model")
+        self._prepared_group[binding_key] = (
+            flat, nrepeat, tuple(flat_inputs), tuple(flat_outputs))
+
+    def run_group_prepared(self, *, binding_key: str = "default"
+                           ) -> tuple[Any, float]:
+        """Run a stable repeat-major group whose bindings were compiled once."""
+        if self.workspace is None:
+            reject(RK_E_INVALID, "model plan workspace is already closed",
+                   stage="model")
+        if binding_key not in self._prepared_group:
+            reject(RK_E_INVALID,
+                   f"prepared group key {binding_key!r} is not installed",
+                   stage="model")
+        self._lock_descriptors()
+        try:
+            flat, nrepeat, _, _ = self._prepared_group[binding_key]
+            if hasattr(self.lib.cdll, "rk_mock_reset_tags"):
+                self.lib.mock_control("rk_mock_reset_tags")
+            t0 = time.perf_counter()
+            report = self.lib.workspace_run_group_bound(
+                self.workspace, flat, nrepeat)
+            elapsed_us = (time.perf_counter() - t0) * 1e6
+            return report, elapsed_us
+        finally:
+            self._descriptor_lock.release()
+
     def run(self, inputs: list[np.ndarray]) -> tuple[list[np.ndarray], Any, float]:
         out_arrays = [np.empty(tuple(b.shape), dtype=np.float16)
                       for b in self.outputs]
@@ -682,7 +828,8 @@ class HybridModelRunner:
 
     def __init__(self, lib: LibRKPlan, program: Any,
                  weights: dict[str, np.ndarray], batch: int, *,
-                 weights_path: str | Path | None = None, fd: int = 0):
+                 weights_path: str | Path | None = None, fd: int = 0,
+                 execution_mode: str = "prepared"):
         from .hybrid import HybridRunner, HybridProgram, load_hybrid_program
         if isinstance(program, (str, Path)):
             program = load_hybrid_program(program)
@@ -696,7 +843,8 @@ class HybridModelRunner:
         self.program = program
         self.batch = int(batch)
         self.runner = HybridRunner(lib, program, weights,
-                                   weights_path=weights_path, fd=fd)
+                                   weights_path=weights_path, fd=fd,
+                                   execution_mode=execution_mode)
         self.last_trace: dict[str, np.ndarray] = {}
 
     def run_result(self, raw_images: np.ndarray, *, stats: RunStats | None = None,

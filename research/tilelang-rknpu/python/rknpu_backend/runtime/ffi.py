@@ -655,12 +655,25 @@ class LibRKPlan:
         """Single run with envelope attribution (explicit ``_ex`` entry)."""
         in_arr = self._binding_array(inputs)
         out_arr = self._binding_array(outputs)
+        return self.workspace_run_attributed_bound(
+            workspace, in_arr, out_arr, len(inputs), len(outputs))
+
+    def workspace_run_attributed_bound(self, workspace: CWorkspace,
+                                       in_arr, out_arr,
+                                       ninputs: int, noutputs: int):
+        """Attributed run with caller-owned, already packed binding arrays.
+
+        A compiled runner may populate the arrays once after proving that the
+        backing Host buffers and all their views are stable.  The C workspace
+        still validates every binding and every finite input on every call; this
+        entry only removes duplicate Python descriptor construction.
+        """
         report = _new_attribution()
         diag = RKDiag()
-        rc = self.cdll.rk_workspace_run_ex(workspace.handle, in_arr, len(inputs),
-                                           out_arr, len(outputs),
-                                           ctypes.byref(report),
-                                           ctypes.byref(diag))
+        rc = self.cdll.rk_workspace_run_ex(
+            workspace.handle, in_arr if ninputs else None, int(ninputs),
+            out_arr if noutputs else None, int(noutputs),
+            ctypes.byref(report), ctypes.byref(diag))
         if rc:
             raise _diag_to_exception(diag, "workspace_run_ex")
         return report
@@ -677,12 +690,17 @@ class LibRKPlan:
         arr = (RKBinding * max(count, 1))()
         for i, binding in enumerate(bindings):
             arr[i] = binding
+        return self.workspace_run_group_bound(workspace, arr, nrepeat)
+
+    def workspace_run_group_bound(self, workspace: CWorkspace, arr,
+                                  nrepeat: int):
+        """Group entry with a prebuilt repeat-major binding array."""
         report = RKGroupReport()
         report.struct_size = ctypes.sizeof(RKGroupReport)
         diag = RKDiag()
-        rc = self.cdll.rk_workspace_run_group(workspace.handle, arr, int(nrepeat),
-                                              ctypes.byref(report),
-                                              ctypes.byref(diag))
+        rc = self.cdll.rk_workspace_run_group(
+            workspace.handle, arr, int(nrepeat), ctypes.byref(report),
+            ctypes.byref(diag))
         if rc:
             raise _diag_to_exception(diag, "workspace_run_group")
         return report

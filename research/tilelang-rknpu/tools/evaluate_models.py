@@ -132,7 +132,7 @@ def _hybrid_path(manifest: dict, plans_dir: Path, key: str) -> Path:
 
 
 def _build_mlp_runners(lib, plans_dir, manifest, weights, weights_path,
-                       schedule, fd):
+                       schedule, fd, execution_mode="prepared"):
     t0 = time.perf_counter()
     profiles = sorted({row["profile"] for row in schedule}, reverse=True)
     runners = {}
@@ -142,7 +142,8 @@ def _build_mlp_runners(lib, plans_dir, manifest, weights, weights_path,
                 _hybrid_path(manifest, plans_dir, f"mnist_mlp_b{batch}"),
                 plans_dir=plans_dir)
             runners[batch] = HybridRunner(
-                lib, program, weights, weights_path=weights_path, fd=fd)
+                lib, program, weights, weights_path=weights_path, fd=fd,
+                execution_mode=execution_mode)
     except BaseException as exc:
         cleanup_errors = []
         for runner in reversed(list(runners.values())):
@@ -159,11 +160,12 @@ def _build_mlp_runners(lib, plans_dir, manifest, weights, weights_path,
 
 def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
                      *, weight_load_seconds: float, primary_full: bool,
-                     weights_path: Path):
+                     weights_path: Path, execution_mode: str = "prepared"):
     """Evaluate one static MLP profile; reference time is outside the interval."""
     schedule = make_batch_schedule(len(x), batch, tail_profiles=(8, 1))
     runners, setup_seconds = _build_mlp_runners(
-        lib, plans_dir, manifest, weights, weights_path, schedule, fd)
+        lib, plans_dir, manifest, weights, weights_path, schedule, fd,
+        execution_mode=execution_mode)
     stats = RunStats()
     warm_stats = RunStats()
     logits = np.empty((len(x), 10), dtype=np.float32)
@@ -262,22 +264,26 @@ def _run_mlp_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
 
 
 def _build_vit_runners(lib, plans_dir, manifest, weights, weights_path,
-                       batch, fd):
+                       batch, fd, execution_mode="prepared",
+                       hybrid_suffix=""):
     t0 = time.perf_counter()
     program = load_hybrid_program(
-        _hybrid_path(manifest, plans_dir, f"tiny_vit_b{batch}"),
+        _hybrid_path(manifest, plans_dir,
+                     f"tiny_vit_b{batch}{hybrid_suffix}"),
         plans_dir=plans_dir)
     runner = HybridRunner(lib, program, weights, weights_path=weights_path,
-                          fd=fd)
+                          fd=fd, execution_mode=execution_mode)
     return runner, time.perf_counter() - t0
 
 
 def _run_vit_profile(lib, plans_dir, manifest, weights, x, y, batch, fd,
                      *, weight_load_seconds: float, primary_full: bool,
-                     weights_path: Path):
+                     weights_path: Path, execution_mode: str = "prepared",
+                     hybrid_suffix: str = ""):
     schedule = make_batch_schedule(len(x), batch, tail_profiles=())
     runner, setup_seconds = _build_vit_runners(
-        lib, plans_dir, manifest, weights, weights_path, batch, fd)
+        lib, plans_dir, manifest, weights, weights_path, batch, fd,
+        execution_mode=execution_mode, hybrid_suffix=hybrid_suffix)
     stats = RunStats()
     warm_stats = RunStats()
     logits = np.empty((len(x), 10), dtype=np.float32)
@@ -369,7 +375,8 @@ def _layer_trace_path(out: Path) -> Path:
 
 def _run_layer_traces(lib, plans_dir, manifest, *, weights_dir: Path,
                       x: np.ndarray, numeric_spec: dict, fd: int,
-                      models: str) -> dict:
+                      models: str, execution_mode: str = "prepared",
+                      hybrid_suffix: str = "") -> dict:
     """Capture the deterministic subset from the same planized graph nodes."""
     indices = [int(v) for v in numeric_spec["sample_policy"]["indices"]]
     if len(x) <= max(indices):
@@ -390,7 +397,7 @@ def _run_layer_traces(lib, plans_dir, manifest, *, weights_dir: Path,
             plans_dir=plans_dir)
         t_model = time.perf_counter()
         with HybridRunner(lib, program, weights, weights_path=weights_path,
-                          fd=fd) as runner:
+                          fd=fd, execution_mode=execution_mode) as runner:
             result = runner.run(sample, capture=True)
             for key in program.trace_tensors:
                 arrays[f"mlp.{key}"] = np.asarray(result.trace[key])
@@ -408,11 +415,12 @@ def _run_layer_traces(lib, plans_dir, manifest, *, weights_dir: Path,
         weights_path = weights_dir / "tiny_vit.npz"
         weights = load_weight_npz(weights_path)
         program = load_hybrid_program(
-            _hybrid_path(manifest, plans_dir, "tiny_vit_b8"),
+            _hybrid_path(manifest, plans_dir,
+                         f"tiny_vit_b8{hybrid_suffix}"),
             plans_dir=plans_dir)
         t_model = time.perf_counter()
         with HybridRunner(lib, program, weights, weights_path=weights_path,
-                          fd=fd) as runner:
+                          fd=fd, execution_mode=execution_mode) as runner:
             result = runner.run(sample, capture=True)
             for key in program.trace_tensors:
                 arrays[f"tiny_vit.{key}"] = np.asarray(result.trace[key])
@@ -435,6 +443,13 @@ def main() -> int:
     ap.add_argument("--fd", type=int, default=None,
                     help="use this already-open device fd; otherwise mock fd=0")
     ap.add_argument("--backend", choices=("mock", "board"), default="mock")
+    ap.add_argument("--execution-mode", choices=("generic", "prepared"),
+                    default="prepared",
+                    help="Host binding strategy; prepared binds stable resident "
+                         "buffers once and relies on the C per-run guards")
+    ap.add_argument("--hybrid-suffix", default="",
+                    help="append a static Tiny ViT graph-variant suffix such as "
+                         "_hostfused; MLP profile names are unaffected")
     ap.add_argument("--models", choices=("mlp", "vit", "both"), default="both")
     ap.add_argument("--out", default=str(ROOT / "evidence" /
                                          "model_eval_mock_v2.json"))
@@ -447,6 +462,8 @@ def main() -> int:
                     help="frozen layer sample list and trace contract")
     args = ap.parse_args()
     plans_dir = Path(args.plans_dir).resolve()
+    if not all(ch.isalnum() or ch == "_" for ch in args.hybrid_suffix):
+        raise SystemExit("--hybrid-suffix may contain only letters, digits and _")
     manifest = json.loads((plans_dir / "manifest.json").read_text())
     numeric_spec = json.loads(Path(args.numeric_spec).read_text())
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
@@ -476,6 +493,8 @@ def main() -> int:
         "timing_schema_version": TIMING_SCHEMA_VERSION,
         "backend": args.backend,
         "manifest_profile_hash": manifest["profile_hash"],
+        "execution_mode": args.execution_mode,
+        "hybrid_suffix": args.hybrid_suffix,
         "evaluation_set": ("full_test_split" if full_requested
                            else "admission_subsample"),
         "test_images": int(len(x)),
@@ -501,7 +520,8 @@ def main() -> int:
                     lib, plans_dir, manifest, w, xe, ye, batch, fd,
                     weight_load_seconds=weight_load_seconds,
                     primary_full=(primary and full_requested),
-                    weights_path=Path(args.weights_dir) / "mnist_mlp.npz")
+                    weights_path=Path(args.weights_dir) / "mnist_mlp.npz",
+                    execution_mode=args.execution_mode)
                 result["model"] = "mnist_mlp"
                 report["models"].append(result)
                 np.save(_sidecar(Path(args.out), "mlp", batch, "logits"), logits)
@@ -521,7 +541,9 @@ def main() -> int:
                     lib, plans_dir, manifest, w, xe, ye, batch, fd,
                     weight_load_seconds=weight_load_seconds,
                     primary_full=(primary and full_requested),
-                    weights_path=Path(args.weights_dir) / "tiny_vit.npz")
+                    weights_path=Path(args.weights_dir) / "tiny_vit.npz",
+                    execution_mode=args.execution_mode,
+                    hybrid_suffix=args.hybrid_suffix)
                 result["model"] = "tiny_vit"
                 report["models"].append(result)
                 np.save(_sidecar(Path(args.out), "vit", batch, "logits"), logits)
@@ -533,7 +555,9 @@ def main() -> int:
         trace = _run_layer_traces(
             lib, plans_dir, manifest,
             weights_dir=Path(args.weights_dir).resolve(), x=x,
-            numeric_spec=numeric_spec, fd=fd, models=args.models)
+            numeric_spec=numeric_spec, fd=fd, models=args.models,
+            execution_mode=args.execution_mode,
+            hybrid_suffix=args.hybrid_suffix)
         if trace["status"] == "captured":
             trace_path = _layer_trace_path(Path(args.out))
             np.savez_compressed(trace_path, **trace["arrays"])

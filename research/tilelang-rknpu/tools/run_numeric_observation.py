@@ -60,6 +60,8 @@ def main() -> int:
     ap.add_argument("--manifest-key", action="append", default=[],
                     metavar="OLD=NEW",
                     help="override an rkhybrid manifest stem for this observation")
+    ap.add_argument("--execution-mode", choices=("generic", "prepared"),
+                    default="prepared")
     args = ap.parse_args()
     plans_dir = Path(args.plans_dir).resolve()
     weights_dir = Path(args.weights_dir).resolve()
@@ -109,7 +111,8 @@ def main() -> int:
         own_fd = True
     try:
         arrays = observe_split(lib, plans_dir, weights_dir, raw, split, fd=fd,
-                               manifest_keys=manifest_keys)
+                               manifest_keys=manifest_keys,
+                               execution_mode=args.execution_mode)
         out = Path(args.out).resolve()
         out.parent.mkdir(parents=True, exist_ok=True)
         save_npz_deterministic(out, arrays)
@@ -128,6 +131,7 @@ def main() -> int:
             "sample_indices": indices,
             "sample_sha256": sample_image_hashes(images),
             "labels_read": False,
+            "execution_mode": args.execution_mode,
             "compiled_manifest_sha256": sha256(plans_dir / "manifest.json"),
             "profiles": [f"{m}.b{b}" for m, b in (
                 ("mnist_mlp", 32), ("mnist_mlp", 8), ("mnist_mlp", 1),

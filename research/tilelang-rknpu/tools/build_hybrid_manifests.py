@@ -718,6 +718,22 @@ def main() -> int:
                         "rmsnorm_mode": "fused",
                         "sha256": sha256(path)}
         print("wrote", path, flush=True)
+        # Host-fusion candidate on the production mapped-QKV layout: the residual
+        # and RMSNorm are one registered, bit-preserving Host action while the
+        # QK/PV plans still consume QKV directly.  This isolates Host-boundary
+        # fusion from the materialised-QKV control above.
+        key = f"tiny_vit_b{batch}_hostfused"
+        path = plans_dir / f"{key}.rkhybrid.json"
+        data = vit_manifest(batch, compiled, weights["tiny_vit"],
+                            weights_sha["tiny_vit"],
+                            compiled["profile_hash"], ffn_mode="packed",
+                            rmsnorm_mode="fused", attn_layout="qkv")
+        path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+        written[key] = {"path": path.name, "model": "tiny_vit",
+                        "batch": batch, "ffn_mode": "packed",
+                        "rmsnorm_mode": "fused", "attn_layout": "qkv",
+                        "sha256": sha256(path)}
+        print("wrote", path, flush=True)
     compiled["hybrid_schema_version"] = HYBRID_SCHEMA_VERSION
     compiled["hybrid_manifests"] = written
     compiled["hybrid_policy"] = {

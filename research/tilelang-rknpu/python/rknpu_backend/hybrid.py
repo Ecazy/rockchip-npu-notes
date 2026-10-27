@@ -22,6 +22,7 @@ import numpy as np
 from .errors import (RK_E_INVALID, RK_E_NUMERIC_CONTRACT, RK_E_SCHEMA,
                      RK_E_SHAPE, RK_E_UNSUPPORTED, reject)
 from .models import PlanCall, RunStats
+from .passes.residency import analyze_residency
 from .plan import Plan
 from .runtime.ffi import LibRKPlan
 
@@ -1619,7 +1620,8 @@ class HybridRunner:
                  weights_path: str | Path | None = None, fd: int = 0,
                  plan_entry: str = "attributed",
                  repeat_submit: str = "manifest",
-                 reuse_bindings: bool = True):
+                 reuse_bindings: bool = True,
+                 execution_mode: str = "prepared"):
         if plan_entry not in ("attributed", "legacy"):
             reject(RK_E_INVALID, f"unknown plan entry {plan_entry!r}",
                    stage="model")
@@ -1627,9 +1629,16 @@ class HybridRunner:
                                  "chain_shared"):
             reject(RK_E_INVALID, f"unknown repeat_submit {repeat_submit!r}",
                    stage="model")
+        if execution_mode not in ("generic", "prepared"):
+            reject(RK_E_UNSUPPORTED, f"unknown execution_mode {execution_mode!r}",
+                   stage="model")
         self.plan_entry = plan_entry
         self.repeat_submit = repeat_submit
         self.reuse_bindings = bool(reuse_bindings)
+        self.execution_mode = execution_mode
+        self.residency = None
+        self.resident_values: dict[str, np.ndarray] | None = None
+        self.prepared_nodes: dict[str, tuple[Any, ...]] = {}
         t0 = time.perf_counter()
         self.lib = lib
         self.program = program
@@ -1685,7 +1694,253 @@ class HybridRunner:
                     "HybridRunner static binding-plan cleanup also failed: " +
                     "; ".join(repr(e) for e in cleanup_errors))
             raise
+        try:
+            if self.execution_mode == "prepared":
+                self._prepare_resident_execution()
+        except BaseException as exc:
+            cleanup_errors = self._cleanup_calls()
+            if cleanup_errors:
+                exc.add_note(
+                    "HybridRunner resident lowering cleanup also failed: " +
+                    "; ".join(repr(e) for e in cleanup_errors))
+            raise
         self.setup_us = (time.perf_counter() - t0) * 1e6
+
+    # ------------------------------------------------------------------
+    # Compiled Host-residency lowering
+    # ------------------------------------------------------------------
+
+    def _resident_array_for_ref(self, ref: _RepeatRef) -> np.ndarray:
+        """Resolve one statically compiled access into a resident slot."""
+        if self.resident_values is None:
+            reject(RK_E_INVALID, "resident values are unavailable", stage="model")
+        holder = self.resident_values.get(ref.tensor)
+        if holder is None:
+            reject(RK_E_SCHEMA,
+                   f"compiled access names no resident tensor {ref.tensor!r}",
+                   stage="lowering")
+        value = holder[ref.index] if ref.index else holder
+        if ref.row_start is not None:
+            value = value[ref.row_start:ref.row_start + int(ref.row_extent)]
+        return value
+
+    def _prepare_resident_execution(self) -> None:
+        """Lower immutable graph slots and all RKPlan I/O views exactly once.
+
+        The pass proves one producer per slot and one stable allocation per
+        tensor.  This method then resolves every repeat slice and every mapped
+        group window against those slots, validates their exact plan shapes once,
+        and asks each ``PlanCall`` to prebuild its ctypes binding array.
+
+        Per-run semantics are unchanged:
+        * every producer still writes its declared tensor once;
+        * every C workspace call still validates bindings, aliases and finite
+          values;
+        * public outputs are copied into fresh arrays so caller retention never
+          aliases reusable residency storage.
+        """
+        residency = analyze_residency(self.program)
+        resident = residency.allocate()
+        values: dict[str, np.ndarray] = {
+            name: np.asarray(value)
+            for name, value in self.host_constant_values.items()
+        }
+        # Names are disjoint by manifest validation.  Keeping constants and
+        # resident slots in one compiled lookup table lets Host actions resolve
+        # their inputs without rebuilding a graph-level dictionary per call.
+        for name, array in resident.items():
+            if name in values:
+                reject(RK_E_SCHEMA, "resident slot collides with Host constant",
+                       stage="lowering", actual=name)
+            values[name] = array
+        # Resolve all prebound views against the same stable allocation table.
+        self.resident_values = values
+
+        prepared: dict[str, tuple[Any, ...]] = {}
+        output_tensors: dict[str, tuple[str, ...]] = {}
+        for node in self.program.nodes:
+            output_tensors[node.id] = tuple(
+                sorted({ref.tensor for ref in node.outputs.values()}))
+            if not isinstance(node, NpuNode):
+                continue
+            binding_plan = self.node_plans[node.id]
+            if binding_plan.mode == "shared_group":
+                call = self.calls[node.group_plan]
+                inputs = [self._resident_array_for_ref(ref)
+                          for ref in binding_plan.flat_inputs]
+                outputs = [self._resident_array_for_ref(ref)
+                           for ref in binding_plan.flat_outputs]
+                call.bind_prepared_into(inputs, outputs,
+                                        binding_key=node.id)
+                prepared[node.id] = (
+                    "single", call, len(binding_plan.repeats),
+                    tuple(inputs), tuple(outputs))
+                continue
+            nrepeat = len(binding_plan.repeats)
+            if nrepeat == 1:
+                in_refs, out_refs = binding_plan.repeats[0]
+                call = self.calls[node.plan]
+                inputs = [self._resident_array_for_ref(ref)
+                          for ref in in_refs]
+                outputs = [self._resident_array_for_ref(ref)
+                           for ref in out_refs]
+                call.bind_prepared_into(inputs, outputs,
+                                        binding_key=node.id)
+                prepared[node.id] = (
+                    "single", call, 1, tuple(inputs), tuple(outputs))
+                continue
+            if binding_plan.mode != "per_repeat_submits":
+                reject(RK_E_UNSUPPORTED,
+                       f"prepared execution does not bind repeat mode "
+                       f"{binding_plan.mode!r} for node {node.id!r}",
+                       stage="lowering")
+            call = self.calls[node.plan]
+            input_rows = [
+                [self._resident_array_for_ref(ref) for ref in in_refs]
+                for in_refs, _ in binding_plan.repeats]
+            output_rows = [
+                [self._resident_array_for_ref(ref) for ref in out_refs]
+                for _, out_refs in binding_plan.repeats]
+            call.bind_group_prepared_into(input_rows, output_rows,
+                                          binding_key=node.id)
+            prepared[node.id] = (
+                "group", call, nrepeat, None, None)
+
+        self.residency = residency
+        self.resident_values = values
+        self.prepared_nodes = prepared
+        self._node_output_tensors = output_tensors
+
+    def _run_prepared(self, arr: np.ndarray, *, stats: RunStats | None,
+                      capture: bool) -> HybridResult:
+        """Execute the resident lowering without per-call graph binding work."""
+        if self.resident_values is None:
+            reject(RK_E_INVALID, "prepared runner has no resident values",
+                   stage="model")
+        values = dict(self.resident_values)
+        values[self.program.input_spec.name] = arr
+        produced_tensors: set[str] = set()
+        phase_before_us = (stats.preprocess_us + stats.execution_us +
+                           stats.postprocess_us) if stats is not None else 0.0
+        t_run = time.perf_counter()
+
+        for node in self.program.nodes:
+            if getattr(node, "capture_only", False) and not capture:
+                continue
+            if isinstance(node, HostNode):
+                t0 = time.perf_counter()
+                inputs = {name: self._resolve(
+                    ref, values, {}, f"{node.id}.inputs.{name}")
+                    for name, ref in node.inputs.items()}
+                outputs = node.action.func(inputs, node.attrs)
+                if not isinstance(outputs, dict) or \
+                        set(outputs) != set(node.action.output_names):
+                    reject(RK_E_SCHEMA,
+                           f"Host action {node.action.action_id!r} returned "
+                           "wrong output keys", stage="host_action")
+                produced: list[np.ndarray] = []
+                for name, ref in node.outputs.items():
+                    value = np.asarray(outputs[name])
+                    target_spec = self.program.tensors[ref.tensor]
+                    dtype = DTYPES[target_spec.dtype]
+                    if value.dtype != np.dtype(dtype):
+                        reject(RK_E_INVALID,
+                               f"{node.id}.{name} dtype mismatch",
+                               stage="host_action",
+                               actual=str(value.dtype),
+                               required=target_spec.dtype)
+                    if value.shape != target_spec.shape:
+                        reject(RK_E_SHAPE,
+                               f"{node.id}.{name} shape mismatch",
+                               stage="host_action", actual=list(value.shape),
+                               required=list(target_spec.shape))
+                    if not value.flags.c_contiguous:
+                        value = np.ascontiguousarray(value)
+                    if ref.index:
+                        reject(RK_E_UNSUPPORTED,
+                               "prepared Host outputs may not be indexed",
+                               stage="lowering", actual=node.id)
+                    target = values[ref.tensor]
+                    if target.shape != value.shape or target.dtype != value.dtype:
+                        reject(RK_E_SHAPE,
+                               "resident Host output target mismatch",
+                               stage="lowering", actual=node.id)
+                    if value is not target:
+                        np.copyto(target, value, casting="no")
+                    produced.append(target)
+                    produced_tensors.add(ref.tensor)
+                elapsed_us = (time.perf_counter() - t0) * 1e6
+                if stats is not None:
+                    stats.add_host_action(
+                        node.id, node.phase, elapsed_us,
+                        inputs=tuple(inputs.values()), outputs=tuple(produced))
+                continue
+
+            prepared = self.prepared_nodes.get(node.id)
+            if prepared is None:
+                reject(RK_E_INVALID,
+                       f"prepared node {node.id!r} was not lowered",
+                       stage="lowering")
+            kind, call, repeats, _, _ = prepared
+            t_node = time.perf_counter()
+            if kind == "single":
+                report, workspace_us = call.run_prepared(
+                    binding_key=node.id)
+            elif kind == "group":
+                report, workspace_us = call.run_group_prepared(
+                    binding_key=node.id)
+            else:
+                reject(RK_E_SCHEMA,
+                       f"prepared node {node.id!r} has unknown lowering kind",
+                       stage="lowering", actual=kind)
+            node_us = (time.perf_counter() - t_node) * 1e6
+            produced_tensors.update(self._node_output_tensors[node.id])
+            if stats is not None:
+                if kind == "group":
+                    stats.add_group_report(node.id, report, node_us,
+                                           repeats=repeats, phase=node.phase,
+                                           workspace_us=workspace_us)
+                else:
+                    stats.add_report(node.id, report, node_us,
+                                     phase=node.phase,
+                                     workspace_us=workspace_us)
+
+        # The public arrays are deliberately fresh copies.  Residency storage is
+        # reused by the next synchronous call, while the generic API guarantees
+        # that a returned output can be read after another run.
+        public_outputs: dict[str, np.ndarray] = {}
+        for public, tensor in self.program.outputs.items():
+            if tensor not in produced_tensors:
+                reject(RK_E_SCHEMA,
+                       f"graph output {tensor!r} was not produced", stage="model")
+            value = values[tensor]
+            spec = self.program.tensors[tensor]
+            if value.shape != spec.shape or \
+                    value.dtype != np.dtype(DTYPES[spec.dtype]):
+                reject(RK_E_SHAPE, f"graph output {tensor!r} invalid",
+                       stage="model")
+            if not np.isfinite(value).all():
+                reject(RK_E_NUMERIC_CONTRACT,
+                       f"graph output {tensor!r} contains non-finite values",
+                       stage="model")
+            public_outputs[public] = np.array(value, dtype=DTYPES[spec.dtype],
+                                              order="C", copy=True)
+
+        trace: dict[str, np.ndarray] = {}
+        if capture:
+            for name in self.program.trace_tensors:
+                if name in produced_tensors:
+                    trace[name] = np.array(values[name], copy=True)
+        if stats is not None:
+            elapsed_us = (time.perf_counter() - t_run) * 1e6
+            phase_now_us = (stats.preprocess_us + stats.execution_us +
+                            stats.postprocess_us)
+            residual_us = max(0.0, elapsed_us -
+                              (phase_now_us - phase_before_us))
+            if residual_us > 0.0:
+                stats.add_executor_overhead(residual_us)
+            stats.record_run(elapsed_us)
+        return HybridResult(public_outputs, trace)
 
     def _mapped_binding_plan(self, node: NpuNode) -> _NpuBindingPlan:
         """Resolve an explicit mapped group layout against this runner's tensors."""
@@ -2043,6 +2298,8 @@ class HybridRunner:
         if not arr.flags.c_contiguous:
             reject(RK_E_INVALID, "hybrid graph input must be C-contiguous",
                    stage="model")
+        if self.execution_mode == "prepared":
+            return self._run_prepared(arr, stats=stats, capture=capture)
         values: dict[str, np.ndarray] = {spec.name: arr}
         values.update(self.host_constant_values)
         phase_before_us = (stats.preprocess_us + stats.execution_us +
