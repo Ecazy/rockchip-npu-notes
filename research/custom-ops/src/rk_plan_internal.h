@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdatomic.h>
 #include "custom_ops.h"
+#include "co_execute_internal.h"
 
 typedef struct rk_plan {
     uint32_t schema_version;
@@ -97,6 +98,18 @@ typedef struct rk_workspace {
     uint32_t program_cache_ready;
     uint32_t program_cache_submit;
     uint32_t program_cache_tasks;
+    /* Bounded command-BO packing reuse.  Eligible only when the creation-time
+     * co_program cache is ready for the same single submit, so the packed
+     * commands, task descriptors, BO addresses and submit configuration are
+     * all fixed by construction.  The plan borrows the existing
+     * execute_workspace command BO; disabling this flag keeps the original
+     * per-submit packing path.  Default on for eligible workspaces; opt out with
+     * RK_PLAN_COMMAND_CACHE=0.  The separate RK_PLAN_COMMAND_CACHE_SYNC=1 arm
+     * re-syncs the unchanged command BO every submit and exists for A/B. */
+    uint32_t command_cache;
+    uint32_t command_cache_sync;     /* re-sync unchanged command BO per submit */
+    uint32_t command_cache_ready;
+    co_command_plan *command_plan;   /* allocated only for an eligible workspace */
     /* Pre-allocated per-run Host scratch.  The single-run gate gives exclusive
      * ownership of these buffers to whichever entry point runs, so a plan call
      * no longer allocates or frees the emission array, the per-output tile

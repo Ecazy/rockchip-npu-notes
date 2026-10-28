@@ -337,6 +337,8 @@ static int upload_role(rk_workspace *ws, uint32_t role,
 }
 
 static void build_program_cache(rk_workspace *ws, rk_diag *diag);
+static void build_command_cache(rk_workspace *ws, rk_diag *diag);
+static void drop_command_cache(rk_workspace *ws);
 
 int rk_workspace_create(int fd, const rk_plan *plan,
                         const rk_binding *constants, uint32_t nconstants,
@@ -378,6 +380,10 @@ int rk_workspace_create(int fd, const rk_plan *plan,
         "RK_PLAN_PREPARED_VALIDATION", 0);
     ws->program_cache = (uint32_t)env_flag_enabled(
         "RK_PLAN_PROGRAM_CACHE", 1);
+    ws->command_cache = (uint32_t)env_flag_enabled(
+        "RK_PLAN_COMMAND_CACHE", 1);
+    ws->command_cache_sync = (uint32_t)env_flag_enabled(
+        "RK_PLAN_COMMAND_CACHE_SYNC", 0);
     atomic_init(&ws->busy, 0);
     atomic_init(&ws->poisoned, 0);
     if (rk_plan_clone_plan(plan, &ws->plan, diag)) {
@@ -497,6 +503,7 @@ int rk_workspace_create(int fd, const rk_plan *plan,
             ws->emit_index[s->task_ids[j]] = j;
     }
     build_program_cache(ws, diag);
+    build_command_cache(ws, diag);
 
     /* The plan's declared Host budget must cover the whole resident footprint,
      * not just the binding/staging estimate: the verifier now includes the same
@@ -507,6 +514,10 @@ int rk_workspace_create(int fd, const rk_plan *plan,
                               ? ws->plan->host_budget_bytes
                               : ws->plan->claimed_host_bytes;
         uint64_t resident = rk_workspace_host_bytes(ws, 1);
+        if (budget && resident > budget && ws->command_cache_ready) {
+            drop_command_cache(ws);
+            resident = rk_workspace_host_bytes(ws, 1);
+        }
         if (budget && resident > budget) {
             rk_diag_set(diag, RK_E_BUDGET, "workspace_create",
                         "workspace Host footprint exceeds the plan Host budget; "
@@ -544,6 +555,7 @@ fail:
     free(ws->emit_index);
     free(ws->prepared_inputs);
     free(ws->prepared_outputs);
+    drop_command_cache(ws);
     rk_plan_free(ws->plan);
     free(ws);
     return diag && diag->code ? diag->code : RK_E_INVALID;
@@ -580,6 +592,48 @@ static void build_program_cache(rk_workspace *ws, rk_diag *diag) {
     ws->program_cache_submit = 0;
     ws->program_cache_tasks = submit->ntask_ids;
     ws->program_cache_ready = 1;
+}
+
+/* Build the bounded command-BO reuse candidate.  Eligibility is deliberately
+ * narrower than the co_program cache: the cached programs must already be ready
+ * for this one submit, and the submit is either a chain or a single task.  The
+ * plan borrows ws->execute_workspace.commands, so no BO is allocated here and
+ * it cannot outlive this workspace/fd.  Any failure is an optional-cache miss:
+ * clear the diagnostic and keep the original per-run packing path. */
+static void build_command_cache(rk_workspace *ws, rk_diag *diag) {
+    ws->command_cache_ready = 0;
+    if (!ws->command_cache || !ws->program_cache_ready || !ws->plan ||
+        !ws->execute_workspace_ready)
+        return;
+    if (ws->plan->nsubmits != 1u) return;
+    const rk_submit_desc *submit = &ws->plan->submits[0];
+    uint32_t tasks = submit->ntask_ids;
+    if (!tasks || tasks > ws->max_submit_tasks) return;
+    enum co_mode mode = submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE;
+    if (mode == CO_SEPARATE && tasks > 1u) return;
+    co_command_plan *plan = calloc(1, sizeof(*plan));
+    if (!plan) return;
+    if (co_command_plan_build(ws->fd, ws->batch_scratch, tasks, mode,
+                              &ws->execute_workspace, plan, NULL)) {
+        rk_diag_clear(diag);
+        co_command_plan_release(plan);
+        free(plan);
+        return;
+    }
+    ws->command_plan = plan;
+    ws->command_cache_ready = 1;
+}
+
+/* Optional caches must never turn a workload that fits the plan budget into a
+ * creation/group failure.  Dropping is safe: the original per-submit packing
+ * path remains valid. */
+static void drop_command_cache(rk_workspace *ws) {
+    if (ws->command_plan) {
+        co_command_plan_release(ws->command_plan);
+        free(ws->command_plan);
+        ws->command_plan = NULL;
+    }
+    ws->command_cache_ready = 0;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -811,6 +865,9 @@ uint64_t rk_workspace_host_bytes(const rk_workspace *ws, uint32_t capacity) {
     total += (uint64_t)ws->max_submit_tasks * (uint64_t)sizeof(co_program);
     total += (uint64_t)ws->noutputs *
              (uint64_t)(sizeof(size_t) + sizeof(uint32_t));
+    /* Optional command-BO packing reuse stores only descriptors/handles; the
+     * command BO itself already belongs to execute_workspace. */
+    if (ws->command_cache_ready) total += (uint64_t)sizeof(co_command_plan);
     return total;
 }
 
@@ -1224,11 +1281,20 @@ static int run_repeat(rk_workspace *ws, const rk_binding *inputs,
             if (index + 1u != submit->ntask_ids) continue;
             co_execute_profile profile;
             memset(&profile, 0, sizeof(profile));
-            int native = co_execute_profiled(
-                    ws->fd, cached ? ws->batch_scratch : st->batch,
-                    submit->ntask_ids,
-                    submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE,
-                    &ws->execute_workspace, &profile);
+            enum co_mode mode =
+                submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE;
+            int native;
+            if (cached && ws->command_cache_ready && ws->command_plan) {
+                native = co_execute_cached_profiled(
+                        ws->fd, ws->batch_scratch, submit->ntask_ids, mode,
+                        &ws->execute_workspace, ws->command_plan, &profile,
+                        (int)ws->command_cache_sync);
+            } else {
+                native = co_execute_profiled(
+                        ws->fd, cached ? ws->batch_scratch : st->batch,
+                        submit->ntask_ids, mode,
+                        &ws->execute_workspace, &profile);
+            }
             st->submit_wait_us += profile.submit_wait_us;
             st->output_sync_us += profile.output_sync_us;
             st->command_us += profile.command_us;
@@ -1598,6 +1664,7 @@ int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag) {
     free(ws->emit_index);
     free(ws->prepared_inputs);
     free(ws->prepared_outputs);
+    drop_command_cache(ws);
     rk_plan_free(ws->plan);
     free(ws);
     return 0;

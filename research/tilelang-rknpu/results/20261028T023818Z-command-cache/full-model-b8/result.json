@@ -1,0 +1,135 @@
+{
+  "batch": 8,
+  "bitwise": true,
+  "flags": {
+    "cache": "RK_PLAN_COMMAND_CACHE",
+    "sync": "RK_PLAN_COMMAND_CACHE_SYNC"
+  },
+  "kind": "full-model-command-cache-ab",
+  "limit": 256,
+  "note": "Same compiled graph, weights, fd and timed interval. Only the two creation-time command-cache flags differ; program cache, pack, guard, download, publication and output sync are otherwise identical.",
+  "output_files": {
+    "cache_nosync": "cache_nosync_logits.npy",
+    "cache_sync": "cache_sync_logits.npy",
+    "control": "control_logits.npy"
+  },
+  "round_ratio_median": {
+    "ratio_cache_sync_over_cache_nosync": 1.0181299894186464,
+    "ratio_control_over_cache_nosync": 1.036512065006903,
+    "ratio_control_over_cache_sync": 1.0184524807935271
+  },
+  "round_ratio_p10": {
+    "ratio_cache_sync_over_cache_nosync": 1.0137797436159102,
+    "ratio_control_over_cache_nosync": 1.0352436580980264,
+    "ratio_control_over_cache_sync": 1.017435364063814
+  },
+  "rounds": 7,
+  "rounds_detail": [
+    {
+      "median_us": {
+        "cache_nosync": 3333.711007144302,
+        "cache_sync": 3395.8344720304012,
+        "control": 3455.042082350701
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.0186349280885372,
+      "ratio_control_over_cache_nosync": 1.036395198907878,
+      "ratio_control_over_cache_sync": 1.017435364063814,
+      "round": 1
+    },
+    {
+      "median_us": {
+        "cache_nosync": 3321.8979369848967,
+        "cache_sync": 3384.8974853754044,
+        "control": 3447.605005931109
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.0189649259506417,
+      "ratio_control_over_cache_nosync": 1.0378419419653542,
+      "ratio_control_over_cache_sync": 1.0185256779050578,
+      "round": 2
+    },
+    {
+      "median_us": {
+        "cache_nosync": 3330.064471811056,
+        "cache_sync": 3390.438505448401,
+        "control": 3453.000506851822
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.0181299894186464,
+      "ratio_control_over_cache_nosync": 1.0369170134937078,
+      "ratio_control_over_cache_sync": 1.0184524807935271,
+      "round": 3
+    },
+    {
+      "median_us": {
+        "cache_nosync": 3325.2519788220525,
+        "cache_sync": 3384.168026968837,
+        "control": 3444.1049792803824
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.01771776951702,
+      "ratio_control_over_cache_nosync": 1.0357425546139913,
+      "ratio_control_over_cache_sync": 1.0177109859303382,
+      "round": 4
+    },
+    {
+      "median_us": {
+        "cache_nosync": 3323.0645349249244,
+        "cache_sync": 3368.8555122353137,
+        "control": 3444.396483246237
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.0137797436159102,
+      "ratio_control_over_cache_nosync": 1.036512065006903,
+      "ratio_control_over_cache_sync": 1.0224233336029305,
+      "round": 5
+    },
+    {
+      "median_us": {
+        "cache_nosync": 3330.9394493699074,
+        "cache_sync": 3387.522418051958,
+        "control": 3448.3339404687285
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.0169870901414177,
+      "ratio_control_over_cache_nosync": 1.0352436580980264,
+      "ratio_control_over_cache_sync": 1.0179516221332465,
+      "round": 6
+    },
+    {
+      "median_us": {
+        "cache_nosync": 3324.668970890343,
+        "cache_sync": 3388.1054841913283,
+        "control": 3450.6674273870885
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.0190805502311397,
+      "ratio_control_over_cache_nosync": 1.0378980456700937,
+      "ratio_control_over_cache_sync": 1.0184651698383271,
+      "round": 7
+    }
+  ],
+  "schema_version": 1,
+  "setup_us": {
+    "cache_nosync": 17674.49895851314,
+    "cache_sync": 18054.535030387342,
+    "control": 18272.70002104342
+  },
+  "timing": {
+    "cache_nosync": {
+      "max_us": 3413.334023207426,
+      "median_us": 3327.001992147416,
+      "min_us": 3016.3800111040473,
+      "n": 224,
+      "p10_us": 3300.1690171658993
+    },
+    "cache_sync": {
+      "max_us": 3419.4590989500284,
+      "median_us": 3386.210009921342,
+      "min_us": 3094.254992902279,
+      "n": 224,
+      "p10_us": 3355.0020307302475
+    },
+    "control": {
+      "max_us": 3502.8751008212566,
+      "median_us": 3450.083895586431,
+      "min_us": 3140.6290363520384,
+      "n": 224,
+      "p10_us": 3418.8759746029973
+    }
+  }
+}

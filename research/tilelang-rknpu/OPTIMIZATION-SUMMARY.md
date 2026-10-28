@@ -1,5 +1,14 @@
 # Tiny ViT 优化总报告与最终交付验收
 
+> **Command-cache follow-up (2026-10-28):** source adds and adopts
+> creation-time command-BO packing reuse for `program_cache_ready`
+> single-submit workspaces (`RK_PLAN_COMMAND_CACHE`, default on, `=0`
+> opt-out; `RK_PLAN_COMMAND_CACHE_SYNC=1` restores only the old command sync).
+> QK/PV isolated gains are 1.087×/1.092×; Tiny ViT b8/b1 end-to-end gains are
+> 1.0365×/1.0276×. Host increment is 3,184 B per eligible workspace and the
+> command BO allocation is unchanged. Frozen numeric replay passes. See
+> [COMMAND-CACHE-REPORT.md](COMMAND-CACHE-REPORT.md).
+
 > **Program-cache follow-up (2026-10-27):** source commit after `f18c9f3`
 > adds and adopts a creation-time single-submit `co_program` cache
 > (`RK_PLAN_PROGRAM_CACHE`, default on, `=0` opt-out). The final runtime build is

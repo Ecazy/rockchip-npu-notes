@@ -186,6 +186,7 @@ target_link_options(rknpu_plan_mock PRIVATE
   -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
+  -Wl,--wrap=co_execute_cached_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
@@ -237,6 +238,24 @@ target_link_options(output_sync_test PRIVATE
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
   -Wl,--wrap=rocket_context_faulted)
 add_test(NAME output_sync COMMAND output_sync_test)
+
+# Command-BO packing reuse: real clear/pack/seal/verify/handle-list path, with
+# only the submit ioctl stubbed.  Proves cached and per-submit plans produce the
+# same bytes/descriptors/handles and that the opt-in command sync is separable.
+add_executable(command_cache_test tests/c/command_cache_test.c tests/mock/npu_mock.c)
+target_include_directories(command_cache_test PRIVATE include src tests/mock)
+target_link_libraries(command_cache_test PRIVATE custom_ops m)
+target_compile_options(command_cache_test PRIVATE -Wall -Wextra -Werror)
+target_link_options(command_cache_test PRIVATE
+  -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
+  -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
+  -Wl,--wrap=rocket_batched_submit_supported
+  -Wl,--wrap=rocket_submit_tasks_flags
+  -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew -Wl,--wrap=co_emit_ew_max
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=rocket_context_faulted)
+add_test(NAME command_cache COMMAND command_cache_test)
+set_tests_properties(command_cache PROPERTIES ENVIRONMENT "ROCKET_CHIP=rk3588")
 
 # Guard-scan coverage: the vectorised scan must keep byte-exact coverage.
 add_executable(guard_scan_test tests/c/guard_scan_test.c tests/mock/npu_mock.c)
@@ -295,6 +314,7 @@ target_link_options(rk_plan_host_test PRIVATE
   -Wl,--wrap=rocket_bo_alloc32 -Wl,--wrap=rocket_bo_free
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
+  -Wl,--wrap=co_execute_cached_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc

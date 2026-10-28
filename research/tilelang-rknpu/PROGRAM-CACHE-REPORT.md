@@ -58,9 +58,11 @@ emitter 只读取不可变 action/template、`views` 的 BO 地址/tensor 描述
 - cache 不跨 workspace、不跨 fd、不跨 BO 分配；每个 workspace 的 cache
   随 workspace 销毁。
 - 配置在 workspace 创建时快照；后续修改环境不会让旧 workspace 静默换程序。
-- 创建失败：若 cache 构建失败，cleanup 走既有 workspace fail 路径；
-  `batch_scratch` 由同一处释放。程序构建失败只触发原路径 fallback，不发布
-  半成品结果。
+- 失败边界：程序缓存构建失败只清掉该次可选 cache 的诊断并回退原 per-run
+  emit 路径，workspace 创建继续；若后续 workspace 创建本身失败（例如 BO
+  分配或常量上传失败），才进入既有统一 fail/cleanup 路径，`batch_scratch`
+  也由同一处释放。两者不是同一事件，不能写成“缓存构建失败直接清理并终止
+  创建”。任何失败都不会发布半成品结果。
 - 运行时仍保留 binding、finite、alias、guard、sync、download、publication
   全部检查；本改动只移除重复 emit。
 

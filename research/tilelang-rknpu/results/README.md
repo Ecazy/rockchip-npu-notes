@@ -553,6 +553,19 @@ runner controls and are asserted bit-identical.
 - Default policy: `shared_group` for the QK/PV nodes.  It is bit-identical to both
   controls, passes the numeric gates, and is 1.21x faster than B1 end to end; the
   controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
+## Command-BO packing reuse (2026-10-28)
+
+`20261028T023818Z-command-cache/` closes the bounded command-BO cache
+candidate. For eligible single-submit workspaces the command BO, task
+descriptors, chain links and handle lists are packed once at creation and
+reused; the control packs every submit. QK/PV isolated medians improve
+1.0866×/1.0923×, and uninstrumented Tiny ViT b8/b1 improve 1.0365×/1.0276×.
+The host incremental cost is 3,184 B per eligible workspace and no new command
+BO is allocated. `bcmdverify` proves the command bytes stay unchanged over
+512/1024 real device submissions. Frozen numeric replay is PASS / 0 problems.
+The table, contract argument and failure evidence are in
+[`../COMMAND-CACHE-REPORT.md`](../COMMAND-CACHE-REPORT.md).
+
 ## Current / vendor / CPU full MNIST comparison (2026-10-28)
 
 `20261028T012703Z-current-backend-comparison/` contains the current backend, RKNN Toolkit Lite 2.3.2 and CPU FP32 three-arm campaign on all 10,000 MNIST test images, three rounds, across MLP32/8/1 and ViT8/1. The 32-image coexistence smoke passed before the full run. The current library hash is `7fd5a94b…`, vendor runtime hash `d31fc19c…`, and the temporary bind mount was restored to its prior hash.

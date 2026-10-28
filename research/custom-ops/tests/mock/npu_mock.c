@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "custom_ops.h"
+#include "co_execute_internal.h"
 #include "rocket_npu.h"
 
 #include "mock_npu.h"   /* the single source of the test-only seam API */
@@ -324,10 +325,9 @@ static void mock_maybe_corrupt_guard(const co_program *p) {
 /* Primitive semantics: matmul (with optional accumulate / element-wise mul),
  * LUT activation, and the element-wise add/mul that goes through the identity
  * weight.  No hardware LUT interpolation error is modelled. */
-int __wrap_co_execute_profiled(int fd, const co_program *p, unsigned count,
-                        enum co_mode mode, co_execute_workspace *workspace,
-                        co_execute_profile *profile) {
-    (void)fd; (void)workspace;
+static int mock_execute_profiled_impl(int fd, const co_program *p,
+                                      unsigned count, enum co_mode mode,
+                                      co_execute_profile *profile) {
     /* The mock performs the work the provider would perform, so it reports that
      * work as the simulated blocking submit.  Without this the envelope
      * attribution would show an unexplained residual that only exists because
@@ -481,4 +481,24 @@ int __wrap_co_execute_profiled(int fd, const co_program *p, unsigned count,
             (double)(mock_end.tv_nsec - mock_start.tv_nsec) / 1e3;
     }
     return 0;
+}
+
+int __wrap_co_execute_profiled(int fd, const co_program *p, unsigned count,
+                               enum co_mode mode, co_execute_workspace *workspace,
+                               co_execute_profile *profile) {
+    (void)workspace;
+    return mock_execute_profiled_impl(fd, p, count, mode, profile);
+}
+
+/* The cached entry executes the same simulated device work.  The mock has no
+ * provider command BO, so the packed-plan identity is production-only; the
+ * host-side command-plan test exercises that part against the real seam. */
+int __wrap_co_execute_cached_profiled(int fd, const co_program *p, unsigned count,
+                                      enum co_mode mode,
+                                      co_execute_workspace *workspace,
+                                      co_command_plan *plan,
+                                      co_execute_profile *profile,
+                                      int sync_command) {
+    (void)workspace; (void)plan; (void)sync_command;
+    return mock_execute_profiled_impl(fd, p, count, mode, profile);
 }

@@ -895,7 +895,8 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
     if (!warm) rc = -1;
     if (!rc && (!strcmp(mode, "b") || !strcmp(mode, "c") ||
                 !strcmp(mode, "d") || !strcmp(mode, "battr") ||
-                !strcmp(mode, "cprof"))) {
+                !strcmp(mode, "cprof") || !strcmp(mode, "bcmd") ||
+                !strcmp(mode, "bcmdverify"))) {
         if (!strcmp(mode, "b")) {
             bctx bc;
             double t0 = now_us();
@@ -969,6 +970,130 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
                 }
             }
             if (!rc) write_outputs(&def, &hd, out_path);
+            print_timing("SETUP_US", setup, "FIRST_US", 0, warm, 0);
+        } else if (!strcmp(mode, "bcmdverify")) {
+            /* Device-read-only command BO evidence: run the cached path many
+             * times, then explicitly sync the command BO from the device and
+             * compare it with the snapshot taken after creation.  The production
+             * fast path skips this sync; the probe performs it only to read. */
+            bctx bc;
+            double t0 = now_us();
+            if (b_setup(&b, &def, &hd, fd, &bc)) rc = -1;
+            double setup = now_us() - t0;
+            if (!rc && (!bc.ws->command_cache_ready || !bc.ws->command_plan)) {
+                printf("CMDBYTES_NA program_ready=%u command_ready=%u\n",
+                       bc.ws->program_cache_ready, bc.ws->command_cache_ready);
+                rc = -1;
+            }
+            unsigned char *before = NULL;
+            size_t nbytes = 0;
+            if (!rc) {
+                nbytes = bc.ws->command_plan->words * 8u;
+                before = malloc(nbytes ? nbytes : 1u);
+                if (!before) rc = -1;
+                else memcpy(before, bc.ws->execute_workspace.commands.ptr,
+                            nbytes);
+            }
+            for (int r = 0; !rc && r < 16; r++) {
+                for (uint32_t f = 0; !rc && f < def.frames; f++) {
+                    load_frame(&def, &hd, f);
+                    if (b_run(&bc)) rc = -1;
+                }
+            }
+            int same = -1;
+            if (!rc) {
+                int prep = rocket_bo_prep(fd, &bc.ws->execute_workspace.commands,
+                                          0, 2000000000ull);
+                if (prep) rc = -1;
+                else same = memcmp(before,
+                                   bc.ws->execute_workspace.commands.ptr,
+                                   nbytes) == 0;
+                (void)rocket_bo_fini(fd, &bc.ws->execute_workspace.commands);
+            }
+            if (!rc)
+                printf("CMDBYTES_OK %d bytes=%zu runs=%d\n", same, nbytes,
+                       16 * (int)def.frames);
+            free(before);
+            print_timing("SETUP_US", setup, "FIRST_US", 0, warm, 0);
+        } else if (!strcmp(mode, "bcmd")) {
+            /* Command-BO packing breakdown for an eligible single-submit
+             * workspace.  The plan is built into a separate command workspace
+             * on the same fd using the workspace's creation-time co_programs. */
+            bctx bc;
+            double t0 = now_us();
+            if (b_setup(&b, &def, &hd, fd, &bc)) rc = -1;
+            double setup = now_us() - t0;
+            if (!rc) {
+                load_frame(&def, &hd, 0);
+                if (b_run(&bc)) rc = -1;
+            }
+            if (!rc && (!bc.ws->program_cache_ready ||
+                        !bc.ws->command_cache_ready ||
+                        bc.ws->plan->nsubmits != 1u)) {
+                printf("CMDBUILD_NA program_ready=%u command_ready=%u submits=%u\n",
+                       bc.ws->program_cache_ready, bc.ws->command_cache_ready,
+                       bc.ws->plan->nsubmits);
+                rc = -1;
+            }
+            co_execute_workspace measure_ws;
+            memset(&measure_ws, 0, sizeof(measure_ws));
+            co_command_plan plan;
+            memset(&plan, 0, sizeof(plan));
+            if (!rc) {
+                const rk_submit_desc *submit = &bc.ws->plan->submits[0];
+                enum co_mode cmode = submit->mode == RK_SUBMIT_CHAIN
+                                     ? CO_CHAIN : CO_SEPARATE;
+                uint32_t ntasks = submit->ntask_ids;
+                if (co_execute_workspace_init(fd, bc.ws->max_submit_tasks,
+                                              &measure_ws)) rc = -1;
+                /* Host accounting: only the optional plan descriptor block is
+                 * new; the command BO already belongs to execute_workspace. */
+                uint64_t host_on = rk_workspace_host_bytes(bc.ws, 1);
+                uint64_t host_off = 0;
+                const char *old_cache = getenv("RK_PLAN_COMMAND_CACHE");
+                char cache_copy[16] = {0};
+                if (old_cache) snprintf(cache_copy, sizeof(cache_copy), "%s",
+                                        old_cache);
+                setenv("RK_PLAN_COMMAND_CACHE", "0", 1);
+                rk_workspace *off_ws = NULL;
+                rk_diag off_diag;
+                memset(&off_diag, 0, sizeof(off_diag));
+                if (!rk_workspace_create(fd, bc.cplan, bc.constants,
+                                         bc.nconstants, &off_ws, &off_diag)) {
+                    host_off = rk_workspace_host_bytes(off_ws, 1);
+                    rk_workspace_destroy(off_ws, &off_diag);
+                }
+                if (cache_copy[0]) setenv("RK_PLAN_COMMAND_CACHE", cache_copy, 1);
+                else unsetenv("RK_PLAN_COMMAND_CACHE");
+                printf("CMDMEM host_on=%llu host_off=%llu delta=%lld plan_bytes=%zu\n",
+                       (unsigned long long)host_on, (unsigned long long)host_off,
+                       (long long)host_on - (long long)host_off,
+                       sizeof(co_command_plan));
+                for (unsigned i = 0; !rc && i < 64u; i++) {
+                    co_command_times times;
+                    if (co_command_plan_build(fd, bc.ws->batch_scratch, ntasks,
+                                              cmode, &measure_ws, &plan,
+                                              &times)) { rc = -1; break; }
+                    printf("CMDBUILD_US %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+                           times.allocation_us, times.clear_us, times.pack_us,
+                           times.verify_us, times.sync_us, times.handles_us,
+                           times.total_us);
+                }
+                for (int arm = 0; !rc && arm < 2; arm++) {
+                    for (unsigned i = 0; !rc && i < 64u; i++) {
+                        co_execute_profile prof;
+                        memset(&prof, 0, sizeof(prof));
+                        if (co_command_plan_submit(&plan, arm, &prof)) {
+                            rc = -1; break;
+                        }
+                        printf("CMDRUN_US %d %.6f %.6f %.6f\n", arm,
+                               prof.command_us, prof.submit_wait_us,
+                               prof.output_sync_us);
+                    }
+                }
+                co_command_plan_release(&plan);
+                co_execute_workspace_destroy(&measure_ws);
+            }
             print_timing("SETUP_US", setup, "FIRST_US", 0, warm, 0);
         } else if (!strcmp(mode, "cprof")) {
             direct_ctx dc;

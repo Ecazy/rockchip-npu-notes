@@ -6,6 +6,7 @@
 #include "rocket_chain.h"
 #include "rocket_hw_profile.h"
 #include "reformat_template.h"
+#include "co_execute_internal.h"
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -429,10 +430,24 @@ void co_execute_workspace_destroy(co_execute_workspace *w){
     if(w&&w->commands.handle)rocket_bo_free(w->fd,&w->commands);
     if(w)memset(w,0,sizeof(*w));
 }
-static int execute_impl(int fd,const co_program *p,unsigned n,enum co_mode mode,
-                       co_execute_workspace *workspace,co_execute_profile *prof) {
+/* Shared packing path.  This is the single place that clears the command BO,
+ * copies regcmd words, writes chain links, verifies the chain and builds the
+ * handle lists.  The creation-time cache calls it once; the uncached path calls
+ * it once per submit.  Keeping one implementation is what makes the cached and
+ * control command bytes comparable by construction. */
+int co_command_plan_build(int fd,const co_program *p,unsigned n,enum co_mode mode,
+                          co_execute_workspace *workspace,co_command_plan *plan,
+                          co_command_times *times) {
+    if(times)memset(times,0,sizeof(*times));
+    if(!plan)return ROCKET_E_SHAPE;
+    /* Avoid a full 3 KiB struct clear on the per-submit control path: every
+     * field and every array entry below ``n``/``n_sync`` is initialised here. */
+    plan->fd=fd;plan->programs=p;plan->mode=mode;plan->n_tasks=n;
+    plan->commands=(rocket_bo){0};plan->owns_commands=0;
+    plan->n_in=0;plan->n_out=0;plan->flags=0;plan->words=0;plan->n_sync=0;
     if(workspace&&(workspace->fd!=fd||!workspace->commands.handle))return ROCKET_E_SHAPE;
     if(fd<0||!p||!n||n>CO_MAX_PROGRAMS||(mode!=CO_SEPARATE&&mode!=CO_CHAIN))return ROCKET_E_SHAPE;
+    if(mode==CO_SEPARATE&&n>1)return ROCKET_E_SHAPE; /* execute_impl recurses first */
     if(strcmp(rocket_hw_current()->name,"rk3588"))return ROCKET_E_UNSUPPORTED;
     if(mode==CO_CHAIN&&!rocket_batched_submit_supported())return ROCKET_E_UNSUPPORTED;
     /* Mixing PPU/DPU completion classes is intentionally not supported. */
@@ -445,88 +460,162 @@ static int execute_impl(int fd,const co_program *p,unsigned n,enum co_mode mode,
             if(!valid(p[i].reads[j])||p[i].reads[j].buffer->fd!=fd||
                (workspace&&workspace->commands.handle==p[i].reads[j].buffer->bo.handle))return ROCKET_E_SHAPE;
     }
-    if(mode==CO_SEPARATE&&n>1) {
-        for(unsigned i=0;i<n;i++){int rc=execute_impl(fd,p+i,1,mode,workspace,prof);if(rc)return rc;}return 0;
-    }
     size_t offs[CO_MAX_PROGRAMS],words=0;
     for(unsigned i=0;i<n;i++){offs[i]=words;words+=rkt_chain_words(p[i].count);}
-    double start=prof?co_clock_us():0;
-    rocket_bo rcbo={0};int rc=0;
-    if(workspace){if(workspace->commands.size<words*8)return ROCKET_E_SHAPE;rcbo=workspace->commands;}
-    else rc=rocket_bo_alloc32(fd,words*8,&rcbo);
-    if(prof)prof->allocation_us+=co_clock_us()-start;
+    double start=times?co_clock_us():0;
+    int rc=0;
+    if(workspace){if(workspace->commands.size<words*8)return ROCKET_E_SHAPE;plan->commands=workspace->commands;}
+    else {rc=rocket_bo_alloc32(fd,words*8,&plan->commands);plan->owns_commands=1;}
+    if(times)times->allocation_us=co_clock_us()-start;
     if(rc)return rc;
-    start=prof?co_clock_us():0;
-    rocket_task_desc tasks[CO_MAX_PROGRAMS];
-    if((rc=rocket_bo_prep(fd,&rcbo,1,0)))goto end;
-    memset(rcbo.ptr,0,words*8);
+    plan->words=words;
+    if((rc=rocket_bo_prep(fd,&plan->commands,1,0)))goto bad;
+    if(times){start=co_clock_us();}
+    memset(plan->commands.ptr,0,words*8);
+    if(times){times->clear_us=co_clock_us()-start;start=co_clock_us();}
     for(unsigned i=0;i<n;i++) {
-        if(mode==CO_CHAIN)rc=rkt_chain_pack_at(&rcbo,tasks,(int)i,offs[i],i+1<n?offs[i+1]:offs[i],
-            p[i].words,p[i].count,i+1<n?p[i+1].count:p[i].count);
-        else {memcpy(rcbo.ptr,p[i].words,p[i].count*8);tasks[i]=(rocket_task_desc){(uint32_t)rcbo.dma_address,p[i].count};}
+        if(mode==CO_CHAIN)rc=rkt_chain_pack_at(&plan->commands,plan->tasks,(int)i,offs[i],
+            i+1<n?offs[i+1]:offs[i],p[i].words,p[i].count,i+1<n?p[i+1].count:p[i].count);
+        else {memcpy(plan->commands.ptr,p[i].words,p[i].count*8);
+              plan->tasks[i]=(rocket_task_desc){(uint32_t)plan->commands.dma_address,p[i].count};}
         if(rc)break;
     }
-    if(!rc&&mode==CO_CHAIN)rc=rkt_chain_verify(&rcbo,tasks,(int)n);
-    {int r=rocket_bo_fini(fd,&rcbo);if(!rc)rc=r;}if(rc)goto end;
-    uint32_t ins[CO_MAX_PROGRAMS*3+1],outs[CO_MAX_PROGRAMS*3+1];unsigned ni=0,no=0;
-    for(unsigned i=0;i<n;i++)add_handle(outs,&no,p[i].output.buffer->bo.handle);
+    if(times){times->pack_us=co_clock_us()-start;start=co_clock_us();}
+    if(!rc&&mode==CO_CHAIN)rc=rkt_chain_verify(&plan->commands,plan->tasks,(int)n);
+    if(times)times->verify_us=co_clock_us()-start;
+    {
+        double t0=times?co_clock_us():0;
+        int r=rocket_bo_fini(fd,&plan->commands);
+        if(times)times->sync_us+=co_clock_us()-t0;
+        if(!rc)rc=r;
+    }
+    if(rc)goto bad;
+    if(times)start=co_clock_us();
+    unsigned ni=0,no=0;
+    for(unsigned i=0;i<n;i++)add_handle(plan->outs,&no,p[i].output.buffer->bo.handle);
     for(unsigned i=0;i<n;i++)for(unsigned j=0;j<p[i].nreads;j++) {
         uint32_t h=p[i].reads[j].buffer->bo.handle;int written=0;
-        for(unsigned k=0;k<no;k++)if(outs[k]==h)written=1;
+        for(unsigned k=0;k<no;k++)if(plan->outs[k]==h)written=1;
         /* A device intermediate belongs only in out_handles, never both lists. */
-        if(!written)add_handle(ins,&ni,h);
+        if(!written)add_handle(plan->ins,&ni,h);
     }
-    add_handle(ins,&ni,rcbo.handle);
+    add_handle(plan->ins,&ni,plan->commands.handle);
+    plan->n_in=ni;plan->n_out=no;
+    plan->flags=p[0].flags|(mode==CO_CHAIN?ROCKET_JOB_BATCHED:0);
+    for(unsigned i=0;i<n;i++) {
+        co_buffer *buffer=p[i].output.buffer;
+        plan->program_outputs[i]=buffer;
+    }
+    /* Record the original post-submit dedup set, preserving the provider's
+     * full-object identity guard: handle is the BO identity within fd, but only
+     * identical backing objects may merge a prep/fini pair. */
+    for(unsigned i=0;i<n;i++) {
+        co_buffer *buffer=p[i].output.buffer;
+        uint32_t handle=buffer->bo.handle;
+        int duplicate=0;
+        for(unsigned j=0;j<plan->n_sync;j++) {
+            co_buffer *seen=plan->sync_buffers[j];
+            if(seen->fd==buffer->fd&&seen->bo.handle==handle&&
+               seen->bo.obj_addr==buffer->bo.obj_addr&&
+               seen->bo.size==buffer->bo.size){duplicate=1;break;}
+        }
+        if(!duplicate)plan->sync_buffers[plan->n_sync++]=buffer;
+    }
+    if(times){times->handles_us=co_clock_us()-start;
+              times->total_us=times->allocation_us+times->clear_us+
+                              times->pack_us+times->verify_us+
+                              times->sync_us+times->handles_us;}
+    return 0;
+bad:
+    co_command_plan_release(plan);
+    return rc;
+}
+
+void co_command_plan_release(co_command_plan *plan) {
+    if(!plan)return;
+    if(plan->owns_commands&&plan->commands.handle)rocket_bo_free(plan->fd,&plan->commands);
+    memset(plan,0,sizeof(*plan));
+}
+
+int co_command_plan_submit(co_command_plan *plan,int sync_command,
+                           co_execute_profile *prof) {
+    if(!plan||!plan->n_tasks||plan->fd<0||!plan->commands.handle)return ROCKET_E_SHAPE;
+    int rc=0;
+    double start=prof?co_clock_us():0;
+    if(sync_command) {
+        rc=rocket_bo_prep(plan->fd,&plan->commands,1,0);
+        if(!rc)rc=rocket_bo_fini(plan->fd,&plan->commands);
+    }
     if(prof)prof->command_us+=co_clock_us()-start;
+    if(rc)return rc;
     start=prof?co_clock_us():0;
-    rc=rocket_submit_tasks_flags(fd,tasks,n,ins,ni,outs,no,p[0].flags|(mode==CO_CHAIN?ROCKET_JOB_BATCHED:0));
+    rc=rocket_submit_tasks_flags(plan->fd,plan->tasks,plan->n_tasks,
+                                 plan->ins,plan->n_in,plan->outs,plan->n_out,
+                                 plan->flags);
     if(prof)prof->submit_wait_us+=co_clock_us()-start;
     start=prof?co_clock_us():0;
     if(!rc) {
 #ifdef CO_OUTPUT_SYNC_REFERENCE
         /* Board A/B control: preserve the historical per-program output sync. */
-        for(unsigned i=0;i<n;i++) {
-            rocket_bo *b=&p[i].output.buffer->bo;
-            rc=rocket_bo_prep(fd,b,0,2000000000ull);if(rc)break;
-            rc=rocket_bo_fini(fd,b);if(rc)break;
+        for(unsigned i=0;i<plan->n_tasks;i++) {
+            rocket_bo *b=&plan->program_outputs[i]->bo;
+            rc=rocket_bo_prep(plan->fd,b,0,2000000000ull);if(rc)break;
+            rc=rocket_bo_fini(plan->fd,b);if(rc)break;
         }
 #else
-        /* PREP/FINI operate on the complete BO (provider syncs [0,page_up(size)))
-         * and the submit above is blocking.  Thus disjoint output views in one BO
-         * need one CPU sync pair after this submit.  Keep the seen set local to this
-         * call: CO_SEPARATE recurses once per submit and must sync each completion. */
-        struct output_sync_key {
-            int fd;
-            uint32_t handle;
-            uint64_t obj_addr;
-            size_t size;
-        } seen[CO_MAX_PROGRAMS];
-        unsigned nseen=0;
-        for(unsigned i=0;i<n;i++) {
-            co_buffer *buffer=p[i].output.buffer;
-            uint32_t handle=buffer->bo.handle;
-            int duplicate=0;
-            for(unsigned j=0;j<nseen;j++)
-                if(seen[j].fd==buffer->fd&&seen[j].handle==handle&&
-                   seen[j].obj_addr==buffer->bo.obj_addr&&
-                   seen[j].size==buffer->bo.size) {
-                    duplicate=1;break;
-                }
-            if(duplicate)continue;
-            /* Handle is the BO identity within fd.  Retain the provider's actual
-             * full-object sync identity as a consistency guard: prep/fini use
-             * obj_addr and page_up(size), so only identical backing objects merge. */
-            seen[nseen++]=(struct output_sync_key){buffer->fd,handle,
-                buffer->bo.obj_addr,buffer->bo.size};
-            rocket_bo *b=&buffer->bo;
-            rc=rocket_bo_prep(fd,b,0,2000000000ull);if(rc)break;
-            rc=rocket_bo_fini(fd,b);if(rc)break;
+        for(unsigned i=0;i<plan->n_sync;i++) {
+            rocket_bo *b=&plan->sync_buffers[i]->bo;
+            rc=rocket_bo_prep(plan->fd,b,0,2000000000ull);if(rc)break;
+            rc=rocket_bo_fini(plan->fd,b);if(rc)break;
         }
 #endif
     }
-if(prof)prof->output_sync_us+=co_clock_us()-start;
-end: start=prof?co_clock_us():0;if(!workspace)rocket_bo_free(fd,&rcbo);
-    if(prof)prof->allocation_us+=co_clock_us()-start;
+    if(prof)prof->output_sync_us+=co_clock_us()-start;
+    return rc;
+}
+
+int co_execute_cached_profiled(int fd,const co_program *p,unsigned n,
+                               enum co_mode mode,co_execute_workspace *workspace,
+                               co_command_plan *plan,
+                               co_execute_profile *prof,int sync_command) {
+    if(prof)memset(prof,0,sizeof(*prof));
+    if(!workspace||!plan||workspace->fd!=fd||
+       workspace->commands.handle!=plan->commands.handle||
+       plan->fd!=fd||plan->mode!=mode||plan->n_tasks!=n||
+       plan->programs!=p)return ROCKET_E_SHAPE;
+    /* The cached programs are supplied so the caller's eligibility stays
+     * explicit; the packed plan itself is what this entry executes.  A cheap
+     * identity check prevents a stale plan from being paired with a different
+     * program array. */
+    if(!p||!n)return ROCKET_E_SHAPE;
+    return co_command_plan_submit(plan,sync_command,prof);
+}
+
+static int execute_impl(int fd,const co_program *p,unsigned n,enum co_mode mode,
+                       co_execute_workspace *workspace,co_execute_profile *prof) {
+    if(workspace&&(workspace->fd!=fd||!workspace->commands.handle))return ROCKET_E_SHAPE;
+    if(fd<0||!p||!n||n>CO_MAX_PROGRAMS||(mode!=CO_SEPARATE&&mode!=CO_CHAIN))return ROCKET_E_SHAPE;
+    if(strcmp(rocket_hw_current()->name,"rk3588"))return ROCKET_E_UNSUPPORTED;
+    if(mode==CO_CHAIN&&!rocket_batched_submit_supported())return ROCKET_E_UNSUPPORTED;
+    if(mode==CO_SEPARATE&&n>1) {
+        for(unsigned i=0;i<n;i++){int rc=execute_impl(fd,p+i,1,mode,workspace,prof);if(rc)return rc;}return 0;
+    }
+    co_command_plan plan;
+    co_command_times times;
+    int rc=co_command_plan_build(fd,p,n,mode,workspace,&plan,
+                                 prof?&times:NULL);
+    if(prof) {
+        prof->allocation_us+=times.allocation_us;
+        prof->command_us+=times.clear_us+times.pack_us+times.verify_us+
+                          times.sync_us+times.handles_us;
+    }
+    if(rc)return rc;
+    rc=co_command_plan_submit(&plan,0,prof);
+    if(!workspace) {
+        double start=co_clock_us();
+        co_command_plan_release(&plan);
+        if(prof)prof->allocation_us+=co_clock_us()-start;
+    }
     return rc;
 }
 

@@ -772,6 +772,20 @@ static void lut_segment_case(void) {
         EXPECT(rk_workspace_create(0, live_plan, constants, 1, &ws, &diag) == 0);
         EXPECT(ws != NULL);
         if (!ws) { rk_plan_destroy(live_plan); return; }
+        /* A single-submit workspace with a ready co_program cache must also
+         * own the packed command plan; the control arm with that prerequisite
+         * removed must not. */
+        EXPECT(ws->program_cache_ready == 1u);
+        EXPECT(ws->command_cache_ready == 1u);
+        EXPECT(ws->command_plan != NULL);
+        setenv("RK_PLAN_PROGRAM_CACHE", "0", 1);
+        rk_workspace *no_program_cache = NULL;
+        EXPECT(rk_workspace_create(0, live_plan, constants, 1,
+                                   &no_program_cache, &diag) == 0);
+        EXPECT(no_program_cache && no_program_cache->command_cache_ready == 0u &&
+               no_program_cache->command_plan == NULL);
+        if (no_program_cache) rk_workspace_destroy(no_program_cache, &diag);
+        setenv("RK_PLAN_PROGRAM_CACHE", "1", 1);
         /* Every simulated BO owns an independent, aligned, non-overlapping
          * 32-bit DMA window, and the lookup agrees with the table. */
         {
@@ -1654,6 +1668,10 @@ done:
 }
 
 int main(void) {
+    /* Exercise the bounded command-BO reuse through the production runtime in
+     * this process.  The flag is still a creation-time snapshot; individual
+     * tests below may turn it off to check the control path. */
+    setenv("RK_PLAN_COMMAND_CACHE", "1", 1);
     enum { M = 32, K = 512, N = 48 };
     const uint32_t slack_guard = CO_SLACK + CO_GUARD;
     rk_value_desc values[3] = {
