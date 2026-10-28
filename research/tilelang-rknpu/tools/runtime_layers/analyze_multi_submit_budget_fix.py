@@ -150,8 +150,8 @@ def main():
         "",
         "## Corrected MLP smoke",
         "",
-        "| case | cache state | cached submits | host delta | cache request | cache physical | fallback command request/physical |",
-        "|---|---|---:|---:|---:|---:|---|",
+        "| case | cache state | cached submits | skipped budget/static | host delta | cache request | cache physical | fallback command request/physical |",
+        "|---|---|---:|---|---:|---:|---:|---|",
     ]
     for case in CASES:
         s = smoke[case]
@@ -160,6 +160,8 @@ def main():
         lines.append(
             f"| {case} | {state} | {s['info'].get('cached', 0)}/"
             f"{s['na'].get('submits', 8) if s['na'] else s['info'].get('submits', 0)} | "
+            f"{s['info'].get('skipped_budget', s['na'].get('skipped_budget', 0) if s['na'] else 0)}/"
+            f"{s['info'].get('skipped_static', s['na'].get('skipped_static', 0) if s['na'] else 0)} | "
             f"{int(mem.get('host_delta', 0))} B | "
             f"{int(mem.get('device_request_bytes', 0))} B | "
             f"{int(mem.get('device_physical_bytes', 0))} B | "

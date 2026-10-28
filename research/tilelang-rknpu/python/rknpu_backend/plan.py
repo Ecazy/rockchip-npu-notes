@@ -559,6 +559,54 @@ class Publish:
                    _int(obj["cols"], "cols", minimum=1, where="Publish"))
 
 
+BUDGET_POLICY_VERSION = 1
+
+
+@dataclass(frozen=True)
+class PlanBudget:
+    """Explicit user-authorized limits persisted with a plan.
+
+    This is deliberately separate from :class:`Accounting`, which remains the
+    compiler's estimate of required resources.  Plans written before this block
+    existed have no stored budget and are loaded with the historical strict
+    semantics: budget == claimed usage.
+    """
+    device_budget_bytes: int
+    host_budget_bytes: int
+    schema_version: int = BUDGET_POLICY_VERSION
+
+    def __post_init__(self) -> None:
+        if self.schema_version != BUDGET_POLICY_VERSION:
+            reject(RK_E_SCHEMA,
+                   f"unsupported budget policy schema {self.schema_version}",
+                   stage="schema")
+        for name in ("device_budget_bytes", "host_budget_bytes"):
+            value = getattr(self, name)
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                reject(RK_E_BUDGET, f"{name} must be a positive integer",
+                       stage="schema")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"schema_version": self.schema_version,
+                "device_budget_bytes": self.device_budget_bytes,
+                "host_budget_bytes": self.host_budget_bytes}
+
+    @classmethod
+    def from_dict(cls, obj: Any) -> "PlanBudget":
+        _require(isinstance(obj, dict), RK_E_SCHEMA,
+                 "budget_policy must be an object", stage="schema")
+        _keys(obj, {"schema_version", "device_budget_bytes",
+                    "host_budget_bytes"}, where="budget_policy")
+        return cls(device_budget_bytes=_int(
+                       obj["device_budget_bytes"], "device_budget_bytes",
+                       where="budget_policy"),
+                   host_budget_bytes=_int(
+                       obj["host_budget_bytes"], "host_budget_bytes",
+                       where="budget_policy"),
+                   schema_version=_int(obj["schema_version"], "schema_version",
+                                       where="budget_policy"))
+
+
 @dataclass(frozen=True)
 class Accounting:
     peak_payload_bytes: int
@@ -619,6 +667,7 @@ class Plan:
     plan_hash: str = ""
     schema_version: int = PLAN_SCHEMA_VERSION
     kind: str = PLAN_KIND
+    budget: PlanBudget | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != PLAN_SCHEMA_VERSION:
@@ -645,6 +694,8 @@ class Plan:
             "publish": [p.to_dict() for p in self.publish],
             "accounting": self.accounting.to_dict(),
         }
+        if self.budget is not None:
+            out["budget_policy"] = self.budget.to_dict()
         if include_hash:
             out["plan_hash"] = self.plan_hash
         return out
@@ -656,7 +707,7 @@ class Plan:
         required = {"schema_version", "kind", "name", "profile_hash", "source_hash",
                     "bindings", "constants", "buffers", "views", "actions",
                     "submits", "publish", "accounting", "plan_hash"}
-        _keys(obj, required, where="Plan")
+        _keys(obj, required, {"budget_policy"}, where="Plan")
         plan = cls(
             name=_str(obj["name"], "name", where="Plan"),
             profile_hash=_str(obj["profile_hash"], "profile_hash", where="Plan"),
@@ -671,6 +722,8 @@ class Plan:
             accounting=Accounting.from_dict(obj["accounting"]),
             plan_hash=obj["plan_hash"],
             schema_version=obj["schema_version"], kind=obj["kind"],
+            budget=(PlanBudget.from_dict(obj["budget_policy"])
+                    if "budget_policy" in obj else None),
         )
         expected = compute_plan_hash(plan)
         if plan.plan_hash != expected:

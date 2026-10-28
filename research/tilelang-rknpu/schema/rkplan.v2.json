@@ -339,6 +339,28 @@
     },
     "accounting": {
       "type": "object"
+    },
+    "budget_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "device_budget_bytes",
+        "host_budget_bytes"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "device_budget_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "host_budget_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     }
   }
 }

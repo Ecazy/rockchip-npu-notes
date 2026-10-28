@@ -315,7 +315,8 @@ def expand_static_repeat(plan: Plan, nrepeat: int, *,
         source_hash=f"{plan.source_hash}|repeat_expand:n={nrepeat}",
         bindings=tuple(bindings), constants=tuple(),
         buffers=tuple(buffers), views=tuple(views), actions=tuple(actions),
-        submits=submits, publish=publish, accounting=accounting))
+        submits=submits, publish=publish, accounting=accounting,
+        budget=plan.budget))
 
 
 def remap_group_inputs(group: Plan, nrepeat: int, specs: list[dict]) -> Plan:

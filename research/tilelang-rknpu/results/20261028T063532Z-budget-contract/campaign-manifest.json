@@ -1,0 +1,282 @@
+{
+  "board": {
+    "core_mask": "1",
+    "cpu_freq": "2304000",
+    "dmc_freq": "2112000000",
+    "driver": "RKNPU driver v0.9.8",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "model": "RK3588 OPi 5 Plus",
+    "npu_freq": "1000000000"
+  },
+  "budget": "CompileOptions device/host budgets persist in plan budget_policy; RK_PLAN_MULTI_SUBMIT_BUDGET default 4 MiB/workspace",
+  "budget_policy": {
+    "mnist_mlp_b1": {
+      "device_budget_bytes": 268435456,
+      "host_budget_bytes": 268435456,
+      "schema_version": 1
+    },
+    "mnist_mlp_b32": {
+      "device_budget_bytes": 268435456,
+      "host_budget_bytes": 268435456,
+      "schema_version": 1
+    },
+    "mnist_mlp_b8": {
+      "device_budget_bytes": 268435456,
+      "host_budget_bytes": 268435456,
+      "schema_version": 1
+    }
+  },
+  "contract": {
+    "abi_change": false,
+    "c_descriptor": "existing device_budget_bytes/host_budget_bytes vs claimed_*",
+    "legacy_plan_semantics": "budget = claimed usage",
+    "plan_budget_schema_version": 1
+  },
+  "control": "RK_PLAN_MULTI_SUBMIT_CACHE=0",
+  "decision": {
+    "adopt_default": true,
+    "reason": "With explicit budget_policy, exact-full device budget allocates zero cache, partial headroom caches a prefix, and sufficient headroom caches all 8 MLP submits with bitwise output. Legal five-profile run gains 1.03-1.05x on MLP and is neutral on ViT; legacy strict plans still fall back safely."
+  },
+  "default": "RK_PLAN_MULTI_SUBMIT_CACHE=1",
+  "files": {
+    "README_sha256": "c4b42fe76a8e39d4e8be2cb0b492b8e77fd03e688f9647353c05d15e407d3afe",
+    "analysis_md_sha256": "e001952b7df30702cd4a776c8edd8ed402ee2b978b0d27877448e39be1d4f58e",
+    "analysis_sha256": "99e64a9fc4b622493cae5ab82e8fe11b9f82957bc51cace26741027a861f6a22",
+    "numeric_verify_sha256": "9bc68f7264ea56259820c797b990ede907c7c5521fd6d8bc46ff04f0e77ad958",
+    "report_sha256": "8be35334ea21aabd1027e2f007caef1db3a0d23875eaeae2b1e078d3375558e2"
+  },
+  "identities": {
+    "budgeted_manifest_sha256": "832e0a9a2d0748f99e07d69da32100cd9da6af6166b0954c926e7614a84282fe",
+    "final_runtime_sha256": "b94454bdbfd15f6fd3f6af29089e81f1a1e902d5f448fef19cbf1f4fb232f0e9",
+    "numeric_spec_sha256": "b2b68629574537d0824b20dc8dd32bce9d81692256605429cd6b35f7146e8aa3",
+    "probe_sha256": "f443e5e4887b12f167f51f399496e54f6966fa16cf461cd11f71c1bc87189b65"
+  },
+  "kind": "plan-budget-contract-multi-submit-cache",
+  "plan_hashes": {
+    "mnist_mlp_b1": "ee8ac3e8ab4f661f8643853723d589be370481092a4a691f9341f7a3f62ebc51",
+    "mnist_mlp_b32": "3efd5e8dbe80393888cb4a32972fdc44f36ee685e5a22e4746d2a6aaf4f292e6",
+    "mnist_mlp_b8": "d295f0c028a4d6043c25e2ec1159cf99fabc1fea8e4558e8309d03591c2135a3"
+  },
+  "results": {
+    "bitwise": {
+      "exact": {
+        "equal": true,
+        "off": "a4a387489461cf3a1f04f4924bd2c4a272365f560ecbf6a474622788e569c62c",
+        "on": "a4a387489461cf3a1f04f4924bd2c4a272365f560ecbf6a474622788e569c62c"
+      },
+      "full": {
+        "equal": true,
+        "off": "a4a387489461cf3a1f04f4924bd2c4a272365f560ecbf6a474622788e569c62c",
+        "on": "a4a387489461cf3a1f04f4924bd2c4a272365f560ecbf6a474622788e569c62c"
+      },
+      "partial": {
+        "equal": true,
+        "off": "a4a387489461cf3a1f04f4924bd2c4a272365f560ecbf6a474622788e569c62c",
+        "on": "a4a387489461cf3a1f04f4924bd2c4a272365f560ecbf6a474622788e569c62c"
+      }
+    },
+    "checks": {
+      "command_cache_test": "command_cache: 270 checks, 0 failures",
+      "ctest": [
+        "100% tests passed, 0 tests failed out of 33"
+      ],
+      "plan_budget_contract": "....                                                                     [100%]\n4 passed in 0.99s",
+      "pytest": "356 passed, 71 subtests passed in 30.94s",
+      "rk_plan_host": "RK_PLAN host checks=875 failures=0"
+    },
+    "full_model": {
+      "mlp_b1": {
+        "accuracy": {
+          "control": 0.9921875,
+          "prepared": 0.9921875
+        },
+        "bitwise": true,
+        "control_us": 898.3210427686572,
+        "p10": 1.0449170358843458,
+        "prepared_us": 859.2379745095968,
+        "ratio": 1.0459033553855352,
+        "setup_us": {
+          "control": 13595.279073342681,
+          "prepared": 14104.813919402659
+        },
+        "throughput_control": 1227.3500075475924,
+        "throughput_prepared": 1298.7241559487552
+      },
+      "mlp_b32": {
+        "accuracy": {
+          "control": 0.9921875,
+          "prepared": 0.9921875
+        },
+        "bitwise": true,
+        "control_us": 1073.7565462477505,
+        "p10": 1.0247378106256324,
+        "prepared_us": 1037.2985270805657,
+        "ratio": 1.0538322695252245,
+        "setup_us": {
+          "control": 14068.939024582505,
+          "prepared": 14704.47308383882
+        },
+        "throughput_control": 28172.875797584064,
+        "throughput_prepared": 28377.816204596653
+      },
+      "mlp_b8": {
+        "accuracy": {
+          "control": 0.9921875,
+          "prepared": 0.9921875
+        },
+        "bitwise": true,
+        "control_us": 1005.9449123218656,
+        "p10": 1.0357135550647047,
+        "prepared_us": 969.0499864518642,
+        "ratio": 1.0386236203720633,
+        "setup_us": {
+          "control": 13792.152050882578,
+          "prepared": 14773.305039852858
+        },
+        "throughput_control": 7974.106755653807,
+        "throughput_prepared": 8268.497961116753
+      },
+      "vit_b1": {
+        "accuracy": {
+          "control": 0.9921875,
+          "prepared": 0.9921875
+        },
+        "bitwise": true,
+        "control_us": 1477.1264977753162,
+        "p10": 1.0053349660808841,
+        "prepared_us": 1469.9799939990044,
+        "ratio": 1.005920975509224,
+        "setup_us": {
+          "control": 21767.670987173915,
+          "prepared": 22979.530040174723
+        },
+        "throughput_control": 694.6897059973975,
+        "throughput_prepared": 698.8808659216136
+      },
+      "vit_b8": {
+        "accuracy": {
+          "control": 0.9921875,
+          "prepared": 0.9921875
+        },
+        "bitwise": true,
+        "control_us": 3391.6005049832165,
+        "p10": 0.997547473229067,
+        "prepared_us": 3395.684470888227,
+        "ratio": 0.9998720416402984,
+        "setup_us": {
+          "control": 59274.63399711996,
+          "prepared": 75952.49800942838
+        },
+        "throughput_control": 2373.4444483063626,
+        "throughput_prepared": 2371.5398704652953
+      }
+    },
+    "numeric": {
+      "problems": [],
+      "status": "PASS"
+    },
+    "smoke": {
+      "exact": {
+        "cmdbytes": null,
+        "info": {},
+        "mem": {
+          "device_physical_bytes": 0.0,
+          "device_request_bytes": 0.0,
+          "fallback_cmd_physical": 65536.0,
+          "fallback_cmd_request": 65536.0,
+          "host_delta": 0.0,
+          "host_off": 69580.0,
+          "host_on": 69580.0,
+          "setup_off_us": 3776.158,
+          "setup_on_us": 3673.785
+        },
+        "na": {
+          "cached": 0,
+          "ready": 0,
+          "skipped_budget": 8,
+          "skipped_static": 0,
+          "submits": 8
+        }
+      },
+      "full": {
+        "cmdbytes": {
+          "checked": 8,
+          "runs": 1024,
+          "same": 1
+        },
+        "info": {
+          "cached": 8,
+          "device_physical_bytes": 32768,
+          "device_request_bytes": 11088,
+          "ready": 1,
+          "skipped_budget": 0,
+          "skipped_static": 0,
+          "submits": 8
+        },
+        "mem": {
+          "device_physical_bytes": 32768.0,
+          "device_request_bytes": 11088.0,
+          "fallback_cmd_physical": 65536.0,
+          "fallback_cmd_request": 65536.0,
+          "host_delta": 208528.0,
+          "host_off": 69580.0,
+          "host_on": 278108.0,
+          "setup_off_us": 3877.074,
+          "setup_on_us": 3960.781
+        },
+        "na": {}
+      },
+      "partial": {
+        "cmdbytes": {
+          "checked": 1,
+          "runs": 1024,
+          "same": 1
+        },
+        "info": {
+          "cached": 1,
+          "device_physical_bytes": 4096,
+          "device_request_bytes": 4032,
+          "ready": 1,
+          "skipped_budget": 7,
+          "skipped_static": 0,
+          "submits": 8
+        },
+        "mem": {
+          "device_physical_bytes": 4096.0,
+          "device_request_bytes": 4032.0,
+          "fallback_cmd_physical": 65536.0,
+          "fallback_cmd_request": 65536.0,
+          "host_delta": 92160.0,
+          "host_off": 69580.0,
+          "host_on": 161740.0,
+          "setup_off_us": 3977.698,
+          "setup_on_us": 3758.951
+        },
+        "na": {}
+      }
+    }
+  },
+  "schema_version": 1,
+  "source_sha256": {
+    "research/custom-ops/CMakeLists.txt": "d17b7fa9c56b1439c0296da8b6a3038637ac96768020ef7b7dac5fb75aaee3dd",
+    "research/custom-ops/src/co_execute_internal.h": "a86973ec071ffae80962ae36579f41e3fd8962ab208ee865a776856b0fc3db27",
+    "research/custom-ops/src/custom_ops.c": "5f6a339de4ccb61cb8b8b55220ec63843bffbfcaaa982d1b6a11a64c3a4e4eb4",
+    "research/custom-ops/src/rk_plan_internal.h": "531b4f4258fe12882674067248a2fe71ef4188a7cf9989b86f0832fe7b02b7f9",
+    "research/custom-ops/src/rk_plan_runtime.c": "be4041ea283b52aa6427ebd82e1e3d9ec1401959a1be03d8e987ff201995c5f0",
+    "research/custom-ops/tests/c/command_cache_test.c": "4c2afb829e695d9c234dff09d190bad47e6f0acbc21ee4c047d2f59ceb323567",
+    "research/custom-ops/tests/c/rk_plan_host_test.c": "524702dc955ed2a22efa820cae50d674871bd4a9a70dbd36ad446bff719f6909",
+    "research/custom-ops/tests/mock/npu_mock.c": "1e61db043a84ebe705019b0f9d2207691e2a5d868d2141a59ec42a72ef0f1baf",
+    "research/tilelang-rknpu/python/rknpu_backend/codegen/descriptor.py": "f42594e2db6a6a5d3e039d09d9aa5fd921f0977a59b30d913f5b5f0d3e197025",
+    "research/tilelang-rknpu/python/rknpu_backend/passes/repeat_expand.py": "4202e6d3bc16080e67821b9332cbc043ccd5b9e8d79bf766153e7ebd1fa79e3f",
+    "research/tilelang-rknpu/python/rknpu_backend/passes/storage.py": "d9ce98fd8e4490b920ccfbdd20313a51ec5d72b8f2370f50fd4e7eeb840c818f",
+    "research/tilelang-rknpu/python/rknpu_backend/plan.py": "7bd4e5c9d2738216a08a7669bccf53572eded47f9a622aabbd8b60605d314e92",
+    "research/tilelang-rknpu/schema/rkplan.v2.json": "c18df0e70ce1b475b033f052acda9a9ee85492be0b25f1cb2f20c4a1412ede2e",
+    "research/tilelang-rknpu/tests/test_models.py": "5c25c959c5092e6cc4b5356690598cea63e2305e008106b4d59ff88180981d4f",
+    "research/tilelang-rknpu/tests/test_plan_budget_contract.py": "4625075580a6b2da8a6660e54fc20ac936dc2c204991bc112f76c034633f6f25",
+    "research/tilelang-rknpu/tools/runtime_layers/analyze_budget_contract.py": "c98888ede48390b21aadf0f7838a1d003307758808dadfdea870fbbabadb2112",
+    "research/tilelang-rknpu/tools/runtime_layers/build_budgeted_mlp_campaign.py": "30d32b4e9cb99b4f03df24afe781e2db45d8016fdc5f89ec2fcbf928da893ead",
+    "research/tilelang-rknpu/tools/runtime_layers/build_cases.py": "b588bead3ff1ab54f151cf9154ced558148f9d97f83c960ab8efa263bcef0f51",
+    "research/tilelang-rknpu/tools/runtime_layers/full_model_multi_submit_cache.py": "eba2ec8da31c17619f20a976d625fa4f950ea94a0927600c8d81c2cd7065c797",
+    "research/tilelang-rknpu/tools/verify_numeric_acceptance.py": "c597233557cc0597552255e24f0900ddcb5cbeeb2f76f1d2f711e964503d219e"
+  }
+}

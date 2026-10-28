@@ -978,9 +978,12 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
             if (b_setup(&b, &def, &hd, fd, &bc)) rc = -1;
             double setup = now_us() - t0;
             if (!rc && (!bc.ws->multi_submit_ready || !bc.ws->submit_cache)) {
-                printf("MULTI_NA ready=%u cached=%u submits=%u\n",
+                printf("MULTI_NA ready=%u cached=%u submits=%u "
+                       "skipped_budget=%u skipped_static=%u\n",
                        bc.ws->multi_submit_ready, bc.ws->multi_submit_cached,
-                       bc.ws->plan->nsubmits);
+                       bc.ws->plan->nsubmits,
+                       bc.ws->multi_submit_skipped_budget,
+                       bc.ws->multi_submit_skipped_static);
                 rc = -1;
             }
             unsigned char *snapshots[64];
@@ -989,9 +992,12 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
             memset(snapshot_bytes, 0, sizeof(snapshot_bytes));
             if (!rc) {
                 printf("MULTI_INFO ready=%u cached=%u submits=%u "
+                       "skipped_budget=%u skipped_static=%u "
                        "device_request_bytes=%llu device_physical_bytes=%llu\n",
                        bc.ws->multi_submit_ready, bc.ws->multi_submit_cached,
                        bc.ws->plan->nsubmits,
+                       bc.ws->multi_submit_skipped_budget,
+                       bc.ws->multi_submit_skipped_static,
                        (unsigned long long)bc.ws->multi_submit_device_bytes,
                        (unsigned long long)bc.ws->multi_submit_device_physical_bytes);
                 for (uint32_t s = 0; s < bc.ws->plan->nsubmits; s++) {

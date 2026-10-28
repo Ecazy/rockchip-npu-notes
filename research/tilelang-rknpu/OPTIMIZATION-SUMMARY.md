@@ -1,14 +1,14 @@
 # Tiny ViT 优化总报告与最终交付验收
 
-> **Multi-submit cache budget correction (2026-10-28):** the candidate is
-> **not adopted as a default**. The earlier 1.09× MLP gains came from separate
-> cache command BOs that were not charged against the plans' declared device
-> budgets; that claim is withdrawn. Admission now checks the cache budget,
-> workspace Host room, and plan device room including the still-allocated
-> fallback command workspace. Current compiled MLP plans have no device
-> headroom, so `RK_PLAN_MULTI_SUBMIT_CACHE=1` safely falls back and is opt-in
-> only. Budget-boundary regressions cover exact-full device budget, partial
-> Host/cache budgets and malformed values. See
+> **Plan-budget contract and multi-submit cache (2026-10-28):** compile
+> `device_budget_bytes` / `host_budget_bytes` now persist as a versioned
+> `budget_policy`, enter the plan hash, survive load and map to the existing C
+> descriptor budget fields; legacy plans without it stay strict. Admission
+> checks cache-own, workspace Host and plan device room before any persistent
+> allocation, with the fallback command workspace charged. Budgeted MLP plans
+> (documented 256 MiB limits) show legal gains of 1.0386×–1.0538×; ViT is
+> neutral. `RK_PLAN_MULTI_SUBMIT_CACHE=1` is the default; legacy plans safely
+> fall back. Earlier invalid-budget results remain historical. See
 > [MULTI-SUBMIT-CACHE-REPORT.md](MULTI-SUBMIT-CACHE-REPORT.md).
 
 > **Command-cache follow-up (2026-10-28, corrected):** source adds and adopts

@@ -123,9 +123,9 @@ typedef struct rk_workspace {
     uint32_t command_cache_ready;
     co_command_plan *command_plan;   /* allocated only for an eligible workspace */
     /* Budgeted multi-submit static preparation.  Each ready submit owns its
-     * creation-time programs and an independent command BO.  Opt-in only
-     * (RK_PLAN_MULTI_SUBMIT_CACHE=1); the compiled plans' declared device
-     * budgets currently leave no room for the extra command BOs. */
+     * creation-time programs and an independent command BO.  Default on, but
+     * only plans with an explicit budget_policy and declared headroom can be
+     * cached; legacy plans keep strict semantics and fall back. */
     uint32_t multi_submit_cache;
     uint32_t multi_submit_sync;      /* reuse command-cache sync policy */
     uint32_t multi_submit_ready;
@@ -135,6 +135,8 @@ typedef struct rk_workspace {
     size_t multi_submit_program_bytes;   /* sum of per-submit program slices */
     uint64_t multi_submit_device_bytes;  /* command request bytes */
     uint64_t multi_submit_device_physical_bytes; /* page-aligned upper bound */
+    uint32_t multi_submit_skipped_budget;
+    uint32_t multi_submit_skipped_static;
     /* Pre-allocated per-run Host scratch.  The single-run gate gives exclusive
      * ownership of these buffers to whichever entry point runs, so a plan call
      * no longer allocates or frees the emission array, the per-output tile

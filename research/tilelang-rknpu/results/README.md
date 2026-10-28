@@ -553,22 +553,25 @@ runner controls and are asserted bit-identical.
 - Default policy: `shared_group` for the QK/PV nodes.  It is bit-identical to both
   controls, passes the numeric gates, and is 1.21x faster than B1 end to end; the
   controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
-## Multi-submit cache budget correction (2026-10-28)
+## Plan-budget contract and legal multi-submit cache (2026-10-28)
 
-`20261028T055700Z-multi-submit-budget-fix/` is the corrected budget-closure
-record. The earlier `20261028T035849Z-multi-submit-cache/` result remains as
-historical evidence, but its MLP speedups are withdrawn: the separate cache
-command BOs were not charged against the plans' declared device budgets.
+`20261028T063532Z-budget-contract/` closes the budget-contract package.
+Compile `device_budget_bytes` / `host_budget_bytes` now persist as a versioned
+`budget_policy`, enter the canonical plan hash, load through the hybrid
+manifest and map to the existing C descriptor budget fields. Plans without
+that block keep strict budget = claimed behavior.
 
-The corrected admission checks three limits before allocation: the cache-own
-budget (Host + page-aligned command bytes), workspace Host room, and plan
-device room after data slots plus the still-allocated fallback command
-workspace. Current compiled MLP plans declare a device budget already consumed
-by those base resources, so the opt-in cache allocates **0 B** and safely falls
-back. A short interleaved five-profile confirmation is neutral and bitwise.
-`RK_PLAN_MULTI_SUBMIT_CACHE` is therefore **not a default**; it remains opt-in
-for future plans with declared device headroom. Budget-boundary and malformed
-configuration regressions are documented in
+Admission checks cache-own, workspace Host and plan device room before any
+persistent allocation; the fallback command workspace remains charged. With
+explicit 256 MiB budgets the legal MLP cache caches 8/8 submits and gains
+1.0386×–1.0538× across b32/b8/b1; ViT is neutral and all outputs are bitwise.
+Exact-full budget allocates zero cache BOs, and partial headroom caches only
+the fitting prefix. `RK_PLAN_MULTI_SUBMIT_CACHE` is adopted as default, with
+legacy strict plans safely falling back.
+
+The earlier `20261028T035849Z-multi-submit-cache/` and
+`20261028T055700Z-multi-submit-budget-fix/` results remain historical and are
+not performance claims. See
 [`../MULTI-SUBMIT-CACHE-REPORT.md`](../MULTI-SUBMIT-CACHE-REPORT.md).
 
 ## Command-BO packing reuse (2026-10-28)

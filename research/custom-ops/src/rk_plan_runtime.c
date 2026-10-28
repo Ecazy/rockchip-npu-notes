@@ -403,12 +403,11 @@ int rk_workspace_create(int fd, const rk_plan *plan,
         "RK_PLAN_COMMAND_CACHE", 1);
     ws->command_cache_sync = (uint32_t)env_flag_enabled(
         "RK_PLAN_COMMAND_CACHE_SYNC", 0);
-    /* Opt-in only: current compiled plans declare a device budget that is
-     * fully consumed by data slots plus the fallback command workspace, so the
-     * independent-BO cache has no legal device headroom there.  Enabling it is
-     * safe (it falls back) but is not the default. */
+    /* Default on.  Plans carrying an explicit budget_policy can admit the
+     * cache when their declared device/Host headroom allows it; legacy plans
+     * without budget_policy remain strict and safely fall back. */
     ws->multi_submit_cache = (uint32_t)env_flag_enabled(
-        "RK_PLAN_MULTI_SUBMIT_CACHE", 0);
+        "RK_PLAN_MULTI_SUBMIT_CACHE", 1);
     ws->multi_submit_sync = ws->command_cache_sync;
     ws->multi_submit_budget = env_bytes("RK_PLAN_MULTI_SUBMIT_BUDGET",
                                         4u << 20);
@@ -702,21 +701,28 @@ static uint64_t workspace_device_request_bytes(const rk_workspace *ws) {
  * allocation is made speculatively. */
 static void build_multi_submit_cache(rk_workspace *ws, rk_diag *diag) {
     ws->multi_submit_ready = 0;
+    ws->multi_submit_skipped_budget = 0;
+    ws->multi_submit_skipped_static = 0;
     if (!ws->multi_submit_cache || !ws->plan || ws->plan->nsubmits <= 1u)
         return;
     uint32_t nsubmits = ws->plan->nsubmits;
     uint64_t entry_bytes =
         (uint64_t)nsubmits * (uint64_t)sizeof(rk_submit_cache);
     if (!ws->multi_submit_budget ||
-        ws->multi_submit_budget < entry_bytes)
+        ws->multi_submit_budget < entry_bytes) {
+        ws->multi_submit_skipped_budget = nsubmits;
         return;
+    }
 
     uint64_t host_limit = ws->plan->host_budget_bytes
                               ? ws->plan->host_budget_bytes
                               : ws->plan->claimed_host_bytes;
     uint64_t base_host = rk_workspace_host_bytes(ws, 1);
     uint64_t host_room = host_limit > base_host ? host_limit - base_host : 0;
-    if (!host_room) return;
+    if (!host_room || entry_bytes > host_room) {
+        ws->multi_submit_skipped_budget = nsubmits;
+        return;
+    }
 
     uint64_t device_limit = ws->plan->device_budget_bytes
                                 ? ws->plan->device_budget_bytes
@@ -724,7 +730,10 @@ static void build_multi_submit_cache(rk_workspace *ws, rk_diag *diag) {
     uint64_t base_device = workspace_device_request_bytes(ws);
     uint64_t device_room = device_limit > base_device
                                ? device_limit - base_device : 0;
-    if (!device_room) return;
+    if (!device_room) {
+        ws->multi_submit_skipped_budget = nsubmits;
+        return;
+    }
 
     rk_submit_cache *entries = calloc(nsubmits, sizeof(*entries));
     if (!entries) return;
@@ -741,36 +750,69 @@ static void build_multi_submit_cache(rk_workspace *ws, rk_diag *diag) {
             submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE;
         /* Multi-task CO_SEPARATE has no single immutable command region in the
          * original executor; leave that submit on the per-run path. */
-        if (mode == CO_SEPARATE && tasks > 1u) continue;
+        if (mode == CO_SEPARATE && tasks > 1u) {
+            ws->multi_submit_skipped_static++;
+            continue;
+        }
         uint64_t host_cost = (uint64_t)tasks * (uint64_t)sizeof(co_program);
-        if (used_host + host_cost > host_room) continue;
+        if (used_host + host_cost > host_room) {
+            ws->multi_submit_skipped_budget++;
+            continue;
+        }
 
-        co_program *slice = calloc(tasks, sizeof(*slice));
-        if (!slice) continue;
+        /* Use the existing per-submit scratch to discover the command cost
+         * before making any persistent cache allocation.  Only after the Host,
+         * device-request and cache-own physical checks all pass do we allocate
+         * the permanent program slice and command BO. */
         int emitted = 1;
         for (uint32_t j = 0; j < tasks; j++) {
             uint32_t id = submit->task_ids[j];
             if (id >= ws->plan->nactions ||
                 ws->plan->actions[id].kind != RK_ACTION_NPU_TASK ||
-                rk_emit_action(ws->plan, ws->views, id, &slice[j], diag)) {
+                rk_emit_action(ws->plan, ws->views, id,
+                               &ws->batch_scratch[j], diag)) {
                 emitted = 0;
                 break;
             }
         }
         if (!emitted) {
             rk_diag_clear(diag);
-            free(slice);
+            ws->multi_submit_skipped_static++;
             continue;
         }
         uint64_t words = 0;
         for (uint32_t j = 0; j < tasks; j++)
-            words += (uint64_t)rkt_chain_words(slice[j].count);
+            words += (uint64_t)rkt_chain_words(ws->batch_scratch[j].count);
         uint64_t command_request = words * 8u;
         uint64_t command_physical = cache_page_up(command_request);
         if (used_device_request + command_request > device_room ||
             used_host + host_cost + used_device_physical + command_physical >
                 ws->multi_submit_budget) {
+            ws->multi_submit_skipped_budget++;
+            continue;
+        }
+
+        co_program *slice = calloc(tasks, sizeof(*slice));
+        if (!slice) {
+            ws->multi_submit_skipped_budget++;
+            continue;
+        }
+        /* Re-emit into the persistent slice.  The scratch emission above is the
+         * cost probe; persistent emission keeps the program identity visible to
+         * the existing emitter tracking and keeps every allocation after the
+         * budget decision. */
+        int persisted = 1;
+        for (uint32_t j = 0; j < tasks; j++) {
+            uint32_t id = submit->task_ids[j];
+            if (rk_emit_action(ws->plan, ws->views, id, &slice[j], diag)) {
+                persisted = 0;
+                break;
+            }
+        }
+        if (!persisted) {
+            rk_diag_clear(diag);
             free(slice);
+            ws->multi_submit_skipped_static++;
             continue;
         }
         co_command_plan plan;
@@ -778,6 +820,7 @@ static void build_multi_submit_cache(rk_workspace *ws, rk_diag *diag) {
         if (co_command_plan_build(ws->fd, slice, tasks, mode, NULL, &plan,
                                   NULL)) {
             free(slice);
+            ws->multi_submit_skipped_static++;
             continue;
         }
         entries[s].ready = 1;
@@ -818,6 +861,8 @@ static void drop_multi_submit_cache(rk_workspace *ws) {
     ws->multi_submit_cached = 0;
     ws->multi_submit_device_bytes = 0;
     ws->multi_submit_device_physical_bytes = 0;
+    ws->multi_submit_skipped_budget = 0;
+    ws->multi_submit_skipped_static = 0;
     ws->multi_submit_ready = 0;
 }
 

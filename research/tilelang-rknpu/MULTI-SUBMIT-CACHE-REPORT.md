@@ -1,118 +1,125 @@
-# 受预算控制的多提交静态执行准备（预算闭环修订）
+# 预算契约贯通与多提交缓存采用结论
 
-日期：2026-10-28。本包原目标是把 single-submit 程序/命令缓存扩展为按 submit
-规划的多提交准备。独立 command BO、部分缓存和正收益方向已实现并有回归；
-但预算闭环修订发现：当前 compiled MLP plan 的 device budget 已被数据槽和
-原 fallback command workspace 恰好用满，额外 cache command BO 没有合法
-设备余量。因此本包**不采用为默认**，只保留 opt-in 实验实现。
+日期：2026-10-28。本包完成 Plan→descriptor 的预算契约贯通，并在显式预算
+余量下重新评估多提交静态准备。最终结论：**采用**
+`RK_PLAN_MULTI_SUBMIT_CACHE=1` 为默认；旧计划缺少 `budget_policy` 时保持
+strict 语义并安全回退，新计划只有在显式声明的 Host/device 余量内才会缓存。
 
-历史结果 `results/20261028T035849Z-multi-submit-cache/` 保持原样；其中
-1.0918×/1.1341× 等性能数字是在未把新增 command BO 计入 device budget 的
-实现上测得，现已撤回，不能作为产品收益声明。
+此前两个结果保持历史原样，不作为产品收益声明：
 
-## 0. 最终结论
+- `results/20261028T035849Z-multi-submit-cache/`：未把 cache command BO 计入
+  device budget，收益声明已撤回；
+- `results/20261028T055700Z-multi-submit-budget-fix/`：保守严格回退版本，
+  device budget 被 base 资源用满，收益中性。
 
-- 默认：`RK_PLAN_MULTI_SUBMIT_CACHE=0`，保持原 single-submit 策略。
-- opt-in：`RK_PLAN_MULTI_SUBMIT_CACHE=1` 仅对显式声明了 device 余量的
-  workspace 生效；当前 compiled MLP 计划全部安全回退。
-- 预算：`RK_PLAN_MULTI_SUBMIT_BUDGET` 默认 4 MiB/workspace；非法、负数、
-  溢出和显式 0 都 fail closed 为 0（禁用 cache），不会静默放开限制。
-- 单 submit 的 command BO cache 和此前所有结果不变。
+新收益只引用本包 budgeted plan package 的合法配置实测。
 
-## 1. 分配前同时约束三类预算
+## 1. 预算契约
 
-`build_multi_submit_cache()` 在每次分配前检查：
+`CompileOptions.device_budget_bytes` / `host_budget_bytes` 现在写入计划的
+版本化 `budget_policy`：
 
-1. **缓存自身上限**：Host entry/program 字节 + command BO 的页对齐物理上界
-   ≤ `RK_PLAN_MULTI_SUBMIT_BUDGET`；
-2. **workspace Host 余量**：
-   `plan Host budget - rk_workspace_host_bytes(ws,1)` 仍能容纳该 submit 的
-   program slice 和 entry；
-3. **设备预算余量**：
-   `plan device budget - 当前数据槽 request - 原 fallback command workspace
-   request` 仍能容纳该 submit 的 command request。
+```json
+"budget_policy": {
+  "schema_version": 1,
+  "device_budget_bytes": 268435456,
+  "host_budget_bytes": 268435456
+}
+```
 
-原 fallback command workspace 没有被替换或忽略：MLP 中它的 request/physical
-均为 **65,536 B**，始终计入 base device usage。若数据槽 + fallback 已用满
-计划 device budget，则 command request 余量为 0，任何 cache BO 都不会分配。
+- 该块进入 canonical plan hash，序列化/加载往返保留；
+- `build_plan_descriptor()` 把它投影到既有 C 字段
+  `device_budget_bytes` / `host_budget_bytes`；
+- `claimed_device_bytes` / `claimed_host_bytes` 继续表示编译器 accounting
+  估算；
+- 没有新增或重排公共 C ABI 字段；
+- 旧 JSON 缺少 `budget_policy` 时 `budget=None`，descriptor 的 budget 仍等于
+  accounting 估算，保持原先严格限制，不自动补成 256 MiB 或扩大权限；
+- `budget_policy.schema_version` 独立版本化；不认识的版本直接拒绝。
 
-不满足任一预算时跳过该 submit；部分缓存按 plan order 保留前缀，全部不满足
-则回退原 per-run 路径，workspace 仍可运行。
+`build_cases.py` 的 probe bundle 也同步区分 budget 与 claimed，避免测试
+工具再次把两者混为一谈。
 
-## 2. 设备字节口径
+## 2. 分配前检查
 
-- **request bytes**：计划声明和 `plan->device_budget_bytes` 校验使用的口径。
-- **physical upper bound**：provider 对每个 BO 做 4,096 B 页对齐，因此严格
-  物理上限是每个 BO `page_up(size)` 之和。
-- 独立 command BO 的页对齐开销按 BO 逐个计算，不能把多个小 BO 的 request
-  相加后只 page-up 一次。
-- 历史 MLP 的 11,088 B 只是 cache command **request**；若按当前独立 BO
-  分配，物理上界是 **32,768 B**（8 个 BO × 4 KiB）。本轮修正后该 cache
-  因 device budget 无余量而不分配，实际增量 request/physical 都是 **0 B**。
+`build_multi_submit_cache()` 在每次持久分配前检查三类预算：
 
-## 3. 预算解析加固
+1. **缓存自身上限**：Host entries/programs + command BO 页对齐物理上界 ≤
+   `RK_PLAN_MULTI_SUBMIT_BUDGET`（默认 4 MiB/workspace）；
+2. **workspace Host 余量**：`plan Host budget - rk_workspace_host_bytes(ws,1)`
+   必须容纳 entry 和 program slice；
+3. **device 预算余量**：`plan device budget - 数据槽 request - fallback
+   command workspace request` 必须容纳新 command request。
 
-`env_bytes()` 现在的行为：
+fallback command workspace 始终存在并计入，不能视为被替换。`entries` 在
+Host 余量不足时不会先分配；每个 submit 先把 program 发射到现有
+`batch_scratch` 作为成本探针，三项预算都通过后才分配持久 program slice、
+重新发射到该 slice，并分配独立 command BO。因此临时和持久分配都不突破
+声明边界。
 
-- 未设置或空串：使用默认值；
-- 首字符不是数字（包括负数、`+`、空白、单词）：返回 0；
-- `strtoull` 溢出（`ERANGE`）或尾随非法字符：返回 0；
-- 显式 `0`：返回 0，即禁用可选 cache；
-- 不会把负数/溢出解释成极大预算，也不会在解析失败时退回默认值。
+`RK_PLAN_MULTI_SUBMIT_BUDGET` 解析 fail closed：未设置/空串使用默认值；
+负数、带符号、空白/单词、尾随垃圾、溢出和显式 0 都返回 0（禁用 cache），
+不会静默变成默认值或无界值。
 
-## 4. 针对性回归
+## 3. 设备字节口径
 
-`rk_plan_host_test` 新增一个 4-submit synthetic plan，直接断言 mock 的 BO
-分配次数，防止“先超额分配再释放”：
+- plan 的 `device_budget_bytes` 按**request bytes** 校验，与已声明
+  accounting 口径一致；
+- cache 自身上限按**每个 command BO 的页对齐 physical upper bound** 计算，
+  因为 provider 对每个 BO 做 4 KiB 对齐；
+- fallback command workspace 的 request/physical 均单独报告并计入 base
+  device usage。
 
-- device budget 恰好等于基础数据槽 + fallback command：**0 个 cache BO**，
-  分配次数仅 base；
-- Host 余量不足：只缓存 **3/4** submit，分配次数 base+3，
-  `rk_workspace_host_bytes(ws,1) ≤ host_budget`，输出逐位一致；
-- cache 自身上限只够一个 submit：缓存 **1/4**，分配次数 base+1，输出逐位一致；
-- `-1`、非数字、`0`、超长溢出值：全部禁用 cache，分配次数仅 base，输出逐位一致。
+MLP b32 的实测：
 
-`command_cache_test` 另覆盖独立 command BO 不互相覆盖、合法/非法
-`CO_SEPARATE`、后续 program 非法零提交、submit 失败和构建失败清理。
+| variant | cache state | cached | skipped budget/static | Host delta | cache request | cache physical | fallback command request/physical |
+|---|---|---:|---|---:|---:|---:|---|
+| exact | fallback | 0/8 | 8/0 | 0 B | 0 B | 0 B | 65,536/65,536 B |
+| partial | prepared | 1/8 | 7/0 | 92,160 B | 4,032 B | 4,096 B | 65,536/65,536 B |
+| full | prepared | 8/8 | 0/0 | 208,528 B | 11,088 B | 32,768 B | 65,536/65,536 B |
 
-## 5. 修正后的短性能确认
+exact 预算恰好用完数据槽 + fallback command，零 cache BO；partial 只剩
+4,032 request，第一个 4-task submit 命中后其余 7 个因 device 余量跳过；
+full 使用 `CompileOptions` 文档默认 256 MiB 上限，8 个 submit 全缓存，未为
+恢复收益反向提高预算。三者输出逐位一致。
 
-当前 compiled plan 下，opt-in 与 control 都走原 per-submit 路径。同进程、
-同 fd、逐 call 交替的五 profile 交错结果（256 images、3 rounds）：
+## 4. 合法余量下的性能
 
-| profile | control µs | opt-in µs | on/off | bitwise |
-|---|---:|---:|---:|---|
-| mlp_b32 | 1355.9 | 1353.3 | 1.0016× | yes |
-| mlp_b8 | 1001.9 | 1000.1 | 1.0022× | yes |
-| mlp_b1 | 902.1 | 900.1 | 1.0029× | yes |
-| vit_b8 | 3112.5 | 3093.1 | 1.0055× | yes |
-| vit_b1 | 1198.4 | 1179.9 | 1.0154× | yes |
+预算化 MLP plan（b1/b8/b32，256 MiB 显式上限）加未改 ViT plan；同进程、
+同 fd、逐 call 交替，256 images、7 rounds，逐调用样本在
+`full-model/result.json`。
 
-这是**安全回退的中性确认**，不是收益声明。`bmulti` 同时显示 MLP：
-`ready=0, cached=0/8, host_delta=0, cache request/physical=0/0`，fallback
-command request/physical=65,536/65,536 B。
+| profile | control µs | prepared µs | ratio | p10 | throughput control | throughput prepared | bitwise |
+|---|---:|---:|---:|---:|---:|---:|---|
+| mlp_b32 | 1073.8 | 1037.3 | **1.0538×** | 1.0247× | 28172.9 | 28377.8 | yes |
+| mlp_b8 | 1005.9 | 969.0 | **1.0386×** | 1.0357× | 7974.1 | 8268.5 | yes |
+| mlp_b1 | 898.3 | 859.2 | **1.0459×** | 1.0449× | 1227.4 | 1298.7 | yes |
+| vit_b8 | 3391.6 | 3395.7 | 0.9999× | 0.9975× | 2373.4 | 2371.5 | yes |
+| vit_b1 | 1477.1 | 1470.0 | 1.0059× | 1.0053× | 694.7 | 698.9 | yes |
 
-## 6. 验证
+五个 profile 准确率相同、logits 逐位一致。MLP 收益 1.034–1.054×；ViT
+默认图没有多提交 workspace，保持中性。
 
-- `command_cache_test`：**270 checks / 0 failures**
-- `rk_plan_host_test`：**875 checks / 0 failures**（含上述预算边界）
-- CTest：**33/33 passed**
-- pytest：**352 passed, 71 subtests passed**
-- 冻结数值复验：**PASS / 0 problems**
-- 未重跑未变化的外部基线；未改硬件配方、数值政策或异步执行
+## 5. 验收
 
-## 7. 决策
+- `plan-budget-contract`：4 tests，覆盖 compile/persist/hash/load/hybrid
+  manifest/C descriptor separation、旧计划 strict 语义、非法 budget 拒绝；
+- `rk_plan_host_test`：**875 checks / 0 failures**，含 device 恰满零分配、
+  Host 余量 partial、cache 余量 partial、非法配置、mock 分配次数和输出逐位；
+- `command_cache_test`：**270 checks / 0 failures**；
+- CTest：**33/33 passed**；
+- pytest：**356 passed, 71 subtests passed**；
+- budgeted plan package 的冻结数值复验：**PASS / 0 problems**；派生 spec 只
+  更新 compiled-manifest identity，阈值和 expected arrays 未变；
+- exact/partial/full 三种预算的 MLP output SHA-256 完全一致。
 
-**不采用默认开启。** 独立 command BO 与部分缓存实现保留为 opt-in
-实验；只有未来 plan 明确声明了 device budget 余量时才可能生效。当前
-compiled MLP 计划 device budget 已满，因此保持原执行路径和中性结果。
+## 6. 历史与身份
 
-## 8. 身份与证据
-
-- 修正后 board runtime：`artifacts/librknpu_plan.so` SHA-256
-  `b5741177637882433d363d629a284ea93373ea3c4e0919a2aafa1e231a7aec49`
-- probe：`artifacts/probe-budget-fix` SHA-256
-  `9bae73e14e5d63bfebcb558ec79160acf21ef6b72c32708e85d6f2f6a6d9afa3`
-- 修正后结果：`results/20261028T055700Z-multi-submit-budget-fix/`
-  （以实际生成的目录名为准）
-- 历史结果（未覆盖）：`results/20261028T035849Z-multi-submit-cache/`
+- 最终 board runtime：`artifacts/librknpu_plan.so` SHA-256
+  `b94454bdbfd15f6fd3f6af29089e81f1a1e902d5f448fef19cbf1f4fb232f0e9`
+- probe：`artifacts/probe-contract-final` SHA-256
+  `f443e5e4887b12f167f51f399496e54f6966fa16cf461cd11f71c1bc87189b65`
+- 结果：`results/20261028T063532Z-budget-contract/`
+- 历史结果（未覆盖、未重算）：
+  - `results/20261028T035849Z-multi-submit-cache/`
+  - `results/20261028T055700Z-multi-submit-budget-fix/`

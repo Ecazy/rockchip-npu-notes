@@ -222,7 +222,9 @@ def _check_existing_campaign(spec: dict, campaign_manifest: Path,
 def verify(spec_path: Path, calibration_observation: Path,
            acceptance_observation: Path, *,
            campaign_manifest: Path | None = None,
-           campaign_results: Path | None = None) -> dict:
+           campaign_results: Path | None = None,
+           compiled_manifest: Path | None = None,
+           plans_dir: Path | None = None) -> dict:
     spec = json.loads(spec_path.read_text())
     problems: list[str] = []
     row: dict = {"status": "PASS", "problems": problems,
@@ -277,7 +279,10 @@ def verify(spec_path: Path, calibration_observation: Path,
         problems.append("calibration weights hash mismatch")
     if acc_meta.get("weights_sha256") != spec["weights_sha256"]:
         problems.append("acceptance weights hash mismatch")
-    compiled_path = ROOT / "models" / "compiled" / "manifest.json"
+    plans_root = (plans_dir if plans_dir is not None
+                  else ROOT / "models" / "compiled")
+    compiled_path = (compiled_manifest if compiled_manifest is not None
+                     else plans_root / "manifest.json")
     if spec.get("compiled_manifest_sha256") != sha256(compiled_path):
         problems.append("spec compiled-manifest hash mismatch")
     if cal_meta.get("compiled_manifest_sha256") != spec.get(
@@ -294,8 +299,7 @@ def verify(spec_path: Path, calibration_observation: Path,
                     "plan_hash"):
                 problems.append(f"{label} plan hash mismatch for {key}")
             else:
-                actual_plan = load_plan(str(
-                    ROOT / "models" / "compiled" / package["path"]))
+                actual_plan = load_plan(str(plans_root / package["path"]))
                 if actual_plan.plan_hash != info.get("plan_hash"):
                     problems.append(f"{label} actual plan hash mismatch for {key}")
     # Explicit no-overlap proof: different official split and no repeated pixel
@@ -360,6 +364,8 @@ def main() -> int:
     ap.add_argument("--acceptance-observation", required=True)
     ap.add_argument("--campaign-manifest", default="")
     ap.add_argument("--campaign-results", default="")
+    ap.add_argument("--compiled-manifest", default="")
+    ap.add_argument("--plans-dir", default="")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
     summary = verify(
@@ -368,7 +374,10 @@ def main() -> int:
         campaign_manifest=(Path(args.campaign_manifest)
                            if args.campaign_manifest else None),
         campaign_results=(Path(args.campaign_results)
-                          if args.campaign_results else None))
+                          if args.campaign_results else None),
+        compiled_manifest=(Path(args.compiled_manifest)
+                           if args.compiled_manifest else None),
+        plans_dir=(Path(args.plans_dir) if args.plans_dir else None))
     out = Path(args.out) if args.out else Path(
         args.acceptance_observation).with_suffix(".verify.json")
     out.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")

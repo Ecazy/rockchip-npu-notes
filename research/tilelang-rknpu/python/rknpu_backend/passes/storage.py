@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from ..capabilities import TargetProfile, check_budgets
 from ..errors import RK_E_BUDGET, RK_E_SHAPE, reject
 from ..options import CompileOptions
-from ..plan import Accounting, Buffer, Plan, Submit, with_plan_hash
+from ..plan import Accounting, Buffer, Plan, PlanBudget, Submit, with_plan_hash
 from .dag import DraftBuffer, DraftPlan
 
 CO_SLACK = 32768
@@ -131,5 +131,7 @@ def assign_storage(draft: DraftPlan, *, profile: TargetProfile,
         views=tuple(draft.views), actions=tuple(draft.actions),
         submits=tuple(submits), publish=tuple(draft.publish),
         accounting=accounting,
+        budget=PlanBudget(device_budget_bytes=options.device_budget_bytes,
+                          host_budget_bytes=options.host_budget_bytes),
     )
     return with_plan_hash(plan)

@@ -61,8 +61,11 @@ def _write_bundle(path: Path, plan: dict, values, config):
     out += _u32(config["frames"])
     out += _u64(_hash64(plan["profile_hash"]))
     out += _u64(_hash64(plan["source_hash"]))
-    out += _u64(plan["accounting"]["device_request_bytes"])
-    out += _u64(plan["accounting"]["host_bytes"])
+    budget = plan.get("budget_policy") or {}
+    out += _u64(budget.get("device_budget_bytes",
+                           plan["accounting"]["device_request_bytes"]))
+    out += _u64(budget.get("host_budget_bytes",
+                           plan["accounting"]["host_bytes"]))
     out += _u64(plan["accounting"]["device_request_bytes"])
     out += _u64(plan["accounting"]["host_bytes"])
     for v in values:

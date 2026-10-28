@@ -356,8 +356,12 @@ def build_plan_descriptor(plan: Plan):
         actions=actions, nactions=len(actions), reserved3=0,
         submits=submits, nsubmits=len(submits), reserved4=0,
         publish=publish, npublish=len(publish), reserved5=0,
-        device_budget_bytes=plan.accounting.device_request_bytes,
-        host_budget_bytes=plan.accounting.host_bytes,
+        device_budget_bytes=(plan.budget.device_budget_bytes
+                             if plan.budget is not None
+                             else plan.accounting.device_request_bytes),
+        host_budget_bytes=(plan.budget.host_budget_bytes
+                           if plan.budget is not None
+                           else plan.accounting.host_bytes),
         claimed_device_bytes=plan.accounting.device_request_bytes,
         claimed_host_bytes=plan.accounting.host_bytes,
         runtime_abi_version=RK_ABI_VERSION, reserved6=0)
