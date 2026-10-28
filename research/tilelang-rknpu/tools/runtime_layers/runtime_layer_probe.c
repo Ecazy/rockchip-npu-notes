@@ -1071,6 +1071,8 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
                        sizeof(co_command_plan));
                 for (unsigned i = 0; !rc && i < 64u; i++) {
                     co_command_times times;
+                    memset(&times, 0, sizeof(times));
+                    times.detail = 1;
                     if (co_command_plan_build(fd, bc.ws->batch_scratch, ntasks,
                                               cmode, &measure_ws, &plan,
                                               &times)) { rc = -1; break; }

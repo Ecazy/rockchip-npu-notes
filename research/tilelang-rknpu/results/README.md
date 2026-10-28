@@ -555,15 +555,20 @@ runner controls and are asserted bit-identical.
   controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
 ## Command-BO packing reuse (2026-10-28)
 
-`20261028T023818Z-command-cache/` closes the bounded command-BO cache
-candidate. For eligible single-submit workspaces the command BO, task
-descriptors, chain links and handle lists are packed once at creation and
-reused; the control packs every submit. QK/PV isolated medians improve
-1.0866×/1.0923×, and uninstrumented Tiny ViT b8/b1 improve 1.0365×/1.0276×.
-The host incremental cost is 3,184 B per eligible workspace and no new command
-BO is allocated. `bcmdverify` proves the command bytes stay unchanged over
-512/1024 real device submissions. Frozen numeric replay is PASS / 0 problems.
-The table, contract argument and failure evidence are in
+`20261028T023818Z-command-cache/` is the historical full campaign for the
+bounded command-BO cache. It remains unchanged and is not the corrected timing
+record.
+
+`20261028T030858Z-command-cache-fix/` is the corrected follow-up. It restores
+whole-array `CO_SEPARATE` validation before fan-out (a later invalid program
+now yields zero submits) and fixes the command timing interval so
+`sync` includes PREP+FINI and public `command_us` keeps its original continuous
+coverage. Corrected short A/B: QK/PV isolated **1.0858×/1.0937×** and Tiny ViT
+b8/b1 **1.0392×/1.0268×**. The host incremental cost remains 3,184 B per
+eligible workspace, no new command BO is allocated, and `bcmdverify` shows
+unchanged bytes after 512/1024 real submissions. Frozen numeric replay passes.
+
+The corrected table, contract argument and regression evidence are in
 [`../COMMAND-CACHE-REPORT.md`](../COMMAND-CACHE-REPORT.md).
 
 ## Current / vendor / CPU full MNIST comparison (2026-10-28)

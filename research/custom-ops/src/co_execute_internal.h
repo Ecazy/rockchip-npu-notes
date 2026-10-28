@@ -17,7 +17,13 @@
 #define CO_COMMAND_MAX_HANDLES (CO_MAX_PROGRAMS * 3u + 1u)
 
 typedef struct {
-    /* Disjoint intervals of one build, for attribution probes only. */
+    /* Set to 1 only by the independent breakdown probe.  Zero keeps the
+     * production path at the original two outer timestamps (allocation and the
+     * continuous command interval) and avoids adding control-path probes. */
+    int detail;
+    /* Sub-intervals of one build, for the independent breakdown probe only.
+     * total_us is the continuous outer interval and is the value the public
+     * command_us attribution uses; the parts may not sum to it. */
     double allocation_us;
     double clear_us;
     double pack_us;

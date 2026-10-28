@@ -1,0 +1,91 @@
+{
+  "batch": 8,
+  "bitwise": true,
+  "flags": {
+    "cache": "RK_PLAN_COMMAND_CACHE",
+    "sync": "RK_PLAN_COMMAND_CACHE_SYNC"
+  },
+  "kind": "full-model-command-cache-ab",
+  "limit": 64,
+  "note": "Same compiled graph, weights, fd and timed interval. Only the two creation-time command-cache flags differ; program cache, pack, guard, download, publication and output sync are otherwise identical.",
+  "output_files": {
+    "cache_nosync": "cache_nosync_logits.npy",
+    "cache_sync": "cache_sync_logits.npy",
+    "control": "control_logits.npy"
+  },
+  "round_ratio_median": {
+    "ratio_cache_sync_over_cache_nosync": 1.018494719637102,
+    "ratio_control_over_cache_nosync": 1.0392466955010804,
+    "ratio_control_over_cache_sync": 1.0200546497057854
+  },
+  "round_ratio_p10": {
+    "ratio_cache_sync_over_cache_nosync": 1.017991621894898,
+    "ratio_control_over_cache_nosync": 1.038920274466616,
+    "ratio_control_over_cache_sync": 1.018668427760639
+  },
+  "rounds": 3,
+  "rounds_detail": [
+    {
+      "median_us": {
+        "cache_nosync": 3398.459928575903,
+        "cache_sync": 3461.31349215284,
+        "control": 3530.7289217598736
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.018494719637102,
+      "ratio_control_over_cache_nosync": 1.038920274466616,
+      "ratio_control_over_cache_sync": 1.0200546497057854,
+      "round": 1
+    },
+    {
+      "median_us": {
+        "cache_nosync": 3420.480468776077,
+        "cache_sync": 3482.0204600691795,
+        "control": 3557.2705091908574
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.017991621894898,
+      "ratio_control_over_cache_nosync": 1.0399914695211596,
+      "ratio_control_over_cache_sync": 1.0216110301431667,
+      "round": 2
+    },
+    {
+      "median_us": {
+        "cache_nosync": 3407.355514355004,
+        "cache_sync": 3476.187994237989,
+        "control": 3541.082958690822
+      },
+      "ratio_cache_sync_over_cache_nosync": 1.0202011441403744,
+      "ratio_control_over_cache_nosync": 1.0392466955010804,
+      "ratio_control_over_cache_sync": 1.018668427760639,
+      "round": 3
+    }
+  ],
+  "schema_version": 1,
+  "setup_us": {
+    "cache_nosync": 17775.414045900106,
+    "cache_sync": 18244.699924252927,
+    "control": 18230.409012176096
+  },
+  "timing": {
+    "cache_nosync": {
+      "max_us": 3456.2089713290334,
+      "median_us": 3409.251046832651,
+      "min_us": 3350.9189961478114,
+      "n": 24,
+      "p10_us": 3389.7089306265116
+    },
+    "cache_sync": {
+      "max_us": 3583.6659371852875,
+      "median_us": 3473.563469015062,
+      "min_us": 3431.7090176045895,
+      "n": 24,
+      "p10_us": 3448.3340568840504
+    },
+    "control": {
+      "max_us": 4468.57197675854,
+      "median_us": 3536.708012688905,
+      "min_us": 3513.9580722898245,
+      "n": 24,
+      "p10_us": 3518.91596801579
+    }
+  }
+}

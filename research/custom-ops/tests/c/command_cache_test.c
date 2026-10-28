@@ -171,6 +171,25 @@ static void command_plan_case(void) {
     submit_fail_at = 0;
     EXPECT(co_command_plan_submit(&a, 0, NULL) == 0);
 
+    /* CO_SEPARATE validates the whole program array before it fans out.  A
+     * later invalid program must produce zero submissions, not one for the
+     * earlier valid program.  The legal path still submits once per program. */
+    submit_calls = 0;
+    co_program invalid_second = p[1];
+    invalid_second.count = 0;
+    EXPECT(co_execute_profiled(7, p, 2, CO_SEPARATE, &ws1, NULL) == 0);
+    EXPECT(submit_calls == 2u);
+    EXPECT((last_flags & ROCKET_JOB_BATCHED) == 0u);
+    submit_calls = 0;
+    {
+        co_program bad_pair[2];
+        memcpy(bad_pair, p, sizeof(bad_pair));
+        bad_pair[1] = invalid_second;
+        EXPECT(co_execute_profiled(7, bad_pair, 2, CO_SEPARATE, &ws1,
+                                   NULL) == ROCKET_E_SHAPE);
+        EXPECT(submit_calls == 0u);
+    }
+
     /* Identity guards: wrong fd, wrong workspace and a reallocated command BO
      * are refused rather than executing a stale plan. */
     EXPECT(co_execute_cached_profiled(8, p, 2, CO_CHAIN, &ws1, &a, NULL, 0) ==

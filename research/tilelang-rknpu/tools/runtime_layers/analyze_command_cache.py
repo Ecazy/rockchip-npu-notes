@@ -70,20 +70,23 @@ def main():
     args = ap.parse_args()
     root = args.result_dir
 
+    round_dirs = sorted(
+        (p for p in (root / "pair").glob("r*") if p.is_dir()),
+        key=lambda p: int(p.name[1:]))
+    nrounds = len(round_dirs)
     paired = {}
     for case in CASES:
         per = {arm: [] for arm in ARMS}
         setup = {arm: [] for arm in ARMS}
         first = {arm: [] for arm in ARMS}
         bitwise = True
-        for r in range(1, 8):
+        for rdir in round_dirs:
             for arm in ARMS:
-                t = parse_timing(root / "pair" / f"r{r}" / case / f"{arm}.log")
+                t = parse_timing(rdir / case / f"{arm}.log")
                 per[arm].append(statistics.median(t["warm"]))
                 setup[arm].append(t["setup"])
                 first[arm].append(t["first"])
-            hashes = {sha(root / "pair" / f"r{r}" / case / f"{arm}.bin")
-                      for arm in ARMS}
+            hashes = {sha(rdir / case / f"{arm}.bin") for arm in ARMS}
             bitwise = bitwise and len(hashes) == 1
         row = {
             "median_us": {arm: median(per[arm]) for arm in ARMS},
@@ -92,7 +95,7 @@ def main():
             "bitwise_all_rounds": bitwise,
         }
         for a in ("sync", "nosync"):
-            ratios = [per["off"][i] / per[a][i] for i in range(7)]
+            ratios = [per["off"][i] / per[a][i] for i in range(nrounds)]
             row[f"ratio_off_over_{a}"] = {
                 "median": median(ratios),
                 "p10": p10(ratios),
@@ -214,7 +217,7 @@ def main():
         "## Isolated cases",
         "",
         "µs; ratio = control / arm; primary is the median of per-round paired",
-        "medians over seven rotated rounds.",
+        f"medians over {nrounds} rotated rounds.",
         "",
         "| case | control | cache+sync | cache | control/cache | p10 | range | bitwise |",
         "|---|---:|---:|---:|---:|---:|---:|---|",
@@ -244,7 +247,7 @@ def main():
     lines += [
         "",
         "",
-        "Creation cost (process setup medians from the same seven paired runs;",
+        f"Creation cost (process setup medians from the same {nrounds} paired runs;",
         "the direct first-build interval is the cleaner attribution):",
         "",
         "| case | setup control | setup cache | setup delta | first command build |",
@@ -265,7 +268,8 @@ def main():
         "Medians of 64 builds into a separate command workspace on the same fd,",
         "using the creation-time `co_program` array.  `sync` is the command-BO",
         "prep+fini pair; clear, pack, verify and handles are the rest of the",
-        "removed build.  MLP b32 is ineligible (8 submits).",
+        "removed build.  `total` is one continuous outer interval; sub-parts are",
+        "probe-only and may not sum to it.  MLP b32 is ineligible (8 submits).",
         "",
         "| case | clear | pack | verify | handles | sync | total | first build |",
         "|---|---:|---:|---:|---:|---:|---:|---:|",
