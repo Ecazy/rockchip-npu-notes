@@ -1,13 +1,14 @@
 # Tiny ViT 优化总报告与最终交付验收
 
-> **Multi-submit cache (2026-10-28):** source adds budgeted per-submit static
-> preparation for multi-submit workspaces (`RK_PLAN_MULTI_SUBMIT_CACHE`,
-> default on, `=0` control; `RK_PLAN_MULTI_SUBMIT_BUDGET` default 4 MiB).
-> Each prepared submit owns an independent command BO. MLP isolated gains are
-> 1.0918×/1.1341× for b32/b1; the interleaved five-profile check gives
-> 1.0511×/1.0781×/1.0954× for MLP b32/b8/b1 and neutral ViT. Host increment is
-> 208,528 B plus 11,088 B device command bytes per MLP workspace. Frozen
-> numeric replay passes. See
+> **Multi-submit cache budget correction (2026-10-28):** the candidate is
+> **not adopted as a default**. The earlier 1.09× MLP gains came from separate
+> cache command BOs that were not charged against the plans' declared device
+> budgets; that claim is withdrawn. Admission now checks the cache budget,
+> workspace Host room, and plan device room including the still-allocated
+> fallback command workspace. Current compiled MLP plans have no device
+> headroom, so `RK_PLAN_MULTI_SUBMIT_CACHE=1` safely falls back and is opt-in
+> only. Budget-boundary regressions cover exact-full device budget, partial
+> Host/cache budgets and malformed values. See
 > [MULTI-SUBMIT-CACHE-REPORT.md](MULTI-SUBMIT-CACHE-REPORT.md).
 
 > **Command-cache follow-up (2026-10-28, corrected):** source adds and adopts

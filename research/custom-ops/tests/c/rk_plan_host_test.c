@@ -1691,6 +1691,292 @@ done:
     free(actions); free(views); free(buffers); free(values); free(task_ids);
 }
 
+
+/* Budget closure: a small four-submit plan lets us set Host and device budgets
+ * at exact boundaries without changing the fixture's other limits. */
+static void multi_submit_budget_case(void) {
+    enum { M = 32, K = 32, N = 32 };
+    co_tensor x_t, w_t, y_t;
+    EXPECT(co_tensor_input(&x_t, M, K) == 0);
+    EXPECT(co_tensor_weight(&w_t, N, K) == 0);
+    EXPECT(co_tensor_matrix(&y_t, M, N, CO_F16) == 0);
+
+    rk_value_desc values[3];
+    memset(values, 0, sizeof(values));
+    const uint32_t shape[3][2] = {{M, K}, {N, K}, {M, N}};
+    const uint32_t roles[3] = {RK_ROLE_INPUT, RK_ROLE_CONSTANT,
+                               RK_ROLE_OUTPUT};
+    const uint64_t nbytes[3] = {x_t.bytes, w_t.bytes, y_t.bytes};
+    const char *names[3] = {"A", "B", "Y"};
+    for (uint32_t i = 0; i < 3; i++) {
+        values[i].abi_version = RK_ABI_VERSION;
+        values[i].struct_size = sizeof(rk_value_desc);
+        values[i].id = i;
+        values[i].role = roles[i];
+        values[i].dtype = RK_DTYPE_F16;
+        values[i].rank = 2;
+        values[i].shape[0] = shape[i][0];
+        values[i].shape[1] = shape[i][1];
+        values[i].nbytes = nbytes[i];
+        values[i].name = names[i];
+        values[i].name_len = (uint32_t)strlen(names[i]);
+    }
+
+    rk_buffer_desc buffers[3];
+    rk_view_desc views[3];
+    memset(buffers, 0, sizeof(buffers));
+    memset(views, 0, sizeof(views));
+    const uint32_t layouts[3] = {RK_LAYOUT_CUBE_F16, RK_LAYOUT_WEIGHT_F16,
+                                 RK_LAYOUT_CUBE_F16};
+    const uint32_t broles[3] = {RK_ROLE_INPUT_SLICE, RK_ROLE_WEIGHT,
+                                RK_ROLE_OUTPUT};
+    const co_tensor *geom[3] = {&x_t, &w_t, &y_t};
+    for (uint32_t i = 0; i < 3; i++) {
+        buffers[i].abi_version = RK_ABI_VERSION;
+        buffers[i].struct_size = sizeof(rk_buffer_desc);
+        buffers[i].id = i;
+        buffers[i].role = broles[i];
+        buffers[i].slot_id = i;
+        buffers[i].alignment = 16;
+        buffers[i].layout_id = layouts[i];
+        buffers[i].capacity = geom[i]->bytes;
+        buffers[i].lifetime_last = 6;
+        views[i].abi_version = RK_ABI_VERSION;
+        views[i].struct_size = sizeof(rk_view_desc);
+        views[i].id = i;
+        views[i].buffer_id = i;
+        views[i].tensor.abi_version = RK_ABI_VERSION;
+        views[i].tensor.struct_size = sizeof(rk_tensor_desc);
+        views[i].tensor.dtype = RK_DTYPE_F16;
+        views[i].tensor.layout = layouts[i];
+        views[i].tensor.rows = geom[i]->rows;
+        views[i].tensor.cols = geom[i]->cols;
+        views[i].tensor.physical_rows = geom[i]->physical_rows;
+        views[i].tensor.physical_cols = geom[i]->physical_cols;
+        views[i].tensor.atom = geom[i]->atom;
+        views[i].tensor.bytes = geom[i]->bytes;
+        views[i].valid_region[1] = views[i].tensor.rows;
+        views[i].valid_region[3] = views[i].tensor.cols;
+    }
+
+    uint32_t v_x = 0, v_w = 1, v_y = 2;
+    uint32_t task_in[] = {v_x, v_w};
+    uint32_t task_deps[][4] = {{0, 1}, {0, 1, 2}, {0, 1, 3}, {0, 1, 4}};
+    uint32_t down_in[] = {v_y};
+    uint32_t down_deps[] = {5};
+    rk_action_desc actions[7];
+    memset(actions, 0, sizeof(actions));
+    for (uint32_t i = 0; i < 7; i++) {
+        actions[i].abi_version = RK_ABI_VERSION;
+        actions[i].struct_size = sizeof(rk_action_desc);
+        actions[i].id = i;
+        snprintf(actions[i].origin, sizeof(actions[i].origin), "budget:%u", i);
+    }
+    actions[0].kind = RK_ACTION_UPLOAD;
+    actions[0].source_binding = 0;
+    actions[0].source_row_stride = K;
+    actions[0].noutputs = 1;
+    actions[0].outputs = &v_x;
+    actions[1].kind = RK_ACTION_UPLOAD;
+    actions[1].source_binding = 1;
+    actions[1].source_row_stride = K;
+    actions[1].flags = RK_ACTION_FLAG_CACHE_CONSTANT;
+    actions[1].noutputs = 1;
+    actions[1].outputs = &v_w;
+    for (uint32_t t = 0; t < 4; t++) {
+        actions[2 + t].kind = RK_ACTION_NPU_TASK;
+        actions[2 + t].template_id = RK_TEMPLATE_MM_F16;
+        actions[2 + t].ninputs = 2;
+        actions[2 + t].inputs = task_in;
+        actions[2 + t].noutputs = 1;
+        actions[2 + t].outputs = &v_y;
+        actions[2 + t].ndeps = 2 + t;
+        actions[2 + t].deps = task_deps[t];
+    }
+    actions[6].kind = RK_ACTION_DOWNLOAD;
+    actions[6].source_binding = 2;
+    actions[6].ninputs = 1;
+    actions[6].inputs = down_in;
+    actions[6].ndeps = 1;
+    actions[6].deps = down_deps;
+
+    uint32_t task0[] = {2}, task1[] = {3}, task2[] = {4}, task3[] = {5};
+    uint32_t submit_dep0[] = {0}, submit_dep1[] = {1}, submit_dep2[] = {2};
+    rk_submit_desc submits[4] = {
+        {.abi_version = RK_ABI_VERSION, .struct_size = sizeof(rk_submit_desc),
+         .id = 0, .mode = RK_SUBMIT_CHAIN, .core_policy = RK_CORE_SINGLE,
+         .ntask_ids = 1, .task_ids = task0},
+        {.abi_version = RK_ABI_VERSION, .struct_size = sizeof(rk_submit_desc),
+         .id = 1, .mode = RK_SUBMIT_CHAIN, .core_policy = RK_CORE_SINGLE,
+         .ntask_ids = 1, .ndeps = 1, .deps = submit_dep0, .task_ids = task1},
+        {.abi_version = RK_ABI_VERSION, .struct_size = sizeof(rk_submit_desc),
+         .id = 2, .mode = RK_SUBMIT_CHAIN, .core_policy = RK_CORE_SINGLE,
+         .ntask_ids = 1, .ndeps = 1, .deps = submit_dep1, .task_ids = task2},
+        {.abi_version = RK_ABI_VERSION, .struct_size = sizeof(rk_submit_desc),
+         .id = 3, .mode = RK_SUBMIT_CHAIN, .core_policy = RK_CORE_SINGLE,
+         .ntask_ids = 1, .ndeps = 1, .deps = submit_dep2, .task_ids = task3},
+    };
+    rk_publish_desc publish = {
+        .abi_version = RK_ABI_VERSION, .struct_size = sizeof(rk_publish_desc),
+        .binding_id = 2, .view_id = 2, .rows = M, .cols = N};
+
+    const uint64_t reserved = x_t.bytes + w_t.bytes + y_t.bytes +
+                              3u * (CO_SLACK + CO_GUARD);
+    const uint64_t base_device = reserved + CO_MAX_WORDS * 8u;
+    const uint64_t host_req = x_t.bytes + w_t.bytes + y_t.bytes +
+                              65536u + sizeof(co_program) + y_t.bytes +
+                              (sizeof(size_t) + sizeof(uint32_t));
+
+    rk_diag diag;
+    memset(&diag, 0, sizeof(diag));
+    rk_plan_desc desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.abi_version = RK_ABI_VERSION;
+    desc.struct_size = sizeof(desc);
+    desc.schema_version = RK_SCHEMA_VERSION;
+    desc.values = values; desc.nvalues = 3;
+    desc.buffers = buffers; desc.nbuffers = 3;
+    desc.views = views; desc.nviews = 3;
+    desc.actions = actions; desc.nactions = 7;
+    desc.submits = submits; desc.nsubmits = 4;
+    desc.publish = &publish; desc.npublish = 1;
+    desc.runtime_abi_version = RK_ABI_VERSION;
+
+    _Float16 *xbuf = calloc(x_t.bytes / 2u, 2);
+    _Float16 *wbuf = calloc(w_t.bytes / 2u, 2);
+    _Float16 *yctl = calloc(y_t.bytes / 2u, 2);
+    _Float16 *ycache = calloc(y_t.bytes / 2u, 2);
+    EXPECT(xbuf && wbuf && yctl && ycache);
+    if (!xbuf || !wbuf || !yctl || !ycache) goto done;
+    for (uint32_t i = 0; i < x_t.bytes / 2u; i++)
+        xbuf[i] = value(i, 3);
+    for (uint32_t i = 0; i < w_t.bytes / 2u; i++)
+        wbuf[i] = value(i, 7);
+    rk_binding inputs[] = {{.abi_version = RK_ABI_VERSION,
+        .struct_size = sizeof(rk_binding), .id = 0, .dtype = RK_DTYPE_F16,
+        .rank = 2, .shape = {M, K}, .data = xbuf, .nbytes = x_t.bytes}};
+    rk_binding constants[] = {{.abi_version = RK_ABI_VERSION,
+        .struct_size = sizeof(rk_binding), .id = 1, .dtype = RK_DTYPE_F16,
+        .rank = 2, .shape = {N, K}, .data = wbuf, .nbytes = w_t.bytes}};
+    rk_binding outputs[] = {{.abi_version = RK_ABI_VERSION,
+        .struct_size = sizeof(rk_binding), .id = 2, .dtype = RK_DTYPE_F16,
+        .rank = 2, .shape = {M, N}, .data = yctl, .nbytes = y_t.bytes}};
+
+    /* Loose base plan used for the invalid-config and partial-budget checks. */
+    desc.device_budget_bytes = base_device + (1u << 20);
+    desc.claimed_device_bytes = base_device + (1u << 20);
+    desc.host_budget_bytes = host_req + (1u << 20);
+    desc.claimed_host_bytes = host_req;
+    rk_plan *plan = NULL;
+    int plan_rc = rk_plan_create(&desc, &plan, &diag);
+    if (plan_rc)
+        fprintf(stderr, "BUDGET-PLAN diag: %d %s\n", diag.code, diag.message);
+    EXPECT(plan_rc == 0);
+    if (!plan) goto done;
+    rk_workspace *control = NULL;
+    EXPECT(rk_workspace_create(3, plan, constants, 1, &control, &diag) == 0);
+    rk_run_report report;
+    if (control)
+        EXPECT(rk_workspace_run(control, inputs, 1, outputs, 1, &report,
+                                &diag) == 0);
+    if (control) EXPECT(rk_workspace_destroy(control, &diag) == 0);
+    rk_plan_destroy(plan);
+
+    /* Exact device budget: no room for any cache command BO. */
+    desc.device_budget_bytes = base_device;
+    desc.claimed_device_bytes = base_device;
+    plan = NULL;
+    EXPECT(rk_plan_create(&desc, &plan, &diag) == 0);
+    if (plan) {
+        memcpy(ycache, yctl, y_t.bytes);
+        unsigned allocs_before = rk_mock_allocs();
+        rk_workspace *ws = NULL;
+        EXPECT(rk_workspace_create(3, plan, constants, 1, &ws, &diag) == 0);
+        EXPECT(ws && ws->multi_submit_cached == 0u);
+        EXPECT(rk_mock_allocs() - allocs_before == 4u); /* 3 slots + fallback */
+        if (ws) {
+            EXPECT(rk_workspace_run(ws, inputs, 1, outputs, 1, &report, &diag) == 0);
+            EXPECT(!memcmp(yctl, ycache, y_t.bytes));
+            EXPECT(rk_workspace_destroy(ws, &diag) == 0);
+        }
+        rk_plan_destroy(plan);
+    }
+
+    /* Tight Host budget: plan is valid, but cache Host bytes do not fit. */
+    desc.device_budget_bytes = base_device + (1u << 20);
+    desc.claimed_device_bytes = base_device + (1u << 20);
+    desc.host_budget_bytes = host_req;
+    desc.claimed_host_bytes = host_req;
+    plan = NULL;
+    EXPECT(rk_plan_create(&desc, &plan, &diag) == 0);
+    if (plan) {
+        unsigned allocs_before = rk_mock_allocs();
+        rk_workspace *ws = NULL;
+        EXPECT(rk_workspace_create(3, plan, constants, 1, &ws, &diag) == 0);
+        EXPECT(ws && ws->multi_submit_ready == 1u &&
+               ws->multi_submit_cached == 3u);
+        EXPECT(rk_mock_allocs() - allocs_before == 7u); /* base + 3 cache BOs */
+        if (ws) {
+            EXPECT(rk_workspace_host_bytes(ws, 1) <= desc.host_budget_bytes);
+            EXPECT(rk_workspace_run(ws, inputs, 1, outputs, 1, &report, &diag) == 0);
+            EXPECT(!memcmp(yctl, ycache, y_t.bytes));
+            EXPECT(rk_workspace_destroy(ws, &diag) == 0);
+        }
+        rk_plan_destroy(plan);
+    }
+
+    /* Partial cache: only one of four submits fits the cache budget. */
+    desc.device_budget_bytes = base_device + (1u << 20);
+    desc.claimed_device_bytes = base_device + (1u << 20);
+    desc.host_budget_bytes = host_req + (1u << 20);
+    desc.claimed_host_bytes = host_req;
+    plan = NULL;
+    EXPECT(rk_plan_create(&desc, &plan, &diag) == 0);
+    if (plan) {
+        setenv("RK_PLAN_MULTI_SUBMIT_BUDGET", "40000", 1);
+        unsigned allocs_before = rk_mock_allocs();
+        rk_workspace *ws = NULL;
+        EXPECT(rk_workspace_create(3, plan, constants, 1, &ws, &diag) == 0);
+        EXPECT(ws && ws->multi_submit_ready == 1u &&
+               ws->multi_submit_cached == 1u);
+        EXPECT(rk_mock_allocs() - allocs_before == 5u); /* base + 1 cache BO */
+        if (ws) {
+            EXPECT(rk_workspace_run(ws, inputs, 1, outputs, 1, &report, &diag) == 0);
+            EXPECT(!memcmp(yctl, ycache, y_t.bytes));
+            EXPECT(rk_workspace_destroy(ws, &diag) == 0);
+        }
+        setenv("RK_PLAN_MULTI_SUBMIT_BUDGET", "4194304", 1);
+        rk_plan_destroy(plan);
+        plan = NULL;
+    }
+
+    /* Malformed budgets fail closed: no cache and unchanged output. */
+    plan = NULL;
+    EXPECT(rk_plan_create(&desc, &plan, &diag) == 0);
+    if (!plan) goto done;
+    const char *bad_budgets[] = {"-1", "not-a-number", "0",
+                                 "999999999999999999999999999999"};
+    for (uint32_t i = 0; i < 4; i++) {
+        setenv("RK_PLAN_MULTI_SUBMIT_BUDGET", bad_budgets[i], 1);
+        unsigned allocs_before = rk_mock_allocs();
+        rk_workspace *ws = NULL;
+        EXPECT(rk_workspace_create(3, plan, constants, 1, &ws, &diag) == 0);
+        EXPECT(ws && ws->multi_submit_ready == 0u &&
+               ws->submit_cache == NULL);
+        EXPECT(rk_mock_allocs() - allocs_before == 4u);
+        if (ws) {
+            EXPECT(rk_workspace_run(ws, inputs, 1, outputs, 1, &report, &diag) == 0);
+            EXPECT(!memcmp(yctl, ycache, y_t.bytes));
+            EXPECT(rk_workspace_destroy(ws, &diag) == 0);
+        }
+    }
+    setenv("RK_PLAN_MULTI_SUBMIT_BUDGET", "4194304", 1);
+    rk_plan_destroy(plan);
+
+done:
+    free(xbuf); free(wbuf); free(yctl); free(ycache);
+}
+
 int main(void) {
     /* Exercise the bounded command-BO reuse through the production runtime in
      * this process.  The flag is still a creation-time snapshot; individual
@@ -2169,6 +2455,7 @@ int main(void) {
     mock_tag_capacity_case();
     multi_output_budget_case();
     many_upload_fallback_case();
+    multi_submit_budget_case();
     printf("RK_PLAN host checks=%u failures=%u\n", checks, failures);
     return failures ? 1 : 0;
 }

@@ -226,25 +226,33 @@ def main():
             f"{r['setup_us']['nosync']:.1f} | {delta:+.1f} | {first:.1f} |")
     lines += [
         "",
-        "| case | cached submits | device command bytes | Host delta | unique command BOs | bytes unchanged |",
-        "|---|---:|---:|---:|---|---|",
+        "| case | cached submits | command request | command physical | fallback request/physical | Host delta | unique BOs | bytes unchanged |",
+        "|---|---:|---:|---:|---|---:|---|---|",
     ]
     for case in CASES:
         b = bmulti[case]
         cb = b["cmdbytes"] or {}
         lines.append(
             f"| {LABELS[case]} | {b['info'].get('cached')}/"
-            f"{b['info'].get('submits')} | {b['info'].get('device_bytes')} | "
+            f"{b['info'].get('submits')} | "
+            f"{b['info'].get('device_request_bytes')} B | "
+            f"{b['info'].get('device_physical_bytes')} B | "
+            f"{int(b['mem'].get('fallback_cmd_request', 0))}/"
+            f"{int(b['mem'].get('fallback_cmd_physical', 0))} B | "
             f"{int(b['mem'].get('host_delta', 0))} B | "
             f"{'yes' if b['handles_unique'] else 'NO'} | "
             f"{'yes' if cb.get('same') else 'NO'} "
             f"({cb.get('checked', 0)} BOs / {cb.get('runs', 0)} runs) |")
     lines += [
         "",
-        "All MLP b1/b8/b32 plans share the same 8-submit/11-task structure, so",
-        "the per-workspace cache footprint is the same 208,528 B Host + 11,088 B",
-        "device.  The 4 MiB budget is a hard per-workspace cap, and a tight",
-        "budget caches only the prefix of submits that fits.",
+        "Request bytes (11,088 B) match the plan's declared device accounting.",
+        "Physical occupancy is page-aligned per BO: the eight cache BOs occupy",
+        "32,768 B, while the 11,088 B request is 8 pages only if one fused arena",
+        "were used.  The fallback command workspace remains allocated and is",
+        "shown separately.  The 4 MiB cache budget is a hard per-workspace cap",
+        "using Host bytes plus page-aligned command bytes; plan device-budget",
+        "admission uses the declared request-byte口径.  A tight budget caches only",
+        "the prefix of submits that fits.",
         "",
         "## Command regions",
         "",

@@ -1,165 +1,118 @@
-# 受预算控制的多提交静态执行准备
+# 受预算控制的多提交静态执行准备（预算闭环修订）
 
-日期：2026-10-28。本包把已有的 single-submit `co_program`/命令缓存扩展为按
-submit 规划的多提交准备机制，但控制臂仍保持原 single-submit 策略；只比较
-新增的多提交能力。
+日期：2026-10-28。本包原目标是把 single-submit 程序/命令缓存扩展为按 submit
+规划的多提交准备。独立 command BO、部分缓存和正收益方向已实现并有回归；
+但预算闭环修订发现：当前 compiled MLP plan 的 device budget 已被数据槽和
+原 fallback command workspace 恰好用满，额外 cache command BO 没有合法
+设备余量。因此本包**不采用为默认**，只保留 opt-in 实验实现。
 
-## 0. 结论
+历史结果 `results/20261028T035849Z-multi-submit-cache/` 保持原样；其中
+1.0918×/1.1341× 等性能数字是在未把新增 command BO 计入 device budget 的
+实现上测得，现已撤回，不能作为产品收益声明。
 
-**采用** `RK_PLAN_MULTI_SUBMIT_CACHE=1` 作为默认，`=0` 为 control。
-多提交准备只命中结构上合法的 submit；MLP 的 8 个 submit 全部命中。
+## 0. 最终结论
 
-- MLP b32 isolated：**1.0918×**（625.3→572.2 µs）
-- MLP b1 isolated：**1.1341×**（446.5→393.5 µs）
-- 五 profile 交错全模型（256 images，7 rounds）：
-  - MLP b32 **1.0511×**（1059.2→1006.5 µs）
-  - MLP b8 **1.0781×**（701.0→649.2 µs）
-  - MLP b1 **1.0954×**（601.1→549.2 µs）
-  - ViT b8 1.0030×、ViT b1 1.0021×（默认图没有多提交 workspace，中性）
-- 创建成本：MLP b32 +200.7 µs、b1 +177.6 µs（同 A/B 的 `SETUP_US` 中位数）。
-- 内存：每个 MLP workspace Host **208,528 B** + device command BO
-  **11,088 B**；预算默认 4 MiB/workspace，超预算按 submit 前缀缓存，缓存
-  构建失败/不足安全回退。
-- 命令区域：8 个 submit 各自独立 command BO，handle 唯一；1,024 次
-  cached execution 后 8 个 BO 字节全部 unchanged。
-- 输出同步、guard、下载、发布、数值政策、submit 顺序和核策略不变。
+- 默认：`RK_PLAN_MULTI_SUBMIT_CACHE=0`，保持原 single-submit 策略。
+- opt-in：`RK_PLAN_MULTI_SUBMIT_CACHE=1` 仅对显式声明了 device 余量的
+  workspace 生效；当前 compiled MLP 计划全部安全回退。
+- 预算：`RK_PLAN_MULTI_SUBMIT_BUDGET` 默认 4 MiB/workspace；非法、负数、
+  溢出和显式 0 都 fail closed 为 0（禁用 cache），不会静默放开限制。
+- 单 submit 的 command BO cache 和此前所有结果不变。
 
-## 1. 投资价值确认
+## 1. 分配前同时约束三类预算
 
-当前 control 臂的 MLP 成本（µs，battr 中位数）：
+`build_multi_submit_cache()` 在每次分配前检查：
 
-| case | emit | command prep | total |
-|---|---:|---:|---:|
-| MLP b32 | 15.5 | 35.0 | 625.0 |
-| MLP b1 | 15.9 | 34.7 | 447.7 |
+1. **缓存自身上限**：Host entry/program 字节 + command BO 的页对齐物理上界
+   ≤ `RK_PLAN_MULTI_SUBMIT_BUDGET`；
+2. **workspace Host 余量**：
+   `plan Host budget - rk_workspace_host_bytes(ws,1)` 仍能容纳该 submit 的
+   program slice 和 entry；
+3. **设备预算余量**：
+   `plan device budget - 当前数据槽 request - 原 fallback command workspace
+   request` 仍能容纳该 submit 的 command request。
 
-另有实现前的独立快照 `baseline-cost/`，emit 15–16 µs、command 31–35 µs，
-与 control 臂一致。可消除部分约为每次调用 50 µs（emit + command prep，
-其中 command sync 约 8–9 µs 可通过只读 BO 论证一并省去）。因此预计收益
-足以支撑受预算控制的实现。
+原 fallback command workspace 没有被替换或忽略：MLP 中它的 request/physical
+均为 **65,536 B**，始终计入 base device usage。若数据槽 + fallback 已用满
+计划 device budget，则 command request 余量为 0，任何 cache BO 都不会分配。
 
-## 2. 实现与资格
+不满足任一预算时跳过该 submit；部分缓存按 plan order 保留前缀，全部不满足
+则回退原 per-run 路径，workspace 仍可运行。
 
-- `rk_workspace` 保存 `rk_submit_cache[]`；每项记录 submit id、task 数、
-  mode、program 切片和 `co_command_plan`。
-- 程序切片来自一个受预算限制的连续 `co_program` 数组；默认预算
-  `RK_PLAN_MULTI_SUBMIT_BUDGET=4 MiB`，同时计入 Host 程序和 entry 块以及
-  device command BO 字节。
-- 资格是结构性的：`nsubmits > 1`；submit 有非零 task；全部为
-  `RK_ACTION_NPU_TASK` 且 `rk_emit_action` 创建时成功；mode 为 `CHAIN`
-  或单 task `CO_SEPARATE`。多 task `CO_SEPARATE` 和其他失败项继续使用原
-  per-run 路径，没有模型名特判。
-- 按 plan order 逐 submit 准备；预算不足时跳过放不下的 submit，继续尝试
-  后续更小的 submit，因此支持“缓存前缀/部分缓存”。
+## 2. 设备字节口径
 
-## 3. command 区域独立性
+- **request bytes**：计划声明和 `plan->device_budget_bytes` 校验使用的口径。
+- **physical upper bound**：provider 对每个 BO 做 4,096 B 页对齐，因此严格
+  物理上限是每个 BO `page_up(size)` 之和。
+- 独立 command BO 的页对齐开销按 BO 逐个计算，不能把多个小 BO 的 request
+  相加后只 page-up 一次。
+- 历史 MLP 的 11,088 B 只是 cache command **request**；若按当前独立 BO
+  分配，物理上界是 **32,768 B**（8 个 BO × 4 KiB）。本轮修正后该 cache
+  因 device budget 无余量而不分配，实际增量 request/physical 都是 **0 B**。
 
-每个成功 submit 由
-`co_command_plan_build(fd, slice, tasks, mode, workspace=NULL, ...)`
-分配一个 exact `words*8` 的独立 `rocket_bo`。没有修改 BO 基址、没有用
-指针偏移伪装切片；`rkt_chain_pack_at` 使用该 BO 自己的 DMA base 写入链地址，
-`rkt_chain_verify` 在同一对象内校验链尾。
+## 3. 预算解析加固
 
-默认开启的 MLP b32/b1 证据：
+`env_bytes()` 现在的行为：
 
-- `cached submits`：8/8；
-- `device_bytes`：11,088；
-- 8 个 submit 的 command handle：21..28，全部唯一；
-- 1,024 次 cached execution 后，8 个 BO 经显式 FROM_DEVICE sync 与创建快照
-  逐字节比较全部 unchanged；
-- `command_cache_test` 独立 build 两个 owned plan，提交第二个后第一个字节
-  不变。
+- 未设置或空串：使用默认值；
+- 首字符不是数字（包括负数、`+`、空白、单词）：返回 0；
+- `strtoull` 溢出（`ERANGE`）或尾随非法字符：返回 0；
+- 显式 `0`：返回 0，即禁用可选 cache；
+- 不会把负数/溢出解释成极大预算，也不会在解析失败时退回默认值。
 
-## 4. 原执行语义保持
+## 4. 针对性回归
 
-- `run_repeat` 仍按原 plan action 顺序处理；cached submit 只跳过创建时已
-  完成的 `rk_emit_action` 和命令打包，submit 仍走既有
-  `rocket_submit_tasks_flags`。
-- 输出同步仍按原去重集合执行；guard、download、publish、host 边界和核策略
-  不变。
-- 多提交缓存命中时，`command_us` 只剩 `RK_PLAN_COMMAND_CACHE_SYNC=1`
-  审计臂的 PREP/FINI；默认 no-sync 只依据已经证明的只读 command BO 契约。
-- 缓存构建失败、内存不足或预算不足不会使 workspace 创建失败；部分创建在
-  drop 路径释放全部 owned command BO、程序数组和 entry 数组。
-- 提交失败仍按原路径 poison；poisoned workspace 的 destroy 继续拒绝释放
-  可能被设备触碰的 BO，达到进程级恢复边界。
+`rk_plan_host_test` 新增一个 4-submit synthetic plan，直接断言 mock 的 BO
+分配次数，防止“先超额分配再释放”：
 
-## 5. 隔离 A/B
+- device budget 恰好等于基础数据槽 + fallback command：**0 个 cache BO**，
+  分配次数仅 base；
+- Host 余量不足：只缓存 **3/4** submit，分配次数 base+3，
+  `rk_workspace_host_bytes(ws,1) ≤ host_budget`，输出逐位一致；
+- cache 自身上限只够一个 submit：缓存 **1/4**，分配次数 base+1，输出逐位一致；
+- `-1`、非数字、`0`、超长溢出值：全部禁用 cache，分配次数仅 base，输出逐位一致。
 
-7 rotated rounds；逐调用样本保留在 `pair/r*/<case>/<arm>.log` 的
-`WARM_US` 行。
+`command_cache_test` 另覆盖独立 command BO 不互相覆盖、合法/非法
+`CO_SEPARATE`、后续 program 非法零提交、submit 失败和构建失败清理。
 
-| case | control | cache+sync | cache | control/cache | p10 | range | bitwise |
-|---|---:|---:|---:|---:|---:|---:|---|
-| MLP b32 | 625.3 | 580.1 | 572.2 | **1.0918×** | 1.0886× | 1.0886–1.0970 | yes |
-| MLP b1 | 446.5 | 401.9 | 393.5 | **1.1341×** | 1.1328× | 1.1328–1.1397 | yes |
+## 5. 修正后的短性能确认
 
-归因（µs 中位数）显示 cache 臂 emit=0，command 从约 35 µs 降到 0.3–0.4 µs：
+当前 compiled plan 下，opt-in 与 control 都走原 per-submit 路径。同进程、
+同 fd、逐 call 交替的五 profile 交错结果（256 images、3 rounds）：
 
-| case | arm | emit | command | output sync | total |
-|---|---|---:|---:|---:|---:|
-| MLP b32 | control | 15.5 | 35.0 | 29.9 | 625.0 |
-| MLP b32 | cache+sync | 0.0 | 8.5 | 30.0 | 579.2 |
-| MLP b32 | cache | 0.0 | 0.4 | 30.0 | 572.5 |
-| MLP b1 | control | 15.9 | 34.7 | 25.5 | 447.7 |
-| MLP b1 | cache+sync | 0.0 | 8.5 | 25.4 | 402.6 |
-| MLP b1 | cache | 0.0 | 0.3 | 25.7 | 393.7 |
+| profile | control µs | opt-in µs | on/off | bitwise |
+|---|---:|---:|---:|---|
+| mlp_b32 | 1355.9 | 1353.3 | 1.0016× | yes |
+| mlp_b8 | 1001.9 | 1000.1 | 1.0022× | yes |
+| mlp_b1 | 902.1 | 900.1 | 1.0029× | yes |
+| vit_b8 | 3112.5 | 3093.1 | 1.0055× | yes |
+| vit_b1 | 1198.4 | 1179.9 | 1.0154× | yes |
 
-## 6. 创建成本与内存
+这是**安全回退的中性确认**，不是收益声明。`bmulti` 同时显示 MLP：
+`ready=0, cached=0/8, host_delta=0, cache request/physical=0/0`，fallback
+command request/physical=65,536/65,536 B。
 
-同 A/B 的 `SETUP_US` 中位数：
+## 6. 验证
 
-| case | control µs | cache µs | delta |
-|---|---:|---:|---:|
-| MLP b32 | 3925.8 | 4126.5 | +200.7 |
-| MLP b1 | 3663.3 | 3840.9 | +177.6 |
+- `command_cache_test`：**270 checks / 0 failures**
+- `rk_plan_host_test`：**875 checks / 0 failures**（含上述预算边界）
+- CTest：**33/33 passed**
+- pytest：**352 passed, 71 subtests passed**
+- 冻结数值复验：**PASS / 0 problems**
+- 未重跑未变化的外部基线；未改硬件配方、数值政策或异步执行
 
-`bmulti` 直接测量（默认 on）：
+## 7. 决策
 
-| case | cached | device bytes | Host delta | unique BO | bytes unchanged |
-|---|---:|---:|---:|---|---|
-| MLP b32 | 8/8 | 11,088 | 208,528 B | yes | yes (8 BOs / 1024 runs) |
-| MLP b1 | 8/8 | 11,088 | 208,528 B | yes | yes (8 BOs / 1024 runs) |
+**不采用默认开启。** 独立 command BO 与部分缓存实现保留为 opt-in
+实验；只有未来 plan 明确声明了 device budget 余量时才可能生效。当前
+compiled MLP 计划 device budget 已满，因此保持原执行路径和中性结果。
 
-三个 MLP profile 的 plan 都是 8 submits / 11 tasks，缓存 footprint 相同。
-4 MiB 是每 workspace 的硬上限；低预算测试只缓存 1/2 submit，未缓存 submit
-仍逐次准备且输出逐位一致。
+## 8. 身份与证据
 
-## 7. 五 profile 完整模型
-
-同进程、同 fd、同 compiled graph/weights，两个 runner 逐 call 交替顺序，
-256 images、7 rounds；`stats=None`，无节点代理。逐调用样本在
-`full-model/result.json` 的 `samples`。
-
-| profile | control µs | prepared µs | ratio | p10 | throughput control | throughput prepared | bitwise |
-|---|---:|---:|---:|---:|---:|---:|---|
-| mlp_b32 | 1059.2 | 1006.5 | **1.0511×** | 1.0303× | 30233.0 | 31612.6 | yes |
-| mlp_b8 | 701.0 | 649.2 | **1.0781×** | 1.0397× | 10292.1 | 10974.2 | yes |
-| mlp_b1 | 601.1 | 549.2 | **1.0954×** | 1.0472× | 1571.3 | 1703.8 | yes |
-| vit_b8 | 3375.3 | 3362.4 | 1.0030× | 1.0014× | 2372.6 | 2381.5 | yes |
-| vit_b1 | 1442.4 | 1438.9 | 1.0021× | 1.0010× | 707.2 | 710.2 | yes |
-
-五个 profile 准确率相同、logits 逐位一致。ViT 默认图没有多提交 workspace，
-其中性结果符合预期，也说明实现没有按模型名特判。
-
-## 8. 回归与决策
-
-- `command_cache_test`：**270 checks / 0 failures**；
-- `rk_plan_host_test`：多提交缓存、低预算部分缓存和原路径输出均通过；
-- CTest：**33/33**；
-- pytest：**352 passed, 71 subtests passed**；
-- 冻结数值复验：**PASS / 0 problems**；
-- 默认 on 的 8 个独立 command BO 在 1,024 次执行后字节 unchanged。
-
-**决策：采用默认 on（4 MiB 预算）**。没有扩展硬件配方、数值政策或异步
-执行；single-submit 和 command-cache 的旧结果原样保留。
-
-## 9. 身份与证据
-
-- 最终 board runtime：`artifacts/librknpu_plan.so` SHA-256
-  `ddf0fb836bf1e58eb653ecc9560c8fabe3473bccb6ca8eeb3888aedf0739a73f`
-- probe：`artifacts/probe-multi-final` SHA-256
-  `63568db3fa01ec3c4c86d8d2d52445472ed1a3136a0a0ac9c4e27a614b606c0a`
-- compiled package：`16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869`
-- numeric spec：`2ccefee0d19dbb558622c67f7020331b573357c44434e7dde24e26d98514ecb2`
-- 结果：`results/20261028T035849Z-multi-submit-cache/`
+- 修正后 board runtime：`artifacts/librknpu_plan.so` SHA-256
+  `b5741177637882433d363d629a284ea93373ea3c4e0919a2aafa1e231a7aec49`
+- probe：`artifacts/probe-budget-fix` SHA-256
+  `9bae73e14e5d63bfebcb558ec79160acf21ef6b72c32708e85d6f2f6a6d9afa3`
+- 修正后结果：`results/20261028T055700Z-multi-submit-budget-fix/`
+  （以实际生成的目录名为准）
+- 历史结果（未覆盖）：`results/20261028T035849Z-multi-submit-cache/`

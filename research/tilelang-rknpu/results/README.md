@@ -553,16 +553,22 @@ runner controls and are asserted bit-identical.
 - Default policy: `shared_group` for the QK/PV nodes.  It is bit-identical to both
   controls, passes the numeric gates, and is 1.21x faster than B1 end to end; the
   controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
-## Budgeted multi-submit static preparation (2026-10-28)
+## Multi-submit cache budget correction (2026-10-28)
 
-`20261028T035849Z-multi-submit-cache/` closes the multi-submit package. Each
-eligible submit owns creation-time programs and a separate exact-sized command
-BO; the default budget is 4 MiB per workspace and covers Host plus device cache
-bytes. MLP isolated gains are 1.0918×/1.1341× (b32/b1); the interleaved
-five-profile check gives 1.0511×/1.0781×/1.0954× for MLP b32/b8/b1 and neutral
-ViT. Host increment is 208,528 B and device command bytes 11,088 per MLP
-workspace. Frozen numeric replay is PASS / 0 problems. The full table,
-command-region argument and failure evidence are in
+`20261028T055700Z-multi-submit-budget-fix/` is the corrected budget-closure
+record. The earlier `20261028T035849Z-multi-submit-cache/` result remains as
+historical evidence, but its MLP speedups are withdrawn: the separate cache
+command BOs were not charged against the plans' declared device budgets.
+
+The corrected admission checks three limits before allocation: the cache-own
+budget (Host + page-aligned command bytes), workspace Host room, and plan
+device room after data slots plus the still-allocated fallback command
+workspace. Current compiled MLP plans declare a device budget already consumed
+by those base resources, so the opt-in cache allocates **0 B** and safely falls
+back. A short interleaved five-profile confirmation is neutral and bitwise.
+`RK_PLAN_MULTI_SUBMIT_CACHE` is therefore **not a default**; it remains opt-in
+for future plans with declared device headroom. Budget-boundary and malformed
+configuration regressions are documented in
 [`../MULTI-SUBMIT-CACHE-REPORT.md`](../MULTI-SUBMIT-CACHE-REPORT.md).
 
 ## Command-BO packing reuse (2026-10-28)

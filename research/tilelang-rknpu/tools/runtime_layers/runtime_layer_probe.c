@@ -988,10 +988,12 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
             size_t snapshot_bytes[64];
             memset(snapshot_bytes, 0, sizeof(snapshot_bytes));
             if (!rc) {
-                printf("MULTI_INFO ready=%u cached=%u submits=%u device_bytes=%llu\n",
+                printf("MULTI_INFO ready=%u cached=%u submits=%u "
+                       "device_request_bytes=%llu device_physical_bytes=%llu\n",
                        bc.ws->multi_submit_ready, bc.ws->multi_submit_cached,
                        bc.ws->plan->nsubmits,
-                       (unsigned long long)bc.ws->multi_submit_device_bytes);
+                       (unsigned long long)bc.ws->multi_submit_device_bytes,
+                       (unsigned long long)bc.ws->multi_submit_device_physical_bytes);
                 for (uint32_t s = 0; s < bc.ws->plan->nsubmits; s++) {
                     if (!bc.ws->submit_cache[s].ready) continue;
                     co_command_plan *plan = &bc.ws->submit_cache[s].plan;
@@ -1062,12 +1064,21 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
             }
             if (cache_copy[0]) setenv("RK_PLAN_MULTI_SUBMIT_CACHE", cache_copy, 1);
             else unsetenv("RK_PLAN_MULTI_SUBMIT_CACHE");
+            uint64_t fallback_request =
+                (uint64_t)bc.ws->execute_workspace.commands.size;
+            uint64_t fallback_physical =
+                (fallback_request + 4095u) & ~(uint64_t)4095u;
             printf("MULTI_MEM host_on=%llu host_off=%llu host_delta=%lld "
-                   "device_bytes=%llu setup_on_us=%.3f setup_off_us=%.3f\n",
+                   "device_request_bytes=%llu device_physical_bytes=%llu "
+                   "fallback_cmd_request=%llu fallback_cmd_physical=%llu "
+                   "setup_on_us=%.3f setup_off_us=%.3f\n",
                    (unsigned long long)host_on,
                    (unsigned long long)host_off,
                    (long long)host_on - (long long)host_off,
                    (unsigned long long)bc.ws->multi_submit_device_bytes,
+                   (unsigned long long)bc.ws->multi_submit_device_physical_bytes,
+                   (unsigned long long)fallback_request,
+                   (unsigned long long)fallback_physical,
                    on_us, off_us);
             print_timing("SETUP_US", setup, "FIRST_US", 0, warm, 0);
         } else if (!strcmp(mode, "bcmdverify")) {
