@@ -1,0 +1,86 @@
+{
+  "batch": 1,
+  "bitwise": true,
+  "call_ratio_summary": {
+    "max_us": 1.727675541285663,
+    "median_us": 1.0267187972314067,
+    "min_us": 0.5234145012547516,
+    "n": 1792,
+    "p10_us": 1.0037721401474298
+  },
+  "flag": "RK_PLAN_PROGRAM_CACHE",
+  "kind": "full-model-program-cache-ab",
+  "limit": 256,
+  "note": "Both arms are the same compiled graph. Only the workspace-snapshotted program-cache flag differs; finite scans, guard, sync, pack, emitter, command and publication are otherwise identical.",
+  "output_files": {
+    "current": "current_logits.npy",
+    "experimental": "experimental_logits.npy"
+  },
+  "round_ratio_median": 1.0282068377097593,
+  "round_ratio_p10": 1.0231257531044344,
+  "rounds": [
+    {
+      "current_median_us": 1549.7520798817277,
+      "experimental_median_us": 1512.1269971132278,
+      "ratio_current_over_experimental": 1.0248822240726667,
+      "round": 1
+    },
+    {
+      "current_median_us": 1548.4399627894163,
+      "experimental_median_us": 1513.4405111894011,
+      "ratio_current_over_experimental": 1.0231257531044344,
+      "round": 2
+    },
+    {
+      "current_median_us": 1472.0240142196417,
+      "experimental_median_us": 1433.6705207824707,
+      "ratio_current_over_experimental": 1.0267519579158524,
+      "round": 3
+    },
+    {
+      "current_median_us": 1199.319027364254,
+      "experimental_median_us": 1161.4030227065086,
+      "ratio_current_over_experimental": 1.0326467246222475,
+      "round": 4
+    },
+    {
+      "current_median_us": 1217.839540913701,
+      "experimental_median_us": 1184.0065126307309,
+      "ratio_current_over_experimental": 1.0285750356286445,
+      "round": 5
+    },
+    {
+      "current_median_us": 1222.6519756950438,
+      "experimental_median_us": 1189.1109170392156,
+      "ratio_current_over_experimental": 1.0282068377097593,
+      "round": 6
+    },
+    {
+      "current_median_us": 1187.3604962602258,
+      "experimental_median_us": 1154.256984591484,
+      "ratio_current_over_experimental": 1.0286794986823993,
+      "round": 7
+    }
+  ],
+  "schema_version": 1,
+  "setup_us": {
+    "current": 8360.233972780406,
+    "experimental": 7929.737912490964
+  },
+  "trusted_timing": {
+    "current": {
+      "max_us": 2505.386946722865,
+      "median_us": 1239.5690428093076,
+      "min_us": 1163.1529778242111,
+      "n": 1792,
+      "p10_us": 1180.3610250353813
+    },
+    "experimental": {
+      "max_us": 2285.7639705762267,
+      "median_us": 1202.6734766550362,
+      "min_us": 1129.3200077489018,
+      "n": 1792,
+      "p10_us": 1146.8189768493176
+    }
+  }
+}

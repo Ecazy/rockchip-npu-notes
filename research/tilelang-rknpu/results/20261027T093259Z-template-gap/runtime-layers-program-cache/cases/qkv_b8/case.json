@@ -1,0 +1,47 @@
+{
+  "bundle": "bundle.bin",
+  "constants": [
+    {
+      "id": 1,
+      "name": "B",
+      "nbytes": 24576,
+      "shape": [
+        64,
+        192
+      ]
+    }
+  ],
+  "def_file": "case.def",
+  "frame_file": "frames.bin",
+  "frames": 64,
+  "inputs": [
+    {
+      "id": 0,
+      "name": "A",
+      "nbytes": 16384,
+      "role": 0,
+      "shape": [
+        128,
+        64
+      ]
+    }
+  ],
+  "kind": "single",
+  "manifest_key": "tiny_vit_b8",
+  "name": "qkv_b8",
+  "outputs": [
+    {
+      "id": 2,
+      "name": "Y",
+      "nbytes": 49152,
+      "role": 2,
+      "shape": [
+        128,
+        192
+      ]
+    }
+  ],
+  "plan_key": "qkv",
+  "plans_dir": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/compiled",
+  "weights_dir": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models"
+}

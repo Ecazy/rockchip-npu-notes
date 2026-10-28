@@ -1,0 +1,452 @@
+{
+  "checks": {
+    "isolation": {
+      "frame0_cache_matches_reference": true,
+      "frame1_other_workspace_matches_reference": true,
+      "repeat_same_workspace_unchanged": true,
+      "status": "PASS",
+      "workspace_count": 3
+    },
+    "pv_b8": {
+      "address_revalidated": true,
+      "finite_output_unchanged": true,
+      "rejected_finite": true,
+      "rejected_shape": true,
+      "restored_output_unchanged": true,
+      "shape_output_unchanged": true,
+      "status": "PASS"
+    },
+    "qk_b8": {
+      "address_revalidated": true,
+      "finite_output_unchanged": true,
+      "rejected_finite": true,
+      "rejected_shape": true,
+      "restored_output_unchanged": true,
+      "shape_output_unchanged": true,
+      "status": "PASS"
+    }
+  },
+  "comparison": {
+    "bad": 0,
+    "rows": 56
+  },
+  "decision": {
+    "adopt_default": true,
+    "host_memory_increment_bytes": 0,
+    "reason": "existing batch scratch is reused; no extra co_program array is allocated",
+    "scope": "single-submit workspaces with all tasks emitted and validated at creation"
+  },
+  "full_model": {
+    "full-model-b1": {
+      "batch": 1,
+      "bitwise": true,
+      "call_ratio_summary": {
+        "max_us": 1.727675541285663,
+        "median_us": 1.0267187972314067,
+        "min_us": 0.5234145012547516,
+        "n": 1792,
+        "p10_us": 1.0037721401474298
+      },
+      "flag": "RK_PLAN_PROGRAM_CACHE",
+      "kind": "full-model-program-cache-ab",
+      "limit": 256,
+      "note": "Both arms are the same compiled graph. Only the workspace-snapshotted program-cache flag differs; finite scans, guard, sync, pack, emitter, command and publication are otherwise identical.",
+      "output_files": {
+        "current": "current_logits.npy",
+        "experimental": "experimental_logits.npy"
+      },
+      "round_ratio_median": 1.0282068377097593,
+      "round_ratio_p10": 1.0231257531044344,
+      "rounds": [
+        {
+          "current_median_us": 1549.7520798817277,
+          "experimental_median_us": 1512.1269971132278,
+          "ratio_current_over_experimental": 1.0248822240726667,
+          "round": 1
+        },
+        {
+          "current_median_us": 1548.4399627894163,
+          "experimental_median_us": 1513.4405111894011,
+          "ratio_current_over_experimental": 1.0231257531044344,
+          "round": 2
+        },
+        {
+          "current_median_us": 1472.0240142196417,
+          "experimental_median_us": 1433.6705207824707,
+          "ratio_current_over_experimental": 1.0267519579158524,
+          "round": 3
+        },
+        {
+          "current_median_us": 1199.319027364254,
+          "experimental_median_us": 1161.4030227065086,
+          "ratio_current_over_experimental": 1.0326467246222475,
+          "round": 4
+        },
+        {
+          "current_median_us": 1217.839540913701,
+          "experimental_median_us": 1184.0065126307309,
+          "ratio_current_over_experimental": 1.0285750356286445,
+          "round": 5
+        },
+        {
+          "current_median_us": 1222.6519756950438,
+          "experimental_median_us": 1189.1109170392156,
+          "ratio_current_over_experimental": 1.0282068377097593,
+          "round": 6
+        },
+        {
+          "current_median_us": 1187.3604962602258,
+          "experimental_median_us": 1154.256984591484,
+          "ratio_current_over_experimental": 1.0286794986823993,
+          "round": 7
+        }
+      ],
+      "schema_version": 1,
+      "setup_us": {
+        "current": 8360.233972780406,
+        "experimental": 7929.737912490964
+      },
+      "trusted_timing": {
+        "current": {
+          "max_us": 2505.386946722865,
+          "median_us": 1239.5690428093076,
+          "min_us": 1163.1529778242111,
+          "n": 1792,
+          "p10_us": 1180.3610250353813
+        },
+        "experimental": {
+          "max_us": 2285.7639705762267,
+          "median_us": 1202.6734766550362,
+          "min_us": 1129.3200077489018,
+          "n": 1792,
+          "p10_us": 1146.8189768493176
+        }
+      }
+    },
+    "full-model-b8": {
+      "batch": 8,
+      "bitwise": true,
+      "call_ratio_summary": {
+        "max_us": 1.1453597923821763,
+        "median_us": 1.056645937789355,
+        "min_us": 1.007995455669951,
+        "n": 224,
+        "p10_us": 1.0353646127894567
+      },
+      "flag": "RK_PLAN_PROGRAM_CACHE",
+      "kind": "full-model-program-cache-ab",
+      "limit": 256,
+      "note": "Both arms are the same compiled graph. Only the workspace-snapshotted program-cache flag differs; finite scans, guard, sync, pack, emitter, command and publication are otherwise identical.",
+      "output_files": {
+        "current": "current_logits.npy",
+        "experimental": "experimental_logits.npy"
+      },
+      "round_ratio_median": 1.0554052863833567,
+      "round_ratio_p10": 1.0524543388386907,
+      "rounds": [
+        {
+          "current_median_us": 3691.2895157001913,
+          "experimental_median_us": 3460.4379907250404,
+          "ratio_current_over_experimental": 1.0667116491016162,
+          "round": 1
+        },
+        {
+          "current_median_us": 3689.6849633194506,
+          "experimental_median_us": 3505.791013594717,
+          "ratio_current_over_experimental": 1.0524543388386907,
+          "round": 2
+        },
+        {
+          "current_median_us": 3684.873052407056,
+          "experimental_median_us": 3495.000011753291,
+          "ratio_current_over_experimental": 1.0543270500758923,
+          "round": 3
+        },
+        {
+          "current_median_us": 3711.41399955377,
+          "experimental_median_us": 3508.4160044789314,
+          "ratio_current_over_experimental": 1.0578602978710865,
+          "round": 4
+        },
+        {
+          "current_median_us": 3725.997463334352,
+          "experimental_median_us": 3514.2500419169664,
+          "ratio_current_over_experimental": 1.0602539429157638,
+          "round": 5
+        },
+        {
+          "current_median_us": 3710.101475007832,
+          "experimental_median_us": 3523.2914378866553,
+          "ratio_current_over_experimental": 1.0530214546297167,
+          "round": 6
+        },
+        {
+          "current_median_us": 3697.4139511585236,
+          "experimental_median_us": 3503.311949316412,
+          "ratio_current_over_experimental": 1.0554052863833567,
+          "round": 7
+        }
+      ],
+      "schema_version": 1,
+      "setup_us": {
+        "current": 18421.73805925995,
+        "experimental": 18505.153944715858
+      },
+      "trusted_timing": {
+        "current": {
+          "max_us": 3800.0799249857664,
+          "median_us": 3700.7685168646276,
+          "min_us": 3350.04401858896,
+          "n": 224,
+          "p10_us": 3642.581985332072
+        },
+        "experimental": {
+          "max_us": 3620.7069642841816,
+          "median_us": 3506.958542857319,
+          "min_us": 3163.37903495878,
+          "n": 224,
+          "p10_us": 3437.83397693187
+        }
+      }
+    }
+  },
+  "kind": "creation-time-coprogram-cache-ab",
+  "numeric": {
+    "problems": [],
+    "status": "PASS"
+  },
+  "paired": {
+    "mlp_b32": {
+      "cache_off_median_us": 589.74292,
+      "cache_on_median_us": 592.659058,
+      "first_us": {
+        "0": 700.284058,
+        "1": 705.241943
+      },
+      "round_ratio_max": 1.0014844319982126,
+      "round_ratio_median": 0.9955751693418091,
+      "round_ratio_min": 0.991644166332993,
+      "round_ratio_p10": 0.991644166332993,
+      "round_ratios": [
+        1.0009898414558553,
+        0.9940944220983189,
+        0.991644166332993,
+        1.0009879991257389,
+        1.0014844319982126,
+        0.9955751693418091,
+        0.9950795690023859
+      ],
+      "setup_us": {
+        "0": 3611.374023,
+        "1": 3680.498047
+      }
+    },
+    "pv_b8": {
+      "cache_off_median_us": 380.328979,
+      "cache_on_median_us": 334.245972,
+      "first_us": {
+        "0": 626.784058,
+        "1": 448.577881
+      },
+      "round_ratio_max": 1.1424821455461267,
+      "round_ratio_median": 1.138744711852938,
+      "round_ratio_min": 1.0219964401822679,
+      "round_ratio_p10": 1.0219964401822679,
+      "round_ratios": [
+        1.1378715403038575,
+        1.1399818215792878,
+        1.1424821455461267,
+        1.0219964401822679,
+        1.139493929005917,
+        1.138744711852938,
+        1.1369979561040156
+      ],
+      "setup_us": {
+        "0": 991.655029,
+        "1": 1170.445068
+      }
+    },
+    "qk_b8": {
+      "cache_off_median_us": 394.328979,
+      "cache_on_median_us": 347.954102,
+      "first_us": {
+        "0": 648.659058,
+        "1": 459.661011
+      },
+      "round_ratio_max": 1.1385378367194137,
+      "round_ratio_median": 1.1342273450336915,
+      "round_ratio_min": 1.130542516740013,
+      "round_ratio_p10": 1.130542516740013,
+      "round_ratios": [
+        1.1342273450336915,
+        1.1365152224794228,
+        1.1356803419385826,
+        1.130542516740013,
+        1.1385378367194137,
+        1.1324395508922611,
+        1.1326622277465372
+      ],
+      "setup_us": {
+        "0": 907.07312,
+        "1": 1162.277954
+      }
+    },
+    "qkv_b8": {
+      "cache_off_median_us": 167.707031,
+      "cache_on_median_us": 167.997925,
+      "first_us": {
+        "0": 268.912964,
+        "1": 255.204956
+      },
+      "round_ratio_max": 1.0424845077588338,
+      "round_ratio_median": 1.0086831802362959,
+      "round_ratio_min": 0.9774341498563152,
+      "round_ratio_p10": 0.9774341498563152,
+      "round_ratios": [
+        1.0086831802362959,
+        0.9774341498563152,
+        1.0088850869962172,
+        0.9810027114628895,
+        1.0000058197063906,
+        1.0424845077588338,
+        1.0190955215667097
+      ],
+      "setup_us": {
+        "0": 388.786987,
+        "1": 382.369995
+      }
+    }
+  },
+  "profile": {
+    "mlp_b32": {
+      "0": {
+        "alloc_us": 0.0,
+        "command_us": 28.583984,
+        "download_us": 3.791016,
+        "emit_us": 14.292602500000001,
+        "guard_us": 161.2894895,
+        "output_sync_us": 24.791992,
+        "pack_layout_us": 145.10247800000002,
+        "pack_us": 156.915039,
+        "publish_us": 0.0,
+        "submit_alloc_us": 0.583008,
+        "submit_wait_us": 184.913513,
+        "total_us": 589.0135499999999,
+        "validate_us": 9.333008
+      },
+      "1": {
+        "alloc_us": 0.0,
+        "command_us": 28.728942500000002,
+        "download_us": 3.791992,
+        "emit_us": 15.1674805,
+        "guard_us": 161.580933,
+        "output_sync_us": 25.082031,
+        "pack_layout_us": 145.248047,
+        "pack_us": 156.915039,
+        "publish_us": 0.145447,
+        "submit_alloc_us": 0.583984,
+        "submit_wait_us": 185.644104,
+        "total_us": 590.910034,
+        "validate_us": 9.333008
+      }
+    },
+    "pv_b8": {
+      "0": {
+        "alloc_us": 0.0,
+        "command_us": 25.083008,
+        "download_us": 116.6655275,
+        "emit_us": 46.373535000000004,
+        "guard_us": 25.375,
+        "output_sync_us": 3.5,
+        "pack_layout_us": 11.957641500000001,
+        "pack_us": 45.3534545,
+        "publish_us": 1.166016,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 59.791016,
+        "total_us": 379.161987,
+        "validate_us": 46.082519500000004
+      },
+      "1": {
+        "alloc_us": 0.0,
+        "command_us": 25.375,
+        "download_us": 117.247986,
+        "emit_us": 0.0,
+        "guard_us": 25.375,
+        "output_sync_us": 3.645447,
+        "pack_layout_us": 13.123291,
+        "pack_us": 45.208008,
+        "publish_us": 1.166504,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 59.9365235,
+        "total_us": 336.7250365,
+        "validate_us": 46.083008
+      }
+    },
+    "qk_b8": {
+      "0": {
+        "alloc_us": 0.0,
+        "command_us": 24.0625,
+        "download_us": 112.583008,
+        "emit_us": 46.374023,
+        "guard_us": 24.791992,
+        "output_sync_us": 3.5,
+        "pack_layout_us": 6.709961,
+        "pack_us": 39.666016,
+        "publish_us": 1.166992,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 59.791016,
+        "total_us": 395.349487,
+        "validate_us": 72.041016
+      },
+      "1": {
+        "alloc_us": 0.0,
+        "command_us": 24.208008,
+        "download_us": 112.872803,
+        "emit_us": 0.0,
+        "guard_us": 24.791504,
+        "output_sync_us": 3.5,
+        "pack_layout_us": 6.562012,
+        "pack_us": 39.375,
+        "publish_us": 1.166992,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 59.791016,
+        "total_us": 348.100464,
+        "validate_us": 72.041016
+      }
+    },
+    "qkv_b8": {
+      "0": {
+        "alloc_us": 0.0,
+        "command_us": 2.0409550000000003,
+        "download_us": 34.270508,
+        "emit_us": 1.458008,
+        "guard_us": 25.374023,
+        "output_sync_us": 4.375,
+        "pack_layout_us": 37.333008,
+        "pack_us": 43.166016,
+        "publish_us": 1.75,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 48.416016,
+        "total_us": 164.78942849999999,
+        "validate_us": 2.3334960000000002
+      },
+      "1": {
+        "alloc_us": 0.0,
+        "command_us": 2.041992,
+        "download_us": 33.833008,
+        "emit_us": 0.0,
+        "guard_us": 25.375,
+        "output_sync_us": 4.375,
+        "pack_layout_us": 37.333008,
+        "pack_us": 43.166016,
+        "publish_us": 1.75,
+        "submit_alloc_us": 0.0,
+        "submit_wait_us": 48.125,
+        "total_us": 163.47747800000002,
+        "validate_us": 2.333984
+      }
+    }
+  },
+  "protocol": "Cache off/on are the same C implementation and same workspace.  7 rotated rounds; per-round median ratio is primary, p10 auxiliary.  Full model uses two runners in one process with env snapshotted at workspace creation; stats=None and no node proxies.",
+  "schema_version": 1
+}
