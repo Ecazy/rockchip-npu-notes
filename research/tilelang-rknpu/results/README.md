@@ -539,3 +539,16 @@ runner controls and are asserted bit-identical.
 - Default policy: `shared_group` for the QK/PV nodes.  It is bit-identical to both
   controls, passes the numeric gates, and is 1.21x faster than B1 end to end; the
   controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
+## Current / vendor / CPU full MNIST comparison (2026-10-28)
+
+`20261028T012703Z-current-backend-comparison/` contains the current backend, RKNN Toolkit Lite 2.3.2 and CPU FP32 three-arm campaign on all 10,000 MNIST test images, three rounds, across MLP32/8/1 and ViT8/1. The 32-image coexistence smoke passed before the full run. The current library hash is `7fd5a94b…`, vendor runtime hash `d31fc19c…`, and the temporary bind mount was restored to its prior hash.
+
+- `board/full.json` — full per-round summaries, identities, accuracy/error metrics and schedules.
+- `board/full_artifacts/raw_samples.jsonl` — every timed call, batch order and per-arm duration.
+- `board/full_artifacts/logits.*.npy` — every round output, plus CPU and declared references.
+- `board/full.json.stdout`, `.stderr`, `.exit`, `.runtime-mount.txt` — command output, toolkit/runtime log, actual exit code and bind-mount restoration evidence.
+- `campaign/` — deployed immutable inputs, manifests, model hashes, frozen packed precision policy and checksums.
+- `source-bundle.tgz` and `source-bundle.sha256` — exact source bundle sent to the board.
+- `SHA256SUMS` — checksums for fetched run evidence, excluding this checksum file.
+
+The human-readable table and precision-policy notes are in [`../CURRENT-BACKEND-COMPARISON.md`](../CURRENT-BACKEND-COMPARISON.md).

@@ -1,0 +1,11 @@
+# Host command (credentials supplied only through SSH_ASKPASS from ignored .env)
+./research/tilelang-rknpu/scripts/run-current-backend-comparison-host.sh
+
+# Remote dependency setup
+bash /mnt/ssd/workspace/tl-current-backend-20261028T012703Z/source/tilelang-rknpu/scripts/run-current-backend-comparison-native.sh install-site /mnt/ssd/workspace/tl-current-backend-20261028T012703Z /mnt/ssd/workspace/vendor-bench/site /mnt/ssd/workspace/tl-current-backend-20261028T012703Z/results/site
+
+# Remote coexistence smoke (passed, exit 0)
+bash /mnt/ssd/workspace/tl-current-backend-20261028T012703Z/source/tilelang-rknpu/scripts/run-current-backend-comparison-native.sh run /mnt/ssd/workspace/tl-current-backend-20261028T012703Z all 32 1 /mnt/ssd/workspace/tl-current-backend-20261028T012703Z/results/smoke.json
+
+# Remote full campaign (passed, exit 0)
+bash /mnt/ssd/workspace/tl-current-backend-20261028T012703Z/source/tilelang-rknpu/scripts/run-current-backend-comparison-native.sh run /mnt/ssd/workspace/tl-current-backend-20261028T012703Z all 10000 3 /mnt/ssd/workspace/tl-current-backend-20261028T012703Z/results/full.json
