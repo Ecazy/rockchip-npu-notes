@@ -66,8 +66,9 @@ class SwiGLUTests(unittest.TestCase):
                                    allow_approx_lut=True))
         recipes = {submit.recipe_id for submit in result.plan.submits}
         self.assertNotIn("swiglu_ffn_v1", recipes)
-        self.assertEqual(recipes, {"linear_k_acc_v1", "gate_ew_v1"})
-        self.assertEqual(len(result.plan.submits), 6)
+        self.assertEqual(recipes, {"linear_k_acc_v1", "gate_ew_v1",
+                                   "linear_epilogue_v1"})
+        self.assertEqual(len(result.plan.submits), 5)
         self.assertEqual([a.template_id for a in result.plan.actions
                           if a.kind == "npu_task"],
                          ["co.mm.f16.v1", "co.mm.f16.v1",

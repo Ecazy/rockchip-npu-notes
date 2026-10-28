@@ -68,6 +68,22 @@ RECIPE_SIGNATURES = {
 
 def _recipe_matches(recipe: str, templates: list[str]) -> bool:
     """Prove a submit's declared recipe describes its actual task sequence."""
+    if recipe == "linear_epilogue_v1":
+        if not templates or templates[0] != "co.mm.f16.v1":
+            return False
+        i = 1
+        while i < len(templates) and templates[i] == "co.mm_acc.f16.v1":
+            i += 1
+        if i == len(templates) or templates[i] != "co.ew_add.f16.v1":
+            return False
+        i += 1
+        if i < len(templates):
+            if templates[i] != "co.ew_max.f16.v1":
+                return False
+            i += 1
+        return i == len(templates)
+    if recipe == "ew_add_relu_v1":
+        return templates == ["co.ew_add.f16.v1", "co.ew_max.f16.v1"]
     signatures = RECIPE_SIGNATURES.get(recipe)
     if not signatures or not templates:
         return False

@@ -17,6 +17,11 @@ class CompileOptions:
     tile_limit: int = 256
     device_budget_bytes: int = 256 * 1024 * 1024
     host_budget_bytes: int = 256 * 1024 * 1024
+    # Generic submit-level epilogue fusion: chain a Linear output's bias add
+    # and ReLU (or either epilogue suffix) into the same submit when the direct
+    # dependency and template sequence prove it is safe.  This changes no task,
+    # arithmetic or transfer; it only reduces Submit envelopes.
+    fuse_epilogue: bool = True
     # Experimental patterns are opt-in: only ``enabled`` capabilities are selected
     # by default (P2).
     allow_experimental: bool = False
@@ -41,6 +46,9 @@ class CompileOptions:
         if self.tile_limit != 256:
             reject(RK_E_UNSUPPORTED, "MVP tile_limit is fixed at 256",
                    stage="options", actual=self.tile_limit, required=256)
+        if not isinstance(self.fuse_epilogue, bool):
+            reject(RK_E_UNSUPPORTED, "fuse_epilogue must be a boolean",
+                   stage="options")
         for name in ("device_budget_bytes", "host_budget_bytes", "max_actions",
                      "max_ir_nodes"):
             value = getattr(self, name)

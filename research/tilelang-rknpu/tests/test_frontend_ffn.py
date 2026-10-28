@@ -79,9 +79,10 @@ class FFNExtractionTests(unittest.TestCase):
                           "co.lut.sigmoid.f16.v1", "co.ew_mul.f16.v1",
                           "co.ew_mul.f16.v1", "co.mm.f16.v1",
                           "co.ew_add.f16.v1"])
-        self.assertEqual(len(result.plan.submits), 6)
+        self.assertEqual(len(result.plan.submits), 5)
         self.assertEqual({s.recipe_id for s in result.plan.submits},
-                         {"linear_k_acc_v1", "gate_ew_v1"})
+                         {"linear_k_acc_v1", "gate_ew_v1",
+                          "linear_epilogue_v1"})
         self.assertEqual(sum(a.kind == "upload" for a in result.plan.actions), 6)
         self.assertEqual(sum(a.kind == "download" for a in result.plan.actions), 1)
         self.assertEqual(result.report["source"]["narrowing_points"],
@@ -98,8 +99,9 @@ class FFNExtractionTests(unittest.TestCase):
                                    allow_approx_lut=True,
                                    allow_experimental=True))
         self.assertEqual({s.recipe_id for s in result.plan.submits},
-                         {"linear_k_acc_v1", "gate_ew_v1"})
-        self.assertEqual(len(result.plan.submits), 6)
+                         {"linear_k_acc_v1", "gate_ew_v1",
+                          "linear_epilogue_v1"})
+        self.assertEqual(len(result.plan.submits), 5)
 
     def test_fp32_residual_variant_is_rejected_even_with_all_opt_ins(self):
         for factory in (self.fixtures.swiglu_ffn_fp32_residual,

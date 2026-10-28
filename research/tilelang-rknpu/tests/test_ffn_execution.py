@@ -193,7 +193,9 @@ class FFNExecutionTests(unittest.TestCase):
                                    submit_mode=mode)).plan
         self.assertNotIn("swiglu_ffn_v1",
                          {s.recipe_id for s in plan.submits})
-        self.assertEqual(len(plan.submits), 6 if mode == "chain" else 7)
+        # chain mode fuses the final Linear + residual add; separate mode keeps
+        # one Submit per task.
+        self.assertEqual(len(plan.submits), 5 if mode == "chain" else 7)
         self.assertEqual(
             [a.template_id for a in plan.actions if a.kind == "npu_task"],
             ["co.mm.f16.v1", "co.mm.f16.v1",
@@ -284,7 +286,7 @@ class FFNExecutionTests(unittest.TestCase):
             kernel, profile=self.profile,
             options=CompileOptions(numeric_mode="rk_f16_tiled",
                                    allow_approx_lut=True)).plan
-        self.assertEqual(len(plan.submits), 6)
+        self.assertEqual(len(plan.submits), 5)
         self.assertNotIn("swiglu_ffn_v1",
                          {s.recipe_id for s in plan.submits})
 

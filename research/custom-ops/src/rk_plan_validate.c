@@ -238,6 +238,12 @@ static int validate_download(const rk_plan_desc *desc, const rk_action_desc *a, 
 /* Declared arity of every template this backend emits.  Used to bound the input
  * and output arrays *before* they are indexed: a forged count would otherwise be
  * walked out of bounds. */
+static int action_depends_on(const rk_action_desc *a, uint32_t dep) {
+    for (uint32_t i = 0; i < a->ndeps; i++)
+        if (a->deps[i] == dep) return 1;
+    return 0;
+}
+
 static int template_arity(uint32_t template_id, uint32_t *nin, uint32_t *nout) {
     switch (template_id) {
     case RK_TEMPLATE_MM_F16: *nin = 2; *nout = 1; return 0;
@@ -1069,6 +1075,42 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
                 }
             }
             if (all_plain_mm && s->ntask_ids > 1) continue;  /* admitted group */
+            /* Generic Linear-epilogue chain: MM / MM_ACC* followed by an
+             * optional EW_ADD and then an optional EW_MAX.  Each epilogue task
+             * must directly depend on the previous task, so this is the same
+             * ordered task sequence, only in one Submit envelope. */
+            if (first_tpl == RK_TEMPLATE_MM_F16 && s->ntask_ids > 1) {
+                int ok = 1, saw_epilogue = 0, epilogue_phase = 0;
+                for (uint32_t j = 1; j < s->ntask_ids; j++) {
+                    uint32_t tpl = desc->actions[s->task_ids[j]].template_id;
+                    if (epilogue_phase == 0 && tpl == RK_TEMPLATE_MM_ACC_F16)
+                        continue;
+                    if (tpl == RK_TEMPLATE_EW_ADD_F16 && epilogue_phase == 0) {
+                        epilogue_phase = 1;
+                        saw_epilogue = 1;
+                    } else if (tpl == RK_TEMPLATE_EW_MAX_F16 &&
+                               epilogue_phase == 1) {
+                        epilogue_phase = 2;
+                    } else {
+                        ok = 0;
+                        break;
+                    }
+                    if (!action_depends_on(&desc->actions[s->task_ids[j]],
+                                           s->task_ids[j - 1])) {
+                        ok = 0;
+                        break;
+                    }
+                }
+                if (ok && saw_epilogue) continue;
+            }
+            /* EW_ADD followed by EW_MAX as a standalone epilogue submit. */
+            if (first_tpl == RK_TEMPLATE_EW_ADD_F16 &&
+                s->ntask_ids == 2 &&
+                desc->actions[s->task_ids[1]].template_id ==
+                    RK_TEMPLATE_EW_MAX_F16 &&
+                action_depends_on(&desc->actions[s->task_ids[1]],
+                                  s->task_ids[0]))
+                continue;
             for (uint32_t j = 1; j < s->ntask_ids; j++) {
                 uint32_t tpl = desc->actions[s->task_ids[j]].template_id;
                 int ok;

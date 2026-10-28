@@ -1,0 +1,364 @@
+{
+  "batch": 8,
+  "bridge_policy": {
+    "final_output": "host_materialized",
+    "host_action": "sum_resolved_input_output_tensor_bytes",
+    "npu_fallback": "forbidden",
+    "rkplan": "C_RKRunReport_upload_plus_download_bytes"
+  },
+  "execution_policy": {
+    "dynamic_shapes": "forbidden",
+    "host_actions_version": 1,
+    "host_fallback": "forbidden",
+    "mode": "explicit_hybrid",
+    "npu_fallback": "forbidden",
+    "plan_reuse": "per_plan_workspace",
+    "unknown_action": "reject"
+  },
+  "host_constants": {},
+  "input": {
+    "axes": [
+      "batch",
+      "row",
+      "col"
+    ],
+    "dtype": "uint8",
+    "name": "raw",
+    "shape": [
+      8,
+      28,
+      28
+    ]
+  },
+  "kind": "rkhybrid",
+  "model": "mnist_mlp",
+  "name": "mnist_mlp_b8",
+  "nodes": [
+    {
+      "action": "mnist.normalize_flatten.v1",
+      "action_version": 1,
+      "attrs": {},
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [],
+      "id": "normalize",
+      "inputs": {
+        "raw": {
+          "tensor": "raw"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "float32",
+        "semantics": "normalize_uint8_with_float32_then_one_float16_store",
+        "storage": "float16",
+        "writeback": "float16"
+      },
+      "outputs": {
+        "x": {
+          "tensor": "x_flat"
+        }
+      },
+      "phase": "preprocess",
+      "repeat": []
+    },
+    {
+      "action": "tensor.pad_2d.v1",
+      "action_version": 1,
+      "attrs": {
+        "copy_shape": [
+          8,
+          784
+        ],
+        "input_shape": [
+          8,
+          784
+        ],
+        "output_shape": [
+          8,
+          1024
+        ]
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "normalize"
+      ],
+      "id": "pad_k",
+      "inputs": {
+        "x": {
+          "tensor": "x_flat"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "none",
+        "semantics": "logical_784_to_ordered_1024_k",
+        "storage": "float16",
+        "writeback": "zero_pad_top_left"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "x_padded"
+        }
+      },
+      "phase": "preprocess",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "constants": {
+        "B1": {
+          "kind": "weight_repeat_pad",
+          "name": "b1",
+          "repeat_rows": 8,
+          "reshape": [
+            1,
+            256
+          ]
+        },
+        "B2": {
+          "kind": "weight_repeat_pad",
+          "name": "b2",
+          "repeat_rows": 8,
+          "reshape": [
+            1,
+            128
+          ]
+        },
+        "B3": {
+          "kind": "weight_repeat_pad",
+          "name": "b3",
+          "repeat_rows": 8,
+          "reshape": [
+            1,
+            10
+          ]
+        },
+        "W1": {
+          "kind": "weight_repeat_pad",
+          "name": "W1",
+          "reshape": [
+            784,
+            256
+          ]
+        },
+        "W2": {
+          "kind": "weight_repeat_pad",
+          "name": "W2",
+          "reshape": [
+            256,
+            128
+          ]
+        },
+        "W3": {
+          "kind": "weight_repeat_pad",
+          "name": "W3",
+          "reshape": [
+            128,
+            10
+          ]
+        },
+        "__identity_128": {
+          "generator": "identity",
+          "kind": "generated"
+        },
+        "__identity_256": {
+          "generator": "identity",
+          "kind": "generated"
+        },
+        "__identity_32": {
+          "generator": "identity",
+          "kind": "generated"
+        },
+        "__zero_8x128": {
+          "generator": "zero",
+          "kind": "generated"
+        },
+        "__zero_8x256": {
+          "generator": "zero",
+          "kind": "generated"
+        }
+      },
+      "depends_on": [
+        "pad_k"
+      ],
+      "id": "mlp",
+      "inputs": {
+        "X": {
+          "tensor": "x_padded"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "float16_per_256_k_tile",
+        "ordered_k_tile": 256,
+        "semantics": "real_tilelang_staged_mlp_with_device_resident_activations",
+        "storage": "float16",
+        "writeback": "explicit_float16_each_k_tile"
+      },
+      "outputs": {
+        "Y": {
+          "tensor": "logits_padded"
+        }
+      },
+      "phase": "execution",
+      "plan": "mlp",
+      "repeat": []
+    },
+    {
+      "action": "logits.prefix.v1",
+      "action_version": 1,
+      "attrs": {
+        "cols": 10
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "mlp"
+      ],
+      "id": "export_logits",
+      "inputs": {
+        "logits": {
+          "tensor": "logits_padded"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "none",
+        "semantics": "first_10_of_padded_16_logits",
+        "storage": "float32",
+        "writeback": "float32_prefix"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "logits"
+        }
+      },
+      "phase": "postprocess",
+      "repeat": []
+    }
+  ],
+  "outputs": {
+    "logits": "logits"
+  },
+  "plans": {
+    "mlp": {
+      "dynamic_operand": null,
+      "path": "mnist_mlp_b8.rkplan.json",
+      "plan_hash": "bc9bcd4f1347497489c635b5125fa5dc0a6e963c3a28e158453909d1df167ada",
+      "source_hash": "Span(SourceName(/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/tilelang_mlp.py, 0x353de0e0), 22, 22, 1, 1048576)"
+    }
+  },
+  "profile_hash": "50fa71281ad979ade1543d5350cd7ac584568fddb57412e39e4d4d9f2a3f2d79",
+  "schema_version": 1,
+  "tensors": [
+    {
+      "axes": [
+        "batch",
+        "feature"
+      ],
+      "dtype": "float16",
+      "name": "x_flat",
+      "shape": [
+        8,
+        784
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "ordered_k"
+      ],
+      "dtype": "float16",
+      "name": "x_padded",
+      "shape": [
+        8,
+        1024
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "padded_class"
+      ],
+      "dtype": "float16",
+      "name": "logits_padded",
+      "shape": [
+        8,
+        16
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "class"
+      ],
+      "dtype": "float32",
+      "name": "logits",
+      "shape": [
+        8,
+        10
+      ]
+    }
+  ],
+  "trace_tensors": [
+    "x_padded",
+    "logits"
+  ],
+  "weights": {
+    "file": "mnist_mlp.npz",
+    "host_precision": "float16",
+    "keys": {
+      "W1": {
+        "dtype": "float32",
+        "shape": [
+          784,
+          256
+        ]
+      },
+      "W2": {
+        "dtype": "float32",
+        "shape": [
+          256,
+          128
+        ]
+      },
+      "W3": {
+        "dtype": "float32",
+        "shape": [
+          128,
+          10
+        ]
+      },
+      "b1": {
+        "dtype": "float32",
+        "shape": [
+          256
+        ]
+      },
+      "b2": {
+        "dtype": "float32",
+        "shape": [
+          128
+        ]
+      },
+      "b3": {
+        "dtype": "float32",
+        "shape": [
+          10
+        ]
+      }
+    },
+    "sha256": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e"
+  }
+}

@@ -87,7 +87,8 @@ class SiluProjKernelTests(unittest.TestCase):
                          ["co.mm.f16.v1", "co.lut.sigmoid.f16.v1",
                           "co.ew_mul.f16.v1", "co.mm.f16.v1",
                           "co.ew_add.f16.v1"])
-        self.assertEqual(len(plan.submits), 4)
+        # The final Linear + residual add is one fused Submit chain.
+        self.assertEqual(len(plan.submits), 3)
         # Four external/weight uploads plus two identity weights; exactly one
         # final download.  The two GEMM intermediates never round-trip.
         uploads = [a for a in plan.actions if a.kind == "upload"]

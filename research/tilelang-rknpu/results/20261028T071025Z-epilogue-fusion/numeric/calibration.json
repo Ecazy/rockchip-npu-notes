@@ -1,0 +1,252 @@
+{
+  "compiled_manifest_sha256": "2ad44d0c57fa6cbe72bc4650c9744038c496231951cd49b6e82574de218193a1",
+  "created_utc": "2026-10-28T07:14:03Z",
+  "execution_mode": "auto",
+  "kind": "model-numeric-observation",
+  "labels_read": false,
+  "mode": "calibration",
+  "observation_file": "observation.npz",
+  "observation_sha256": "c6f6bcd2722aaa99383baf4375fa83bde7010b4594adcacd8bab371dee6c6131",
+  "plans": {
+    "mnist_mlp_b1": {
+      "path": "mnist_mlp_b1.rkplan.json",
+      "plan_hash": "274496183b2df73291d874af9dde9d9718541da55ecdf8acdaf2be37cb57d228"
+    },
+    "mnist_mlp_b32": {
+      "path": "mnist_mlp_b32.rkplan.json",
+      "plan_hash": "86fec2b0d85dbb365663dfa94a3022a4bf85ebc5bcf8f270d0147ed9814bf267"
+    },
+    "mnist_mlp_b8": {
+      "path": "mnist_mlp_b8.rkplan.json",
+      "plan_hash": "bc9bcd4f1347497489c635b5125fa5dc0a6e963c3a28e158453909d1df167ada"
+    },
+    "mnist_mlp_diag_l1_bias": {
+      "path": "mnist_mlp_diag_l1_bias.rkplan.json",
+      "plan_hash": "1718b0c06799f7febbb1fbc2abfe3cef9ded9976254b5de537f5ff2bafb01dfd"
+    },
+    "mnist_mlp_diag_l1_relu": {
+      "path": "mnist_mlp_diag_l1_relu.rkplan.json",
+      "plan_hash": "88d8984f0553db058c09310209a41ef2fa5e3386ac6197ed31b2b5f9fc0799ee"
+    },
+    "mnist_mlp_diag_l2_bias": {
+      "path": "mnist_mlp_diag_l2_bias.rkplan.json",
+      "plan_hash": "24ca795c9ef0e238dc4a6bcd9c2ab4329921b7499acf53bc713e0a3b2b2ccbd9"
+    },
+    "mnist_mlp_diag_l2_relu": {
+      "path": "mnist_mlp_diag_l2_relu.rkplan.json",
+      "plan_hash": "8f1d625a7f2a017d3ed107d1e12b8bdfa2908d5dfe1eaef93ad6cfd573acf8fb"
+    },
+    "mnist_mlp_diag_l3_bias": {
+      "path": "mnist_mlp_diag_l3_bias.rkplan.json",
+      "plan_hash": "f520050b245b6acebbcc15dd674ece6ed8234b2629325d862f15da1e0b84cbc8"
+    },
+    "mnist_relu_probe": {
+      "path": "mnist_relu_probe.rkplan.json",
+      "plan_hash": "f9386ef48a72ac4d2c04c0424e8a34aba1012e83136e424093765c6880612bcf"
+    },
+    "tiny_vit_b1_attn_out": {
+      "path": "tiny_vit_b1_attn_out.rkplan.json",
+      "plan_hash": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3"
+    },
+    "tiny_vit_b1_classifier": {
+      "path": "tiny_vit_b1_classifier.rkplan.json",
+      "plan_hash": "ec780abc31a527f5ce44d2496468e160058aeb6d97197209e5ea8c6b096f48ba"
+    },
+    "tiny_vit_b1_down": {
+      "path": "tiny_vit_b1_down.rkplan.json",
+      "plan_hash": "ea43d153c27b4d2896d7dc35ad838510f5e29155e231e732b88420d139871cc3"
+    },
+    "tiny_vit_b1_ffn": {
+      "path": "tiny_vit_b1_ffn.rkplan.json",
+      "plan_hash": "505fb787906b248e170465da0bd7590520dbd871c34972cf0d525a6a338ed854"
+    },
+    "tiny_vit_b1_ffn_trace": {
+      "path": "tiny_vit_b1_ffn_trace.rkplan.json",
+      "plan_hash": "c709c3b330a7ac51bf9f83a5bc35a018c868938e1e3a8f5265906c45aa328cab"
+    },
+    "tiny_vit_b1_gate": {
+      "path": "tiny_vit_b1_gate.rkplan.json",
+      "plan_hash": "80af518973e90c653c1286764cd9fc1554ff486deb1330b94fe20681a2d09169"
+    },
+    "tiny_vit_b1_gate_up": {
+      "path": "tiny_vit_b1_gate_up.rkplan.json",
+      "plan_hash": "9f3c55f30c2fdb34e9e78e4b05bb7bf3666d78266db2b61dc3fe6c93cb929477"
+    },
+    "tiny_vit_b1_patch": {
+      "path": "tiny_vit_b1_patch.rkplan.json",
+      "plan_hash": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3"
+    },
+    "tiny_vit_b1_pv": {
+      "path": "tiny_vit_b1_pv.rkplan.json",
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815"
+    },
+    "tiny_vit_b1_pv_qkv_group": {
+      "path": "tiny_vit_b1_pv_qkv_group.rkplan.json",
+      "plan_hash": "24f866289c08d595577f34a2426600cdffcecf4b6faab03fd58c2caa5598dd4e"
+    },
+    "tiny_vit_b1_qk": {
+      "path": "tiny_vit_b1_qk.rkplan.json",
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815"
+    },
+    "tiny_vit_b1_qk_group": {
+      "path": "tiny_vit_b1_qk_group.rkplan.json",
+      "plan_hash": "68131a615200172b9273e9ccb9915dc4d588ed06650ca3d2ed3129ac5df87a4b"
+    },
+    "tiny_vit_b1_qk_qkv_group": {
+      "path": "tiny_vit_b1_qk_qkv_group.rkplan.json",
+      "plan_hash": "52b9c4dd38611d29b5073a68919733612e705edce23959d1e84198f599e49de6"
+    },
+    "tiny_vit_b1_qkv": {
+      "path": "tiny_vit_b1_qkv.rkplan.json",
+      "plan_hash": "5f63eaaf615d3e099b28f69c9ad87538c591cb9ee0bfb59d3267cb3658953436"
+    },
+    "tiny_vit_b1_up": {
+      "path": "tiny_vit_b1_up.rkplan.json",
+      "plan_hash": "80af518973e90c653c1286764cd9fc1554ff486deb1330b94fe20681a2d09169"
+    },
+    "tiny_vit_b8_attn_out": {
+      "path": "tiny_vit_b8_attn_out.rkplan.json",
+      "plan_hash": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0"
+    },
+    "tiny_vit_b8_classifier": {
+      "path": "tiny_vit_b8_classifier.rkplan.json",
+      "plan_hash": "f68f9131075631696750442702bd93cbd9319de85934cb81c99269ea6e8bfe4c"
+    },
+    "tiny_vit_b8_down": {
+      "path": "tiny_vit_b8_down.rkplan.json",
+      "plan_hash": "7af7e79f69fc8eeeedd104fb06a9cacb26632e3d2cc8f9812c5ace53829f6706"
+    },
+    "tiny_vit_b8_ffn": {
+      "path": "tiny_vit_b8_ffn.rkplan.json",
+      "plan_hash": "be069f0f44a1324af0698f2d58a5ce0c5d5178938c72c030aa69ea79a020875b"
+    },
+    "tiny_vit_b8_ffn_trace": {
+      "path": "tiny_vit_b8_ffn_trace.rkplan.json",
+      "plan_hash": "d053efa80f23d2ae8fc963183b3ef39808e0c5bd1cdf2201e8222d6842ff741c"
+    },
+    "tiny_vit_b8_gate": {
+      "path": "tiny_vit_b8_gate.rkplan.json",
+      "plan_hash": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe"
+    },
+    "tiny_vit_b8_gate_up": {
+      "path": "tiny_vit_b8_gate_up.rkplan.json",
+      "plan_hash": "4bbebbb73dfe7529f8fd17d220cd542c4f69e6a96b2be80b318e2a4b5d9d5935"
+    },
+    "tiny_vit_b8_patch": {
+      "path": "tiny_vit_b8_patch.rkplan.json",
+      "plan_hash": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0"
+    },
+    "tiny_vit_b8_pv": {
+      "path": "tiny_vit_b8_pv.rkplan.json",
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815"
+    },
+    "tiny_vit_b8_pv_qkv_group": {
+      "path": "tiny_vit_b8_pv_qkv_group.rkplan.json",
+      "plan_hash": "8bfff8c59cd33367051ab7792d44ad7c3269fba332f22f2e73e7c14e977cd466"
+    },
+    "tiny_vit_b8_qk": {
+      "path": "tiny_vit_b8_qk.rkplan.json",
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815"
+    },
+    "tiny_vit_b8_qk_group": {
+      "path": "tiny_vit_b8_qk_group.rkplan.json",
+      "plan_hash": "825e8bb1666a72c01af11ed0930989485459e911ff96c6e5518921a98039839b"
+    },
+    "tiny_vit_b8_qk_qkv_group": {
+      "path": "tiny_vit_b8_qk_qkv_group.rkplan.json",
+      "plan_hash": "f20c52b74ce9a3f50eebce3c0dea11b3c6cc1b3cd6df8cc70892aee2bdd31209"
+    },
+    "tiny_vit_b8_qkv": {
+      "path": "tiny_vit_b8_qkv.rkplan.json",
+      "plan_hash": "05cc9c88dfec4da3ddd302b201981fda023340a38f01235cc028e9c1373e7d53"
+    },
+    "tiny_vit_b8_up": {
+      "path": "tiny_vit_b8_up.rkplan.json",
+      "plan_hash": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe"
+    }
+  },
+  "profiles": [
+    "mnist_mlp.b32",
+    "mnist_mlp.b8",
+    "mnist_mlp.b1",
+    "tiny_vit.b8",
+    "tiny_vit.b1"
+  ],
+  "sample_indices": [
+    1244,
+    2363,
+    2999,
+    4556,
+    4891,
+    8580,
+    14022,
+    14891,
+    18780,
+    20214,
+    23747,
+    23823,
+    29431,
+    29453,
+    29495,
+    32891,
+    32984,
+    33660,
+    34481,
+    38748,
+    40912,
+    42965,
+    43746,
+    44188,
+    45480,
+    46056,
+    48201,
+    51374,
+    53224,
+    53271,
+    54801,
+    59181
+  ],
+  "sample_sha256": [
+    "bf1c4673be2b6648717dffc298cff16d4968612b48bfec8e8376ba4e84d682e9",
+    "7043b0c4c56d428f712ad18da9cab0fd2aa6abb20ca29a23496942ddecc2f7f9",
+    "afe8678831ab464fd43ba0b1692d6e3f2ce2fbbafe26b8126f55f051fac98eeb",
+    "e4e51b5353624b3b09b07a15afd40457e3376df970899d2f0c70f7a2e22a690d",
+    "f3978e6baf5c1469b4670d19ac94101d3762cbe7f193577eb8a9d71017f5c75d",
+    "cc0fad20dac98d0bfe34b4666b0566923cac864a7b277f1c34ba9c3147272b77",
+    "4ed4e67d8f8c202321a77370f561682ff405cc1882c1ddc1824dcfd71a1b5a04",
+    "8912763556a44413e5780e26067c9633deae25b34c97f0f12356ff977d92adea",
+    "25572fc4ebcae5eb1df885c7dde00a10dbb646d570680880e8f1cd03b05f78a2",
+    "89e5494907025be4c682a8c1ba788593dd1fc1496734b7ac7d91ac5916600e36",
+    "c836712ba78c6ea01e03069d2171d4064ba16cc4248acbf71bdd8b0c9a4ec2a5",
+    "59315124f6cbd63de76976a97eebd0e64ea885ad6ca446908063368036c26dcd",
+    "2d67001eb2061c59c6cb58869d6ad6fa8b23f88aacf78c126ab0369875ff997c",
+    "6ab34dfe1898cc3f2fb7ab01bee04c2e32951464e6d8fbca93b5a7674f97fdef",
+    "04c610d0a35a9b222f778ecd48edf46e512d2b8d5a33ea99767080745b4d2406",
+    "60559d99deffe5ff49e330e6cd459fe900cc793e20f7dc399f3fc480ecddedd0",
+    "7bab681803655d8a0acc0eac093cc2f116a81cb6068c5db4b07e59bc5fad37a0",
+    "c6ca6fcd2d9d7e8a442863665249679be588b4e31bcea39d73aea38ca130da36",
+    "1783b1ee91c2b130460cb0c548f7166ccc2c0fb4f7265b8965cedb36b16a6834",
+    "44ff251ccef58615e963f969d53a62611471b14029b66285412795be09b62398",
+    "b72af14c9956db34dd5f93b8c12c588d5d320bff4ad1a0eb046849e246b75023",
+    "c743bb01b186fcc352dbe91bf553cd0322c3910423791591525fc49f9f9ed2a8",
+    "f407a4d8ed74157ea02a72dbf22aa4099dfcdca8a2e41649dc5328fccc138f50",
+    "74b67184507aa2a05c19f1011476649cecb7fb0f8a265bd423fb4956b9201cb0",
+    "2b06e9548a14c7c99e1ea63515259c6c993369131f5ec2a000b657113dcc5baf",
+    "d1ef9b8a802ad936f0eb9b20fecc97d8d3a14846994451129053d2b023a43ecd",
+    "11086724d2ed305260deb4bdb0f2458586ef9972c4e3e4fa0a8dd57bad594a96",
+    "3437968db00d5e541aec0db5ddf02b2701e77f85257a2eff24f5ae59b9b863f2",
+    "8a6504a0cbf25d86db31bb27decae635478a943a757c50d41320467ea3b4fe72",
+    "921a6caf3c3e13fc9891a15de9957573268520cb2591ef55e28ebbdd59def2e6",
+    "1c3e27faf65a7673bbebe320e18232a52e9a6a836aab2513dd9751b0e2a95469",
+    "862d4ab60d6efbb0f13f118b67986d6782bc4dafd1a5cef036c2006024fe448e"
+  ],
+  "schema_version": 2,
+  "source_file": "train-images-idx3-ubyte.gz",
+  "source_sha256": "440fcabf73cc546fa21475e81ea370265605f56be210a4024d2ca8f203523609",
+  "spec_sha256": null,
+  "split": "train",
+  "weights_sha256": {
+    "mnist_mlp.npz": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+    "tiny_vit.npz": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+  }
+}

@@ -553,6 +553,19 @@ runner controls and are asserted bit-identical.
 - Default policy: `shared_group` for the QK/PV nodes.  It is bit-identical to both
   controls, passes the numeric gates, and is 1.21x faster than B1 end to end; the
   controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
+## Linear-epilogue Submit fusion (2026-10-28)
+
+`20261028T071025Z-epilogue-fusion/` contains the operator/compiler package.
+A generic `fuse_epilogue` rule merges a directly dependent `MM/MM_ACC` chain
+with a contiguous `EW_ADD`/`EW_MAX` epilogue into one Submit envelope. MLP
+keeps its 11 tasks, data path, padding and transfers but goes from 8 to 3
+Submits; two interleaved 256-image/7-round full-model runs show median MLP
+ratios 1.0846×–1.4181×, ViT neutral, and bitwise logits. The alternative
+bias-into-GEMM and `max(x,-b)` fusions were rejected because they change the
+existing FP16 narrowing/accumulation policy. `fuse_epilogue=False` keeps the
+original lowering as the control. See
+[`../EPILOGUE-FUSION-REPORT.md`](../EPILOGUE-FUSION-REPORT.md).
+
 ## Plan-budget contract and legal multi-submit cache (2026-10-28)
 
 `20261028T063532Z-budget-contract/` closes the budget-contract package.

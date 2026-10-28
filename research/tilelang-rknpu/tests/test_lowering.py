@@ -72,6 +72,8 @@ class LoweringTests(unittest.TestCase):
         self.assertEqual([a.template_id for a in tasks],
                          ["co.mm.f16.v1", "co.mm_acc.f16.v1",
                           "co.ew_add.f16.v1"])
+        # The residual upload is interleaved in action order, so this control
+        # case intentionally keeps the add in its own Submit.
         self.assertEqual(len(result.plan.submits), 2)
         # The residual is a second input binding, packed per output tile.
         names = [b.name for b in result.plan.bindings if b.role == "input"]

@@ -10,6 +10,17 @@
 > neutral. `RK_PLAN_MULTI_SUBMIT_CACHE=1` is the default; legacy plans safely
 > fall back. Earlier invalid-budget results remain historical. See
 > [MULTI-SUBMIT-CACHE-REPORT.md](MULTI-SUBMIT-CACHE-REPORT.md).
+>
+> **Linear-epilogue compiler optimization (2026-10-28):** a generic
+> `fuse_epilogue` pass merges a directly dependent `MM/MM_ACC` chain with its
+> contiguous `EW_ADD`/`EW_MAX` epilogue into one Submit envelope. MLP keeps the
+> same 11 tasks, buffers, transfers, padding and arithmetic but drops from 8 to
+> 3 Submits; full-model MLP gains median 1.0845×–1.4185× across two interleaved
+> runs, ViT stays neutral, and all logits are bitwise equal. Bias-into-GEMM and
+> bias+ReLU `max(x,-b)` candidates were rejected because they change the
+> FP16 rounding/accumulation policy. Original lowering remains available with
+> `fuse_epilogue=False`. See
+> [EPILOGUE-FUSION-REPORT.md](EPILOGUE-FUSION-REPORT.md).
 
 > **Command-cache follow-up (2026-10-28, corrected):** source adds and adopts
 > creation-time command-BO packing reuse for `program_cache_ready`

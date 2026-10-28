@@ -81,7 +81,8 @@ class CLITests(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
             report = json.loads(proc.stdout)
             self.assertEqual(report["counts"]["tasks"], 5)
-            self.assertEqual(report["counts"]["submits"], 4)
+            # The final Linear + residual add is one fused Submit chain.
+            self.assertEqual(report["counts"]["submits"], 3)
             kinds = [action["kind"] for action in report["actions"]]
             self.assertEqual(kinds.count("upload"), 5)
             self.assertEqual(kinds.count("download"), 1)

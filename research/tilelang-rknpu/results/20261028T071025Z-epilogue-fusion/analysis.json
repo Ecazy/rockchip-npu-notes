@@ -1,0 +1,500 @@
+{
+  "attr_us": {
+    "control_b1": {
+      "alloc": 0.0,
+      "alloc2": 0.0,
+      "command": 0.291504,
+      "download": 2.916016,
+      "emit": 0.0,
+      "guard": 175.872925,
+      "output_sync": 25.6674805,
+      "pack": 11.666992,
+      "pack_layout": 4.666016,
+      "publish": 0.0,
+      "submit_wait": 174.998535,
+      "total": 394.036987,
+      "validate": 0.583008
+    },
+    "control_b32": {
+      "alloc": 0.0,
+      "alloc2": 0.0,
+      "command": 0.291016,
+      "download": 3.791992,
+      "emit": 0.0,
+      "guard": 164.205933,
+      "output_sync": 24.9370115,
+      "pack": 158.081055,
+      "pack_layout": 145.540039,
+      "publish": 0.145447,
+      "submit_wait": 185.49755850000003,
+      "total": 548.1805420000001,
+      "validate": 9.625
+    },
+    "fused_b1": {
+      "alloc": 0.0,
+      "alloc2": 0.0,
+      "command": 0.0,
+      "download": 2.916016,
+      "emit": 0.0,
+      "guard": 176.455933,
+      "output_sync": 22.75,
+      "pack": 11.666992,
+      "pack_layout": 4.666016,
+      "publish": 0.0,
+      "submit_wait": 130.665039,
+      "total": 346.495972,
+      "validate": 0.583008
+    },
+    "fused_b32": {
+      "alloc": 0.0,
+      "alloc2": 0.0,
+      "command": 0.29095499999999996,
+      "download": 3.791992,
+      "emit": 0.0,
+      "guard": 164.790039,
+      "output_sync": 22.166016,
+      "pack": 158.081055,
+      "pack_layout": 145.540039,
+      "publish": 0.291016,
+      "submit_wait": 139.7054445,
+      "total": 499.327026,
+      "validate": 9.333984
+    }
+  },
+  "checks": {
+    "command_cache": "command_cache: 270 checks, 0 failures",
+    "ctest": [
+      "100% tests passed, 0 tests failed out of 33"
+    ],
+    "epilogue_fusion": ".                                                                        [100%]\n1 passed in 1.10s",
+    "pytest": "357 passed, 71 subtests passed in 30.63s",
+    "rk_plan_host": "RK_PLAN host checks=875 failures=0"
+  },
+  "control": "fuse_epilogue=False",
+  "decision": {
+    "adopt_default": true,
+    "reason": "Same tasks, data path and arithmetic; Submit count 8->3. Full-model MLP gains are positive in two runs; ViT is neutral and all logits are bitwise equal."
+  },
+  "full_model": {
+    "profiles": {
+      "mlp_b1": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.4205475026433898,
+        "combined_ratio_median": 1.41846515526512,
+        "combined_ratio_min": 1.10375872813045,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 863.3220568299294,
+            "fused_us": 608.4090564399958,
+            "ratio_median": 1.4197269981240161,
+            "ratio_p10": 1.4159917390070318,
+            "setup_us": {
+              "control": 14538.816991262138,
+              "prepared": 13919.324963353574
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 860.9900251030922,
+            "fused_us": 606.6589849069715,
+            "ratio_median": 1.4179461733355385,
+            "ratio_p10": 1.10375872813045,
+            "setup_us": {
+              "control": 14482.526923529804,
+              "prepared": 13919.617049396038
+            }
+          }
+        ]
+      },
+      "mlp_b32": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.2347593537361254,
+        "combined_ratio_median": 1.1412754595642716,
+        "combined_ratio_min": 1.0497850833282019,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 999.5290311053395,
+            "fused_us": 949.9459993094206,
+            "ratio_median": 1.0526717239563954,
+            "ratio_p10": 1.0497850833282019,
+            "setup_us": {
+              "control": 15141.976997256279,
+              "prepared": 14430.902083404362
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 1307.0874847471714,
+            "fused_us": 1061.6534855216742,
+            "ratio_median": 1.2302408548854733,
+            "ratio_p10": 1.226638787721748,
+            "setup_us": {
+              "control": 15017.1450804919,
+              "prepared": 14455.402037128806
+            }
+          }
+        ]
+      },
+      "mlp_b8": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.3616326011618505,
+        "combined_ratio_median": 1.084515191844272,
+        "combined_ratio_min": 1.0662595518642313,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 647.637527436018,
+            "fused_us": 597.0339989289641,
+            "ratio_median": 1.0848657961428128,
+            "ratio_p10": 1.0830680038347504,
+            "setup_us": {
+              "control": 14207.780011929572,
+              "prepared": 14267.86300726235
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 644.2830199375749,
+            "fused_us": 598.4930321574211,
+            "ratio_median": 1.076923039434279,
+            "ratio_p10": 1.0662595518642313,
+            "setup_us": {
+              "control": 14232.280082069337,
+              "prepared": 14031.323953531682
+            }
+          }
+        ]
+      },
+      "vit_b1": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.007226735505347,
+        "combined_ratio_median": 1.0038826193466384,
+        "combined_ratio_min": 0.9074841263637581,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 1433.2319842651486,
+            "fused_us": 1419.3779788911343,
+            "ratio_median": 1.0049317260422508,
+            "ratio_p10": 0.9074841263637581,
+            "setup_us": {
+              "control": 23703.45196686685,
+              "prepared": 36671.372945420444
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 1394.2949590273201,
+            "fused_us": 1437.0239805430174,
+            "ratio_median": 1.0024980454665893,
+            "ratio_p10": 0.996803221104454,
+            "setup_us": {
+              "control": 23550.912970677018,
+              "prepared": 36145.50502970815
+            }
+          }
+        ]
+      },
+      "vit_b8": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.0061078500338767,
+        "combined_ratio_median": 1.0026254120856235,
+        "combined_ratio_min": 0.9991420656114197,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 3323.061973787844,
+            "fused_us": 3313.729481305927,
+            "ratio_median": 1.0036097196475555,
+            "ratio_p10": 1.0003080505402386,
+            "setup_us": {
+              "control": 61377.85397004336,
+              "prepared": 60231.91101849079
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 3059.9829624406993,
+            "fused_us": 3053.5654514096677,
+            "ratio_median": 1.0020064322067044,
+            "ratio_p10": 0.9991420656114197,
+            "setup_us": {
+              "control": 60614.28098473698,
+              "prepared": 59584.7099320963
+            }
+          }
+        ]
+      }
+    },
+    "protocol": {
+      "interleaved": true,
+      "limit": 256,
+      "multi_submit_cache": 1,
+      "rounds": 7
+    }
+  },
+  "fused": "fuse_epilogue=True",
+  "kind": "epilogue-submit-fusion",
+  "numeric": {
+    "problems": [],
+    "status": "PASS"
+  },
+  "schema_version": 1,
+  "smoke": {
+    "control_b1": {
+      "cmdbytes": {
+        "checked": 8,
+        "runs": 1024,
+        "same": 1
+      },
+      "info": {
+        "cached": 8,
+        "device_physical_bytes": 32768,
+        "device_request_bytes": 11088,
+        "ready": 1,
+        "skipped_budget": 0,
+        "skipped_static": 0,
+        "submits": 8
+      },
+      "mem": {
+        "device_physical_bytes": 32768.0,
+        "device_request_bytes": 11088.0,
+        "fallback_cmd_physical": 65536.0,
+        "fallback_cmd_request": 65536.0,
+        "host_delta": 208528.0,
+        "host_off": 67308.0,
+        "host_on": 275836.0,
+        "setup_off_us": 3604.372,
+        "setup_on_us": 3685.454
+      },
+      "na": {}
+    },
+    "control_b32": {
+      "cmdbytes": {
+        "checked": 8,
+        "runs": 1024,
+        "same": 1
+      },
+      "info": {
+        "cached": 8,
+        "device_physical_bytes": 32768,
+        "device_request_bytes": 11088,
+        "ready": 1,
+        "skipped_budget": 0,
+        "skipped_static": 0,
+        "submits": 8
+      },
+      "mem": {
+        "device_physical_bytes": 32768.0,
+        "device_request_bytes": 11088.0,
+        "fallback_cmd_physical": 65536.0,
+        "fallback_cmd_request": 65536.0,
+        "host_delta": 208528.0,
+        "host_off": 69580.0,
+        "host_on": 278108.0,
+        "setup_off_us": 3592.414,
+        "setup_on_us": 3652.787
+      },
+      "na": {}
+    },
+    "fused_b1": {
+      "cmdbytes": {
+        "checked": 3,
+        "runs": 1024,
+        "same": 1
+      },
+      "info": {
+        "cached": 3,
+        "device_physical_bytes": 16384,
+        "device_request_bytes": 11088,
+        "ready": 1,
+        "skipped_budget": 0,
+        "skipped_static": 0,
+        "submits": 3
+      },
+      "mem": {
+        "device_physical_bytes": 16384.0,
+        "device_request_bytes": 11088.0,
+        "fallback_cmd_physical": 98304.0,
+        "fallback_cmd_request": 98304.0,
+        "host_delta": 192488.0,
+        "host_off": 100556.0,
+        "host_on": 293044.0,
+        "setup_off_us": 3632.371,
+        "setup_on_us": 3612.246
+      },
+      "na": {}
+    },
+    "fused_b32": {
+      "cmdbytes": {
+        "checked": 3,
+        "runs": 1024,
+        "same": 1
+      },
+      "info": {
+        "cached": 3,
+        "device_physical_bytes": 16384,
+        "device_request_bytes": 11088,
+        "ready": 1,
+        "skipped_budget": 0,
+        "skipped_static": 0,
+        "submits": 3
+      },
+      "mem": {
+        "device_physical_bytes": 16384.0,
+        "device_request_bytes": 11088.0,
+        "fallback_cmd_physical": 98304.0,
+        "fallback_cmd_request": 98304.0,
+        "host_delta": 192488.0,
+        "host_off": 102828.0,
+        "host_on": 295316.0,
+        "setup_off_us": 3760.994,
+        "setup_on_us": 3806.203
+      },
+      "na": {}
+    }
+  },
+  "structural": {
+    "b1": {
+      "allocator_slack": 623808,
+      "control_command_workspace": 65536,
+      "control_device_request": 1518528,
+      "control_host": 895532,
+      "control_recipes": [
+        "linear_k_acc_v1",
+        "gate_ew_v1",
+        "gate_ew_v1",
+        "linear_k_acc_v1",
+        "gate_ew_v1",
+        "gate_ew_v1",
+        "linear_k_acc_v1",
+        "gate_ew_v1"
+      ],
+      "control_submits": 8,
+      "data_bo_count": 19,
+      "data_path_identical": true,
+      "fused_command_workspace": 98304,
+      "fused_device_request": 1551296,
+      "fused_host": 928780,
+      "fused_recipes": [
+        "linear_epilogue_v1",
+        "linear_epilogue_v1",
+        "linear_epilogue_v1"
+      ],
+      "fused_submits": 3,
+      "peak_payload": 829184,
+      "reserved": 1452992,
+      "task_sequence_identical": true,
+      "tasks": 11,
+      "transfers": 16
+    },
+    "b32": {
+      "allocator_slack": 623808,
+      "control_command_workspace": 65536,
+      "control_device_request": 1627328,
+      "control_host": 1009612,
+      "control_recipes": [
+        "linear_k_acc_v1",
+        "gate_ew_v1",
+        "gate_ew_v1",
+        "linear_k_acc_v1",
+        "gate_ew_v1",
+        "gate_ew_v1",
+        "linear_k_acc_v1",
+        "gate_ew_v1"
+      ],
+      "control_submits": 8,
+      "data_bo_count": 19,
+      "data_path_identical": true,
+      "fused_command_workspace": 98304,
+      "fused_device_request": 1660096,
+      "fused_host": 1042860,
+      "fused_recipes": [
+        "linear_epilogue_v1",
+        "linear_epilogue_v1",
+        "linear_epilogue_v1"
+      ],
+      "fused_submits": 3,
+      "peak_payload": 937984,
+      "reserved": 1561792,
+      "task_sequence_identical": true,
+      "tasks": 11,
+      "transfers": 16
+    },
+    "b8": {
+      "allocator_slack": 623808,
+      "control_command_workspace": 65536,
+      "control_device_request": 1518528,
+      "control_host": 921292,
+      "control_recipes": [
+        "linear_k_acc_v1",
+        "gate_ew_v1",
+        "gate_ew_v1",
+        "linear_k_acc_v1",
+        "gate_ew_v1",
+        "gate_ew_v1",
+        "linear_k_acc_v1",
+        "gate_ew_v1"
+      ],
+      "control_submits": 8,
+      "data_bo_count": 19,
+      "data_path_identical": true,
+      "fused_command_workspace": 98304,
+      "fused_device_request": 1551296,
+      "fused_host": 954540,
+      "fused_recipes": [
+        "linear_epilogue_v1",
+        "linear_epilogue_v1",
+        "linear_epilogue_v1"
+      ],
+      "fused_submits": 3,
+      "peak_payload": 829184,
+      "reserved": 1452992,
+      "task_sequence_identical": true,
+      "tasks": 11,
+      "transfers": 16
+    }
+  }
+}
