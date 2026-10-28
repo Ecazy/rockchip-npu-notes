@@ -553,6 +553,18 @@ runner controls and are asserted bit-identical.
 - Default policy: `shared_group` for the QK/PV nodes.  It is bit-identical to both
   controls, passes the numeric gates, and is 1.21x faster than B1 end to end; the
   controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
+## Budgeted multi-submit static preparation (2026-10-28)
+
+`20261028T035849Z-multi-submit-cache/` closes the multi-submit package. Each
+eligible submit owns creation-time programs and a separate exact-sized command
+BO; the default budget is 4 MiB per workspace and covers Host plus device cache
+bytes. MLP isolated gains are 1.0918×/1.1341× (b32/b1); the interleaved
+five-profile check gives 1.0511×/1.0781×/1.0954× for MLP b32/b8/b1 and neutral
+ViT. Host increment is 208,528 B and device command bytes 11,088 per MLP
+workspace. Frozen numeric replay is PASS / 0 problems. The full table,
+command-region argument and failure evidence are in
+[`../MULTI-SUBMIT-CACHE-REPORT.md`](../MULTI-SUBMIT-CACHE-REPORT.md).
+
 ## Command-BO packing reuse (2026-10-28)
 
 `20261028T023818Z-command-cache/` is the historical full campaign for the

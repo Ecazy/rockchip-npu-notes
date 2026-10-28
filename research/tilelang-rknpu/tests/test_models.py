@@ -85,6 +85,44 @@ class CompleteModelTests(unittest.TestCase):
         self.assertEqual(len([a for a in result.plan.actions
                               if a.kind == "download"]), 1)
 
+    def test_multi_submit_cache_is_bitwise_and_removes_repeated_preparation(self):
+        """The budgeted multi-submit preparation must be bitwise and remove
+        per-call emit/command work without changing submit count."""
+        from rknpu_backend.models import MLPRunner, RunStats
+
+        keys = ("RK_PLAN_MULTI_SUBMIT_CACHE", "RK_PLAN_MULTI_SUBMIT_BUDGET",
+                "RK_PLAN_COMMAND_CACHE_SYNC")
+        old = {key: os.environ.get(key) for key in keys}
+        outputs = {}
+        stats = {}
+        try:
+            for mode in ("0", "1"):
+                os.environ["RK_PLAN_MULTI_SUBMIT_CACHE"] = mode
+                os.environ["RK_PLAN_MULTI_SUBMIT_BUDGET"] = "4194304"
+                os.environ["RK_PLAN_COMMAND_CACHE_SYNC"] = "0"
+                runner = MLPRunner(
+                    self.lib, self._hybrid("mnist_mlp_b32"), self.mlp_weights,
+                    32, fd=0, weights_path=WEIGHTS / "mnist_mlp.npz")
+                try:
+                    run_stats = RunStats()
+                    outputs[mode] = runner.run(self.x[:32], stats=run_stats)
+                    stats[mode] = run_stats
+                finally:
+                    runner.close()
+        finally:
+            for key, value in old.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+        np.testing.assert_array_equal(outputs["0"], outputs["1"])
+        self.assertEqual(stats["0"].submit_count, 8)
+        self.assertEqual(stats["1"].submit_count, 8)
+        self.assertEqual(stats["1"].task_count, stats["0"].task_count)
+        self.assertGreater(stats["0"].plan_emit_us, 0.0)
+        self.assertEqual(stats["1"].plan_emit_us, 0.0)
+
     def test_mlp_learned_weights_input_update_and_batches(self):
         from rknpu_backend.models import MLPRunner
         from rknpu_backend.model_reference import mlp_logits_declared

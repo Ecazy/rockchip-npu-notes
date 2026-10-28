@@ -288,6 +288,10 @@ static void multitile_publish_case(void) {
     rk_workspace *ws = NULL;
     EXPECT(rk_workspace_create(3, plan, constants, 1, &ws, &diag) == 0);
     if (!ws) return;
+    /* The two-submit plan exercises the budgeted multi-submit cache through
+     * the production runtime. */
+    EXPECT(ws->multi_submit_ready == 1u);
+    EXPECT(ws->multi_submit_cached >= 1u);
     rk_binding inputs[] = {{
         .abi_version = RK_ABI_VERSION, .struct_size = sizeof(rk_binding),
         .id = 0, .dtype = RK_DTYPE_F16, .rank = 2, .shape = {MM, KK},
@@ -301,6 +305,26 @@ static void multitile_publish_case(void) {
     EXPECT(rk_workspace_run(ws, inputs, 1, outputs, 1, &report, &diag) == 0);
     EXPECT(report.task_count == 2 && report.download_calls == 2);
     EXPECT(!memcmp(y, ref, (size_t)MM * NN * 2));
+
+    /* A tight multi-submit budget may cache only part of the plan; the
+     * uncached submits must keep the original path and the output must stay
+     * identical. */
+    {
+        setenv("RK_PLAN_MULTI_SUBMIT_BUDGET", "30000", 1);
+        rk_workspace *partial = NULL;
+        EXPECT(rk_workspace_create(3, plan, constants, 1, &partial, &diag) == 0);
+        EXPECT(partial != NULL);
+        if (partial) {
+            EXPECT(partial->multi_submit_ready == 1u);
+            EXPECT(partial->multi_submit_cached == 1u);
+            memset(y, 0x23, (size_t)MM * NN * 2);
+            EXPECT(rk_workspace_run(partial, inputs, 1, outputs, 1,
+                                    &report, &diag) == 0);
+            EXPECT(!memcmp(y, ref, (size_t)MM * NN * 2));
+            EXPECT(rk_workspace_destroy(partial, &diag) == 0);
+        }
+        setenv("RK_PLAN_MULTI_SUBMIT_BUDGET", "4194304", 1);
+    }
 
     /* Input finiteness is rechecked on every call, even when the pointer and
      * binding metadata are unchanged.  Reject before execution/publication. */
@@ -1672,6 +1696,7 @@ int main(void) {
      * this process.  The flag is still a creation-time snapshot; individual
      * tests below may turn it off to check the control path. */
     setenv("RK_PLAN_COMMAND_CACHE", "1", 1);
+    setenv("RK_PLAN_MULTI_SUBMIT_CACHE", "1", 1);
     enum { M = 32, K = 512, N = 48 };
     const uint32_t slack_guard = CO_SLACK + CO_GUARD;
     rk_value_desc values[3] = {

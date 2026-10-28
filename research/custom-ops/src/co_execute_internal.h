@@ -79,4 +79,11 @@ int co_execute_cached_profiled(int fd, const co_program *p, unsigned n,
                                co_command_plan *plan,
                                co_execute_profile *prof, int sync_command);
 
+/* Cached entry for a workspace-owned command BO produced with workspace=NULL
+ * (the multi-submit case).  The plan must remain paired with the exact program
+ * array, mode and task count it was built from. */
+int co_execute_plan_profiled(const co_program *p, unsigned n, enum co_mode mode,
+                             co_command_plan *plan, co_execute_profile *prof,
+                             int sync_command);
+
 #endif /* CO_EXECUTE_INTERNAL_H */

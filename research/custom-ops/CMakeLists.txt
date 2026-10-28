@@ -187,6 +187,7 @@ target_link_options(rknpu_plan_mock PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_execute_cached_profiled
+  -Wl,--wrap=co_execute_plan_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
@@ -315,6 +316,7 @@ target_link_options(rk_plan_host_test PRIVATE
   -Wl,--wrap=rocket_bo_prep -Wl,--wrap=rocket_bo_fini
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_execute_cached_profiled
+  -Wl,--wrap=co_execute_plan_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max
   -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc

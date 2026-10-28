@@ -896,7 +896,7 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
     if (!rc && (!strcmp(mode, "b") || !strcmp(mode, "c") ||
                 !strcmp(mode, "d") || !strcmp(mode, "battr") ||
                 !strcmp(mode, "cprof") || !strcmp(mode, "bcmd") ||
-                !strcmp(mode, "bcmdverify"))) {
+                !strcmp(mode, "bcmdverify") || !strcmp(mode, "bmulti"))) {
         if (!strcmp(mode, "b")) {
             bctx bc;
             double t0 = now_us();
@@ -970,6 +970,105 @@ static int run_mode(const char *case_dir, const char *mode, int rounds,
                 }
             }
             if (!rc) write_outputs(&def, &hd, out_path);
+            print_timing("SETUP_US", setup, "FIRST_US", 0, warm, 0);
+        } else if (!strcmp(mode, "bmulti")) {
+            /* Multi-submit preparation accounting and command-region check. */
+            bctx bc;
+            double t0 = now_us();
+            if (b_setup(&b, &def, &hd, fd, &bc)) rc = -1;
+            double setup = now_us() - t0;
+            if (!rc && (!bc.ws->multi_submit_ready || !bc.ws->submit_cache)) {
+                printf("MULTI_NA ready=%u cached=%u submits=%u\n",
+                       bc.ws->multi_submit_ready, bc.ws->multi_submit_cached,
+                       bc.ws->plan->nsubmits);
+                rc = -1;
+            }
+            unsigned char *snapshots[64];
+            memset(snapshots, 0, sizeof(snapshots));
+            size_t snapshot_bytes[64];
+            memset(snapshot_bytes, 0, sizeof(snapshot_bytes));
+            if (!rc) {
+                printf("MULTI_INFO ready=%u cached=%u submits=%u device_bytes=%llu\n",
+                       bc.ws->multi_submit_ready, bc.ws->multi_submit_cached,
+                       bc.ws->plan->nsubmits,
+                       (unsigned long long)bc.ws->multi_submit_device_bytes);
+                for (uint32_t s = 0; s < bc.ws->plan->nsubmits; s++) {
+                    if (!bc.ws->submit_cache[s].ready) continue;
+                    co_command_plan *plan = &bc.ws->submit_cache[s].plan;
+                    printf("MULTI_BO %u %u %zu %zu\n", s,
+                           plan->commands.handle, plan->words,
+                           plan->words * 8u);
+                    snapshot_bytes[s] = plan->words * 8u;
+                    snapshots[s] = malloc(snapshot_bytes[s] ?
+                                          snapshot_bytes[s] : 1u);
+                    if (!snapshots[s]) rc = -1;
+                    else memcpy(snapshots[s], plan->commands.ptr,
+                                snapshot_bytes[s]);
+                }
+            }
+            for (int r = 0; !rc && r < 16; r++) {
+                for (uint32_t f = 0; !rc && f < def.frames; f++) {
+                    load_frame(&def, &hd, f);
+                    if (b_run(&bc)) rc = -1;
+                }
+            }
+            int all_same = 1;
+            unsigned checked = 0;
+            if (!rc) {
+                for (uint32_t s = 0; s < bc.ws->plan->nsubmits; s++) {
+                    if (!snapshots[s]) continue;
+                    co_command_plan *plan = &bc.ws->submit_cache[s].plan;
+                    if (rocket_bo_prep(fd, &plan->commands, 0,
+                                       2000000000ull) ||
+                        memcmp(snapshots[s], plan->commands.ptr,
+                               snapshot_bytes[s]) != 0)
+                        all_same = 0;
+                    (void)rocket_bo_fini(fd, &plan->commands);
+                    checked++;
+                }
+                printf("MULTI_CMDBYTES_OK %d checked=%u runs=%d\n",
+                       all_same, checked, 16 * (int)def.frames);
+            }
+            for (unsigned s = 0; s < 64u; s++) free(snapshots[s]);
+
+            /* Host/device accounting and workspace-create cost with the cache
+             * off and on, both on the same immutable plan. */
+            const char *old_cache = getenv("RK_PLAN_MULTI_SUBMIT_CACHE");
+            char cache_copy[16] = {0};
+            if (old_cache) snprintf(cache_copy, sizeof(cache_copy), "%s",
+                                    old_cache);
+            uint64_t host_on = rk_workspace_host_bytes(bc.ws, 1);
+            uint64_t host_off = 0;
+            double off_us = 0, on_us = 0;
+            setenv("RK_PLAN_MULTI_SUBMIT_CACHE", "0", 1);
+            rk_workspace *off_ws = NULL;
+            rk_diag off_diag;
+            memset(&off_diag, 0, sizeof(off_diag));
+            t0 = now_us();
+            if (!rk_workspace_create(fd, bc.cplan, bc.constants,
+                                     bc.nconstants, &off_ws, &off_diag)) {
+                off_us = now_us() - t0;
+                host_off = rk_workspace_host_bytes(off_ws, 1);
+                rk_workspace_destroy(off_ws, &off_diag);
+            }
+            setenv("RK_PLAN_MULTI_SUBMIT_CACHE", "1", 1);
+            rk_workspace *on_ws = NULL;
+            memset(&off_diag, 0, sizeof(off_diag));
+            t0 = now_us();
+            if (!rk_workspace_create(fd, bc.cplan, bc.constants,
+                                     bc.nconstants, &on_ws, &off_diag)) {
+                on_us = now_us() - t0;
+                rk_workspace_destroy(on_ws, &off_diag);
+            }
+            if (cache_copy[0]) setenv("RK_PLAN_MULTI_SUBMIT_CACHE", cache_copy, 1);
+            else unsetenv("RK_PLAN_MULTI_SUBMIT_CACHE");
+            printf("MULTI_MEM host_on=%llu host_off=%llu host_delta=%lld "
+                   "device_bytes=%llu setup_on_us=%.3f setup_off_us=%.3f\n",
+                   (unsigned long long)host_on,
+                   (unsigned long long)host_off,
+                   (long long)host_on - (long long)host_off,
+                   (unsigned long long)bc.ws->multi_submit_device_bytes,
+                   on_us, off_us);
             print_timing("SETUP_US", setup, "FIRST_US", 0, warm, 0);
         } else if (!strcmp(mode, "bcmdverify")) {
             /* Device-read-only command BO evidence: run the cached path many

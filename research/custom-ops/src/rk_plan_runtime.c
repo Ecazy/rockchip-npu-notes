@@ -3,6 +3,7 @@
 #include "rk_plan_internal.h"
 #include "rk_plan_download.h"
 #include "rknpu_submit.h"
+#include "rocket_chain.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -168,6 +169,15 @@ static int env_flag_enabled(const char *name, int default_on) {
     const char *v = getenv(name);
     if (!v || !*v) return default_on;
     return strcmp(v, "0") != 0;
+}
+
+static uint64_t env_bytes(const char *name, uint64_t default_value) {
+    const char *v = getenv(name);
+    if (!v || !*v) return default_value;
+    char *end = NULL;
+    unsigned long long parsed = strtoull(v, &end, 0);
+    if (!end || end == v || *end) return default_value;
+    return (uint64_t)parsed;
 }
 
 /* Fixed QK/PV tile geometry already admitted by the independent-MM and layout
@@ -339,6 +349,8 @@ static int upload_role(rk_workspace *ws, uint32_t role,
 static void build_program_cache(rk_workspace *ws, rk_diag *diag);
 static void build_command_cache(rk_workspace *ws, rk_diag *diag);
 static void drop_command_cache(rk_workspace *ws);
+static void build_multi_submit_cache(rk_workspace *ws, rk_diag *diag);
+static void drop_multi_submit_cache(rk_workspace *ws);
 
 int rk_workspace_create(int fd, const rk_plan *plan,
                         const rk_binding *constants, uint32_t nconstants,
@@ -384,6 +396,11 @@ int rk_workspace_create(int fd, const rk_plan *plan,
         "RK_PLAN_COMMAND_CACHE", 1);
     ws->command_cache_sync = (uint32_t)env_flag_enabled(
         "RK_PLAN_COMMAND_CACHE_SYNC", 0);
+    ws->multi_submit_cache = (uint32_t)env_flag_enabled(
+        "RK_PLAN_MULTI_SUBMIT_CACHE", 1);
+    ws->multi_submit_sync = ws->command_cache_sync;
+    ws->multi_submit_budget = env_bytes("RK_PLAN_MULTI_SUBMIT_BUDGET",
+                                        4u << 20);
     atomic_init(&ws->busy, 0);
     atomic_init(&ws->poisoned, 0);
     if (rk_plan_clone_plan(plan, &ws->plan, diag)) {
@@ -504,6 +521,7 @@ int rk_workspace_create(int fd, const rk_plan *plan,
     }
     build_program_cache(ws, diag);
     build_command_cache(ws, diag);
+    build_multi_submit_cache(ws, diag);
 
     /* The plan's declared Host budget must cover the whole resident footprint,
      * not just the binding/staging estimate: the verifier now includes the same
@@ -514,6 +532,10 @@ int rk_workspace_create(int fd, const rk_plan *plan,
                               ? ws->plan->host_budget_bytes
                               : ws->plan->claimed_host_bytes;
         uint64_t resident = rk_workspace_host_bytes(ws, 1);
+        if (budget && resident > budget && ws->multi_submit_ready) {
+            drop_multi_submit_cache(ws);
+            resident = rk_workspace_host_bytes(ws, 1);
+        }
         if (budget && resident > budget && ws->command_cache_ready) {
             drop_command_cache(ws);
             resident = rk_workspace_host_bytes(ws, 1);
@@ -555,6 +577,7 @@ fail:
     free(ws->emit_index);
     free(ws->prepared_inputs);
     free(ws->prepared_outputs);
+    drop_multi_submit_cache(ws);
     drop_command_cache(ws);
     rk_plan_free(ws->plan);
     free(ws);
@@ -634,6 +657,124 @@ static void drop_command_cache(rk_workspace *ws) {
         ws->command_plan = NULL;
     }
     ws->command_cache_ready = 0;
+}
+
+/* Budgeted multi-submit static preparation.  Each cached submit owns its
+ * creation-time co_program slice and a separate command BO, so no later submit
+ * can overwrite an earlier cached command region.  The budget covers both the
+ * Host program/entry block and the device command BOs; submits are visited in
+ * plan order and cached only while the next whole submit fits. */
+static void build_multi_submit_cache(rk_workspace *ws, rk_diag *diag) {
+    ws->multi_submit_ready = 0;
+    if (!ws->multi_submit_cache || !ws->plan || ws->plan->nsubmits <= 1u)
+        return;
+    uint32_t nsubmits = ws->plan->nsubmits;
+    uint32_t total_tasks = 0;
+    for (uint32_t s = 0; s < nsubmits; s++)
+        total_tasks += ws->plan->submits[s].ntask_ids;
+    if (!total_tasks) return;
+
+    uint64_t entry_bytes = (uint64_t)nsubmits * (uint64_t)sizeof(rk_submit_cache);
+    if (ws->multi_submit_budget <= entry_bytes) return;
+    uint64_t program_slots =
+        (ws->multi_submit_budget - entry_bytes) / (uint64_t)sizeof(co_program);
+    if (!program_slots) return;
+    uint32_t capacity = program_slots < (uint64_t)total_tasks
+                            ? (uint32_t)program_slots : total_tasks;
+    if (!capacity) return;
+
+    rk_submit_cache *entries = calloc(nsubmits, sizeof(*entries));
+    co_program *programs = calloc(capacity, sizeof(*programs));
+    if (!entries || !programs) {
+        free(entries);
+        free(programs);
+        return;
+    }
+
+    uint64_t host_bytes = entry_bytes +
+                          (uint64_t)capacity * (uint64_t)sizeof(co_program);
+    uint64_t device_bytes = 0;
+    uint32_t used_programs = 0;
+    uint32_t cached = 0;
+    for (uint32_t s = 0; s < nsubmits; s++) {
+        const rk_submit_desc *submit = &ws->plan->submits[s];
+        uint32_t tasks = submit->ntask_ids;
+        if (!tasks || tasks > ws->max_submit_tasks) continue;
+        enum co_mode mode =
+            submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE;
+        /* Multi-task CO_SEPARATE has no single immutable command region in the
+         * original executor; leave that submit on the per-run path. */
+        if (mode == CO_SEPARATE && tasks > 1u) continue;
+        if (used_programs + tasks > capacity) continue;
+
+        co_program *slice = programs + used_programs;
+        int emitted = 1;
+        for (uint32_t j = 0; j < tasks; j++) {
+            uint32_t id = submit->task_ids[j];
+            if (id >= ws->plan->nactions ||
+                ws->plan->actions[id].kind != RK_ACTION_NPU_TASK ||
+                rk_emit_action(ws->plan, ws->views, id, &slice[j], diag)) {
+                emitted = 0;
+                break;
+            }
+        }
+        if (!emitted) {
+            rk_diag_clear(diag);
+            continue;
+        }
+        size_t words = 0;
+        for (uint32_t j = 0; j < tasks; j++)
+            words += rkt_chain_words(slice[j].count);
+        uint64_t command_bytes = (uint64_t)words * 8u;
+        if (host_bytes + device_bytes + command_bytes > ws->multi_submit_budget) {
+            rk_diag_clear(diag);
+            continue;
+        }
+        co_command_plan plan;
+        memset(&plan, 0, sizeof(plan));
+        if (co_command_plan_build(ws->fd, slice, tasks, mode, NULL, &plan,
+                                  NULL)) {
+            rk_diag_clear(diag);
+            continue;
+        }
+        entries[s].ready = 1;
+        entries[s].submit_id = s;
+        entries[s].n_tasks = tasks;
+        entries[s].mode = mode;
+        entries[s].programs = slice;
+        entries[s].plan = plan;
+        used_programs += tasks;
+        device_bytes += command_bytes;
+        cached++;
+    }
+
+    if (!cached) {
+        free(entries);
+        free(programs);
+        return;
+    }
+    ws->submit_cache = entries;
+    ws->multi_submit_programs = programs;
+    ws->multi_submit_program_capacity = capacity;
+    ws->multi_submit_cached = cached;
+    ws->multi_submit_device_bytes = device_bytes;
+    ws->multi_submit_ready = 1;
+}
+
+static void drop_multi_submit_cache(rk_workspace *ws) {
+    if (ws->submit_cache && ws->plan) {
+        for (uint32_t s = 0; s < ws->plan->nsubmits; s++)
+            if (ws->submit_cache[s].ready)
+                co_command_plan_release(&ws->submit_cache[s].plan);
+    }
+    free(ws->submit_cache);
+    free(ws->multi_submit_programs);
+    ws->submit_cache = NULL;
+    ws->multi_submit_programs = NULL;
+    ws->multi_submit_program_capacity = 0;
+    ws->multi_submit_cached = 0;
+    ws->multi_submit_device_bytes = 0;
+    ws->multi_submit_ready = 0;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -868,6 +1009,12 @@ uint64_t rk_workspace_host_bytes(const rk_workspace *ws, uint32_t capacity) {
     /* Optional command-BO packing reuse stores only descriptors/handles; the
      * command BO itself already belongs to execute_workspace. */
     if (ws->command_cache_ready) total += (uint64_t)sizeof(co_command_plan);
+    if (ws->multi_submit_programs) {
+        total += (uint64_t)ws->multi_submit_program_capacity *
+                 (uint64_t)sizeof(co_program);
+        total += (uint64_t)ws->plan->nsubmits *
+                 (uint64_t)sizeof(rk_submit_cache);
+    }
     return total;
 }
 
@@ -1269,9 +1416,18 @@ static int run_repeat(rk_workspace *ws, const rk_binding *inputs,
                             "NPU task has no submit slot", "", a->id, 0);
                 return RK_E_SCHEMA;
             }
+            enum co_mode mode =
+                submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE;
             const int cached = ws->program_cache_ready &&
                                sid == ws->program_cache_submit;
-            if (!cached) {
+            rk_submit_cache *multi =
+                (ws->multi_submit_ready && ws->submit_cache &&
+                 sid < ws->plan->nsubmits)
+                    ? &ws->submit_cache[sid] : NULL;
+            const int multi_cached =
+                multi && multi->ready && multi->n_tasks == submit->ntask_ids &&
+                multi->mode == mode;
+            if (!cached && !multi_cached) {
                 double e0 = now_us();
                 int native = rk_emit_action(ws->plan, ws->views, a->id,
                                             &st->batch[index], diag);
@@ -1281,10 +1437,12 @@ static int run_repeat(rk_workspace *ws, const rk_binding *inputs,
             if (index + 1u != submit->ntask_ids) continue;
             co_execute_profile profile;
             memset(&profile, 0, sizeof(profile));
-            enum co_mode mode =
-                submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE;
             int native;
-            if (cached && ws->command_cache_ready && ws->command_plan) {
+            if (multi_cached) {
+                native = co_execute_plan_profiled(
+                        multi->programs, submit->ntask_ids, mode, &multi->plan,
+                        &profile, (int)ws->multi_submit_sync);
+            } else if (cached && ws->command_cache_ready && ws->command_plan) {
                 native = co_execute_cached_profiled(
                         ws->fd, ws->batch_scratch, submit->ntask_ids, mode,
                         &ws->execute_workspace, ws->command_plan, &profile,
@@ -1664,6 +1822,7 @@ int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag) {
     free(ws->emit_index);
     free(ws->prepared_inputs);
     free(ws->prepared_outputs);
+    drop_multi_submit_cache(ws);
     drop_command_cache(ws);
     rk_plan_free(ws->plan);
     free(ws);

@@ -1,0 +1,252 @@
+{
+  "compiled_manifest_sha256": "16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869",
+  "created_utc": "2026-10-28T03:58:37Z",
+  "execution_mode": "auto",
+  "kind": "model-numeric-observation",
+  "labels_read": false,
+  "mode": "acceptance",
+  "observation_file": "observation.npz",
+  "observation_sha256": "0ee954b6016ed0261dedbc0c52951e562200efe282bed9b8e872102ac89d2cb2",
+  "plans": {
+    "mnist_mlp_b1": {
+      "path": "mnist_mlp_b1.rkplan.json",
+      "plan_hash": "a1df244f7a6746c26152e57ddc2cd6d2ef03d5adb2786c3af6f2cfa448a36393"
+    },
+    "mnist_mlp_b32": {
+      "path": "mnist_mlp_b32.rkplan.json",
+      "plan_hash": "48e6449fb20102515de0486a7a78875ef6a568bd1e4d0c07d029e5dcec323987"
+    },
+    "mnist_mlp_b8": {
+      "path": "mnist_mlp_b8.rkplan.json",
+      "plan_hash": "20abc9c7b8c1dff33d595cf0c217955247a5b1f2df35490494d2a7a1fff36c50"
+    },
+    "mnist_mlp_diag_l1_bias": {
+      "path": "mnist_mlp_diag_l1_bias.rkplan.json",
+      "plan_hash": "1718b0c06799f7febbb1fbc2abfe3cef9ded9976254b5de537f5ff2bafb01dfd"
+    },
+    "mnist_mlp_diag_l1_relu": {
+      "path": "mnist_mlp_diag_l1_relu.rkplan.json",
+      "plan_hash": "88d8984f0553db058c09310209a41ef2fa5e3386ac6197ed31b2b5f9fc0799ee"
+    },
+    "mnist_mlp_diag_l2_bias": {
+      "path": "mnist_mlp_diag_l2_bias.rkplan.json",
+      "plan_hash": "24ca795c9ef0e238dc4a6bcd9c2ab4329921b7499acf53bc713e0a3b2b2ccbd9"
+    },
+    "mnist_mlp_diag_l2_relu": {
+      "path": "mnist_mlp_diag_l2_relu.rkplan.json",
+      "plan_hash": "8f1d625a7f2a017d3ed107d1e12b8bdfa2908d5dfe1eaef93ad6cfd573acf8fb"
+    },
+    "mnist_mlp_diag_l3_bias": {
+      "path": "mnist_mlp_diag_l3_bias.rkplan.json",
+      "plan_hash": "f520050b245b6acebbcc15dd674ece6ed8234b2629325d862f15da1e0b84cbc8"
+    },
+    "mnist_relu_probe": {
+      "path": "mnist_relu_probe.rkplan.json",
+      "plan_hash": "f9386ef48a72ac4d2c04c0424e8a34aba1012e83136e424093765c6880612bcf"
+    },
+    "tiny_vit_b1_attn_out": {
+      "path": "tiny_vit_b1_attn_out.rkplan.json",
+      "plan_hash": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3"
+    },
+    "tiny_vit_b1_classifier": {
+      "path": "tiny_vit_b1_classifier.rkplan.json",
+      "plan_hash": "ec780abc31a527f5ce44d2496468e160058aeb6d97197209e5ea8c6b096f48ba"
+    },
+    "tiny_vit_b1_down": {
+      "path": "tiny_vit_b1_down.rkplan.json",
+      "plan_hash": "ea43d153c27b4d2896d7dc35ad838510f5e29155e231e732b88420d139871cc3"
+    },
+    "tiny_vit_b1_ffn": {
+      "path": "tiny_vit_b1_ffn.rkplan.json",
+      "plan_hash": "505fb787906b248e170465da0bd7590520dbd871c34972cf0d525a6a338ed854"
+    },
+    "tiny_vit_b1_ffn_trace": {
+      "path": "tiny_vit_b1_ffn_trace.rkplan.json",
+      "plan_hash": "c709c3b330a7ac51bf9f83a5bc35a018c868938e1e3a8f5265906c45aa328cab"
+    },
+    "tiny_vit_b1_gate": {
+      "path": "tiny_vit_b1_gate.rkplan.json",
+      "plan_hash": "80af518973e90c653c1286764cd9fc1554ff486deb1330b94fe20681a2d09169"
+    },
+    "tiny_vit_b1_gate_up": {
+      "path": "tiny_vit_b1_gate_up.rkplan.json",
+      "plan_hash": "9f3c55f30c2fdb34e9e78e4b05bb7bf3666d78266db2b61dc3fe6c93cb929477"
+    },
+    "tiny_vit_b1_patch": {
+      "path": "tiny_vit_b1_patch.rkplan.json",
+      "plan_hash": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3"
+    },
+    "tiny_vit_b1_pv": {
+      "path": "tiny_vit_b1_pv.rkplan.json",
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815"
+    },
+    "tiny_vit_b1_pv_qkv_group": {
+      "path": "tiny_vit_b1_pv_qkv_group.rkplan.json",
+      "plan_hash": "24f866289c08d595577f34a2426600cdffcecf4b6faab03fd58c2caa5598dd4e"
+    },
+    "tiny_vit_b1_qk": {
+      "path": "tiny_vit_b1_qk.rkplan.json",
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815"
+    },
+    "tiny_vit_b1_qk_group": {
+      "path": "tiny_vit_b1_qk_group.rkplan.json",
+      "plan_hash": "68131a615200172b9273e9ccb9915dc4d588ed06650ca3d2ed3129ac5df87a4b"
+    },
+    "tiny_vit_b1_qk_qkv_group": {
+      "path": "tiny_vit_b1_qk_qkv_group.rkplan.json",
+      "plan_hash": "52b9c4dd38611d29b5073a68919733612e705edce23959d1e84198f599e49de6"
+    },
+    "tiny_vit_b1_qkv": {
+      "path": "tiny_vit_b1_qkv.rkplan.json",
+      "plan_hash": "5f63eaaf615d3e099b28f69c9ad87538c591cb9ee0bfb59d3267cb3658953436"
+    },
+    "tiny_vit_b1_up": {
+      "path": "tiny_vit_b1_up.rkplan.json",
+      "plan_hash": "80af518973e90c653c1286764cd9fc1554ff486deb1330b94fe20681a2d09169"
+    },
+    "tiny_vit_b8_attn_out": {
+      "path": "tiny_vit_b8_attn_out.rkplan.json",
+      "plan_hash": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0"
+    },
+    "tiny_vit_b8_classifier": {
+      "path": "tiny_vit_b8_classifier.rkplan.json",
+      "plan_hash": "f68f9131075631696750442702bd93cbd9319de85934cb81c99269ea6e8bfe4c"
+    },
+    "tiny_vit_b8_down": {
+      "path": "tiny_vit_b8_down.rkplan.json",
+      "plan_hash": "7af7e79f69fc8eeeedd104fb06a9cacb26632e3d2cc8f9812c5ace53829f6706"
+    },
+    "tiny_vit_b8_ffn": {
+      "path": "tiny_vit_b8_ffn.rkplan.json",
+      "plan_hash": "be069f0f44a1324af0698f2d58a5ce0c5d5178938c72c030aa69ea79a020875b"
+    },
+    "tiny_vit_b8_ffn_trace": {
+      "path": "tiny_vit_b8_ffn_trace.rkplan.json",
+      "plan_hash": "d053efa80f23d2ae8fc963183b3ef39808e0c5bd1cdf2201e8222d6842ff741c"
+    },
+    "tiny_vit_b8_gate": {
+      "path": "tiny_vit_b8_gate.rkplan.json",
+      "plan_hash": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe"
+    },
+    "tiny_vit_b8_gate_up": {
+      "path": "tiny_vit_b8_gate_up.rkplan.json",
+      "plan_hash": "4bbebbb73dfe7529f8fd17d220cd542c4f69e6a96b2be80b318e2a4b5d9d5935"
+    },
+    "tiny_vit_b8_patch": {
+      "path": "tiny_vit_b8_patch.rkplan.json",
+      "plan_hash": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0"
+    },
+    "tiny_vit_b8_pv": {
+      "path": "tiny_vit_b8_pv.rkplan.json",
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815"
+    },
+    "tiny_vit_b8_pv_qkv_group": {
+      "path": "tiny_vit_b8_pv_qkv_group.rkplan.json",
+      "plan_hash": "8bfff8c59cd33367051ab7792d44ad7c3269fba332f22f2e73e7c14e977cd466"
+    },
+    "tiny_vit_b8_qk": {
+      "path": "tiny_vit_b8_qk.rkplan.json",
+      "plan_hash": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815"
+    },
+    "tiny_vit_b8_qk_group": {
+      "path": "tiny_vit_b8_qk_group.rkplan.json",
+      "plan_hash": "825e8bb1666a72c01af11ed0930989485459e911ff96c6e5518921a98039839b"
+    },
+    "tiny_vit_b8_qk_qkv_group": {
+      "path": "tiny_vit_b8_qk_qkv_group.rkplan.json",
+      "plan_hash": "f20c52b74ce9a3f50eebce3c0dea11b3c6cc1b3cd6df8cc70892aee2bdd31209"
+    },
+    "tiny_vit_b8_qkv": {
+      "path": "tiny_vit_b8_qkv.rkplan.json",
+      "plan_hash": "05cc9c88dfec4da3ddd302b201981fda023340a38f01235cc028e9c1373e7d53"
+    },
+    "tiny_vit_b8_up": {
+      "path": "tiny_vit_b8_up.rkplan.json",
+      "plan_hash": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe"
+    }
+  },
+  "profiles": [
+    "mnist_mlp.b32",
+    "mnist_mlp.b8",
+    "mnist_mlp.b1",
+    "tiny_vit.b8",
+    "tiny_vit.b1"
+  ],
+  "sample_indices": [
+    354,
+    531,
+    622,
+    816,
+    1146,
+    1420,
+    1597,
+    1684,
+    1772,
+    2288,
+    2718,
+    3049,
+    3116,
+    3200,
+    4242,
+    5447,
+    5464,
+    5832,
+    6214,
+    6283,
+    6324,
+    6365,
+    6398,
+    6678,
+    7415,
+    7903,
+    8733,
+    9118,
+    9308,
+    9346,
+    9440,
+    9830
+  ],
+  "sample_sha256": [
+    "f706a8139ae20d351f47957b84c6ddacdcf07259ef5e38f8eee7e342ce1b414f",
+    "0c7f8325cb867fcd140e975a92ab00c16f4f7336220f3497e468a9a37da32b75",
+    "6cadfa343623c9af382d814b9ca21a4ac7be640e762844c976090d8839bed651",
+    "322e63dce9c13a490f2e49601cbf0d191996df3b704d48189ba63c7dc6ef9f1d",
+    "dca93d3e80df68dc0843a0060534a5172c70b0b9049409f44f3ff1ba794086c8",
+    "9a1a6b09d424cd318ef18cda54f3f1a439bbee02e2e420cb36f19b9aff002313",
+    "43ab87d7ec3aa7a7b35856333e2041ffa1fb3c6020aca73194aadd345ef5fdc7",
+    "d630c9251da6edf70b16f863637aa279bf16ceb93aba9067abe98b38f3f6c5ba",
+    "5fb760c66148cab2d0bb0d6bf303b9f174dac5f65ab152202be0bcf259835bdd",
+    "9bfc221e7a5c0f7bdca2475443fae9e38181664eb6eb406967096d9a5956e0ea",
+    "7d949a8fc745586afa37fef28ba140e7593885a677788d62194554e1d5fade21",
+    "c5a6999999fa3ab0c37de6445a0a4affb4327a12fa3437e21a3ffca8035d5c4c",
+    "ea3b9954d97276abe4e0de5325d2c5f274ab1dbfecb2f61fa44c42a78a5767ad",
+    "dff0c24a83395ef446c660004f7fd77b442e4f400128dd60ce340fe5386d4c49",
+    "22238ad195c6d12540914d9ad49c7205e3a29a5f0d122fd54bebedf9ce8b1c6a",
+    "4dfdc7ccf71629d9d19a530fd1e50ddf57e737e1c317109275b98b81b806360f",
+    "338b2ecbf608027e409ea7958712007b790133fb25441ab8a668fd8016113710",
+    "cf7ab7c42c97f2fb3cf6e131eeedc8181db078932bcdaeed537e44ead8a4e26f",
+    "ea3a1ca61ca7a79acb0cadb1b5cb5bded235df72d60b86c7ed69376a18a6a703",
+    "d561046e06fe5ecb1367a8c0a4d71bfefbbbad55bc805b43ef2940f68b3a1c84",
+    "a286752816fa7207aa799f7b9c1f553b09fc6b5da5fe650745c069e4034c41ac",
+    "733d857d90ff3229d7aa6c6f9ad3bb06dff84f529f9d7a6e9f27f3610d2407b1",
+    "0da01a7600cb4001de393cd366b4fcf035024a318df54c470d324705a68c7f6c",
+    "a987b1ebac47bd3f44a1bbffeb407e96aadf863c1d6575788e449ae9e8b2394e",
+    "0382f79a3cd605608cef519ecc63a58f685258d2b9110610a536de08848a45ff",
+    "61bc57777818a16c0724605ab89a5ddd0f4413518d0a8497888b8033994f71f7",
+    "c1435d0bd193080798410c6e49328df4f0d824582dcbca56aa666bacf9a0ec79",
+    "19937021a4c628b3386cf7810a0d79c6ab5e6a02504e29b18079820dbc2e3c21",
+    "6aa638eb35dd5db5c39d61bc04a92bf5b58cdf2103c8a8a6b8f951de52bb9613",
+    "9162cef1d4beb3eba8a5caa9a4a625eee12266020f26f6434537898fe18acce9",
+    "afb2a179fcbf9a4acca50c5f11274ebb8e21eb2c7b0b3678f12cdb6b5300d9a1",
+    "9776321f349660f7aa539de5fb0000443f22989fa65a1688f47fed6ac7caca07"
+  ],
+  "schema_version": 2,
+  "source_file": "t10k-images-idx3-ubyte.gz",
+  "source_sha256": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+  "spec_sha256": "2ccefee0d19dbb558622c67f7020331b573357c44434e7dde24e26d98514ecb2",
+  "split": "test",
+  "weights_sha256": {
+    "mnist_mlp.npz": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+    "tiny_vit.npz": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+  }
+}

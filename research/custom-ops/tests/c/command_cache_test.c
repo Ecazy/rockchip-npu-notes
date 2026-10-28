@@ -190,6 +190,35 @@ static void command_plan_case(void) {
         EXPECT(submit_calls == 0u);
     }
 
+    /* Multi-submit preparation uses one owned command BO per submit.  Building
+     * and submitting the second plan must not move or overwrite the first. */
+    {
+        co_command_plan first, second;
+        EXPECT(co_command_plan_build(7, p, 1, CO_CHAIN, NULL, &first, NULL) == 0);
+        EXPECT(co_command_plan_build(7, p + 1, 1, CO_CHAIN, NULL, &second, NULL) == 0);
+        EXPECT(first.owns_commands && second.owns_commands);
+        EXPECT(first.commands.handle != second.commands.handle);
+        size_t first_bytes = first.words * 8u;
+        unsigned char *first_snapshot = malloc(first_bytes ? first_bytes : 1u);
+        EXPECT(first_snapshot != NULL);
+        if (first_snapshot) {
+            memcpy(first_snapshot, first.commands.ptr, first_bytes);
+            submit_calls = 0;
+            EXPECT(co_execute_plan_profiled(p + 1, 1, CO_CHAIN, &second,
+                                            NULL, 0) == 0);
+            EXPECT(submit_calls == 1u);
+            EXPECT(memcmp(first_snapshot, first.commands.ptr, first_bytes) == 0);
+            EXPECT(co_execute_plan_profiled(p, 1, CO_CHAIN, &first, NULL,
+                                            0) == 0);
+            EXPECT(submit_calls == 2u);
+            EXPECT(co_execute_plan_profiled(p, 1, CO_SEPARATE, &first, NULL,
+                                            0) == ROCKET_E_SHAPE);
+            free(first_snapshot);
+        }
+        co_command_plan_release(&first);
+        co_command_plan_release(&second);
+    }
+
     /* Identity guards: wrong fd, wrong workspace and a reallocated command BO
      * are refused rather than executing a stale plan. */
     EXPECT(co_execute_cached_profiled(8, p, 2, CO_CHAIN, &ws1, &a, NULL, 0) ==

@@ -621,6 +621,15 @@ int co_execute_cached_profiled(int fd,const co_program *p,unsigned n,
     return co_command_plan_submit(plan,sync_command,prof);
 }
 
+int co_execute_plan_profiled(const co_program *p,unsigned n,enum co_mode mode,
+                             co_command_plan *plan,co_execute_profile *prof,
+                             int sync_command) {
+    if(prof)memset(prof,0,sizeof(*prof));
+    if(!plan||!p||!n||plan->programs!=p||plan->mode!=mode||
+       plan->n_tasks!=n||!plan->commands.handle)return ROCKET_E_SHAPE;
+    return co_command_plan_submit(plan,sync_command,prof);
+}
+
 static int execute_impl(int fd,const co_program *p,unsigned n,enum co_mode mode,
                        co_execute_workspace *workspace,co_execute_profile *prof) {
     int rc=validate_program_set(fd,p,n,mode,workspace);

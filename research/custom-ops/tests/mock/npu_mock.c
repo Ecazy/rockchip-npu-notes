@@ -502,3 +502,11 @@ int __wrap_co_execute_cached_profiled(int fd, const co_program *p, unsigned coun
     (void)workspace; (void)plan; (void)sync_command;
     return mock_execute_profiled_impl(fd, p, count, mode, profile);
 }
+
+int __wrap_co_execute_plan_profiled(const co_program *p, unsigned count,
+                                    enum co_mode mode, co_command_plan *plan,
+                                    co_execute_profile *profile,
+                                    int sync_command) {
+    (void)plan; (void)sync_command;
+    return mock_execute_profiled_impl(-1, p, count, mode, profile);
+}

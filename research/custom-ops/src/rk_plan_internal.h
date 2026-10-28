@@ -63,6 +63,18 @@ const rk_action_desc *rk_plan_action(const rk_plan *plan, uint32_t id);
 int rk_emit_action(const rk_plan *plan, const co_view *views,
                    uint32_t action_id, co_program *out, rk_diag *diag);
 
+/* One cached submit: the creation-time programs plus the immutable command
+ * plan.  The plan owns its command BO (built with workspace=NULL), so submits
+ * never share or overwrite a command region. */
+typedef struct {
+    uint32_t ready;
+    uint32_t submit_id;
+    uint32_t n_tasks;
+    enum co_mode mode;
+    co_program *programs;   /* slice of ws->multi_submit_programs */
+    co_command_plan plan;
+} rk_submit_cache;
+
 typedef struct rk_workspace {
     rk_plan *plan;
     int fd;
@@ -110,6 +122,19 @@ typedef struct rk_workspace {
     uint32_t command_cache_sync;     /* re-sync unchanged command BO per submit */
     uint32_t command_cache_ready;
     co_command_plan *command_plan;   /* allocated only for an eligible workspace */
+    /* Budgeted multi-submit static preparation.  Each ready submit owns its
+     * creation-time programs and an independent command BO; default on, with
+     * RK_PLAN_MULTI_SUBMIT_CACHE=0 as the control and
+     * RK_PLAN_MULTI_SUBMIT_BUDGET bounding host+device cache bytes. */
+    uint32_t multi_submit_cache;
+    uint32_t multi_submit_sync;      /* reuse command-cache sync policy */
+    uint32_t multi_submit_ready;
+    uint32_t multi_submit_cached;
+    uint64_t multi_submit_budget;
+    uint32_t multi_submit_program_capacity;
+    co_program *multi_submit_programs;
+    rk_submit_cache *submit_cache;
+    uint64_t multi_submit_device_bytes;
     /* Pre-allocated per-run Host scratch.  The single-run gate gives exclusive
      * ownership of these buffers to whichever entry point runs, so a plan call
      * no longer allocates or frees the emission array, the per-output tile
