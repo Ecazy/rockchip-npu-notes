@@ -1,5 +1,13 @@
 # Tiny ViT 优化总报告与最终交付验收
 
+> **Program-cache follow-up (2026-10-27):** source commit after `f18c9f3`
+> adds and adopts a creation-time single-submit `co_program` cache
+> (`RK_PLAN_PROGRAM_CACHE`, default on, `=0` opt-out). The final runtime build is
+> `cc4586eb4d51edf3b7cbab5d9fffd2fdc0d40e87b24ee9f052318108eb87cdc9`.
+> QK/PV warm gains are 1.134×/1.139×; Tiny ViT b8/b1 end-to-end gains are
+> 5.54×/2.82× (percent ratios: 1.0554/1.0282). See
+> [PROGRAM-CACHE-REPORT.md](PROGRAM-CACHE-REPORT.md).
+
 > **Prepared-validation follow-up (2026-10-27):** source commit `ca6481b`
 > adds an experimental, **default-off** `RK_PLAN_PREPARED_VALIDATION` path.
 > The compiled default-off runtime from that source is

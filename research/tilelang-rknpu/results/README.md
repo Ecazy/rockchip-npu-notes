@@ -36,6 +36,20 @@ payloads needed for independent numerical replay.
   `RK_PLAN_FINITE_SCAN_REFERENCE`; Host pytest is 351 passed plus 71 subtests,
   and CTest is 31/31.
 
+## Creation-time co_program cache checkpoint (2026-10-27)
+
+- `results/20261027T093259Z-template-gap/runtime-layers-program-cache/`: bounded
+  program-cache A/B with a structural eligibility predicate.
+- QK/PV: **1.1342×/1.1387×** warm gains (about 46 µs each); no extra
+  `co_program` Host allocation (reuses existing `batch_scratch`).
+- Tiny ViT b8/b1 uninstrumented: **1.0554×/1.0282×**; all outputs bitwise
+  equal. QKV is neutral; MLP b32 correctly falls back because it has 8 submits.
+- Frozen numeric replay **PASS / 0 problems**; lifecycle/isolation/failure
+  checks pass. Cache is default-on with `RK_PLAN_PROGRAM_CACHE=0` opt-out.
+- Report: [PROGRAM-CACHE-REPORT.md](../PROGRAM-CACHE-REPORT.md); evidence:
+  [README](20261027T093259Z-template-gap/runtime-layers-program-cache/README.md).
+
+## Prepared-validation same-implementation checkpoint (2026-10-27)
 ## Prepared-validation same-implementation checkpoint (2026-10-27)
 
 - `results/20261027T093259Z-template-gap/runtime-layers-prepared/`: corrected

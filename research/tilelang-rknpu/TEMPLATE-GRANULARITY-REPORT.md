@@ -1,5 +1,10 @@
 # 硬件模板与执行粒度差距报告
 
+> **Program-cache follow-up identity:** a later default-on creation-time
+> `co_program` cache changed the adopted runtime to
+> `cc4586eb4d51edf3b7cbab5d9fffd2fdc0d40e87b24ee9f052318108eb87cdc9`.
+> See [PROGRAM-CACHE-REPORT.md](PROGRAM-CACHE-REPORT.md).
+
 > **Prepared-validation follow-up identity:** a later default-off experiment
 > (`ca6481b`) changed the runtime identity to
 > `18dac5981ee05ade1d7d45108dc4bfcc8fbcc0d19187d9b471c56923c27fdc4d`.

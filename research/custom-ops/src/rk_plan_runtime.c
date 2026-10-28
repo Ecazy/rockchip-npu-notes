@@ -336,6 +336,8 @@ static int upload_role(rk_workspace *ws, uint32_t role,
     return 0;
 }
 
+static void build_program_cache(rk_workspace *ws, rk_diag *diag);
+
 int rk_workspace_create(int fd, const rk_plan *plan,
                         const rk_binding *constants, uint32_t nconstants,
                         rk_workspace **out, rk_diag *diag) {
@@ -374,6 +376,8 @@ int rk_workspace_create(int fd, const rk_plan *plan,
         "RK_PLAN_UPLOAD_FAST_PACK", 1);
     ws->prepared_validation = (uint32_t)env_flag_enabled(
         "RK_PLAN_PREPARED_VALIDATION", 0);
+    ws->program_cache = (uint32_t)env_flag_enabled(
+        "RK_PLAN_PROGRAM_CACHE", 1);
     atomic_init(&ws->busy, 0);
     atomic_init(&ws->poisoned, 0);
     if (rk_plan_clone_plan(plan, &ws->plan, diag)) {
@@ -492,6 +496,7 @@ int rk_workspace_create(int fd, const rk_plan *plan,
         for (uint32_t j = 0; j < s->ntask_ids; j++)
             ws->emit_index[s->task_ids[j]] = j;
     }
+    build_program_cache(ws, diag);
 
     /* The plan's declared Host budget must cover the whole resident footprint,
      * not just the binding/staging estimate: the verifier now includes the same
@@ -542,6 +547,39 @@ fail:
     rk_plan_free(ws->plan);
     free(ws);
     return diag && diag->code ? diag->code : RK_E_INVALID;
+}
+
+/* Build the bounded experiment's creation-time co_program cache.  The only
+ * eligibility predicate is structural: the plan must have exactly one submit,
+ * and that submit's whole task list must fit the existing per-submit scratch.
+ * Every task is emitted and validated now; any unsupported/invalid task makes
+ * the workspace fall back to per-run emission.  No cross-workspace or fd state
+ * is retained: the cache lives entirely in ws->batch_scratch and dies with it.
+ */
+static void build_program_cache(rk_workspace *ws, rk_diag *diag) {
+    ws->program_cache_ready = 0;
+    if (!ws->program_cache || !ws->plan || ws->plan->nsubmits != 1u)
+        return;
+    const rk_submit_desc *submit = &ws->plan->submits[0];
+    if (!submit->ntask_ids || submit->ntask_ids > ws->max_submit_tasks)
+        return;
+    for (uint32_t j = 0; j < submit->ntask_ids; j++) {
+        uint32_t id = submit->task_ids[j];
+        if (id >= ws->plan->nactions) return;
+        const rk_action_desc *a = &ws->plan->actions[id];
+        if (a->kind != RK_ACTION_NPU_TASK) return;
+        if (rk_emit_action(ws->plan, ws->views, id,
+                           &ws->batch_scratch[j], diag)) {
+            /* Cache build is optional and bounded.  Preserve the original
+             * per-run emitter path rather than turning a cache miss into a
+             * workspace-creation failure. */
+            rk_diag_clear(diag);
+            return;
+        }
+    }
+    ws->program_cache_submit = 0;
+    ws->program_cache_tasks = submit->ntask_ids;
+    ws->program_cache_ready = 1;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1174,15 +1212,21 @@ static int run_repeat(rk_workspace *ws, const rk_binding *inputs,
                             "NPU task has no submit slot", "", a->id, 0);
                 return RK_E_SCHEMA;
             }
-            double e0 = now_us();
-            int native = rk_emit_action(ws->plan, ws->views, a->id,
-                                        &st->batch[index], diag);
-            st->emit_us += now_us() - e0;
-            if (native) return native;
+            const int cached = ws->program_cache_ready &&
+                               sid == ws->program_cache_submit;
+            if (!cached) {
+                double e0 = now_us();
+                int native = rk_emit_action(ws->plan, ws->views, a->id,
+                                            &st->batch[index], diag);
+                st->emit_us += now_us() - e0;
+                if (native) return native;
+            }
             if (index + 1u != submit->ntask_ids) continue;
             co_execute_profile profile;
             memset(&profile, 0, sizeof(profile));
-            native = co_execute_profiled(ws->fd, st->batch, submit->ntask_ids,
+            int native = co_execute_profiled(
+                    ws->fd, cached ? ws->batch_scratch : st->batch,
+                    submit->ntask_ids,
                     submit->mode == RK_SUBMIT_CHAIN ? CO_CHAIN : CO_SEPARATE,
                     &ws->execute_workspace, &profile);
             st->submit_wait_us += profile.submit_wait_us;

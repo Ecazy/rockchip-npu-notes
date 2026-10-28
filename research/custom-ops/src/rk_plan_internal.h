@@ -88,6 +88,15 @@ typedef struct rk_workspace {
     rk_binding *prepared_outputs;
     uint32_t prepared_ninputs;
     uint32_t prepared_noutputs;
+    /* Experimental creation-time co_program cache.  This candidate is limited
+     * to plans whose complete NPU task set is one submit, so the existing
+     * batch_scratch can hold the cached programs with no extra co_program
+     * allocation.  Default on; opt-out with RK_PLAN_PROGRAM_CACHE=0.
+     * Workspace-local only. */
+    uint32_t program_cache;
+    uint32_t program_cache_ready;
+    uint32_t program_cache_submit;
+    uint32_t program_cache_tasks;
     /* Pre-allocated per-run Host scratch.  The single-run gate gives exclusive
      * ownership of these buffers to whichever entry point runs, so a plan call
      * no longer allocates or frees the emission array, the per-output tile

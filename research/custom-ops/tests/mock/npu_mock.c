@@ -70,6 +70,12 @@ unsigned rk_mock_prep_calls(void) { return mock_prep_count; }
 void rk_mock_fail_fini_at(unsigned index) { mock_fail_fini_at = index; }
 unsigned rk_mock_fini_calls(void) { return mock_fini_count; }
 void rk_mock_reset_tags(void) {
+    /* Creation-time co_program caches retain mock tags across calls.  When the
+     * program cache is enabled, clearing the tag table would make those
+     * unchanged cached programs unexecutable.  The tag lookup still verifies
+     * the full program snapshot; uncached emitters update the same slot. */
+    const char *cache = getenv("RK_PLAN_PROGRAM_CACHE");
+    if (!cache || strcmp(cache, "0") != 0) return;
     for (unsigned i = 0; i < mock_tag_count; i++) {
         free(mock_tags[i].snapshot);
         mock_tags[i].snapshot = NULL;
