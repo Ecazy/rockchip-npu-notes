@@ -20,7 +20,7 @@
 #include "mock_npu.h"   /* the single source of the test-only seam API */
 
 enum { MOCK_TAG_LUT = 1, MOCK_TAG_EW = 2, MOCK_TAG_MM = 3,
-       MOCK_TAG_MM_ACC = 4, MOCK_TAG_EW_MAX = 5 };
+       MOCK_TAG_MM_ACC = 4, MOCK_TAG_EW_MAX = 5, MOCK_TAG_EW_ADD_RELU = 6 };
 static struct {
     const co_program *prog;   /* emission-time address (the slot key) */
     co_program *snapshot;    /* full copy of what that emission produced */
@@ -304,6 +304,13 @@ int __wrap_co_emit_ew_max(co_program *p, co_view x, co_view a, co_view w,
     if (!rc) mock_tag(p, MOCK_TAG_EW_MAX, 0);
     return rc;
 }
+int __real_co_emit_ew_add_relu(co_program *, co_view, co_view, co_view, co_view);
+int __wrap_co_emit_ew_add_relu(co_program *p, co_view x, co_view a, co_view w,
+                               co_view y) {
+    int rc = __real_co_emit_ew_add_relu(p, x, a, w, y);
+    if (!rc) mock_tag(p, MOCK_TAG_EW_ADD_RELU, 0);
+    return rc;
+}
 
 static _Float16 *mock_data(co_view v) {
     return (_Float16 *)((char *)v.buffer->bo.ptr + v.offset);
@@ -416,6 +423,37 @@ static int mock_execute_profiled_impl(int fd, const co_program *p,
                     double b = (double)rhs[co_index(&op.tensor, r, c)];
                     dst[co_index(&y.tensor, r, c)] =
                         (_Float16)(mul ? pass * b : pass + b);
+                }
+            if (mock_inject_nan) dst[0] = (_Float16)NAN;
+            mock_maybe_corrupt_guard(&p[i]);
+            continue;
+        }
+        if (tag == MOCK_TAG_EW_ADD_RELU) {
+            if (p[i].nreads != 3) return ROCKET_E_SHAPE;
+            co_view id = p[i].reads[1];
+            co_view op = p[i].reads[2];
+            if (!id.buffer || !id.buffer->bo.ptr || !op.buffer || !op.buffer->bo.ptr)
+                return ROCKET_E_SHAPE;
+            if (id.tensor.rows != x.tensor.physical_cols ||
+                id.tensor.cols != x.tensor.physical_cols)
+                return ROCKET_E_SHAPE;
+            if (op.tensor.rows != x.tensor.rows ||
+                op.tensor.physical_rows != x.tensor.physical_rows ||
+                op.tensor.physical_cols != x.tensor.physical_cols)
+                return ROCKET_E_SHAPE;
+            _Float16 *dst = mock_data(y);
+            _Float16 *lhs = mock_data(x);
+            _Float16 *rhs = mock_data(op);
+            _Float16 *ident = mock_data(id);
+            for (unsigned r = 0; r < y.tensor.physical_rows; r++)
+                for (unsigned c = 0; c < y.tensor.physical_cols; c++) {
+                    double pass = 0;
+                    for (unsigned q = 0; q < x.tensor.physical_cols; q++)
+                        pass += (double)lhs[co_index(&x.tensor, r, q)] *
+                                (double)ident[co_index(&id.tensor, c, q)];
+                    double b = (double)rhs[co_index(&op.tensor, r, c)];
+                    dst[co_index(&y.tensor, r, c)] =
+                        (_Float16)fmax(pass + b, 0.0);
                 }
             if (mock_inject_nan) dst[0] = (_Float16)NAN;
             mock_maybe_corrupt_guard(&p[i]);

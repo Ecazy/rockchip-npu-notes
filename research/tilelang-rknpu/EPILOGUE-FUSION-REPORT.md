@@ -6,10 +6,12 @@
 
 ## 结论
 
-采用通用 **Linear-epilogue Submit 包络融合**：在依赖直接、动作顺序相邻且
+采用通用 **Linear-epilogue Submit 分组融合**：在依赖直接、动作顺序相邻且
 中间结果无其他消费者的条件下，把 `MM/MM_ACC` 链与后面的 `EW_ADD`、`EW_MAX`
 放进同一个 Submit。MLP 从 **8 Submit / 11 task** 变为 **3 Submit / 11 task**，
 task 模板、算术、buffers、tensor 布局、padding、传输和数值收窄全部不变。
+本轮**没有新增 primitive 寄存器模板**；新增的是通用合法链组合规则及其
+Python/C recipe 校验。
 
 - 默认 `CompileOptions.fuse_epilogue=True`；
 - `fuse_epilogue=False` 保留原 lowering，作为对照；
@@ -24,7 +26,7 @@ task 模板、算术、buffers、tensor 布局、padding、传输和数值收窄
 | bias 融进 GEMM DPU BS stage | 去掉 bias EW task | bias 被移到最终收窄/累加之前，K-accum 顺序和 FP16 rounding 改变 | 淘汰；需新数值政策 |
 | bias+ReLU 合成 `max(x, -b)` EW task | 去掉一个 task | `fp16(x+b)>=0` 与 `x>=-b` 在 rounding 边界不等价 | 淘汰；需近似政策 |
 | 改 K tiling / GEMM template 减少 task | 减少 task/中间访问 | 改变每 K tile FP16 writeback 和累加语义 | 淘汰；当前 K=256 是控制基线 |
-| 通用 Submit 包络融合 | 8→3 Submit，task 不变 | 完全不变 | **采用** |
+| 通用 Submit 分组融合 | 8→3 Submit，task 不变 | 完全不变 | **采用** |
 
 硬件具备 DPU BS bias 和 EW max/min 能力，但“硬件可融合”不等于与现有
 “MatMul FP16 写回 → FP16 bias add → FP16 ReLU”逐位等价。任何改变
@@ -93,8 +95,8 @@ Submit wait 下降约 45 µs；pack/layout 基本不变。
 | vit_b8 | 1.0026× | 0.9991× | 1.0061× | 3323.1→3313.7 | 3060.0→3053.6 | yes |
 | vit_b1 | 1.0039× | 0.9075× | 1.0072× | 1433.2→1419.4 | 1394.3→1437.0 | yes |
 
-准确率一致，所有 logits 逐位相同。ViT 默认图没有 Linear-epilogue 链，保持
-中性；其中一个 sub-1.0 round 是进程噪声，不作为回退声明。b32/b8 的 round
+准确率一致，所有 logits 逐位相同。ViT 默认图没有 Linear-epilogue 链，整体
+未见稳定变化；其反转轮原因尚未定位，不归因于进程噪声。b32/b8 的 round
 ratio 有跨轮波动，因此报告 median/min/max，而不只取单轮最好值。
 
 ## 验收

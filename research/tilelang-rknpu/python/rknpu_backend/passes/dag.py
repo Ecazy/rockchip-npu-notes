@@ -70,7 +70,44 @@ class _Builder:
         # view directly; intermediates never make a host round trip.
         self.value_views: dict[int, int] = {}
         self.value_action: dict[int, int] = {}
+        self._fused_add_relu: dict[int, int] = {}
+        self._skip_fused_relu: set[int] = set()
         self._create_bindings()
+        if options.fuse_add_relu and any(
+                cap.id == "co.ew_add_relu.f16.v1" and cap.status == "enabled"
+                for cap in profile.capabilities):
+            self._find_add_relu_fusions()
+
+    def _find_add_relu_fusions(self) -> None:
+        """Find exact add -> relu pairs with no other consumer.
+
+        The capability gate is checked by the caller; this method only proves
+        the graph-side condition.  The add value must be a temporary consumed
+        exactly once by the ReLU, and must not be a module output.
+        """
+        consumers: dict[int, list[int]] = {}
+        for op in self.module.ops:
+            for value_id in op.inputs:
+                consumers.setdefault(value_id, []).append(op.id)
+        outputs = set(self.module.outputs)
+        for relu_op in self.module.ops:
+            if relu_op.opcode != "relu" or len(relu_op.inputs) != 1:
+                continue
+            add_out = relu_op.inputs[0]
+            if add_out in outputs:
+                continue
+            producer = self.module.value(add_out).producer
+            if producer is None:
+                continue
+            add_op = self.module.op(producer)
+            if add_op.opcode != "add" or len(add_op.outputs) != 1:
+                continue
+            if consumers.get(add_out) != [relu_op.id]:
+                continue
+            if self.module.value(add_out) is self.module.value(relu_op.outputs[0]):
+                continue
+            self._fused_add_relu[add_op.id] = relu_op.id
+            self._skip_fused_relu.add(relu_op.id)
 
     def _create_bindings(self) -> None:
         for value in self.module.values:
@@ -387,22 +424,32 @@ class _Builder:
     def _emit_binary_views(self, *, opcode: str, rows: int, cols: int,
                            cube_rows: int, cube_cols: int,
                            left_view: int, right_view: int,
-                           deps: tuple[int, ...], group: str) -> int:
+                           deps: tuple[int, ...], group: str,
+                           relu: bool = False,
+                           role: str = "workspace",
+                           reuse: bool = True) -> int:
         _, identity_view = self.identity_for(cube_cols)
         identity_upload = self._last_upload_of(identity_view)
         layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols, cube_rows,
                               cube_cols, 8, cube_rows * cube_cols * 2)
-        out_buffer = self.add_buffer(role="workspace", capacity=layout.bytes,
+        out_buffer = self.add_buffer(role=role, capacity=layout.bytes,
                                      layout_id=CUBE_LAYOUT,
-                                     padding_state="finite")
+                                     padding_state="finite", reuse=reuse)
         out_view = self.add_view(out_buffer, 0, layout)
-        template = ("co.ew_add.f16.v1" if opcode == "add"
-                    else "co.ew_mul.f16.v1")
+        if relu:
+            if opcode != "add":
+                reject(RK_E_UNSUPPORTED,
+                       "only add can fuse the ReLU primitive", stage="dag")
+            template = "co.ew_add_relu.f16.v1"
+        else:
+            template = ("co.ew_add.f16.v1" if opcode == "add"
+                        else "co.ew_mul.f16.v1")
         self.add_action(
             "npu_task", template_id=template,
             inputs=(left_view, right_view, identity_view), outputs=(out_view,),
             deps=deps + ((identity_upload,) if identity_upload is not None else ()),
-            origin=f"lowering:dataflow:{opcode}",
+            origin=("lowering:dataflow:add_relu" if relu
+                    else f"lowering:dataflow:{opcode}"),
             attrs={"submit_group": group})
         return out_view
 
@@ -429,7 +476,7 @@ class _Builder:
         for cols in sorted(identity_cols):
             self.identity_for(cols)
         for op in self.module.ops:
-            if op.opcode == "relu":
+            if op.opcode == "relu" and op.id not in self._skip_fused_relu:
                 rows, cols = self.module.value(op.inputs[0]).type.shape
                 self.zero_for(rows, cols)
         for op in self.module.ops:
@@ -463,6 +510,8 @@ class _Builder:
                 self.value_action[out_value.id] = task
                 continue
 
+            if op.id in self._skip_fused_relu:
+                continue
             if op.opcode in {"relu", "silu", "gelu", "sigmoid", "hardsigmoid"}:
                 in_id = op.inputs[0]
                 in_view = self.value_views.get(in_id)
@@ -484,6 +533,42 @@ class _Builder:
                 out_id = op.outputs[0]
                 self.value_views[out_id] = out_view
                 self.value_action[out_id] = last
+                continue
+
+            if op.opcode == "add" and op.id in self._fused_add_relu:
+                relu_id = self._fused_add_relu[op.id]
+                relu_out = self.module.op(relu_id).outputs[0]
+                left_id, right_id = op.inputs
+                left_view = self.value_views.get(left_id)
+                right_view = self.value_views.get(right_id)
+                if left_view is None or right_view is None:
+                    reject(RK_E_SHAPE,
+                           "fused add operands have no device view", stage="dag",
+                           op=op.opcode, action_id=None)
+                out_value = self.module.value(relu_out)
+                rows, cols = out_value.type.shape
+                cr, cc, _ = cube_layout(rows, cols)
+                left = self.views[left_view].tensor
+                right = self.views[right_view].tensor
+                if left.physical_rows != cr or left.physical_cols != cc or \
+                        right.physical_rows != cr or right.physical_cols != cc:
+                    reject(RK_E_SHAPE,
+                           "fused add operands do not share the same physical cube "
+                           "layout", stage="dag", op=op.opcode)
+                group = f"ew:dataflow:{op.id}"
+                out_view = self._emit_binary_views(
+                    opcode="add", rows=rows, cols=cols,
+                    cube_rows=cr, cube_cols=cc, left_view=left_view,
+                    right_view=right_view, deps=self._deps_for(op.inputs),
+                    group=group, relu=True,
+                    role=("output" if relu_out in self.module.outputs
+                          else "workspace"),
+                    reuse=relu_out not in self.module.outputs)
+                last = self._last_task_of_group(group)
+                self.value_views[op.outputs[0]] = out_view
+                self.value_action[op.outputs[0]] = last
+                self.value_views[relu_out] = out_view
+                self.value_action[relu_out] = last
                 continue
 
             if op.opcode in {"add", "mul"}:
@@ -744,7 +829,7 @@ class _Builder:
         for cols in sorted(identity_cols):
             self.identity_for(cols)
         for op in self.module.ops:
-            if op.opcode == "relu":
+            if op.opcode == "relu" and op.id not in self._skip_fused_relu:
                 for tile in value_tiles[op.inputs[0]]:
                     self.zero_for(tile.rows, tile.cols)
 
@@ -829,6 +914,8 @@ class _Builder:
                         else "workspace")
                 continue
 
+            if op.id in self._skip_fused_relu:
+                continue
             if op.opcode in {"relu", "silu", "gelu", "sigmoid", "hardsigmoid"}:
                 in_id = op.inputs[0]
                 in_value = self.module.value(in_id)
@@ -855,6 +942,49 @@ class _Builder:
                     self.buffers[self.views[out_view].buffer_id].role = (
                         "output" if out_id in self.module.outputs
                         else "workspace")
+                continue
+
+            if op.opcode == "add" and op.id in self._fused_add_relu:
+                add_out_id = op.outputs[0]
+                relu_id = self._fused_add_relu[op.id]
+                relu_out_id = self.module.op(relu_id).outputs[0]
+                left_id, right_id = op.inputs
+                for tile in value_tiles[relu_out_id]:
+                    key = (tile.m0, tile.n0)
+                    operand_views: list[int] = []
+                    operand_actions: list[int] = []
+                    for value_id in (left_id, right_id):
+                        value = self.module.value(value_id)
+                        if value.role == "constant" and value.type.rank < 2:
+                            bkey = (value_id, tile.m0, tile.n0)
+                            view = broadcast_views.get(bkey)
+                            action = broadcast_actions.get(bkey)
+                        else:
+                            view = tile_views[value_id].get(key)
+                            action = tile_actions[value_id].get(key)
+                        if view is None or action is None:
+                            reject(RK_E_SHAPE,
+                                   "fused add operand has no device producer",
+                                   stage="dag", op=op.opcode)
+                        operand_views.append(view)
+                        operand_actions.append(action)
+                    cr, cc, _ = cube_layout(tile.rows, tile.cols)
+                    group = (f"ew:dataflow_tiled:{op.id}:"
+                             f"{tile.m0}:{tile.n0}")
+                    out_view = self._emit_binary_views(
+                        opcode="add", rows=tile.rows, cols=tile.cols,
+                        cube_rows=cr, cube_cols=cc,
+                        left_view=operand_views[0],
+                        right_view=operand_views[1],
+                        deps=unique(operand_actions), group=group, relu=True,
+                        role=("output" if relu_out_id in self.module.outputs
+                              else "workspace"),
+                        reuse=relu_out_id not in self.module.outputs)
+                    last = self._last_task_of_group(group)
+                    tile_views[add_out_id][key] = out_view
+                    tile_actions[add_out_id][key] = last
+                    tile_views[relu_out_id][key] = out_view
+                    tile_actions[relu_out_id][key] = last
                 continue
 
             if op.opcode in {"add", "mul"}:

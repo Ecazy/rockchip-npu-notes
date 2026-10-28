@@ -1,4 +1,4 @@
-# Linear → bias → ReLU Submit-envelope fusion
+# Linear → bias → ReLU Submit grouping fusion
 
 Generic rule: a directly dependent `MM/MM_ACC` chain may absorb an
 immediately following `EW_ADD` and `EW_MAX` when the actions are
@@ -56,8 +56,9 @@ cache policy. Ratios are control/fused from all 14 rounds.
 | vit_b1 | **1.0039×** | 0.9075× | 1.0072× | 1433.2→1419.4 | 1394.3→1437.0 | yes |
 
 MLP improves in every run; ViT has no Linear-epilogue fusion in its
-default graph and stays neutral. Accuracy is identical and every logit
-tensor is bitwise equal.
+default graph and shows no stable change; the cause of its reversing
+round is not yet identified and is not attributed to process noise.
+Accuracy is identical and every logit tensor is bitwise equal.
 
 ## Validation
 

@@ -250,7 +250,8 @@ static int template_arity(uint32_t template_id, uint32_t *nin, uint32_t *nout) {
     case RK_TEMPLATE_MM_ACC_F16: *nin = 3; *nout = 1; return 0;
     case RK_TEMPLATE_EW_ADD_F16:
     case RK_TEMPLATE_EW_MUL_F16:
-    case RK_TEMPLATE_EW_MAX_F16: *nin = 3; *nout = 1; return 0;
+    case RK_TEMPLATE_EW_MAX_F16:
+    case RK_TEMPLATE_EW_ADD_RELU_F16: *nin = 3; *nout = 1; return 0;
     case RK_TEMPLATE_LUT_SIGMOID_F16:
     case RK_TEMPLATE_LUT_HARDSIGMOID_F16:
     case RK_TEMPLATE_LUT_GELU_GATE_F16: *nin = 1; *nout = 1; return 0;
@@ -329,7 +330,8 @@ static int validate_template(const rk_plan_desc *desc, const rk_action_desc *a, 
             return fail(diag, RK_E_ALIAS, "validate", "mm_acc output aliases x/weight");
     } else if (a->template_id == RK_TEMPLATE_EW_ADD_F16 ||
                a->template_id == RK_TEMPLATE_EW_MUL_F16 ||
-               a->template_id == RK_TEMPLATE_EW_MAX_F16) {
+               a->template_id == RK_TEMPLATE_EW_MAX_F16 ||
+               a->template_id == RK_TEMPLATE_EW_ADD_RELU_F16) {
         if (a->ninputs != 3 || a->noutputs != 1)
             return fail(diag, RK_E_SHAPE, "validate", "EW requires three inputs and one output");
         const rk_view_desc *x = view_at(desc, a->inputs[0]);
@@ -1087,6 +1089,10 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
                         continue;
                     if (tpl == RK_TEMPLATE_EW_ADD_F16 && epilogue_phase == 0) {
                         epilogue_phase = 1;
+                        saw_epilogue = 1;
+                    } else if (tpl == RK_TEMPLATE_EW_ADD_RELU_F16 &&
+                               epilogue_phase == 0) {
+                        epilogue_phase = 2;
                         saw_epilogue = 1;
                     } else if (tpl == RK_TEMPLATE_EW_MAX_F16 &&
                                epilogue_phase == 1) {

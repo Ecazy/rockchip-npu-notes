@@ -46,12 +46,13 @@ class EpilogueFusionTests(unittest.TestCase):
         cls.images = _read_idx(ROOT / ".data" / "mnist" /
                                "t10k-images-idx3-ubyte.gz")
 
-    def _compile(self, fuse: bool):
+    def _compile(self, fuse_epilogue: bool, fuse_add_relu: bool = False):
         return compile_tilelang(
             make_mlp_prim(1), profile=default_profile(),
             options=CompileOptions(numeric_mode="rk_f16_tiled",
                                    allow_approx_lut=False,
-                                   fuse_epilogue=fuse)).plan
+                                   fuse_epilogue=fuse_epilogue,
+                                   fuse_add_relu=fuse_add_relu)).plan
 
     def _run(self, plan, tmp: Path) -> np.ndarray:
         tmp.mkdir(parents=True, exist_ok=True)
@@ -60,6 +61,11 @@ class EpilogueFusionTests(unittest.TestCase):
                              "mnist_mlp_b1.rkhybrid.json").read_text())
         hybrid["plans"]["mlp"]["path"] = "mnist_mlp_b1.rkplan.json"
         hybrid["plans"]["mlp"]["plan_hash"] = plan.plan_hash
+        hybrid["profile_hash"] = plan.profile_hash
+        node = next(n for n in hybrid["nodes"] if n.get("plan") == "mlp")
+        names = {spec.name for spec in plan.constants}
+        node["constants"] = {k: v for k, v in
+                             node["constants"].items() if k in names}
         path = tmp / "mnist_mlp_b1.rkhybrid.json"
         path.write_text(json.dumps(hybrid))
         program = load_hybrid_program(path, plans_dir=tmp)
@@ -70,9 +76,9 @@ class EpilogueFusionTests(unittest.TestCase):
         finally:
             runner.close()
 
-    def test_mlp_linear_epilogue_fusion_is_structural_and_bitwise(self):
-        control = self._compile(False)
-        fused = self._compile(True)
+    def test_mlp_submit_grouping_fusion_is_structural_and_bitwise(self):
+        control = self._compile(False, False)
+        fused = self._compile(True, False)
         self.assertEqual(len(control.submits), 8)
         self.assertEqual(len(fused.submits), 3)
         self.assertEqual(control.accounting.task_count,
@@ -99,4 +105,28 @@ class EpilogueFusionTests(unittest.TestCase):
             c_out = self._run(control, Path(tmp) / "control")
             f_out = self._run(fused, Path(tmp) / "fused")
         self.assertEqual(c_out.shape, f_out.shape)
+        np.testing.assert_array_equal(c_out, f_out)
+
+    def test_mlp_add_relu_primitive_is_structural_and_bitwise(self):
+        control = self._compile(True, False)
+        fused = self._compile(True, True)
+        self.assertEqual(len(control.submits), 3)
+        self.assertEqual(len(fused.submits), 3)
+        self.assertEqual(control.accounting.task_count, 11)
+        self.assertEqual(fused.accounting.task_count, 9)
+        self.assertEqual(control.accounting.data_bo_count, 19)
+        self.assertEqual(fused.accounting.data_bo_count, 15)
+        self.assertEqual(control.accounting.transfers, 16)
+        self.assertEqual(fused.accounting.transfers, 14)
+        self.assertEqual(
+            [control.actions[t].template_id
+             for s in control.submits for t in s.task_ids].count(
+                 "co.ew_add_relu.f16.v1"), 0)
+        self.assertEqual(
+            [fused.actions[t].template_id
+             for s in fused.submits for t in s.task_ids].count(
+                 "co.ew_add_relu.f16.v1"), 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            c_out = self._run(control, Path(tmp) / "control")
+            f_out = self._run(fused, Path(tmp) / "fused")
         np.testing.assert_array_equal(c_out, f_out)

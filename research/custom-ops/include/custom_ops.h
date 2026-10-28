@@ -81,6 +81,10 @@ int co_emit_mm(co_program *, co_view x, co_view weights, co_view out);
 int co_emit_mm_acc(co_program *, co_view x, co_view weights, co_view prior, co_view out);
 int co_emit_ew(co_program *, co_view x, co_view operand, co_view identity,
                co_view out, int multiply);  /* exact-shape only; no implicit broadcast */
+/* Add+ReLU in one DPU EW stage: out = relu(x + operand), using the same
+ * identity-conv main feed and the EW RELU comparator. */
+int co_emit_ew_add_relu(co_program *, co_view x, co_view operand,
+                        co_view identity, co_view out);
 /* Exact elementwise maximum of x and operand, using an identity-conv main feed. */
 int co_emit_ew_max(co_program *, co_view x, co_view operand, co_view identity,
                    co_view out);

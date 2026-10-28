@@ -14,6 +14,7 @@ MM_F16 = "co.mm.f16.v1"
 MM_ACC_F16 = "co.mm_acc.f16.v1"
 EW_ADD_F16 = "co.ew_add.f16.v1"
 EW_MAX_F16 = "co.ew_max.f16.v1"
+EW_ADD_RELU_F16 = "co.ew_add_relu.f16.v1"
 
 
 def _is_linear_epilogue(templates: list[str]) -> bool:
@@ -23,7 +24,11 @@ def _is_linear_epilogue(templates: list[str]) -> bool:
     i = 1
     while i < len(templates) and templates[i] == MM_ACC_F16:
         i += 1
-    if i == len(templates) or templates[i] != EW_ADD_F16:
+    if i == len(templates):
+        return False
+    if templates[i] == EW_ADD_RELU_F16:
+        return i + 1 == len(templates)
+    if templates[i] != EW_ADD_F16:
         return False
     i += 1
     if i < len(templates):

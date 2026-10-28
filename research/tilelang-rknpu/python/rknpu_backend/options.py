@@ -22,6 +22,10 @@ class CompileOptions:
     # dependency and template sequence prove it is safe.  This changes no task,
     # arithmetic or transfer; it only reduces Submit envelopes.
     fuse_epilogue: bool = True
+    # Primitive-level add+ReLU fusion: replace an EW_ADD immediately consumed
+    # by an EW_MAX(zero) with one co.ew_add_relu template.  This is separate
+    # from Submit grouping and is gated on the capability manifest.
+    fuse_add_relu: bool = True
     # Experimental patterns are opt-in: only ``enabled`` capabilities are selected
     # by default (P2).
     allow_experimental: bool = False
@@ -46,9 +50,10 @@ class CompileOptions:
         if self.tile_limit != 256:
             reject(RK_E_UNSUPPORTED, "MVP tile_limit is fixed at 256",
                    stage="options", actual=self.tile_limit, required=256)
-        if not isinstance(self.fuse_epilogue, bool):
-            reject(RK_E_UNSUPPORTED, "fuse_epilogue must be a boolean",
-                   stage="options")
+        for name in ("fuse_epilogue", "fuse_add_relu"):
+            if not isinstance(getattr(self, name), bool):
+                reject(RK_E_UNSUPPORTED, f"{name} must be a boolean",
+                       stage="options")
         for name in ("device_budget_bytes", "host_budget_bytes", "max_actions",
                      "max_ir_nodes"):
             value = getattr(self, name)

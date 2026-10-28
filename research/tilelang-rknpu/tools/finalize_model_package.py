@@ -164,6 +164,7 @@ def main() -> int:
         "non_blind_disclosure": numeric_spec.get("non_blind_disclosure"),
         "relu_probe_plan": "models/compiled/mnist_relu_probe.rkplan.json",
         "relu_probe_templates": ["co.ew_add.f16.v1", "co.ew_max.f16.v1"],
+        "relu_probe_control": "fuse_add_relu=False (frozen two-task probe)",
         "mlp_hidden_diagnostics": compiled.get("mlp_hidden_diagnostics", {}),
         "numeric_campaign": numeric_campaign,
         "historical_test_envelope_v1": {

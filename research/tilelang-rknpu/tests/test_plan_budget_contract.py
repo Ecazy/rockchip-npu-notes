@@ -83,6 +83,12 @@ class PlanBudgetContractTests(unittest.TestCase):
                                    "mnist_mlp_b1.rkhybrid.json").read_text())
             manifest["plans"]["mlp"]["path"] = "mnist_mlp_b1.rkplan.json"
             manifest["plans"]["mlp"]["plan_hash"] = plan.plan_hash
+            manifest["profile_hash"] = plan.profile_hash
+            node = next(n for n in manifest["nodes"]
+                        if n.get("plan") == "mlp")
+            names = {spec.name for spec in plan.constants}
+            node["constants"] = {k: v for k, v in
+                                 node["constants"].items() if k in names}
             hybrid_path = tmpdir / "mnist_mlp_b1.rkhybrid.json"
             hybrid_path.write_text(json.dumps(manifest))
             program = load_hybrid_program(hybrid_path, plans_dir=tmpdir)

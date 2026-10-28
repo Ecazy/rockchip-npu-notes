@@ -97,6 +97,7 @@ def options_to_dict(options: CompileOptions) -> dict[str, Any]:
         "device_budget_bytes": options.device_budget_bytes,
         "host_budget_bytes": options.host_budget_bytes,
         "fuse_epilogue": options.fuse_epilogue,
+        "fuse_add_relu": options.fuse_add_relu,
         "allow_experimental": options.allow_experimental,
         "max_actions": options.max_actions,
         "max_ir_nodes": options.max_ir_nodes,

@@ -1,0 +1,683 @@
+{
+  "attr_us": {
+    "control_b1": {
+      "alloc": 0.0,
+      "alloc2": 0.0,
+      "command": 0.0,
+      "download": 2.625,
+      "emit": 0.0,
+      "guard": 159.248047,
+      "output_sync": 19.25,
+      "pack": 10.791016,
+      "pack_layout": 4.665955,
+      "publish": 0.0,
+      "submit_wait": 244.414062,
+      "total": 438.078003,
+      "validate": 0.583008
+    },
+    "control_b32": {
+      "alloc": 0.0,
+      "alloc2": 0.0,
+      "command": 0.0,
+      "download": 3.791016,
+      "emit": 0.0,
+      "guard": 157.49798600000003,
+      "output_sync": 20.999023,
+      "pack": 156.332031,
+      "pack_layout": 144.956482,
+      "publish": 0.145508,
+      "submit_wait": 253.16400099999998,
+      "total": 602.5759889999999,
+      "validate": 9.333008
+    },
+    "fused_b1": {
+      "alloc": 0.0,
+      "alloc2": 0.0,
+      "command": 0.0,
+      "download": 2.333008,
+      "emit": 0.0,
+      "guard": 132.999023,
+      "output_sync": 14.0,
+      "pack": 11.083008,
+      "pack_layout": 4.666016,
+      "publish": 0.0,
+      "submit_wait": 226.62298600000003,
+      "total": 389.3704835,
+      "validate": 0.583008
+    },
+    "fused_b32": {
+      "alloc": 0.0,
+      "alloc2": 0.0,
+      "command": 0.0,
+      "download": 3.5,
+      "emit": 0.0,
+      "guard": 129.78997800000002,
+      "output_sync": 15.4575195,
+      "pack": 156.33197,
+      "pack_layout": 144.956482,
+      "publish": 0.0,
+      "submit_wait": 232.16394,
+      "total": 548.035034,
+      "validate": 9.333008
+    }
+  },
+  "baseline": "963fd0d Submit grouping fusion + multi-submit cache",
+  "checks": {
+    "command_cache": "command_cache: 270 checks, 0 failures",
+    "ctest": [
+      "100% tests passed, 0 tests failed out of 33"
+    ],
+    "epilogue_fusion": "..                                                                       [100%]\n2 passed in 1.24s",
+    "pytest": "358 passed, 71 subtests passed in 31.01s",
+    "rk_plan_host": "RK_PLAN host checks=875 failures=0"
+  },
+  "control": "fuse_add_relu=False (separate EW_ADD and EW_MAX tasks)",
+  "decision": {
+    "adopt_default": true,
+    "reason": "EW add+ReLU is bitwise on the hardware probe and keeps the frozen numeric policy; MLP loses two tasks, four data BOs and two transfers while full-model MLP gains are positive in two runs. ViT shows no stable change."
+  },
+  "full_model": {
+    "profiles": {
+      "mlp_b1": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.1260269147206674,
+        "combined_ratio_median": 1.0956505234197416,
+        "combined_ratio_min": 1.0936358448327483,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 607.5350102037191,
+            "fused_us": 555.0349596887827,
+            "ratio_median": 1.0948911565262902,
+            "ratio_p10": 1.0936358448327483,
+            "setup_us": {
+              "control": 13940.3420034796,
+              "prepared": 13316.474971361458
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 506.473530549556,
+            "fused_us": 452.66200322657824,
+            "ratio_median": 1.1206215961566337,
+            "ratio_p10": 1.0948911565262902,
+            "setup_us": {
+              "control": 13807.927956804633,
+              "prepared": 13023.060979321599
+            }
+          }
+        ]
+      },
+      "mlp_b32": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.0595050352548163,
+        "combined_ratio_median": 1.0557542323056106,
+        "combined_ratio_min": 1.0511408407034715,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 1059.0290185064077,
+            "fused_us": 1002.447446808219,
+            "ratio_median": 1.056040556145716,
+            "ratio_p10": 1.054442202517474,
+            "setup_us": {
+              "control": 14680.29199168086,
+              "prepared": 13311.807997524738
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 1060.3414848446846,
+            "fused_us": 1006.676466204226,
+            "ratio_median": 1.0540264542120932,
+            "ratio_p10": 1.0511408407034715,
+            "setup_us": {
+              "control": 14565.96003845334,
+              "prepared": 13081.977027468383
+            }
+          }
+        ]
+      },
+      "mlp_b8": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.0827135341058651,
+        "combined_ratio_median": 1.07834766514451,
+        "combined_ratio_min": 1.0714124820698623,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 707.5750036165118,
+            "fused_us": 656.242948025465,
+            "ratio_median": 1.0788830867413248,
+            "ratio_p10": 1.076820264540174,
+            "setup_us": {
+              "control": 14059.633016586304,
+              "prepared": 13092.186069115996
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 710.7830024324358,
+            "fused_us": 660.6174865737557,
+            "ratio_median": 1.0770932709399834,
+            "ratio_p10": 1.0714124820698623,
+            "setup_us": {
+              "control": 13952.592038549483,
+              "prepared": 13037.352007813752
+            }
+          }
+        ]
+      },
+      "vit_b1": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.0990241047230782,
+        "combined_ratio_median": 1.0072652853584838,
+        "combined_ratio_min": 1.0040323992819626,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 1457.4420638382435,
+            "fused_us": 1445.6294593401253,
+            "ratio_median": 1.0082663612258145,
+            "ratio_p10": 1.0070452533599727,
+            "setup_us": {
+              "control": 23541.90102778375,
+              "prepared": 36058.04999824613
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 1472.7544621564448,
+            "fused_us": 1462.1084555983543,
+            "ratio_median": 1.0066535553354568,
+            "ratio_p10": 1.0040323992819626,
+            "setup_us": {
+              "control": 22854.742011986673,
+              "prepared": 35508.55698995292
+            }
+          }
+        ]
+      },
+      "vit_b8": {
+        "all_bitwise": true,
+        "combined_ratio_max": 1.010025006487408,
+        "combined_ratio_median": 1.000950053993881,
+        "combined_ratio_min": 0.9984907614983543,
+        "runs": [
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 3366.0870394669473,
+            "fused_us": 3366.524528246373,
+            "ratio_median": 0.9997396322829087,
+            "ratio_p10": 0.9990056805631637,
+            "setup_us": {
+              "control": 60678.2310642302,
+              "prepared": 59675.200027413666
+            }
+          },
+          {
+            "accuracy": {
+              "control": 0.9921875,
+              "prepared": 0.9921875
+            },
+            "bitwise": true,
+            "control_us": 3080.986032728106,
+            "fused_us": 3075.8819775655866,
+            "ratio_median": 1.001375877052743,
+            "ratio_p10": 0.9984907614983543,
+            "setup_us": {
+              "control": 60474.066995084286,
+              "prepared": 59553.86895220727
+            }
+          }
+        ]
+      }
+    },
+    "protocol": {
+      "interleaved": true,
+      "limit": 256,
+      "multi_submit_cache": 1,
+      "rounds": 7
+    }
+  },
+  "fused": "fuse_add_relu=True (co.ew_add_relu.f16.v1)",
+  "kind": "add-relu-primitive-fusion",
+  "numeric": {
+    "problems": [],
+    "status": "PASS"
+  },
+  "probe": {
+    "1000000": {
+      "main": {
+        "control_us": 29176.0,
+        "finite": 0.0,
+        "fused_us": 26140.0,
+        "mismatches": 0.0,
+        "n": 1000000.0,
+        "special": 0.0
+      },
+      "reject": "EW_ADD_RELU_PROBE_REJECT no_accum=-5 max=-5 mul=-5",
+      "zero_pairs": "EW_ADD_RELU_PROBE_ZERO_PAIRS x=0x0000 b=0x0000 ctl=0x0000 fused=0x0000 x=0x0000 b=0x8000 ctl=0x0000 fused=0x0000 x=0x8000 b=0x0000 ctl=0x0000 fused=0x0000 x=0x8000 b=0x8000 ctl=0x0000 fused=0x0000 x=0x0000 b=0x8000 ctl=0x0000 fused=0x0000 x=0x8000 b=0x0000 ctl=0x0000 fused=0x0000"
+    },
+    "8192": {
+      "main": {
+        "control_us": 438.7,
+        "finite": 0.0,
+        "fused_us": 324.3,
+        "mismatches": 0.0,
+        "n": 8192.0,
+        "special": 0.0
+      },
+      "reject": "EW_ADD_RELU_PROBE_REJECT no_accum=-5 max=-5 mul=-5",
+      "zero_pairs": "EW_ADD_RELU_PROBE_ZERO_PAIRS x=0x0000 b=0x0000 ctl=0x0000 fused=0x0000 x=0x0000 b=0x8000 ctl=0x0000 fused=0x0000 x=0x8000 b=0x0000 ctl=0x0000 fused=0x0000 x=0x8000 b=0x8000 ctl=0x0000 fused=0x0000 x=0x0000 b=0x8000 ctl=0x0000 fused=0x0000 x=0x8000 b=0x0000 ctl=0x0000 fused=0x0000"
+    }
+  },
+  "schema_version": 1,
+  "smoke": {
+    "control_b1": {
+      "cmdbytes": {
+        "checked": 3,
+        "runs": 1024,
+        "same": 1
+      },
+      "info": {
+        "cached": 3,
+        "device_physical_bytes": 16384,
+        "device_request_bytes": 11088,
+        "ready": 1,
+        "skipped_budget": 0,
+        "skipped_static": 0,
+        "submits": 3
+      },
+      "mem": {
+        "device_physical_bytes": 16384.0,
+        "device_request_bytes": 11088.0,
+        "fallback_cmd_physical": 98304.0,
+        "fallback_cmd_request": 98304.0,
+        "host_delta": 192488.0,
+        "host_off": 100556.0,
+        "host_on": 293044.0,
+        "setup_off_us": 3435.503,
+        "setup_on_us": 3548.96
+      },
+      "na": {}
+    },
+    "control_b32": {
+      "cmdbytes": {
+        "checked": 3,
+        "runs": 1024,
+        "same": 1
+      },
+      "info": {
+        "cached": 3,
+        "device_physical_bytes": 16384,
+        "device_request_bytes": 11088,
+        "ready": 1,
+        "skipped_budget": 0,
+        "skipped_static": 0,
+        "submits": 3
+      },
+      "mem": {
+        "device_physical_bytes": 16384.0,
+        "device_request_bytes": 11088.0,
+        "fallback_cmd_physical": 98304.0,
+        "fallback_cmd_request": 98304.0,
+        "host_delta": 192488.0,
+        "host_off": 102828.0,
+        "host_on": 295316.0,
+        "setup_off_us": 3679.625,
+        "setup_on_us": 3681.375
+      },
+      "na": {}
+    },
+    "fused_b1": {
+      "cmdbytes": {
+        "checked": 3,
+        "runs": 1024,
+        "same": 1
+      },
+      "info": {
+        "cached": 3,
+        "device_physical_bytes": 16384,
+        "device_request_bytes": 9072,
+        "ready": 1,
+        "skipped_budget": 0,
+        "skipped_static": 0,
+        "submits": 3
+      },
+      "mem": {
+        "device_physical_bytes": 16384.0,
+        "device_request_bytes": 9072.0,
+        "fallback_cmd_physical": 81920.0,
+        "fallback_cmd_request": 81920.0,
+        "host_delta": 159240.0,
+        "host_off": 83932.0,
+        "host_on": 243172.0,
+        "setup_off_us": 3341.878,
+        "setup_on_us": 3310.671
+      },
+      "na": {}
+    },
+    "fused_b32": {
+      "cmdbytes": {
+        "checked": 3,
+        "runs": 1024,
+        "same": 1
+      },
+      "info": {
+        "cached": 3,
+        "device_physical_bytes": 16384,
+        "device_request_bytes": 9072,
+        "ready": 1,
+        "skipped_budget": 0,
+        "skipped_static": 0,
+        "submits": 3
+      },
+      "mem": {
+        "device_physical_bytes": 16384.0,
+        "device_request_bytes": 9072.0,
+        "fallback_cmd_physical": 81920.0,
+        "fallback_cmd_request": 81920.0,
+        "host_delta": 159240.0,
+        "host_off": 86204.0,
+        "host_on": 245444.0,
+        "setup_off_us": 3434.628,
+        "setup_on_us": 3429.961
+      },
+      "na": {}
+    }
+  },
+  "structural": {
+    "b1": {
+      "control": {
+        "command_workspace": 98304,
+        "data_bos": 19,
+        "device_request": 1551296,
+        "host_bytes": 928780,
+        "peak_payload": 829184,
+        "plan_hash": "388abbf08798c0080ec39d42e3328d8a2b4134597d37f8d42d48902ba9ad7d5a",
+        "reserved": 1452992,
+        "submits": 3,
+        "tasks": 11,
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ],
+        "transfers": 16
+      },
+      "delta": {
+        "command_workspace": -16384,
+        "data_bos": -4,
+        "device_request": -166144,
+        "host_bytes": -17392,
+        "peak_payload": -18432,
+        "reserved": -149760,
+        "submits": 0,
+        "tasks": -2,
+        "transfers": -2
+      },
+      "fused": {
+        "command_workspace": 81920,
+        "data_bos": 15,
+        "device_request": 1385152,
+        "host_bytes": 911388,
+        "peak_payload": 810752,
+        "plan_hash": "19da051bfaec75a0d8851d8ddf9614057439a650dc8361e35383eacc81f9bf19",
+        "reserved": 1303232,
+        "submits": 3,
+        "tasks": 9,
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add_relu.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add_relu.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ],
+        "transfers": 14
+      },
+      "task_sequence_control": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add.f16.v1",
+        "co.ew_max.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1",
+        "co.ew_max.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "task_sequence_fused": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add_relu.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add_relu.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    },
+    "b32": {
+      "control": {
+        "command_workspace": 98304,
+        "data_bos": 19,
+        "device_request": 1660096,
+        "host_bytes": 1042860,
+        "peak_payload": 937984,
+        "plan_hash": "8c2a3b66526c9c6f4ef6cdd8f5ff5fb820a22c5e36f8aad4f6ffdf0f5aab9b7a",
+        "reserved": 1561792,
+        "submits": 3,
+        "tasks": 11,
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ],
+        "transfers": 16
+      },
+      "delta": {
+        "command_workspace": -16384,
+        "data_bos": -4,
+        "device_request": -196864,
+        "host_bytes": -41200,
+        "peak_payload": -49152,
+        "reserved": -180480,
+        "submits": 0,
+        "tasks": -2,
+        "transfers": -2
+      },
+      "fused": {
+        "command_workspace": 81920,
+        "data_bos": 15,
+        "device_request": 1463232,
+        "host_bytes": 1001660,
+        "peak_payload": 888832,
+        "plan_hash": "0d2d116965cca10fcccf454d03293248530243c94c1d09292755f718d6631fc7",
+        "reserved": 1381312,
+        "submits": 3,
+        "tasks": 9,
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add_relu.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add_relu.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ],
+        "transfers": 14
+      },
+      "task_sequence_control": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add.f16.v1",
+        "co.ew_max.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1",
+        "co.ew_max.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "task_sequence_fused": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add_relu.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add_relu.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    },
+    "b8": {
+      "control": {
+        "command_workspace": 98304,
+        "data_bos": 19,
+        "device_request": 1551296,
+        "host_bytes": 954540,
+        "peak_payload": 829184,
+        "plan_hash": "0524aad3600988a86a0b737bc196e80bae6f7cf0eb1cde32805b2a5bf26c226c",
+        "reserved": 1452992,
+        "submits": 3,
+        "tasks": 11,
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1",
+          "co.ew_max.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ],
+        "transfers": 16
+      },
+      "delta": {
+        "command_workspace": -16384,
+        "data_bos": -4,
+        "device_request": -166144,
+        "host_bytes": -22768,
+        "peak_payload": -18432,
+        "reserved": -149760,
+        "submits": 0,
+        "tasks": -2,
+        "transfers": -2
+      },
+      "fused": {
+        "command_workspace": 81920,
+        "data_bos": 15,
+        "device_request": 1385152,
+        "host_bytes": 931772,
+        "peak_payload": 810752,
+        "plan_hash": "3089d6672fe29fd4b69951a17e184a7d3acf51fdbd9b9a731c888eb71453ae96",
+        "reserved": 1303232,
+        "submits": 3,
+        "tasks": 9,
+        "templates": [
+          "co.mm.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.mm_acc.f16.v1",
+          "co.ew_add_relu.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add_relu.f16.v1",
+          "co.mm.f16.v1",
+          "co.ew_add.f16.v1"
+        ],
+        "transfers": 14
+      },
+      "task_sequence_control": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add.f16.v1",
+        "co.ew_max.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1",
+        "co.ew_max.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "task_sequence_fused": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add_relu.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add_relu.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    }
+  }
+}

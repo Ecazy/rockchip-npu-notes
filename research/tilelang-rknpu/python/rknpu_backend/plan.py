@@ -23,8 +23,9 @@ PLAN_KIND = "rkplan"
 LAYOUT_IDS = {"co.cube.f16.v1", "co.weight.f16.v1", "co.linear.f16.v1"}
 TEMPLATE_IDS = {
     "co.mm.f16.v1", "co.mm_acc.f16.v1", "co.ew_add.f16.v1",
-    "co.ew_mul.f16.v1", "co.ew_max.f16.v1", "co.lut.sigmoid.f16.v1",
-    "co.lut.hardsigmoid.f16.v1", "co.lut.gelu_gate.f16.v1",
+    "co.ew_mul.f16.v1", "co.ew_max.f16.v1", "co.ew_add_relu.f16.v1",
+    "co.lut.sigmoid.f16.v1", "co.lut.hardsigmoid.f16.v1",
+    "co.lut.gelu_gate.f16.v1",
 }
 ACTION_KINDS = {"host_pack", "host_expand", "host_check", "upload", "npu_task",
                 "download", "host_compute", "commit"}
@@ -62,6 +63,7 @@ RECIPE_SIGNATURES = {
         ("co.ew_add.f16.v1", None, None),
         ("co.ew_mul.f16.v1", None, None),
         ("co.ew_max.f16.v1", None, None),
+        ("co.ew_add_relu.f16.v1", None, None),
     ],
 }
 
@@ -74,7 +76,11 @@ def _recipe_matches(recipe: str, templates: list[str]) -> bool:
         i = 1
         while i < len(templates) and templates[i] == "co.mm_acc.f16.v1":
             i += 1
-        if i == len(templates) or templates[i] != "co.ew_add.f16.v1":
+        if i == len(templates):
+            return False
+        if templates[i] == "co.ew_add_relu.f16.v1":
+            return i + 1 == len(templates)
+        if templates[i] != "co.ew_add.f16.v1":
             return False
         i += 1
         if i < len(templates):
@@ -1054,7 +1060,8 @@ def _validate_action_template(plan: Plan, action: Action, view_by_id: dict[int, 
             reject(RK_E_SHAPE, "co.mm_acc tensor extents mismatch", stage="verify",
                    action_id=action.id)
     elif action.template_id in {"co.ew_add.f16.v1", "co.ew_mul.f16.v1",
-                                "co.ew_max.f16.v1"}:
+                                "co.ew_max.f16.v1",
+                                "co.ew_add_relu.f16.v1"}:
         if len(action.inputs) != 3 or len(action.outputs) != 1:
             reject(RK_E_SHAPE, "co.ew requires three inputs and one output",
                    stage="verify", action_id=action.id)

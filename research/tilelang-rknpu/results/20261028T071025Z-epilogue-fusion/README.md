@@ -1,8 +1,8 @@
-# MLP Linear → bias → ReLU operator/compiler optimization
+# MLP Linear → bias → ReLU Submit grouping fusion
 
 This package compares the high-potential Linear-epilogue options, keeps the
 existing numeric narrowing/accumulation policy, and adopts only a generic
-Submit-envelope fusion that is bitwise equivalent.
+Submit grouping fusion that is bitwise equivalent.
 
 ## Candidates and disposition
 
@@ -11,11 +11,12 @@ Submit-envelope fusion that is bitwise equivalent.
 | Fuse bias into the GEMM DPU BS stage | removes the bias EW task | moves the FP16 bias add before the final narrowing/accumulation order; not bitwise with the current policy | rejected for default; would need a new numeric policy and a separate acceptance |
 | Fuse bias+ReLU as one `max(x, -b)` EW task | removes one task | `fp16(x+b)` threshold is not equivalent to `x >= -b` in general; rounding boundary differs | rejected for default; requires an explicit approximation policy |
 | Change K tiling / GEMM template to fewer tasks | fewer tasks and less intermediate traffic | changes the declared FP16 writeback per K tile / accumulation semantics | rejected; current K=256 policy is the control |
-| Generic Submit-envelope fusion (`fuse_epilogue`) | 8→3 Submits, same 11 tasks, same data path | none: same tasks in the same order, same templates, buffers and transfers | **adopted** |
+| Generic Submit grouping fusion (`fuse_epilogue`) | 8→3 Submits, same 11 tasks, same data path | none: same tasks in the same order, same templates, buffers and transfers | **adopted** |
 
 The hardware does expose DPU BS bias and EW max/min, but same hardwaresupport
 does not imply numeric equivalence with the current separate FP16 bias-add and
-FP16 ReLU tasks. No new hardware recipe or numeric policy is enabled here.
+FP16 ReLU tasks. This package added no primitive register template; it added a
+legal Submit-chain combination rule and its recipe/validator checks.
 
 ## Generic rule
 
@@ -84,8 +85,9 @@ policy. Ratios combine all 14 round ratios; per-call samples are in
 | vit_b1 | 1.0039× | 0.9075× | 1.0072× | 1433.2→1419.4 | 1394.3→1437.0 | yes |
 
 Accuracy is identical; every logit tensor is bitwise equal. ViT has no
-Linear-epilogue fusion in its default graph and remains neutral; its one
-sub-1.0 round is process noise, not a claimed regression.
+Linear-epilogue fusion in its default graph and shows no stable change; the
+cause of its reversing round is not yet identified and is not attributed to
+process noise.
 
 ## Validation
 

@@ -88,7 +88,8 @@ enum rk_template_id {
     RK_TEMPLATE_LUT_SIGMOID_F16 = 5,
     RK_TEMPLATE_LUT_HARDSIGMOID_F16 = 6,
     RK_TEMPLATE_LUT_GELU_GATE_F16 = 7,
-    RK_TEMPLATE_EW_MAX_F16 = 8
+    RK_TEMPLATE_EW_MAX_F16 = 8,
+    RK_TEMPLATE_EW_ADD_RELU_F16 = 9
 };
 enum rk_act_kind {
     RK_ACT_NONE = 0,

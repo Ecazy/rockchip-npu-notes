@@ -553,13 +553,26 @@ runner controls and are asserted bit-identical.
 - Default policy: `shared_group` for the QK/PV nodes.  It is bit-identical to both
   controls, passes the numeric gates, and is 1.21x faster than B1 end to end; the
   controls remain one flag away (`HybridRunner(repeat_submit="b1"|"separate")`).
-## Linear-epilogue Submit fusion (2026-10-28)
+## Add+ReLU primitive fusion (2026-10-28)
+
+`20261028T075310Z-add-relu-primitive/` is the primitive-level package on top of
+`963fd0d`'s Submit grouping. `co.ew_add_relu.f16.v1` clears only the EW ReLU
+bypass after the identity-conv ADD; the control keeps separate `EW_ADD` and
+`EW_MAX` tasks. The hardware probe covered signed zero, subnormals, min normal,
+max finite, cancellation and 1M mixed values with zero bit mismatches. MLP
+drops 11→9 tasks, 19→15 data BOs and 16→14 transfers at the same 3 Submits;
+two interleaved full-model runs show MLP medians 1.0558×–1.0957×, while ViT
+shows no stable change. See
+[`../ADD-RELU-PRIMITIVE-REPORT.md`](../ADD-RELU-PRIMITIVE-REPORT.md).
+
+## Linear-epilogue Submit grouping fusion (2026-10-28)
 
 `20261028T071025Z-epilogue-fusion/` contains the operator/compiler package.
 A generic `fuse_epilogue` rule merges a directly dependent `MM/MM_ACC` chain
-with a contiguous `EW_ADD`/`EW_MAX` epilogue into one Submit envelope. MLP
+with a contiguous `EW_ADD`/`EW_MAX` epilogue into one Submit grouping. MLP
 keeps its 11 tasks, data path, padding and transfers but goes from 8 to 3
-Submits; two interleaved 256-image/7-round full-model runs show median MLP
+Submits; this stage added no primitive register template, only the legal chain
+combination rule. two interleaved 256-image/7-round full-model runs show median MLP
 ratios 1.0846×–1.4181×, ViT neutral, and bitwise logits. The alternative
 bias-into-GEMM and `max(x,-b)` fusions were rejected because they change the
 existing FP16 narrowing/accumulation policy. `fuse_epilogue=False` keeps the

@@ -36,7 +36,8 @@ def main() -> int:
     from models.tilelang_mlp import make_relu_probe_prim
     profile = default_profile()
     options = CompileOptions(numeric_mode="rk_f16_tiled",
-                             allow_approx_lut=False)
+                             allow_approx_lut=False,
+                             fuse_add_relu=False)
     result = compile_tilelang(make_relu_probe_prim(), profile=profile,
                               options=options)
     plan = result.plan

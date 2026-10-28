@@ -48,7 +48,12 @@ def main() -> int:
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     profile = default_profile()
-    options = CompileOptions(numeric_mode="rk_f16_tiled", allow_approx_lut=False)
+    options = CompileOptions(numeric_mode="rk_f16_tiled",
+                             allow_approx_lut=False)
+    # The numeric probe is intentionally the frozen two-task Add+Max oracle.
+    probe_options = CompileOptions(numeric_mode="rk_f16_tiled",
+                                   allow_approx_lut=False,
+                                   fuse_add_relu=False)
 
     import models.tilelang_matmul as tmm
     import models.tilelang_mlp as tmlp
@@ -82,7 +87,7 @@ def main() -> int:
         print("wrote", f"mnist_mlp_b{batch}", plan.plan_hash, flush=True)
 
     probe = compile_tilelang(tmlp.make_relu_probe_prim(), profile=profile,
-                             options=options).plan
+                             options=probe_options).plan
     templates = [a.template_id for a in probe.actions
                  if a.kind == "npu_task"]
     if templates != ["co.ew_add.f16.v1", "co.ew_max.f16.v1"]:

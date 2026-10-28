@@ -5,9 +5,9 @@
     "chip_id": "rk3588",
     "driver_abi_id": "rockchip-rknpu-0.9.8",
     "runtime_abi_id": "rk-plan-v1",
-    "custom_ops_source_hash": "68e1d33b9c494a8e0195399c9134244bdb0c117e941ca4e5f0eb04ab8e5cf090",
-    "generator_source_hash": "752eba092073c2eb258739491901d773e734a6cf645c47022008429f3c917c91",
-    "capability_manifest_hash": "43dfb4a274ee94944d2bec59331aea252017636aab7213127a5c95c92307ec45",
+    "custom_ops_source_hash": "6513279a1158c3eeb6e63560b89cc1b5c80d557950f9b28a129754c214540410",
+    "generator_source_hash": "e0b8a48383bd6249d766aa0f280f64d09071b2c36a763fa69cc9260bd3c03100",
+    "capability_manifest_hash": "9cd9c95bfb81425bb31c05c45923175031e2ecc1f2bec5bf84e30d05a880cf86",
     "tensor_layout_versions": [
       "co.cube.f16.v1",
       "co.weight.f16.v1",
@@ -21,7 +21,8 @@
       "co.ew_max.f16.v1",
       "co.lut.sigmoid.f16.v1",
       "co.lut.hardsigmoid.f16.v1",
-      "co.lut.gelu_gate.f16.v1"
+      "co.lut.gelu_gate.f16.v1",
+      "co.ew_add_relu.f16.v1"
     ],
     "max_programs_per_submit": 64,
     "max_words_per_program": 2048,
@@ -240,6 +241,28 @@
         "no TileLang frontend path: the RKIR graph is built by the debug builder",
         "single primitive tile per stage only",
         "LUT approximation tolerance is recipe-specific"
+      ]
+    },
+    {
+      "id": "co.ew_add_relu.f16.v1",
+      "op": "rk.add_relu",
+      "emitter": "co_emit_ew_add_relu",
+      "target_profile": "rk3588_vendor_co_v1",
+      "status": "enabled",
+      "inputs": [
+        "cube_f16",
+        "cube_f16",
+        "identity_weight_f16"
+      ],
+      "output": "cube_f16",
+      "numeric": "f16_ew_add_then_ew_relu_before_out_cvt",
+      "alias": "output_distinct_bos",
+      "chain_recipe": "linear_epilogue_v1",
+      "evidence": "results/20261028T075310Z-add-relu-primitive/",
+      "validation_domain": "exact add->relu; same cube shape/layout; M>=12, M%4, physical extent <=256; finite FP16; add intermediate has no other consumer and is not exported",
+      "uncovered_risks": [
+        "NaN/Inf are outside the default finite-input numeric policy; the hardware probe reports them separately",
+        "signed zero is probed bitwise but not claimed as a general IEEE contract"
       ]
     }
   ]

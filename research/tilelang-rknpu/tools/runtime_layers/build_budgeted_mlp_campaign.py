@@ -24,18 +24,19 @@ from models.tilelang_mlp import make_mlp_prim
 
 
 def compile_mlp(batch: int, device_budget: int, host_budget: int,
-                fuse_epilogue: bool = False):
+                fuse_epilogue: bool = False, fuse_add_relu: bool = False):
     options = CompileOptions(
         numeric_mode="rk_f16_tiled", allow_approx_lut=False,
         device_budget_bytes=device_budget, host_budget_bytes=host_budget,
-        fuse_epilogue=fuse_epilogue)
+        fuse_epilogue=fuse_epilogue, fuse_add_relu=fuse_add_relu)
     return compile_tilelang(make_mlp_prim(batch), profile=default_profile(),
                             options=options).plan
 
 
 def patch_manifest(compiled: Path, out: Path,
                    budgets: dict[int, tuple[int, int]],
-                   fuse_epilogue: bool = False):
+                   fuse_epilogue: bool = False,
+                   fuse_add_relu: bool = False):
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
@@ -46,7 +47,7 @@ def patch_manifest(compiled: Path, out: Path,
     # First compile loose plans to learn the base estimates, then recompile with
     # the requested explicit budgets.
     loose = {b: compile_mlp(b, 256 * 1024 * 1024, 256 * 1024 * 1024,
-                            fuse_epilogue)
+                            fuse_epilogue, fuse_add_relu)
              for b in budgets}
     package_manifest = json.loads((compiled / "manifest.json").read_text())
     for batch, (device_budget, host_budget) in budgets.items():
@@ -54,7 +55,8 @@ def patch_manifest(compiled: Path, out: Path,
             device_budget = loose[batch].accounting.device_request_bytes
         if host_budget is None:
             host_budget = loose[batch].accounting.host_bytes
-        plan = compile_mlp(batch, device_budget, host_budget, fuse_epilogue)
+        plan = compile_mlp(batch, device_budget, host_budget, fuse_epilogue,
+                           fuse_add_relu)
         # Accounting must not move when only the authorized budget changes.
         if (plan.accounting.device_request_bytes !=
                 loose[batch].accounting.device_request_bytes or
@@ -66,6 +68,18 @@ def patch_manifest(compiled: Path, out: Path,
         hybrid = json.loads(hybrid_path.read_text())
         hybrid["plans"]["mlp"]["path"] = f"{name}.rkplan.json"
         hybrid["plans"]["mlp"]["plan_hash"] = plan.plan_hash
+        hybrid["profile_hash"] = plan.profile_hash
+        # A primitive fusion can remove lowering-internal constants (for
+        # example the zero tensor of a fused ReLU).  Keep the node constant
+        # declaration exactly in sync with the new plan.
+        node = next((n for n in hybrid["nodes"]
+                     if getattr(n, "get", lambda *_: None)("plan") == "mlp"),
+                    None)
+        if node is not None:
+            names = {spec.name for spec in plan.constants}
+            declared = node.get("constants", {})
+            node["constants"] = {k: v for k, v in declared.items()
+                                 if k in names}
         hybrid_path.write_text(json.dumps(hybrid, indent=2, sort_keys=True) + "\n")
         if name in package_manifest.get("plans", {}):
             package_manifest["plans"][name]["plan_hash"] = plan.plan_hash
@@ -80,6 +94,7 @@ def main():
     ap.add_argument("--compiled", type=Path, default=ROOT / "models" / "compiled")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--fuse-epilogue", action="store_true")
+    ap.add_argument("--fuse-add-relu", action="store_true")
     args = ap.parse_args()
     # Conservative exact budget; partial: 4 KiB request headroom (first submit
     # command request is 4,032 B); full: the documented CompileOptions default.
@@ -97,7 +112,8 @@ def main():
             levels = {b: (None, 256 * 1024 * 1024) for b in (1, 8, 32)}
         else:
             levels = budgets
-        patch_manifest(args.compiled, out, levels, args.fuse_epilogue)
+        patch_manifest(args.compiled, out, levels, args.fuse_epilogue,
+                       args.fuse_add_relu)
         if name == "partial":
             # Rebuild partial with +4 KiB device request headroom.
             for batch in (1, 8, 32):
@@ -105,7 +121,8 @@ def main():
                 plan = json.loads(plan_path.read_text())
                 base = plan["accounting"]["device_request_bytes"]
                 host = 256 * 1024 * 1024
-                plan2 = compile_mlp(batch, base + 4096, host, args.fuse_epilogue)
+                plan2 = compile_mlp(batch, base + 4096, host,
+                                    args.fuse_epilogue, args.fuse_add_relu)
                 save_plan(plan2, str(plan_path))
                 hybrid_path = out / f"mnist_mlp_b{batch}.rkhybrid.json"
                 hybrid = json.loads(hybrid_path.read_text())

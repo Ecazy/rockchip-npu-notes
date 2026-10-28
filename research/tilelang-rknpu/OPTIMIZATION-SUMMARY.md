@@ -21,6 +21,16 @@
 > FP16 rounding/accumulation policy. Original lowering remains available with
 > `fuse_epilogue=False`. See
 > [EPILOGUE-FUSION-REPORT.md](EPILOGUE-FUSION-REPORT.md).
+>
+> **Add+ReLU primitive fusion (2026-10-28):** `co.ew_add_relu.f16.v1`
+> clears only the EW ReLU bypass after an identity-conv ADD, preserving the
+> existing FP16/OUT_CVT policy. A hardware probe over 8,192 boundary values and
+> 1,000,000 elements found zero bit mismatches. MLP drops from 11 to 9 NPU
+> tasks, 19 to 15 data BOs and 16 to 14 transfers at the same 3 Submits;
+> two interleaved full-model runs show MLP medians **1.0558×–1.0957×**, while
+> ViT shows no stable change. Control path remains with
+> `fuse_add_relu=False`. See
+> [ADD-RELU-PRIMITIVE-REPORT.md](ADD-RELU-PRIMITIVE-REPORT.md).
 
 > **Command-cache follow-up (2026-10-28, corrected):** source adds and adopts
 > creation-time command-BO packing reuse for `program_cache_ready`

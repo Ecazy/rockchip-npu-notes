@@ -120,7 +120,7 @@ def main():
     profiles = {}
     for profile in ("mlp_b32", "mlp_b8", "mlp_b1", "vit_b8", "vit_b1"):
         rows = [r["profiles"][profile] for r in full_runs]
-        ratios = [x["round_ratio_control_over_prepared"]
+        ratios = [x["ratio_control_over_prepared"]
                   for row in rows for x in row["rounds"]]
         profiles[profile] = {
             "runs": [{
@@ -168,13 +168,13 @@ def main():
             "adopt_default": True,
             "reason": "Same tasks, data path and arithmetic; Submit count "
                       "8->3. Full-model MLP gains are positive in two runs; "
-                      "ViT is neutral and all logits are bitwise equal.",
+                      "ViT shows no stable change and all logits are bitwise equal.",
         },
     }
     args.out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
 
     lines = [
-        "# Linear → bias → ReLU Submit-envelope fusion",
+        "# Linear → bias → ReLU Submit grouping fusion",
         "",
         "Generic rule: a directly dependent `MM/MM_ACC` chain may absorb an",
         "immediately following `EW_ADD` and `EW_MAX` when the actions are",
@@ -265,8 +265,9 @@ def main():
     lines += [
         "",
         "MLP improves in every run; ViT has no Linear-epilogue fusion in its",
-        "default graph and stays neutral. Accuracy is identical and every logit",
-        "tensor is bitwise equal.",
+        "default graph and shows no stable change; the cause of its reversing",
+        "round is not yet identified and is not attributed to process noise.",
+        "Accuracy is identical and every logit tensor is bitwise equal.",
         "",
         "## Validation",
         "",

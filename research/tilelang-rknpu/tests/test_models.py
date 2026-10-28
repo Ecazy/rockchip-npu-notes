@@ -79,9 +79,10 @@ class CompleteModelTests(unittest.TestCase):
             make_mlp_prim(1), profile=self.profile,
             options=CompileOptions(numeric_mode="rk_f16_tiled",
                                    allow_approx_lut=False))
-        self.assertIn("co.ew_max.f16.v1",
-                      [a.template_id for a in result.plan.actions
-                       if a.kind == "npu_task"])
+        templates = [a.template_id for a in result.plan.actions
+                     if a.kind == "npu_task"]
+        self.assertEqual(templates.count("co.ew_add_relu.f16.v1"), 2)
+        self.assertNotIn("co.ew_max.f16.v1", templates)
         self.assertEqual(len([a for a in result.plan.actions
                               if a.kind == "download"]), 1)
 
