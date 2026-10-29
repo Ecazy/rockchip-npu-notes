@@ -1,0 +1,65 @@
+{
+ "kind": "smollm-rope-indexed-decode-probe",
+ "model_config": {
+  "capacity": 256,
+  "head_dim": 64,
+  "kv_heads": 3,
+  "q_heads": 9,
+  "rope_theta": 100000.0
+ },
+ "pass": true,
+ "problems": [],
+ "results": {
+  "k": {
+   "aba_repeat_bitwise": true,
+   "coefficient_residency": "CosW/SinW/P are plan constants; one-hot position vector is the only per-token coefficient metadata",
+   "device_median_us": 886.8014992913231,
+   "finite": true,
+   "head_dim": 64,
+   "heads": 3,
+   "max_abs_diff_vs_production_host": 0.001953125,
+   "out_of_range_rejected": true,
+   "per_token_download_bytes": 4608,
+   "per_token_upload_bytes": 10752,
+   "plan_hash": "9ed31b8b4f576ef4e054fa0552b7451daa20646ab57706cb93bfeeea9f122392",
+   "position_cases": [
+    0,
+    1,
+    15,
+    16,
+    127,
+    254,
+    255
+   ],
+   "submit_count": 6,
+   "task_count": 6,
+   "tokens": 1
+  },
+  "q": {
+   "aba_repeat_bitwise": true,
+   "coefficient_residency": "CosW/SinW/P are plan constants; one-hot position vector is the only per-token coefficient metadata",
+   "device_median_us": 2700.5084994016215,
+   "finite": true,
+   "head_dim": 64,
+   "heads": 9,
+   "max_abs_diff_vs_production_host": 0.001953125,
+   "out_of_range_rejected": true,
+   "per_token_download_bytes": 13824,
+   "per_token_upload_bytes": 19968,
+   "plan_hash": "d0ecd01c17a8e9a16e8b5c183021a354b1c8fc2f46308108d2642aa3a86701b6",
+   "position_cases": [
+    0,
+    1,
+    15,
+    16,
+    127,
+    254,
+    255
+   ],
+   "submit_count": 18,
+   "task_count": 24,
+   "tokens": 1
+  }
+ },
+ "schema_version": 1
+}

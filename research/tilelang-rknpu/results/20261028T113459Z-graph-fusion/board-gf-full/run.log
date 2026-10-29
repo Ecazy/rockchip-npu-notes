@@ -1,0 +1,11 @@
+round=1 arm=deviceffn_fused suffix=_deviceffn_fused
+ViT 8 0.9821 1.0
+Traceback (most recent call last):
+  File "/mnt/ssd/workspace/graph-fusion-20261028T122013Z/tilelang-rknpu/tools/evaluate_models.py", line 605, in <module>
+    raise SystemExit(main())
+  File "/mnt/ssd/workspace/graph-fusion-20261028T122013Z/tilelang-rknpu/tools/evaluate_models.py", line 562, in main
+    result, logits, ref, declared = _run_vit_profile(
+  File "/mnt/ssd/workspace/graph-fusion-20261028T122013Z/tilelang-rknpu/tools/evaluate_models.py", line 307, in _run_vit_profile
+    first = schedule[0]
+IndexError: list index out of range
+arm failed rc=1

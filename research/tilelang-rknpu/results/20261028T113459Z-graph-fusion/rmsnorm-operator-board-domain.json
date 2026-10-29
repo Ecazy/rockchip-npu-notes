@@ -1,0 +1,62 @@
+{
+ "acceptance": {
+  "input_sha256": "abf2f77083260ce0875d8fc8d22452dd674bba7fe3ec98bb0458a513f5d7fd99",
+  "members": 32,
+  "metrics": {
+   "finite": true,
+   "max_abs": 0.0234375,
+   "ref_absmax": 5.62109375,
+   "ref_rms": 1.0486770868301392,
+   "rmse": 0.0012227059341967106
+  },
+  "output_sha256": "0e106aa74459141b9148bc919733284f199d8dde45ef44aff861f3c17b411721",
+  "rows": 512,
+  "seed": 20261030
+ },
+ "calibration": {
+  "input_sha256": "7053f10b0e82f52ce302387efb9a88ad43a279cb9d5ecea8fcff0983de0b0e59",
+  "members": 32,
+  "metrics": {
+   "finite": true,
+   "max_abs": 0.01953125,
+   "ref_absmax": 5.3203125,
+   "ref_rms": 1.0437437295913696,
+   "rmse": 0.0012468112399801612
+  },
+  "output_sha256": "b250a6d98c30e9bd511ddac5091bce979c70e898cadcd6bbb7c9a07f9abc55f3",
+  "rows": 512,
+  "seed": 20261029
+ },
+ "failures": [],
+ "gates": {
+  "atol": 0.0390625,
+  "finite_required": true,
+  "rmse_limit": 0.009765625
+ },
+ "kind": "rmsnorm-approx-operator-acceptance",
+ "numeric_policy": {
+  "lut_scale": 0.75,
+  "lut_table_domain_scaled": [
+   0.125,
+   6.32
+  ],
+  "narrowing": [
+   "fp16_square",
+   "fp16_row_sum_mm",
+   "fp16_mean",
+   "fp16_eps_add",
+   "bounded_rsqrt_lut",
+   "fp16_gamma_expand",
+   "fp16_multiply"
+  ],
+  "reference": "float32 mean/rsqrt/gamma then float16 writeback",
+  "validated_original_mean_square": [
+   0.17,
+   6.1
+  ]
+ },
+ "pass": true,
+ "plan": "tiny_vit_b1_rmsnorm1_approx.rkplan.json",
+ "profile": "rk3588_vendor_co_v1_rmsnorm_lut",
+ "schema_version": 1
+}

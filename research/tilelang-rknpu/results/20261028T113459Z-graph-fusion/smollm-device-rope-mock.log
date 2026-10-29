@@ -1,0 +1,31 @@
+Traceback (most recent call last):
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tools/run_smollm_device_rope.py", line 234, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tools/run_smollm_device_rope.py", line 169, in main
+    ref_prefill = runner.prefill(ids, return_all_logits=False)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python/rknpu_backend/smollm.py", line 792, in prefill
+    x = self._layer_prefill(layer, x, int(ids.size))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python/rknpu_backend/smollm.py", line 663, in _layer_prefill
+    qkv = self._run_plan(
+          ^^^^^^^^^^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python/rknpu_backend/smollm.py", line 419, in _run_plan
+    report, elapsed = call.run_into(inputs, outputs)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python/rknpu_backend/models.py", line 723, in run_into
+    return self._run_into_locked(inputs, outputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python/rknpu_backend/models.py", line 756, in _run_into_locked
+    report = self.workspace.run_attributed(in_bind, out_bind)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python/rknpu_backend/runtime/ffi.py", line 642, in run_attributed
+    return self.lib.workspace_run_attributed(self, inputs, outputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python/rknpu_backend/runtime/ffi.py", line 523, in workspace_run_attributed
+    return self.workspace_run_attributed_bound(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/python/rknpu_backend/runtime/ffi.py", line 543, in workspace_run_attributed_bound
+    raise _diag_to_exception(diag, "workspace_run_ex")
+rknpu_backend.errors.BackendError: RK_E_DEVICE: submission failed; workspace is poisoned

@@ -1,0 +1,120 @@
+[   11.691793] systemd[1]: Mounting /tmp...
+[   11.699072] systemd[1]: Mounted /tmp.
+[   11.715978] rk-pcie fe170000.pcie: PCIe Linking... LTSSM is 0x3
+[   11.745908] rk-pcie fe170000.pcie: PCIe Linking... LTSSM is 0x3
+[   11.754688] systemd[1]: Finished Coldplug All udev Devices.
+[   11.819861] systemd[1]: Starting Helper to synchronize boot up for ifupdown...
+[   11.820320] systemd[1]: Started Rule-based Manager for Device Events and Files.
+[   11.834947] systemd[1]: Created slice Slice /system/systemd-backlight.
+[   11.839416] systemd[1]: Starting Show Plymouth Boot Screen...
+[   11.843544] systemd[1]: Starting Load/Save Screen Backlight Brightness of backlight:backlight...
+[   11.845740] systemd[1]: Finished Helper to synchronize boot up for ifupdown.
+[   11.860227] systemd[1]: Finished Load/Save Screen Backlight Brightness of backlight:backlight.
+[   11.956323] systemd[1]: Started Show Plymouth Boot Screen.
+[   11.961565] systemd[1]: Found device /dev/ttyFIQ0.
+[   11.980173] systemd[1]: Found device /dev/disk/by-uuid/B7B5-A91A.
+[   11.988486] systemd[1]: Condition check resulted in Dispatch Password Requests to Console Directory Watch when bootsplash is active being skipped.
+[   11.988629] systemd[1]: Started Forward Password Requests to Plymouth Directory Watch.
+[   11.988680] systemd[1]: Condition check resulted in Arbitrary Executable File Formats File System Automount Point being skipped.
+[   11.988709] systemd[1]: Reached target Local Encrypted Volumes.
+[   11.988740] systemd[1]: Reached target Hardware activated USB gadget.
+[   11.988796] systemd[1]: Listening on Load/Save RF Kill Switch Status /dev/rfkill Watch.
+[   12.029499] systemd[1]: Starting Load Kernel Module efi_pstore...
+[   12.029734] systemd[1]: Condition check resulted in File System Check on Root Device being skipped.
+[   12.031260] systemd[1]: Starting File System Check on /dev/disk/by-uuid/B7B5-A91A...
+[   12.034036] systemd[1]: modprobe@efi_pstore.service: Deactivated successfully.
+[   12.034362] systemd[1]: Finished Load Kernel Module efi_pstore.
+[   12.034590] systemd[1]: Condition check resulted in Platform Persistent Storage Archival being skipped.
+[   12.043401] systemd[1]: Started File System Check Daemon to report status.
+[   12.205859] systemd[1]: Finished File System Check on /dev/disk/by-uuid/B7B5-A91A.
+[   12.283642] systemd[1]: Mounting /boot...
+[   12.292996] FAT-fs (mmcblk1p1): utf8 is not a recommended IO charset for FAT filesystems, filesystem will be case sensitive!
+[   12.301476] systemd[1]: Mounted /boot.
+[   12.301957] systemd[1]: Reached target Local File Systems.
+[   12.302241] systemd[1]: Condition check resulted in Load AppArmor profiles being skipped.
+[   12.306845] systemd[1]: Starting Set console font and keymap...
+[   12.311808] systemd[1]: Starting Raise network interfaces...
+[   12.316643] systemd[1]: Starting Orange Pi ZRAM config...
+[   12.321260] systemd[1]: Starting Tell Plymouth To Write Out Runtime Data...
+[   12.321514] systemd[1]: Condition check resulted in RPC security service for NFS server being skipped.
+[   12.321670] systemd[1]: Condition check resulted in Mark the need to relabel after reboot being skipped.
+[   12.324074] systemd[1]: Condition check resulted in Set Up Additional Binary Formats being skipped.
+[   12.324185] systemd[1]: Condition check resulted in Store a System Token in an EFI Variable being skipped.
+[   12.324305] systemd[1]: Condition check resulted in Commit a transient machine-id on disk being skipped.
+[   12.327994] systemd[1]: Starting Manage USB device functions...
+[   12.330520] systemd[1]: Finished Set console font and keymap.
+[   12.332575] systemd[1]: Received SIGRTMIN+20 from PID 339 (plymouthd).
+[   12.343704] systemd[1]: Finished Tell Plymouth To Write Out Runtime Data.
+[   12.605885] systemd[1]: Finished Raise network interfaces.
+[   12.617007] zram0: detected capacity change from 0 to 409600
+[   12.660747] systemd[1]: Finished Orange Pi ZRAM config.
+[   12.693561] systemd[1]: Starting Orange Pi memory supported logging...
+[   12.743476] EXT4-fs (zram0): mounted filesystem without journal. Quota mode: none.
+[   12.888569] systemd[1]: Condition check resulted in Dispatch Password Requests to Console Directory Watch when bootsplash is active being skipped.
+[   12.888726] systemd[1]: Condition check resulted in Arbitrary Executable File Formats File System Automount Point being skipped.
+[   12.888949] systemd[1]: Condition check resulted in Load AppArmor profiles being skipped.
+[   12.939767] systemd[1]: Starting Load Kernel Module efi_pstore...
+[   12.940522] systemd[1]: Condition check resulted in Set Up Additional Binary Formats being skipped.
+[   12.940755] systemd[1]: Condition check resulted in Store a System Token in an EFI Variable being skipped.
+[   12.940885] systemd[1]: Condition check resulted in Commit a transient machine-id on disk being skipped.
+[   12.947852] systemd[1]: modprobe@efi_pstore.service: Deactivated successfully.
+[   12.948711] systemd[1]: Finished Load Kernel Module efi_pstore.
+[   12.949520] systemd[1]: Condition check resulted in Platform Persistent Storage Archival being skipped.
+[   12.958205] systemd[1]: Condition check resulted in Dispatch Password Requests to Console Directory Watch when bootsplash is active being skipped.
+[   12.958312] systemd[1]: Condition check resulted in Arbitrary Executable File Formats File System Automount Point being skipped.
+[   12.958445] systemd[1]: Condition check resulted in Load AppArmor profiles being skipped.
+[   12.963533] systemd[1]: Starting Load Kernel Module efi_pstore...
+[   12.964293] systemd[1]: Condition check resulted in Set Up Additional Binary Formats being skipped.
+[   12.964465] systemd[1]: Condition check resulted in Store a System Token in an EFI Variable being skipped.
+[   12.964674] systemd[1]: Condition check resulted in Commit a transient machine-id on disk being skipped.
+[   12.968285] systemd[1]: modprobe@efi_pstore.service: Deactivated successfully.
+[   12.969102] systemd[1]: Finished Load Kernel Module efi_pstore.
+[   12.969613] systemd[1]: Condition check resulted in Platform Persistent Storage Archival being skipped.
+[   13.222597] rk-pcie fe170000.pcie: PCIe Link Fail, LTSSM is 0x3, hw_retries=1
+[   13.306337] file system registered
+[   13.413213] read descriptors
+[   13.413252] read strings
+[   13.487434] systemd[1]: Started Manage USB device functions.
+[   13.584773] android_work: did not send uevent (0 0 0000000000000000)
+[   14.299411] rk-pcie fe170000.pcie: failed to initialize host
+[   15.939157] systemd[1]: Finished Orange Pi memory supported logging.
+[   16.006746] systemd[1]: Starting Journal Service...
+[   16.161473] systemd[1]: Started Journal Service.
+[   16.223795] systemd-journald[864]: Received client request to flush runtime journal.
+[   16.644199] dwc3 fc000000.usb: request ffffff8109b41b00 was not queued to ep0out
+[   16.644247] android_work: did not send uevent (0 0 0000000000000000)
+[   16.645901] rd 0-7: Disabling EAS, schedutil is mandatory
+[   16.752842] xhci-hcd xhci-hcd.15.auto: xHCI Host Controller
+[   16.752964] xhci-hcd xhci-hcd.15.auto: new USB bus registered, assigned bus number 7
+[   16.753063] xhci-hcd xhci-hcd.15.auto: hcc params 0x0220fe64 hci version 0x110 quirks 0x0000800002010010
+[   16.753089] xhci-hcd xhci-hcd.15.auto: irq 82, io mem 0xfc000000
+[   16.753167] xhci-hcd xhci-hcd.15.auto: xHCI Host Controller
+[   16.753237] xhci-hcd xhci-hcd.15.auto: new USB bus registered, assigned bus number 8
+[   16.753243] xhci-hcd xhci-hcd.15.auto: Host supports USB 3.0 SuperSpeed
+[   16.753323] usb usb7: New USB device found, idVendor=1d6b, idProduct=0002, bcdDevice= 6.01
+[   16.753330] usb usb7: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+[   16.753334] usb usb7: Product: xHCI Host Controller
+[   16.753338] usb usb7: Manufacturer: Linux 6.1.43-rockchip-rk3588-rknpu098 xhci-hcd
+[   16.753341] usb usb7: SerialNumber: xhci-hcd.15.auto
+[   16.753671] hub 7-0:1.0: USB hub found
+[   16.753688] hub 7-0:1.0: 1 port detected
+[   16.753855] usb usb8: We don't know the algorithms for LPM for this host, disabling LPM.
+[   16.753896] usb usb8: New USB device found, idVendor=1d6b, idProduct=0003, bcdDevice= 6.01
+[   16.753901] usb usb8: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+[   16.753904] usb usb8: Product: xHCI Host Controller
+[   16.753907] usb usb8: Manufacturer: Linux 6.1.43-rockchip-rk3588-rknpu098 xhci-hcd
+[   16.753911] usb usb8: SerialNumber: xhci-hcd.15.auto
+[   16.754097] hub 8-0:1.0: USB hub found
+[   16.754109] hub 8-0:1.0: 1 port detected
+[   18.344728] RTL8226B_RTL8221B 2.5Gbps PHY r8169-3-3100:00: attached PHY driver (mii_bus:phy_addr=r8169-3-3100:00, irq=MAC)
+[   18.532770] r8169 0003:31:00.0 enP3p49s0: Link is Down
+[   18.565975] RTL8226B_RTL8221B 2.5Gbps PHY r8169-4-4100:00: attached PHY driver (mii_bus:phy_addr=r8169-4-4100:00, irq=MAC)
+[   18.755965] r8169 0004:41:00.0 enP4p65s0: Link is Down
+[   21.099142] r8169 0003:31:00.0 enP3p49s0: Link is Up - 1Gbps/Full - flow control rx/tx
+[   21.099241] IPv6: ADDRCONF(NETDEV_CHANGE): enP3p49s0: link becomes ready
+[   21.457214] ttyFIQ ttyFIQ0: tty_port_close_start: tty->count = 1 port count = 2
+[   23.543509] platform mtd_vendor_storage: deferred probe pending
+[   34.306065] ttyFIQ ttyFIQ0: tty_port_close_start: tty->count = 1 port count = 2
+[   34.841808] wireguard: WireGuard 1.0.0 loaded. See www.wireguard.com for information.
+[   34.841818] wireguard: Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+[18796.441780] EXT4-fs (nvme0n1p1): mounted filesystem with ordered data mode. Quota mode: none.

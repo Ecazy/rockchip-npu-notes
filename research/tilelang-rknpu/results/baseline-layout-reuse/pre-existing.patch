@@ -1,0 +1,814 @@
+diff --git a/research/tilelang-rknpu/.gitignore b/research/tilelang-rknpu/.gitignore
+index 463bce7..87dc587 100644
+--- a/research/tilelang-rknpu/.gitignore
++++ b/research/tilelang-rknpu/.gitignore
+@@ -450,3 +450,9 @@ results/20261027T025648Z-execution-candidates/campaign/vendor/
+ # Add+ReLU primitive fusion (2026-10-28).
+ !results/20261028T075310Z-add-relu-primitive/
+ !results/20261028T075310Z-add-relu-primitive/**
++
++# SmolLM2-135M-Instruct fixed package acceptance (2026-10-28): commit text
++# evidence, frozen spec link and small captured/incremental arrays; full logits,
++# official/model arrays and regenerable 269 MB weights stay under .data/.
++!results/20261028T094650Z-smollm2/
++!results/20261028T094650Z-smollm2/**
+diff --git a/research/tilelang-rknpu/ACCEPTANCE.md b/research/tilelang-rknpu/ACCEPTANCE.md
+index 883089c..aacae26 100644
+--- a/research/tilelang-rknpu/ACCEPTANCE.md
++++ b/research/tilelang-rknpu/ACCEPTANCE.md
+@@ -480,3 +480,148 @@ TileLang control flow/masks, CNN operator coverage, NPU training, INT8/INT4,
+ full LLM loading, KV cache/state, RK1228 support, multi-board/concurrent
+ throughput, or post-fault recovery.  The Transformer's Host bridge is reported
+ and timed rather than hidden; it is not claimed to be pure NPU.
++
++<a id="smollm2-135m-instruct"></a>
++## SmolLM2-135M-Instruct 完整推理验收（2026-10-28）
++
++### 结论与设备
++
++在 RK3588（Orange Pi 5 Plus，kernel
++`6.1.43-rockchip-rk3588-rknpu098`，driver v0.9.8，单核 mask 1）上，以固定
++revision `12fd25f77366fa6b3b4b768ec3050bf629380bac` 的
++HuggingFaceTB/SmolLM2-135M-Instruct 完成 batch=1、容量 256 token 的真实权重推理：
++30 层全部执行，词表 49152 全量执行；prefill、持久 KV cache 的逐 token decode、
++chat template、EOS/max_new_tokens、reset 重放和独立数值/质量验收均通过。
++
++本里程碑不是 RKNN/RKLLM 路径，也没有 CPU 整模型执行或 CPU 矩阵 fallback。
++Embedding、RMSNorm、RoPE、GQA layout/merge、稳定 causal softmax、SwiGLU
++elementwise、residual add、logits 拼接和采样是明确注册并计量的 Host action；
++所有 Q/K/V/O、gate/up/down、attention QK/PV 和 lm_head 分片的矩阵任务均来自
++`models/tilelang_matmul.py:make_matmul_prim` 的真实 TileLang PrimFunc，经
++`compile_tilelang` 生成 RKPlan 后在板端提交。`lm_head` 用 12 个 4096 宽分片覆盖
++49152 词表。
++
++### 固定模型身份
++
++| 项 | 值 |
++|---|---|
++| revision | `12fd25f77366fa6b3b4b768ec3050bf629380bac` |
++| config / tokenizer / weights SHA-256 | 见 `results/20261028T094650Z-smollm2/manifest.json` |
++| layers / hidden / intermediate / vocab | 30 / 576 / 1536 / 49152 |
++| Q heads / KV heads / head_dim | 9 / 3 / 64 |
++| activation / eps / RoPE | SiLU / 1e-5 / theta=100000, HF half-split |
++| tied embeddings | true |
++| BOS / EOS / pad | 1 `<|im_start|>` / 2 `<|im_end|>` / 2 |
++| chat template | tokenizer_config 内嵌模板，Host 侧应用 |
++
++### 计划与执行资源
++
++| 项 | 实测/声明 |
++|---|---:|
++| RKPlan 数 | 268 |
++| NPU tasks / submits | 5660 / 1712 |
++| 每 decoder 层每 token 的矩阵计划调用 | QKV + O + gate/up + down + 3 QK + 3 PV = 9 |
++| decode lm_head 计划 | 12 |
++| 每 token 计划调用总数 | 282（30×9 + 12） |
++| 权重文件 | 269,077,440 B FP16 |
++| 部署计划常量（decode+prefill） | 537,919,488 B |
++| Host KV cache | 30×3×256×64×2×2 = 5,898,240 B |
++| Plan artifact 文本 | 10,784,213 B |
++| 峰值 RSS | 2,049,200 kB |
++
++268 个计划的 `templates` 均只包含 `co.mm.f16.v1` / `co.mm_acc.f16.v1`；无
++Host 矩阵计划、未知 action 或静默 fallback。QK/PV 使用运行时 B operand；KV 追加
++仍是 Host 侧显式、带边界检查的 in-place action。
++
++### 数值验收
++
++门限只用 calibration prompt（“Name the capital of France.”，36 token）上的
++观测冻结，验收使用不重叠的 prompt（“Write a Python function that returns the
++square of an integer.”，42 token）。完整 spec 与哈希：
++`models/smollm2_numeric_acceptance.json`（56 个 gate）。独立 declared reference
++显式实现 FP16 权重/激活、每个 256-wide K tile 的 FP16 writeback、FP32 RMSNorm
++归约、FP32 RoPE/softmax 和单次 FP16 收窄；官方参考为 HF Transformers float32、
++`attn_implementation=eager`、固定随机种子。
++
++| 检查 | 观测 | 冻结门限 | 结果 |
++|---|---|---|---|
++| full logits vs declared reference | max_abs 0.138671875, RMSE 0.0256602, top1 42/42, top5 均值 4.952 | atol 0.296875, RMSE 0.07421875, top1 ≥0.99 | PASS |
++| full logits vs official FP32 | max_abs 0.1135664, RMSE 0.0224003, top1 42/42, top5 均值 4.976 | atol 0.1955566, RMSE 0.0625, top1 ≥0.99 | PASS |
++| teacher-forcing 74 positions vs declared reference | max_abs 0.1464844, RMSE 0.0239630, top1 74/74 | atol 0.34765625, RMSE 0.0869141, top1 ≥0.99 | PASS |
++| incremental KV decode vs full-prefix recompute | 9/9 位置逐元素完全相等（max_abs=0, RMSE=0） | atol/RMSE 2^-12, top1 ≥0.99 | PASS |
++| 首/中/末层 captures（layer 0/15/29） | 见 verifier JSON | 校准冻结的 per-tensor atol/RMSE | PASS（56/56） |
++| lm_head shard 覆盖 | 12×4096=49152；每个 shard 与 declared reference 数值 gate | 校准冻结 | PASS |
++
++补充：per-shard 内部 rank 本身不作为 gate。验收中 shard 08 在 42 个位置里有 1
++个近 tie（top1 从 2670 变 1317，差 0.0078，整词表 top1 仍全对）；这属于硬件
++FP16 近 tie，不是词表索引/拼接错误。V1 policy 曾误把 per-shard rank 作为 gate，
++并误把官方 continuation 本身作为 gate；V2 保留所有 atol/RMSE 值与 full-vocab
++rank gate 不变，只把这两项改为诊断，原始 V1 观测保留在 evidence 中。
++
++### 质量与自由生成
++
++| 项 | Backend | Official FP32 |
++|---|---:|---:|
++| 验收文本 1275 scored tokens, mean NLL | 3.23915684 | 3.23910809 |
++| 验收文本 PPL | 25.512202 | 25.510958 |
++| 验收文本 top1 accuracy | 0.43843137 | 0.43843137 |
++| 校准文本 1275 tokens, mean NLL | 2.88394461 | 2.88385677 |
++| 校准文本 PPL | 17.884682 | 17.883112 |
++
++固定 instruction prompts（chat template，greedy，32 token）：
++- prompt 0 “What is 2+2? Answer with one short sentence.”：32/32 token 与官方
++  一致，首个分叉 None；
++- prompt 1 “Name the capital of France.”：21/32 一致，首个分叉 index 20；
++- prompt 2 “Write a Python function that returns the square of an integer.”：
++  8/32 一致，首个分叉 index 6；
++- prompt 3 “In one sentence, explain why the sky appears blue.”：32/32 一致，
++  首个分叉 None。
++Prompt 0 的实际文本为
++`Two and two is equal to four.<|im_end|>`；teacher forcing 对官方 continuation
++的 top1 为 31/32（首个分叉 index 6），作为质量差异报告而不作为后端数值 gate。
++
++### 性能与资源
++
++3 次独立 generate（同一进程，每次 reset，32 new tokens）：
++
++| 指标 | 观测 |
++|---|---:|
++| Host 权重转换 + 268 plan 编译（本机实测） | 4.977 s |
++| 进程内模型/包/268 workspace 初始化 | 7.713 s |
++| 冷 TTFT（初始化 + prefill，不含 SSH/tokenization） | 10.594 s |
++| 暖 prefill / TTFT | 2.644–2.907 s |
++| decode 总时长（32 token） | 13.049–15.192 s |
++| decode 稳态中位/均值 | 465.85 / 445.17 ms/token |
++| decode tokens/s（warm） | 2.45 |
++| 3 次总量：plan dwell / Host actions | 23.484 s / 5.898 s |
++| 每 decode token 平均 upload / download | 29.92 MB / 9.51 MB |
++| 每 decode token pack / submit wait | 60.44 ms / 87.79 ms |
++| 峰值 RSS | 2,049,200 kB |
++
++计时边界：`prefill_us` 从 Host `prefill()` 入口（embedding 起）到 12 个
++lm_head shard 和 logits 拼接完成；`decode_us` 从 `decode_one()` 入口到下一 token
++logits 完成，包含 30 层、QK/PV、head shards 和所有 Host action。TTFT 不含 Host
++chat template/tokenization、SSH、结果下载。未与 RKNN/RKLLM/CPU 做同口径加速比较。
++
++### 证据与重放
++
++- 汇总与全部文件哈希：`results/20261028T094650Z-smollm2/manifest.json`
++- 验收 verifier：`results/20261028T094650Z-smollm2/verify/verify-summary.json`
++- raw arrays（all-logits、teacher-forcing、reference、official）：本地 ignored
++  `.data/evidence/smollm2-20261028T094650Z/`，路径和哈希见上述 manifest
++- 数值 spec：`models/smollm2_numeric_acceptance.json`
++- model package compile/fetch/chat/replay：`models/README.md#smollm2-135m-instruct`
++  与 [REPLAY.md](REPLAY.md#smollm2-135m-instruct)
++- host 回归：371 pytest PASS、33/33 ctest PASS；日志在 evidence `host/`
++- board 回归：既有 current MLP/TinyViT hybrid plans 各 8 张图的 admission smoke
++  PASS（MLP b1/b8/b32 与 TinyViT b1/b8 accuracy 1.0，top1 agreement 1.0），
++  证明本次通用 extractor/identity 修改未破坏既有模型路径；这不是历史
++  full-split 验收的替代。原始结果在 evidence `regression/`。
++- 边界：prompt len 1/2/3/255/256、257 拒绝、255+2 拒绝、空 prompt 拒绝、
++  EOS 停止、max_new_tokens 停止、两次 reset 结果一致。
++
++### 非声明
++
++本验收只覆盖上述单板、单核、batch=1、FP16、固定 256-token profile 的
++SmolLM2 几何；不声明任意 LLM importer、动态 shape、设备驻 KV cache、量化、
++并发请求、多板、故障后恢复、RK1228 或性能优势。
+diff --git a/research/tilelang-rknpu/README.md b/research/tilelang-rknpu/README.md
+index f277458..804df8d 100644
+--- a/research/tilelang-rknpu/README.md
++++ b/research/tilelang-rknpu/README.md
+@@ -6,6 +6,7 @@
+ 
+ - 后端 MVP 已在声明支持域内完成；仍是实验性后端，不承诺未知设备故障后的恢复。
+ - MNIST MLP 与显式 hybrid Tiny Transformer 完整模型里程碑已关闭，证据统一见 [ACCEPTANCE.md](ACCEPTANCE.md)。
++- SmolLM2-135M-Instruct 固定 revision 的完整 30 层、49152 词表推理链已在 RK3588 上跑通：prefill、持久 KV cache decode、chat template、独立声明参考和官方 FP32 参考均已验收；入口见 [models/README.md](models/README.md#smollm2-135m-instruct)。
+ - 默认模型优化、最终 baseline/current 复验及厂商 RKNN 对照统一见 [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md)。不同数值政策及不同 campaign 的性能分开解释。
+ - 后端重构主线已完成：编译边界收敛到 codegen，新增 `compile_artifact` 直接实例化入口，旧入口与持久化重放保持；TVM 原生图试点已完成但未采用为默认，计算表示继续使用薄 RKIR。结论与证据见 [refactor-specific.md](refactor-specific.md) 第 15 节。原始设计与重构方案各保留一对 overview/specific，按下面的适用范围阅读。
+ 
+diff --git a/research/tilelang-rknpu/REPLAY.md b/research/tilelang-rknpu/REPLAY.md
+index 0cca59c..30db7a3 100644
+--- a/research/tilelang-rknpu/REPLAY.md
++++ b/research/tilelang-rknpu/REPLAY.md
+@@ -203,3 +203,97 @@ git -C ../upstream-components/rknpu-submit apply \
+ 
+ The provider C test `provider_context` covers queued shared-fd submission,
+ task-BO non-rewrite, faulted-close retention and healthy-close compatibility.
++
++## SmolLM2-135M-Instruct
++
++One model driver handles fixed-revision fetch, Host compile, isolated board
++setup, chat generation and generic board requests.  Credentials continue to come
++from the repository's ignored `.env`; the script never prints them.
++
++```bash
++cd research/tilelang-rknpu
++
++# Host-only tokenizer/reference dependencies (torch/numpy are in requirements.lock).
++python3 -m pip install --target .pydeps-p0 -r requirements-smollm2.lock
++
++# Fixed model files and SHA-256 verification (HF mirror by default).
++./scripts/run-smollm2.sh fetch
++
++# Canonical FP16 weights + 268 real-TileLang RKPlans.
++./scripts/run-smollm2.sh compile
++
++# Host regression: full pytest suite and existing C tests.
++./scripts/run-smollm2.sh host-check
++
++# One-time isolated board source bundle, production C build and package upload.
++./scripts/run-smollm2.sh setup-board
++
++# Chat-template driven greedy generation on the RK3588.
++./scripts/run-smollm2.sh chat \
++  "Name the capital of France." 32
++```
++
++The generic board entry accepts a JSON containing `runs` with
++`generate`, `prefill`, `capture`, `teacher_forcing`, `incremental`, `score` or
++`expect_reject` modes:
++
++```bash
++./scripts/run-smollm2.sh board-run /tmp/smollm-request.json \
++  results/$(date -u +%Y%m%dT%H%M%SZ)-smollm2
++```
++
++The committed evidence manifest is
++`results/20261028T094650Z-smollm2/manifest.json`.  Raw 25 MB
++`all-logits`/teacher-forcing arrays and the official reference arrays are kept
++under the ignored local path `.data/evidence/smollm2-20261028T094650Z/`; their
++hashes and replay identities are in that manifest.
++
++Independent references and frozen acceptance:
++
++```bash
++export PYTHONPATH=$PWD/python:$PWD/tools:$PWD/.pydeps-p0
++
++# Fixed text windows for NLL/PPL (calibration and disjoint acceptance sources).
++python3 tools/make_smollm2_ppl_windows.py \
++  --source .data/models/SmolLM2-135M-Instruct/README.md \
++  --out /tmp/smollm-ppl-calibration.json
++python3 tools/make_smollm2_ppl_windows.py \
++  --source ACCEPTANCE.md --out /tmp/smollm-ppl-acceptance.json
++
++# Official FP32 semantic/quality reference.
++python3 tools/smollm2_official.py --mode logits \
++  --ids-json /tmp/calibration-ids.json \
++  --out /tmp/official-calibration
++python3 tools/smollm2_official.py --mode score \
++  --windows-json /tmp/smollm-ppl-calibration.json \
++  --out /tmp/official-ppl-calibration
++
++# Independent declared-reference implementation (FP16, 256-wide K writeback).
++python3 tools/smollm2_reference.py \
++  --package .data/models/smollm2_135m_instruct_package \
++  --ids-json /tmp/calibration-ids.json \
++  --capture-layers 0,15,29 --out /tmp/ref-calibration
++
++# Re-freeze only from calibration observations, then verify disjoint acceptance.
++python3 tools/calibrate_smollm2.py \
++  --board .data/evidence/smollm2-20261028T094650Z/calibration \
++  --reference .data/evidence/smollm2-20261028T094650Z/calibration-reference \
++  --reference-tf .data/evidence/smollm2-20261028T094650Z/calibration-tf-reference \
++  --official-logits .data/evidence/smollm2-20261028T094650Z/official/official-logits-calibration/logits.npy \
++  --ppl-board .data/evidence/smollm2-20261028T094650Z/ppl/calibration-board \
++  --ppl-official .data/evidence/smollm2-20261028T094650Z/official/official-ppl-calibration/result.json \
++  --ppl-source-json .data/evidence/smollm2-20261028T094650Z/official/ppl-calibration-windows.json \
++  --prompt-text "Name the capital of France." \
++  --out models/smollm2_numeric_acceptance.json
++
++python3 tools/verify_smollm2.py \
++  --spec models/smollm2_numeric_acceptance.json \
++  --board .data/evidence/smollm2-20261028T094650Z/acceptance \
++  --reference .data/evidence/smollm2-20261028T094650Z/acceptance-reference \
++  --reference-tf .data/evidence/smollm2-20261028T094650Z/acceptance-tf-reference \
++  --official-logits .data/evidence/smollm2-20261028T094650Z/official/official-logits-acceptance/logits.npy \
++  --ppl-board .data/evidence/smollm2-20261028T094650Z/ppl/acceptance-board \
++  --ppl-official .data/evidence/smollm2-20261028T094650Z/official/official-ppl-acceptance/result.json \
++  --acceptance-source-json .data/evidence/smollm2-20261028T094650Z/official/ppl-acceptance-windows.json \
++  --out /tmp/verify-smollm2.json
++```
+diff --git a/research/tilelang-rknpu/SUPPORT-DOMAIN.md b/research/tilelang-rknpu/SUPPORT-DOMAIN.md
+index b585a06..2287095 100644
+--- a/research/tilelang-rknpu/SUPPORT-DOMAIN.md
++++ b/research/tilelang-rknpu/SUPPORT-DOMAIN.md
+@@ -1,6 +1,7 @@
+ # Supported domain and explicit boundaries
+ 
+-Updated 2026-10-24 for the MVP and complete-model closure checkpoints.
++Updated 2026-10-28 for the MVP, complete-model and SmolLM2-135M-Instruct
++checkpoints.
+ 
+ ## Accepted source forms
+ 
+@@ -8,6 +9,11 @@ Updated 2026-10-24 for the MVP and complete-model closure checkpoints.
+   multi-tile single-GEMM, projection, staged-FP16 FFN, scalar/per-channel
+   compile-time broadcast, real two-output branches, and the explicit guarded
+   ragged K/M/N tail fixture.
++- **Full logical single-GEMM TileLang source**: a one-launch PrimFunc whose
++  `T.copy` regions prove complete A/B/C coverage and whose one `T.gemm`
++  describes a logical M/N/K in 1..4096. The source result is a logical matmul;
++  the target planner lowers it into 256x256 output tiles and 256-wide K slices.
++  This is the form used by every SmolLM2 projection and lm_head shard.
+ - **Real multi-block TileLang stage pipelines**: separately launched `T.Kernel`
+   stages whose global intermediate parameters are materialised between launches.
+   Each stage writes exactly one parameter; later stages may read it; a stage may
+@@ -31,9 +37,15 @@ Updated 2026-10-24 for the MVP and complete-model closure checkpoints.
+ 
+ ## Shapes and tiling
+ 
+-- M, N and K are static integers in **1..4096**.
++- M, N and K are static integers in **1..4096** for the logical operation.
+ - Primitive extents are at most 256. Tiled per-node graphs use a 256x256
+-  logical output grid and 256-wide K slices.
++  logical output grid and 256-wide K slices. A full logical GEMM larger than 256
++  is accepted from the closed single-GEMM source form only; arbitrary large
++  source tiles or loop nests are not reinterpreted.
++- External runtime operand B is supported for the dynamic-weight matmul plans
++  (`b_is_input=True`). Device-produced B remains unsupported; SmolLM2 attention
++  therefore keeps the append-only KV cache on the Host and passes a copied
++  window into QK/PV RKPlans.
+ - MatMul K chains use alternating accumulator BOs; every intermediate value
+   stays device-resident. Residual inputs and exported outputs are kept live
+   through all consumers and downloads.
+@@ -72,7 +84,8 @@ Updated 2026-10-24 for the MVP and complete-model closure checkpoints.
+   `[N]` constants are accepted.
+ - Arbitrary masks, non-rectangular predicates, else branches, and unproved
+   overlap.
+-- Device-produced MatMul weights.
++- Device-produced MatMul weights. Runtime Host-provided B is supported; a
++  MatMul output cannot be consumed as another MatMul's weight.
+ - External arbitrary IOVA import.
+ - Multi-block TileLang extraction is supported only for the separately launched
+   stage form above.  A single parallel grid whose blocks depend on each other's
+@@ -128,3 +141,30 @@ real-TileLang-derived RKPlans.  Unknown Host actions, RKPlans, shapes, numeric
+ contracts or module fallback are rejected.  Dynamic shape, arbitrary ONNX, full
+ LLM/KV cache, quantization, NPU training, multi-board/concurrent throughput and
+ post-fault recovery remain outside scope.
++
++## SmolLM2-135M-Instruct execution domain
++
++The fixed model revision `12fd25f77366fa6b3b4b768ec3050bf629380bac` adds a
++single-model LLM domain, not a generic LLM importer:
++
++- batch 1, total prompt-plus-generated capacity 256 tokens, one fixed prefill
++  bucket of 256 and M=1 decode plans;
++- persistent Host KV cache `[30,3,256,64]` FP16, with an explicitly registered
++  in-place append action and a runtime valid length;
++- 30 layers x {QKV combined projection, O projection, gate/up combined
++  projection, down projection} in both decode and prefill profiles;
++- attention QK/PV plans with runtime operand B, three query heads per KV group;
++- twelve 4096-wide lm_head shards covering the full 49152 vocabulary;
++- embedding lookup, RMSNorm, RoPE, GQA layout/merge, stable causal softmax,
++  SwiGLU elementwise product, residual add, vocabulary concatenation and greedy
++  sampling are named, metered Host actions;
++- unknown Host actions, non-C-contiguous or wrong-shape bindings, plans without
++  only `co.mm*` NPU tasks, and requests beyond capacity fail closed;
++- the fixed package has 268 immutable RKPlans, 5660 NPU tasks and 1712 submits,
++  with about 537.9 MB of deployed plan constants (decode and prefill copies) and
++  a 269.1 MB canonical weight file.
++
++This closes only the named SmolLM2 geometry. It does not establish arbitrary
++GQA/MQA/MLA geometry, dynamic prefill lengths, beam search, sampling policies,
++quantization, multi-request batching, device-resident KV cache, multi-board
++qualification, post-fault recovery, or RK1228 applicability.
+diff --git a/research/tilelang-rknpu/models/README.md b/research/tilelang-rknpu/models/README.md
+index 676d63c..2df5871 100644
+--- a/research/tilelang-rknpu/models/README.md
++++ b/research/tilelang-rknpu/models/README.md
+@@ -28,3 +28,46 @@ pickled object is stored in a model or RKPlan.
+ Default vs control attribution and final acceptance are in
+ [OPTIMIZATION-SUMMARY.md](../OPTIMIZATION-SUMMARY.md); replay commands are in
+ [REPLAY.md](../REPLAY.md).
++
++<a id="smollm2-135m-instruct"></a>
++## SmolLM2-135M-Instruct
++
++The fixed external package is generated into the ignored local directory
++`.data/models/smollm2_135m_instruct_package/`; it is not committed because the
++canonical FP16 weight file is 269.1 MB.  The fixed model is
++`HuggingFaceTB/SmolLM2-135M-Instruct` at revision
++`12fd25f77366fa6b3b4b768ec3050bf629380bac`.
++
++Files:
++
++| path | role |
++|---|---|
++| `manifest.json` | model/file identities, verified config, plan/source hashes, resource counts, coverage and Host-action registry |
++| `weights.npz` | canonical FP16 `embed`, 30 layers of combined QKV/O/gate-up/down weights and norm gammas |
++| `plans/*.rkplan.json` | 268 real-TileLang-derived RKPlans: 240 layer projections, 24 lm_head shards and 4 dynamic-B QK/PV plans |
++
++Verified model semantics: 30 layers, hidden 576, intermediate 1536, vocab
++49152, 9 Q heads, 3 KV heads, head_dim 64, SiLU MLP, RMSNorm eps 1e-5,
++RoPE theta 100000 with HF half-split rotation, tied word embeddings, EOS token
++`<|im_end|>` id 2, BOS `<|im_start|>` id 1, and the tokenizer's embedded chat
++template.
++
++Execution boundary:
++
++- every Q/K/V/O, gate/up/down, attention QK/PV and lm_head shard is an immutable
++  RKPlan whose only NPU task templates are `co.mm.f16.v1` /
++  `co.mm_acc.f16.v1`;
++- embedding lookup, RMSNorm, RoPE, GQA layout/merge, stable causal softmax,
++  in-place KV append, SwiGLU elementwise product, residual add, vocabulary
++  concatenation and greedy sampling are explicitly registered and metered Host
++  actions;
++- prefill uses one 256-token bucket; decode uses M=1 plans and a persistent
++  `[30,3,256,64]` FP16 Host KV cache; no RKNN/RKLLM or CPU matrix fallback is
++  used.
++
++Host-only tokenizer/reference versions are fixed in
++`requirements-smollm2.lock`. Fetch, compile and replay commands are in
++[REPLAY.md](../REPLAY.md).  The frozen
++numeric acceptance policy is `models/smollm2_numeric_acceptance.json`; its
++calibration and disjoint acceptance evidence is under
++`results/20261028T094650Z-smollm2/`.
+diff --git a/research/tilelang-rknpu/python/rknpu_backend/frontend/tilelang_adapter.py b/research/tilelang-rknpu/python/rknpu_backend/frontend/tilelang_adapter.py
+index 08bb815..d85cb08 100644
+--- a/research/tilelang-rknpu/python/rknpu_backend/frontend/tilelang_adapter.py
++++ b/research/tilelang-rknpu/python/rknpu_backend/frontend/tilelang_adapter.py
+@@ -28,6 +28,10 @@ The optional TileLang import stays inside this module, so importing
+ from __future__ import annotations
+ 
+ from dataclasses import dataclass
++import hashlib
++import os
++from pathlib import Path
++import re
+ from typing import Any, Iterable
+ 
+ from ..errors import (RK_E_NUMERIC_CONTRACT, RK_E_SHAPE, RK_E_UNSUPPORTED,
+@@ -593,11 +597,40 @@ def _si_lu_ok(store: Any, item: _Item, tirx: Any, acc: Any,
+     return False, "activation is not acc * sigmoid(acc) on identical indices"
+ 
+ 
++_SOURCE_NAME = re.compile(r"SourceName\((.+?), 0x[0-9a-fA-F]+\)")
++
++
++def _canonical_source_name(path: str) -> str:
++    """Stable source identity independent of checkout path and TVM address.
++
++    ``str(tvm.Span)`` embeds the Python object address of the ``SourceName``.
++    Using it directly made otherwise identical recompilations produce different
++    plan hashes.  We replace that address with a fixed marker and bind the
++    identity to the source file's relative path and content digest.
++    """
++    resolved = Path(path).resolve()
++    package_root = Path(__file__).resolve().parents[3]
++    try:
++        relative = str(resolved.relative_to(package_root))
++    except ValueError:
++        relative = resolved.name
++    try:
++        digest = hashlib.sha256(resolved.read_bytes()).hexdigest()[:16]
++    except OSError:
++        digest = "unreadable"
++    return f"{relative}#sha256:{digest}"
++
++
+ def _source_span(prim_func: Any) -> str:
+     try:
+         span = prim_func.span
+         if span is not None:
+-            return str(span)
++            text = str(span)
++            text = _SOURCE_NAME.sub(
++                lambda match: f"SourceName({_canonical_source_name(match.group(1))}, 0x0)",
++                text)
++            # Any remaining TVM address is identity-irrelevant.
++            return re.sub(r"0x[0-9a-fA-F]+", "0x0", text)
+     except Exception:
+         pass
+     try:
+@@ -4379,12 +4412,15 @@ def extract(prim_func: Any, *, options: CompileOptions,
+     if not (1 <= gm <= 4096 and 1 <= gn <= 4096 and 1 <= gk <= 4096):
+         reject(RK_E_SHAPE, "M/N/K must be in 1..4096", stage="frontend",
+                source=span, actual=[gm, gn, gk])
+-    if max(gm, gn, gk) > 256:
+-        reject(RK_E_UNSUPPORTED,
+-               "the minimal structural extractor accepts one primitive-sized "
+-               "M/N/K tile (<=256); K tiling and multi-tile extraction are not "
+-               "implemented yet", stage="frontend", source=span,
+-               actual=[gm, gn, gk])
++    # A full logical GEMM may exceed the 256-element primitive extent.  The
++    # recognizer still proves that the source copies the complete parameter
++    # regions into its logical GEMM operands and writes the complete output.
++    # The target planner lowers that logical operation to 256x256 output tiles
++    # and 256-wide K slices; the source's alloc_shared extent is a TileLang
++    # staging declaration, not an RKNPU primitive size.  This remains limited
++    # to the same closed single-GEMM dataflow above (one fill, three copies and
++    # one GEMM), so it does not admit an arbitrary loop nest or unmaterialised
++    # shared-memory arrangement.
+ 
+     a_shape = tuple(int(x) for x in a_param.shape)
+     b_shape = tuple(int(x) for x in b_param.shape)
+diff --git a/research/tilelang-rknpu/python/rknpu_backend/hybrid.py b/research/tilelang-rknpu/python/rknpu_backend/hybrid.py
+index 8b61bc1..f1cbb67 100644
+--- a/research/tilelang-rknpu/python/rknpu_backend/hybrid.py
++++ b/research/tilelang-rknpu/python/rknpu_backend/hybrid.py
+@@ -32,7 +32,8 @@ from .runtime.ffi import LibRKPlan
+ HYBRID_SCHEMA_VERSION = 1
+ HYBRID_KIND = "rkhybrid"
+ HOST_ACTIONS_VERSION = 1
+-DTYPES = {"uint8": np.uint8, "float16": np.float16, "float32": np.float32}
++DTYPES = {"uint8": np.uint8, "int32": np.int32,
++          "float16": np.float16, "float32": np.float32}
+ PHASES = {"preprocess", "execution", "postprocess"}
+ _F16 = np.dtype("<f2")
+ 
+@@ -820,6 +821,247 @@ def _logits_prefix(inputs: dict[str, np.ndarray],
+     return {"y": np.ascontiguousarray(x[:, :cols], dtype=np.float32)}
+ 
+ 
++# ---------------------------------------------------------------------------
++# SmolLM2/Llama-shape Host actions.  These are deliberately narrow: they are
++# the non-matrix boundaries of the LLM runner (embedding lookup, RoPE, GQA
++# layout, deterministic softmax, in-place KV append and greedy selection).
++# Every call is metered by the model runner; none of them substitutes for a
++# matrix operation that is required to be an RKPlan.
++# ---------------------------------------------------------------------------
++
++def _smollm_embed_padded(inputs: dict[str, np.ndarray],
++                         attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    _action_attrs(attrs, {"bucket", "hidden"})
++    bucket = _int(attrs["bucket"], "smollm.embed.bucket", minimum=1)
++    hidden = _int(attrs["hidden"], "smollm.embed.hidden", minimum=1)
++    ids = np.asarray(inputs["token_ids"])
++    table = np.asarray(inputs["table"])
++    if ids.dtype != np.dtype("<i4") or ids.ndim != 1 or ids.size > bucket:
++        reject(RK_E_SHAPE,
++               "smollm.embed token_ids must be a 1-D int32 array <= bucket",
++               stage="host_action", actual=[str(ids.dtype), list(ids.shape)])
++    if table.dtype != _F16 or table.ndim != 2 or table.shape[1] != hidden:
++        reject(RK_E_SHAPE,
++               "smollm.embed table must be FP16 [vocab,hidden]",
++               stage="host_action", actual=[str(table.dtype), list(table.shape)])
++    if ids.size and (int(ids.min()) < 0 or int(ids.max()) >= table.shape[0]):
++        reject(RK_E_SHAPE, "smollm.embed token id outside vocabulary",
++               stage="host_action", actual=[int(ids.min()), int(ids.max())],
++               required=[0, table.shape[0] - 1])
++    out = np.zeros((bucket, hidden), dtype=np.float16)
++    if ids.size:
++        out[:ids.size] = table[ids]
++    return {"x": out}
++
++
++def _smollm_rope(inputs: dict[str, np.ndarray],
++                 attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    _action_attrs(attrs, {"theta", "interleaved"})
++    theta = float(attrs["theta"])
++    if not math.isfinite(theta) or theta <= 1.0:
++        reject(RK_E_INVALID, "smollm.rope theta must be finite and > 1",
++               stage="host_action")
++    if attrs["interleaved"] is not False:
++        reject(RK_E_UNSUPPORTED,
++               "smollm.rope supports only the HF Llama half-split convention",
++               stage="host_action", actual=attrs["interleaved"])
++    x = np.asarray(inputs["x"])
++    pos = np.asarray(inputs["positions"])
++    if x.dtype != _F16 or x.ndim != 3 or x.shape[-1] % 2:
++        reject(RK_E_SHAPE,
++               "smollm.rope x must be FP16 [tokens,heads,even_dim]",
++               stage="host_action", actual=[str(x.dtype), list(x.shape)])
++    if pos.dtype != np.dtype("<i4") or pos.shape != (x.shape[0],):
++        reject(RK_E_SHAPE,
++               "smollm.rope positions must be int32 [tokens]",
++               stage="host_action", actual=[str(pos.dtype), list(pos.shape)])
++    if pos.size and int(pos.min()) < 0:
++        reject(RK_E_SHAPE, "smollm.rope positions must be non-negative",
++               stage="host_action", actual=int(pos.min()))
++    dim = x.shape[-1]
++    inv = np.power(np.float32(theta),
++                   -np.arange(0, dim, 2, dtype=np.float32) /
++                   np.float32(dim))
++    freqs = pos.astype(np.float32)[:, None] * inv[None, :]
++    emb = np.concatenate((freqs, freqs), axis=-1)
++    cos = np.cos(emb).astype(np.float32)[:, None, :]
++    sin = np.sin(emb).astype(np.float32)[:, None, :]
++    xf = x.astype(np.float32)
++    half = dim // 2
++    rotated = np.concatenate((-xf[..., half:], xf[..., :half]), axis=-1)
++    return {"y": np.ascontiguousarray(xf * cos + rotated * sin,
++                                      dtype=np.float16)}
++
++
++def _smollm_qkv_split_gqa(inputs: dict[str, np.ndarray],
++                          attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    _action_attrs(attrs, {"q_heads", "kv_heads", "head_dim"})
++    qh = _int(attrs["q_heads"], "smollm.qkv.q_heads", minimum=1)
++    kh = _int(attrs["kv_heads"], "smollm.qkv.kv_heads", minimum=1)
++    d = _int(attrs["head_dim"], "smollm.qkv.head_dim", minimum=1)
++    if qh % kh:
++        reject(RK_E_SHAPE, "smollm.qkv q_heads must be divisible by kv_heads",
++               stage="host_action", actual=[qh, kh])
++    qkv = np.asarray(inputs["qkv"])
++    expected = qh * d + 2 * kh * d
++    if qkv.dtype != _F16 or qkv.ndim != 2 or qkv.shape[1] != expected:
++        reject(RK_E_SHAPE,
++               "smollm.qkv input must be FP16 [tokens,q_heads*d+2*kv_heads*d]",
++               stage="host_action", actual=[str(qkv.dtype), list(qkv.shape)],
++               required=list(expected))
++    t = qkv.shape[0]
++    q_end = qh * d
++    k_end = q_end + kh * d
++    q = qkv[:, :q_end].reshape(t, qh, d)
++    k = qkv[:, q_end:k_end].reshape(t, kh, d)
++    v = qkv[:, k_end:].reshape(t, kh, d)
++    return {"q": np.ascontiguousarray(q, dtype=np.float16),
++            "k": np.ascontiguousarray(k, dtype=np.float16),
++            "v": np.ascontiguousarray(v, dtype=np.float16)}
++
++
++def _smollm_kv_append(inputs: dict[str, np.ndarray],
++                      attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    """Append a prefix to the persistent cache in place.
++
++    The action is intentionally stateful at the cache boundary, but it is still
++    explicit, registered, shape-checked and metered by the model runner.  It
++    returns the same arrays so callers can chain the action result without a
++    hidden alias assumption.
++    """
++    _action_attrs(attrs, {"capacity"})
++    capacity = _int(attrs["capacity"], "smollm.kv.capacity", minimum=1)
++    ck, cv = np.asarray(inputs["cache_k"]), np.asarray(inputs["cache_v"])
++    k, v = np.asarray(inputs["k"]), np.asarray(inputs["v"])
++    start = np.asarray(inputs["start"])
++    if ck.dtype != _F16 or cv.dtype != _F16 or k.dtype != _F16 or \
++            v.dtype != _F16:
++        reject(RK_E_INVALID, "smollm.kv append requires FP16 tensors",
++               stage="host_action")
++    if ck.ndim != 3 or cv.shape != ck.shape or ck.shape[1] != capacity:
++        reject(RK_E_SHAPE,
++               "smollm.kv cache_k/cache_v must be [kv_heads,capacity,head_dim]",
++               stage="host_action", actual=[list(ck.shape), list(cv.shape)],
++               required=capacity)
++    if k.ndim != 3 or k.shape[1:] != (ck.shape[0], ck.shape[2]) or \
++            v.shape != k.shape:
++        reject(RK_E_SHAPE,
++               "smollm.kv k/v must be [tokens,kv_heads,head_dim]",
++               stage="host_action", actual=[list(k.shape), list(v.shape)])
++    if start.dtype != np.dtype("<i4") or start.shape != (1,):
++        reject(RK_E_SHAPE, "smollm.kv start must be int32 [1]",
++               stage="host_action", actual=[str(start.dtype), list(start.shape)])
++    s = int(start[0])
++    if s < 0 or s + k.shape[0] > capacity:
++        reject(RK_E_SHAPE, "smollm.kv append exceeds persistent cache",
++               stage="host_action", actual=[s, k.shape[0], capacity])
++    ck[:, s:s + k.shape[0], :] = k.transpose(1, 0, 2)
++    cv[:, s:s + k.shape[0], :] = v.transpose(1, 0, 2)
++    return {"cache_k": ck, "cache_v": cv}
++
++
++def _smollm_causal_softmax(inputs: dict[str, np.ndarray],
++                           attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    _action_attrs(attrs, {"scale"})
++    scale = float(attrs["scale"])
++    if not math.isfinite(scale) or scale <= 0:
++        reject(RK_E_INVALID, "smollm.softmax scale must be finite and positive",
++               stage="host_action")
++    scores = np.asarray(inputs["scores"])
++    valid = np.asarray(inputs["valid_lengths"])
++    if scores.dtype != _F16 or scores.ndim != 2:
++        reject(RK_E_SHAPE, "smollm.softmax scores must be FP16 rank 2",
++               stage="host_action", actual=[str(scores.dtype), list(scores.shape)])
++    if valid.dtype != np.dtype("<i4") or valid.shape != (scores.shape[0],):
++        reject(RK_E_SHAPE,
++               "smollm.softmax valid_lengths must be int32 [rows]",
++               stage="host_action",
++               actual=[str(valid.dtype), list(valid.shape)])
++    rows, cols = scores.shape
++    sf = scores.astype(np.float32) * np.float32(scale)
++    idx = np.arange(cols, dtype=np.int32)[None, :]
++    mask = idx < valid[:, None]
++    sf = np.where(mask, sf, np.float32(-np.inf))
++    mx = np.max(sf, axis=1, keepdims=True)
++    mx = np.where(np.isfinite(mx), mx, np.float32(0.0))
++    with np.errstate(invalid="ignore", over="ignore"):
++        e = np.exp(sf - mx) * mask.astype(np.float32)
++    den = np.sum(e, axis=1, keepdims=True)
++    probs = np.zeros((rows, cols), dtype=np.float32)
++    np.divide(e, den, out=probs, where=den > 0)
++    return {"probs": np.ascontiguousarray(probs, dtype=np.float16)}
++
++
++def _smollm_qk_layout(inputs: dict[str, np.ndarray],
++                      attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    _action_attrs(attrs, {"q_heads", "kv_heads", "head_dim"})
++    qh = _int(attrs["q_heads"], "smollm.qk_layout.q_heads", minimum=1)
++    kh = _int(attrs["kv_heads"], "smollm.qk_layout.kv_heads", minimum=1)
++    d = _int(attrs["head_dim"], "smollm.qk_layout.head_dim", minimum=1)
++    q = np.asarray(inputs["q"])
++    if q.dtype != _F16 or q.ndim != 3 or q.shape[1:] != (qh, d) or qh % kh:
++        reject(RK_E_SHAPE,
++               "smollm.qk_layout q must be FP16 [tokens,q_heads,head_dim]",
++               stage="host_action", actual=[str(q.dtype), list(q.shape)])
++    t = q.shape[0]
++    per = qh // kh
++    a = q.reshape(t, kh, per, d).transpose(1, 2, 0, 3)
++    return {"a": np.ascontiguousarray(a.reshape(kh, per * t, d),
++                                      dtype=np.float16)}
++
++
++def _smollm_merge_gqa(inputs: dict[str, np.ndarray],
++                      attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    _action_attrs(attrs, {"tokens", "q_heads", "kv_heads", "head_dim"})
++    t = _int(attrs["tokens"], "smollm.merge.tokens", minimum=1)
++    qh = _int(attrs["q_heads"], "smollm.merge.q_heads", minimum=1)
++    kh = _int(attrs["kv_heads"], "smollm.merge.kv_heads", minimum=1)
++    d = _int(attrs["head_dim"], "smollm.merge.head_dim", minimum=1)
++    ctx = np.asarray(inputs["contexts"])
++    per = qh // kh if kh and qh % kh == 0 else 0
++    if ctx.dtype != _F16 or per == 0 or ctx.shape != (kh, per * t, d):
++        reject(RK_E_SHAPE,
++               "smollm.merge contexts must be FP16 [kv_heads,q_per_kv*tokens,head_dim]",
++               stage="host_action", actual=[str(ctx.dtype), list(ctx.shape)])
++    merged = ctx.reshape(kh, per, t, d).transpose(2, 0, 1, 3)
++    return {"merged": np.ascontiguousarray(merged.reshape(t, qh * d),
++                                           dtype=np.float16)}
++
++
++def _smollm_concat_logits(inputs: dict[str, np.ndarray],
++                          attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    _action_attrs(attrs, {"rows", "vocab_size", "shards"})
++    rows = _int(attrs["rows"], "smollm.concat.rows", minimum=1)
++    vocab = _int(attrs["vocab_size"], "smollm.concat.vocab_size", minimum=1)
++    shards = _int(attrs["shards"], "smollm.concat.shards", minimum=1)
++    out = np.empty((rows, vocab), dtype=np.float16)
++    width = (vocab + shards - 1) // shards
++    for i in range(shards):
++        x = np.asarray(inputs[f"shard{i}"])
++        start = i * width
++        stop = min(vocab, start + width)
++        if x.dtype != _F16 or x.ndim != 2 or x.shape != (rows, stop - start):
++            reject(RK_E_SHAPE,
++                   f"smollm.concat shard{i} has the wrong FP16 shape",
++                   stage="host_action", actual=[str(x.dtype), list(x.shape)],
++                   required=[rows, stop - start])
++        out[:, start:stop] = x
++    return {"logits": out}
++
++
++def _smollm_greedy(inputs: dict[str, np.ndarray],
++                   attrs: dict[str, Any]) -> dict[str, np.ndarray]:
++    _action_attrs(attrs, {"vocab_size"})
++    vocab = _int(attrs["vocab_size"], "smollm.greedy.vocab_size", minimum=1)
++    logits = np.asarray(inputs["logits"])
++    if logits.dtype != _F16 or logits.ndim != 2 or logits.shape[1] != vocab:
++        reject(RK_E_SHAPE,
++               "smollm.greedy logits must be FP16 [rows,vocab_size]",
++               stage="host_action", actual=[str(logits.dtype), list(logits.shape)])
++    return {"token_ids": np.ascontiguousarray(
++        np.argmax(logits.astype(np.float32), axis=1), dtype=np.int32)}
++
++
+ HOST_ACTIONS: dict[str, HostAction] = {
+     action.action_id: action for action in (
+         HostAction("mnist.normalize_flatten.v1", HOST_ACTIONS_VERSION,
+@@ -852,6 +1094,27 @@ HOST_ACTIONS: dict[str, HostAction] = {
+                    ("x",), ("y",), _mean_axis),
+         HostAction("logits.prefix.v1", HOST_ACTIONS_VERSION,
+                    ("logits",), ("y",), _logits_prefix),
++        HostAction("smollm.embed_padded.v1", HOST_ACTIONS_VERSION,
++                   ("token_ids", "table"), ("x",), _smollm_embed_padded),
++        HostAction("smollm.rope_half.v1", HOST_ACTIONS_VERSION,
++                   ("x", "positions"), ("y",), _smollm_rope),
++        HostAction("smollm.qkv_split_gqa.v1", HOST_ACTIONS_VERSION,
++                   ("qkv",), ("q", "k", "v"), _smollm_qkv_split_gqa),
++        HostAction("smollm.kv_append_inplace.v1", HOST_ACTIONS_VERSION,
++                   ("cache_k", "cache_v", "k", "v", "start"),
++                   ("cache_k", "cache_v"), _smollm_kv_append),
++        HostAction("smollm.causal_softmax.v1", HOST_ACTIONS_VERSION,
++                   ("scores", "valid_lengths"), ("probs",),
++                   _smollm_causal_softmax),
++        HostAction("smollm.qk_layout_gqa.v1", HOST_ACTIONS_VERSION,
++                   ("q",), ("a",), _smollm_qk_layout),
++        HostAction("smollm.merge_gqa_heads.v1", HOST_ACTIONS_VERSION,
++                   ("contexts",), ("merged",), _smollm_merge_gqa),
++        HostAction("smollm.concat_logits.v1", HOST_ACTIONS_VERSION,
++                   tuple(f"shard{i}" for i in range(12)), ("logits",),
++                   _smollm_concat_logits),
++        HostAction("smollm.greedy_sample.v1", HOST_ACTIONS_VERSION,
++                   ("logits",), ("token_ids",), _smollm_greedy),
+     )
+ }
+ 
+diff --git a/research/tilelang-rknpu/python/rknpu_backend/models.py b/research/tilelang-rknpu/python/rknpu_backend/models.py
+index 5122335..3f72b42 100644
+--- a/research/tilelang-rknpu/python/rknpu_backend/models.py
++++ b/research/tilelang-rknpu/python/rknpu_backend/models.py
+@@ -167,10 +167,21 @@ class RunStats:
+ 
+     def add_host_action(self, name: str, phase: str, elapsed_us: float,
+                         inputs: tuple[np.ndarray, ...] = (),
+-                        outputs: tuple[np.ndarray, ...] = ()) -> None:
+-        """Record one registered Host boundary action and its Host bytes."""
++                        outputs: tuple[np.ndarray, ...] = (),
++                        *, nbytes: int | None = None) -> None:
++        """Record one registered Host boundary action and its Host bytes.
++
++        ``nbytes`` may be supplied by actions such as an in-place KV append
++        where the bound arrays span the whole persistent cache but only one
++        slot is actually touched.  The override is explicit; the default keeps
++        the historical resolved-input-plus-output byte count.
++        """
+         phase = self._phase(phase)
+-        nbytes = _nbytes(tuple(inputs) + tuple(outputs))
++        if nbytes is None:
++            nbytes = _nbytes(tuple(inputs) + tuple(outputs))
++        elif not isinstance(nbytes, int) or isinstance(nbytes, bool) or nbytes < 0:
++            reject(RK_E_INVALID, "host action nbytes override must be >= 0",
++                   stage="model")
+         self.host_action_us += float(elapsed_us)
+         self.host_action_bytes += nbytes
+         self._phase_add(phase, elapsed_us)

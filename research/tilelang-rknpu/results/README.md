@@ -631,3 +631,21 @@ The corrected table, contract argument and regression evidence are in
 - `SHA256SUMS` — checksums for fetched run evidence, excluding this checksum file.
 
 The human-readable table and precision-policy notes are in [`../CURRENT-BACKEND-COMPARISON.md`](../CURRENT-BACKEND-COMPARISON.md).
+
+## SmolLM2, layout reuse and explicit graph fusion (2026-10-28/29)
+
+- `20261028T094650Z-smollm2/`: fixed-model package identity, references, quality
+  measurements, frozen acceptance and captured/incremental observations.
+- `baseline-layout-reuse/`: final analysis, final4 paired runs, contribution
+  controls, persistent-KV off/on measurements, policy invariance and source identities.
+- `20261028T113459Z-graph-fusion/`: AB/BA attribution, model results, operator
+  probes, separate RMSNorm calibration/verification, continuous RoPE policies
+  and the new prompt-3 acceptance. Final fused full-test logits are retained.
+- `20261029T065329Z-models/`: default complete-model admission regression.
+
+These are selected historical campaign records; source/library identities refer
+to the measured snapshots, including the dirty source state at measurement time.
+Large weights, full Smol logits, build outputs and earlier duplicate package
+payloads remain local. Active int16 TP/QKV-to-QK experiments and their current
+stage-status record remain in the working tree and are not part of this checkpoint.
+The default model package is unchanged; experimental paths stay explicit.

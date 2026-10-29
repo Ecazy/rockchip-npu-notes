@@ -1,0 +1,85 @@
+{
+ "schema_version": 1,
+ "kind": "cube-to-weight-boundary-analysis",
+ "tile": [
+  16,
+  16
+ ],
+ "cube_index": "((c//8)*16+r)*8+c%8",
+ "weight_index": "n*32+k for n,k<16 (within the 1024-element padded BO)",
+ "required_mapping_pairs": 256,
+ "p0312_mismatches": 255,
+ "p0312_mismatch_examples": [
+  {
+   "dest": 1,
+   "required_src": 1,
+   "p0312_src": 8
+  },
+  {
+   "dest": 2,
+   "required_src": 2,
+   "p0312_src": 16
+  },
+  {
+   "dest": 3,
+   "required_src": 3,
+   "p0312_src": 24
+  },
+  {
+   "dest": 4,
+   "required_src": 4,
+   "p0312_src": 32
+  },
+  {
+   "dest": 5,
+   "required_src": 5,
+   "p0312_src": 40
+  },
+  {
+   "dest": 6,
+   "required_src": 6,
+   "p0312_src": 48
+  },
+  {
+   "dest": 7,
+   "required_src": 7,
+   "p0312_src": 56
+  },
+  {
+   "dest": 8,
+   "required_src": 128,
+   "p0312_src": 64
+  }
+ ],
+ "required_examples": [
+  {
+   "logical": "K[0,1]",
+   "cube_src": 1,
+   "weight_dest": 1,
+   "p0312_src_for_dest": 8
+  },
+  {
+   "logical": "K[1,0]",
+   "cube_src": 8,
+   "weight_dest": 32,
+   "p0312_src_for_dest": 256
+  }
+ ],
+ "existing_view_verdict": "No existing CUBE/WEIGHT view or p0312 permutation maps the full 16x16 logical K tile to the QK B/WEIGHT physical layout.",
+ "new_primitive_contract": {
+  "id": "co.reorder.cube_to_weight.f16.v1",
+  "input": "CUBE [16,16]",
+  "output": "WEIGHT [16,16]",
+  "element_mapping": "dst_weight[n*32+k] = src_cube[(k//8)*128+n*8+k%8]",
+  "sync": "one PPU/DMA task or a copy command with explicit source/dest BO and 16-byte alignment",
+  "grouping": "one 16x16 head per task; a grouped emit may cover 4/12 heads in one submit",
+  "acceptance": "bitwise equal to host K^T/layout reference for one head; then 4 heads; then QKV->reorder->QK producer chain"
+ },
+ "minimal_experiment": [
+  "construct one 16x16 CUBE K tile and its host weight-layout reference",
+  "run the proposed reorder task three times with same output and compare bitwise",
+  "extend to four heads and verify no cross-head overlap",
+  "only after bitwise pass, wire QKV output and QK consumer in one graph"
+ ],
+ "not_done": "No hardware reorder command exists in the current custom-ops set; this tool does not claim a device implementation."
+}

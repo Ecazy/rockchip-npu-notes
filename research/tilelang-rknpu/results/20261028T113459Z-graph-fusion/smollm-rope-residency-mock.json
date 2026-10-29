@@ -1,0 +1,73 @@
+{
+ "decode": {
+  "k": {
+   "coefficient_residency": "runtime inputs; no dynamic position-indexed device view",
+   "device_median_us": 11215.114500373602,
+   "finite": true,
+   "max_abs_diff": 0.001953125,
+   "per_token_download_bytes": 4608,
+   "per_token_upload_bytes": 13824,
+   "plan_hash": "20a444d493d6200ae3acceab9ce290692e58bd260798d6839adf88e2e587e079",
+   "production_host_median_us": 28.76049984479323,
+   "submit_count": 1,
+   "task_count": 4
+  },
+  "q": {
+   "coefficient_residency": "runtime inputs; no dynamic position-indexed device view",
+   "device_median_us": 57415.307000155735,
+   "finite": true,
+   "max_abs_diff": 0.001953125,
+   "per_token_download_bytes": 13824,
+   "per_token_upload_bytes": 41472,
+   "plan_hash": "bb2beadf6adb295f567d63e0a348047d73066baa27f6707ac0c0e61b068bd3b3",
+   "production_host_median_us": 36.505499792838236,
+   "submit_count": 12,
+   "task_count": 18
+  }
+ },
+ "kind": "smollm-rope-residency-probe",
+ "layers": 2,
+ "model_config": {
+  "head_dim": 64,
+  "kv_heads": 3,
+  "q_heads": 9,
+  "rope_theta": 100000.0
+ },
+ "pass": true,
+ "prefill": {
+  "k": {
+   "coefficient_residency": "Cos/Sin/P uploaded once at PlanCall creation; reused for all layers",
+   "constant_bytes": 344064,
+   "device_layers_median_us": 230570.74350026596,
+   "device_layers_total_us": 461141.4870005319,
+   "finite": true,
+   "max_abs_diff_last_layer": 0.001953125,
+   "per_layer_download_bytes": 98304,
+   "per_layer_upload_bytes": 98304,
+   "per_layer_upload_calls": 1,
+   "plan_hash": "57707c0dec0c24701b8379b576b76d5d289d2c8290e991250589c7b79095c8f1",
+   "production_host_layers_total_us": 441.16200024291174,
+   "setup_constant_upload_us": 1208.4750005669775,
+   "submit_count": 1,
+   "task_count": 4
+  },
+  "q": {
+   "coefficient_residency": "Cos/Sin/P uploaded once at PlanCall creation; reused for all layers",
+   "constant_bytes": 1392640,
+   "device_layers_median_us": 1179657.5580001445,
+   "device_layers_total_us": 2359315.116000289,
+   "finite": true,
+   "max_abs_diff_last_layer": 0.00390625,
+   "per_layer_download_bytes": 294912,
+   "per_layer_upload_bytes": 294912,
+   "per_layer_upload_calls": 1,
+   "plan_hash": "4069caf0ac95969e4db9d2aeea275d632640a2804564d26007d04e9ed38e1db9",
+   "production_host_layers_total_us": 986.7990002021543,
+   "setup_constant_upload_us": 8102.810999844223,
+   "submit_count": 12,
+   "task_count": 18
+  }
+ },
+ "problems": [],
+ "schema_version": 1
+}

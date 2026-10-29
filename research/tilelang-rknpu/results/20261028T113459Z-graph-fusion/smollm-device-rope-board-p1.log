@@ -1,0 +1,30 @@
+{
+ "schema_version": 1,
+ "kind": "smollm-device-rope-integration",
+ "package": "/mnt/ssd/workspace/smollm-work-20261029T064044Z/package",
+ "prompt_tokens": 36,
+ "baseline_prefill_us": 3798756.5680014086,
+ "device_prefill_us": 4050727.294998069,
+ "baseline_decode_us": 568079.2759994802,
+ "device_decode_us": 620124.8750003288,
+ "rope_stats": {
+  "prefill_calls": 60,
+  "decode_calls": 60,
+  "prefill_wall_us": 353000.0869941432,
+  "decode_wall_us": 67660.86199786514
+ },
+ "prefill_logits_max_abs_diff": 0.046875,
+ "prefill_logits_top1_equal": true,
+ "decode_logits_max_abs_diff": 0.1015625,
+ "decode_logits_top1_equal": true,
+ "finite": true,
+ "plan_hashes": {
+  "prefill_9h": "ef68a70b17c0aa2c74e7a7d4d06685e2ad98937c9cc13b9bacba8ea500473234",
+  "decode_9h": "c2042a8f3ab2b3649460afa3945496475f559dd17342fef55b780e74198fd88d",
+  "prefill_3h": "79ebcd195dcbfa0f70ad5a4db57da06e36ce11e8ed0876db3bb0e17d2bc9f054",
+  "decode_3h": "28537b3e6df9450161bcad1aa1d61e1a7efbcc7a5f6a9cf7bff156e2d3f69083"
+ },
+ "coefficient_residency": "prefill constants resident and reused across layers; decode per-token runtime inputs because no dynamic position view",
+ "problems": [],
+ "pass": true
+}

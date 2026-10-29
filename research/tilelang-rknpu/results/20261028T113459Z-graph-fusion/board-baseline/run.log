@@ -1,0 +1,36 @@
+round=1 arm=default suffix=
+Traceback (most recent call last):
+  File "/mnt/ssd/workspace/graph-fusion-20261028T113923Z/tilelang-rknpu/tools/evaluate_models.py", line 605, in <module>
+    raise SystemExit(main())
+  File "/mnt/ssd/workspace/graph-fusion-20261028T113923Z/tilelang-rknpu/tools/evaluate_models.py", line 490, in main
+    numeric_spec = json.loads(Path(args.numeric_spec).read_text())
+  File "/usr/lib/python3.10/pathlib.py", line 1134, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+  File "/usr/lib/python3.10/pathlib.py", line 1119, in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/ssd/workspace/graph-fusion-20261028T113923Z/tilelang-rknpu/models/numeric_acceptance.json'
+arm failed rc=1
+round=1 arm=default suffix=
+ViT 8 0.986328125 1.0
+ViT 1 0.986328125 1.0
+/mnt/ssd/workspace/graph-fusion-20261028T113957Z/out-r1-default.json
+round=1 arm=deviceffn suffix=_deviceffn
+ViT 8 0.986328125 1.0
+ViT 1 0.986328125 1.0
+/mnt/ssd/workspace/graph-fusion-20261028T113957Z/out-r1-deviceffn.json
+round=1 arm=deviceffn_fused suffix=_deviceffn_fused
+ViT 8 0.986328125 1.0
+ViT 1 0.986328125 1.0
+/mnt/ssd/workspace/graph-fusion-20261028T113957Z/out-r1-deviceffn_fused.json
+round=2 arm=default suffix=
+ViT 8 0.986328125 1.0
+ViT 1 0.986328125 1.0
+/mnt/ssd/workspace/graph-fusion-20261028T113957Z/out-r2-default.json
+round=2 arm=deviceffn suffix=_deviceffn
+ViT 8 0.986328125 1.0
+ViT 1 0.986328125 1.0
+/mnt/ssd/workspace/graph-fusion-20261028T113957Z/out-r2-deviceffn.json
+round=2 arm=deviceffn_fused suffix=_deviceffn_fused
+ViT 8 0.986328125 1.0
+ViT 1 0.986328125 1.0
+/mnt/ssd/workspace/graph-fusion-20261028T113957Z/out-r2-deviceffn_fused.json

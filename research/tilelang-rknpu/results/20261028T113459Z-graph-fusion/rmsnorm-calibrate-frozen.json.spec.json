@@ -1,0 +1,41 @@
+{
+ "calibration": {
+  "input_sha256": "7053f10b0e82f52ce302387efb9a88ad43a279cb9d5ecea8fcff0983de0b0e59",
+  "members": 32,
+  "metrics": {
+   "finite": true,
+   "max_abs": 0.01953125,
+   "ref_absmax": 5.3203125,
+   "ref_rms": 1.0437437295913696,
+   "rmse": 0.0012468112399801612
+  },
+  "output_sha256": "b250a6d98c30e9bd511ddac5091bce979c70e898cadcd6bbb7c9a07f9abc55f3",
+  "rows": 512,
+  "seed": 20261029
+ },
+ "frozen_at_utc": "2026-10-29T06:26:53.711773+00:00",
+ "gates": {
+  "atol": 0.0390625,
+  "finite_required": true,
+  "rmse_limit": 0.009765625
+ },
+ "kind": "rmsnorm-approx-operator-acceptance",
+ "library_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+ "numeric_policy": {
+  "lut_scale": 0.75,
+  "lut_table_domain_scaled": [
+   0.125,
+   6.32
+  ],
+  "reference": "float32 mean/rsqrt/gamma then float16 writeback",
+  "validated_original_mean_square": [
+   0.17,
+   6.1
+  ]
+ },
+ "plan_file_sha256": "52c7f3467a50af5a6b9f3e65c317545f4ebb404a9fe242d71a257b928d5019bf",
+ "plan_hash": "736469e7a3b14bed166862929dfe854cfee62333dfd86ccc484460f910336173",
+ "plan_name": "tiny_vit_b1_rmsnorm1_approx",
+ "profile_hash": "c6b8d3e71acaf317a37a21d186cc7252c3ca7e0e61d201da12aba35480bddaf6",
+ "schema_version": 2
+}

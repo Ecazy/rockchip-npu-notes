@@ -1,0 +1,1972 @@
+{
+  "campaign_manifest": "manifest.json",
+  "cores": {
+    "core-1": {
+      "layer_trace": {
+        "golden_rebuild": {
+          "mlp.logits": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "mlp.x_padded": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "relu_probe.output": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.act": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_merged": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_projection": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.ffn": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.gate": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h1": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h2": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h2_tokens": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.k_t_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.logits": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.logits_padded": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.norm1": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.norm2": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_flat": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_projection": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patches": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.pooled": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.positioned": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.probs_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.q_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.qkv": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.scores_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.up": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.v_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          }
+        },
+        "layers": {
+          "mlp.logits": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "mlp.x_padded": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "relu_probe.output": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.act": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.attn_heads": {
+            "atol": 0.0009765625,
+            "max_abs": 0.00048828125,
+            "ok": true
+          },
+          "tiny_vit.attn_merged": {
+            "atol": 0.0009765625,
+            "max_abs": 0.00048828125,
+            "ok": true
+          },
+          "tiny_vit.attn_projection": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.ffn": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.gate": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.h1": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.h2": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.h2_tokens": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.k_t_heads": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.logits": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.logits_padded": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.norm1": {
+            "atol": 0.000244140625,
+            "max_abs": 0.0001220703125,
+            "ok": true
+          },
+          "tiny_vit.norm2": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.patch_flat": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_projection": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.patches": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.pooled": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.positioned": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.probs_heads": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.q_heads": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          },
+          "tiny_vit.qkv": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          },
+          "tiny_vit.scores_heads": {
+            "atol": 0.015625,
+            "max_abs": 0.0078125,
+            "ok": true
+          },
+          "tiny_vit.up": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.v_heads": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          }
+        },
+        "ok": true,
+        "path": "model_eval.layers.npz"
+      },
+      "rows": {
+        "mnist_mlp.b1": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "1": 512
+            },
+            "calls": 512,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.0078125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.04933929443359375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 3.704099799506366e-05,
+            "end_to_end_seconds": 0.6964383539962,
+            "execution_seconds": 0.6131344909808831,
+            "executor_overhead_seconds": 0.06387569390790304,
+            "host_action_seconds": 0.07279027600088739,
+            "model_call_seconds": 0.696401312998205,
+            "plan_call_seconds": 0.5492587970729801,
+            "plan_workspace_seconds": 0.5096364210294269,
+            "postprocess_seconds": 0.01724630899479962,
+            "preprocess_seconds": 0.05558100800408283,
+            "reference_seconds": {
+              "cpu_fp32": 0.1378010810003616,
+              "declared_fp16_path": 1.2450302110009943
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.01828027300143731,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.002095014999213163,
+            "weight_load_seconds": 0.010904405997280264
+          },
+          "top1_agreement": 1.0
+        },
+        "mnist_mlp.b32": {
+          "accuracy": 0.9831,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "32": 312,
+              "8": 2
+            },
+            "calls": 314,
+            "no_dynamic_shapes": true,
+            "tail_calls": 2
+          },
+          "cpu_accuracy": 0.9831,
+          "declared_max_abs_logit_error": 0.015625,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.050689697265625,
+          "n": 10000,
+          "timing": {
+            "argmax_seconds": 0.0007005750012467615,
+            "end_to_end_seconds": 0.7612115509982686,
+            "execution_seconds": 0.5981773360144871,
+            "executor_overhead_seconds": 0.04648561200883705,
+            "host_action_seconds": 0.15469411399317323,
+            "model_call_seconds": 0.7605109759970219,
+            "plan_call_seconds": 0.55169172400565,
+            "plan_workspace_seconds": 0.49427132200435153,
+            "postprocess_seconds": 0.013348529984796187,
+            "preprocess_seconds": 0.1420461590096238,
+            "reference_seconds": {
+              "cpu_fp32": 2.157645715000399,
+              "declared_fp16_path": 3.6028503160014225
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.03561497499686084,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.004533027000434231,
+            "weight_load_seconds": 0.010904405997280264
+          },
+          "top1_agreement": 1.0
+        },
+        "mnist_mlp.b8": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "8": 64
+            },
+            "calls": 64,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.0078125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.04933929443359375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 4.345799970906228e-05,
+            "end_to_end_seconds": 0.12349496699971496,
+            "execution_seconds": 0.10623288500210037,
+            "executor_overhead_seconds": 0.009730458008561982,
+            "host_action_seconds": 0.01569177199053229,
+            "model_call_seconds": 0.1234515090000059,
+            "plan_call_seconds": 0.09650242699353839,
+            "plan_workspace_seconds": 0.0891589309903793,
+            "postprocess_seconds": 0.002587054990726756,
+            "preprocess_seconds": 0.013148174999514595,
+            "reference_seconds": {
+              "cpu_fp32": 0.12058108699784498,
+              "declared_fp16_path": 0.2881374229982612
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.017968777003261494,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.0020538919998216443,
+            "weight_load_seconds": 0.010904405997280264
+          },
+          "top1_agreement": 1.0
+        },
+        "tiny_vit.b1": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "1": 512
+            },
+            "calls": 512,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.038421630859375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 2.7417001547291875e-05,
+            "end_to_end_seconds": 1.4140151560022787,
+            "execution_seconds": 1.3341895959383692,
+            "executor_overhead_seconds": 0.2963076481973985,
+            "host_action_seconds": 0.3881359629231156,
+            "model_call_seconds": 1.4139877390007314,
+            "plan_call_seconds": 0.7190382169028453,
+            "plan_workspace_seconds": 0.6577439680622774,
+            "postprocess_seconds": 0.013238591029221425,
+            "preprocess_seconds": 0.05608105805731611,
+            "reference_seconds": {
+              "cpu_fp32": 0.45305196000117576,
+              "declared_fp16_path": 0.8831338279996999
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.02724628700161702,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.0030752950005989987,
+            "weight_load_seconds": 0.0035690810000232887
+          },
+          "top1_agreement": 1.0
+        },
+        "tiny_vit.b8": {
+          "accuracy": 0.9821,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "8": 1250
+            },
+            "calls": 1250,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.9821,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.038425445556640625,
+          "n": 10000,
+          "timing": {
+            "argmax_seconds": 0.000433994999184506,
+            "end_to_end_seconds": 8.386073937996116,
+            "execution_seconds": 7.987178666015091,
+            "executor_overhead_seconds": 0.9500965830193325,
+            "host_action_seconds": 2.7182271828860354,
+            "model_call_seconds": 8.385639942996931,
+            "plan_call_seconds": 4.668030366032336,
+            "plan_workspace_seconds": 4.451706891984952,
+            "postprocess_seconds": 0.04601130695664324,
+            "preprocess_seconds": 0.3035981539651402,
+            "reference_seconds": {
+              "cpu_fp32": 7.343449880001572,
+              "declared_fp16_path": 11.195923513998423
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.06860468999730074,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.0058221780018357094,
+            "weight_load_seconds": 0.0035690810000232887
+          },
+          "top1_agreement": 1.0
+        }
+      }
+    },
+    "core-2": {
+      "layer_trace": {
+        "golden_rebuild": {
+          "mlp.logits": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "mlp.x_padded": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "relu_probe.output": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.act": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_merged": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_projection": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.ffn": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.gate": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h1": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h2": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h2_tokens": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.k_t_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.logits": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.logits_padded": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.norm1": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.norm2": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_flat": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_projection": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patches": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.pooled": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.positioned": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.probs_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.q_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.qkv": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.scores_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.up": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.v_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          }
+        },
+        "layers": {
+          "mlp.logits": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "mlp.x_padded": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "relu_probe.output": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.act": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.attn_heads": {
+            "atol": 0.0009765625,
+            "max_abs": 0.00048828125,
+            "ok": true
+          },
+          "tiny_vit.attn_merged": {
+            "atol": 0.0009765625,
+            "max_abs": 0.00048828125,
+            "ok": true
+          },
+          "tiny_vit.attn_projection": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.ffn": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.gate": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.h1": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.h2": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.h2_tokens": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.k_t_heads": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.logits": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.logits_padded": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.norm1": {
+            "atol": 0.000244140625,
+            "max_abs": 0.0001220703125,
+            "ok": true
+          },
+          "tiny_vit.norm2": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.patch_flat": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_projection": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.patches": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.pooled": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.positioned": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.probs_heads": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.q_heads": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          },
+          "tiny_vit.qkv": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          },
+          "tiny_vit.scores_heads": {
+            "atol": 0.015625,
+            "max_abs": 0.0078125,
+            "ok": true
+          },
+          "tiny_vit.up": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.v_heads": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          }
+        },
+        "ok": true,
+        "path": "model_eval.layers.npz"
+      },
+      "rows": {
+        "mnist_mlp.b1": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "1": 512
+            },
+            "calls": 512,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.0078125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.04933929443359375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 2.7416997909313068e-05,
+            "end_to_end_seconds": 0.7311538409958303,
+            "execution_seconds": 0.6420190400313004,
+            "executor_overhead_seconds": 0.06876260807257495,
+            "host_action_seconds": 0.07805101291887695,
+            "model_call_seconds": 0.7311264239979209,
+            "plan_call_seconds": 0.5732564319587254,
+            "plan_workspace_seconds": 0.5300741219507472,
+            "postprocess_seconds": 0.01868014102728921,
+            "preprocess_seconds": 0.05939828888949705,
+            "reference_seconds": {
+              "cpu_fp32": 0.1342714589991374,
+              "declared_fp16_path": 1.2335124370001722
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.01720432799993432,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.002134973998181522,
+            "weight_load_seconds": 0.013683663997653639
+          },
+          "top1_agreement": 1.0
+        },
+        "mnist_mlp.b32": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "32": 16
+            },
+            "calls": 16,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.0078125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.049335479736328125,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 3.9374001062242314e-05,
+            "end_to_end_seconds": 0.03521685400119168,
+            "execution_seconds": 0.027983322994259652,
+            "executor_overhead_seconds": 0.0022251009977480862,
+            "host_action_seconds": 0.0068129530154692475,
+            "model_call_seconds": 0.035177480000129435,
+            "plan_call_seconds": 0.025758221996511566,
+            "plan_workspace_seconds": 0.023159210995800095,
+            "postprocess_seconds": 0.0006235730033949949,
+            "preprocess_seconds": 0.006228754013136495,
+            "reference_seconds": {
+              "cpu_fp32": 0.12076870900273207,
+              "declared_fp16_path": 0.18567356999847107
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.018063859002722893,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.0028553809970617294,
+            "weight_load_seconds": 0.013683663997653639
+          },
+          "top1_agreement": 1.0
+        },
+        "mnist_mlp.b8": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "8": 64
+            },
+            "calls": 64,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.0078125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.04933929443359375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 5.191599848330952e-05,
+            "end_to_end_seconds": 0.12155165799777023,
+            "execution_seconds": 0.10390191298938589,
+            "executor_overhead_seconds": 0.009669411996583221,
+            "host_action_seconds": 0.01605639200352016,
+            "model_call_seconds": 0.12149974199928693,
+            "plan_call_seconds": 0.09423250099280267,
+            "plan_workspace_seconds": 0.08681813200018951,
+            "postprocess_seconds": 0.0025505939847789705,
+            "preprocess_seconds": 0.013557714017224498,
+            "reference_seconds": {
+              "cpu_fp32": 0.11904773099740851,
+              "declared_fp16_path": 0.28913695300070685
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.01755053200031398,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.0020795569980691653,
+            "weight_load_seconds": 0.013683663997653639
+          },
+          "top1_agreement": 1.0
+        },
+        "tiny_vit.b1": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "1": 512
+            },
+            "calls": 512,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.038421630859375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 4.229099795338698e-05,
+            "end_to_end_seconds": 1.4489930529962294,
+            "execution_seconds": 1.3654763700869808,
+            "executor_overhead_seconds": 0.3081802279302792,
+            "host_action_seconds": 0.398222276911838,
+            "model_call_seconds": 1.448950761998276,
+            "plan_call_seconds": 0.7309493261527678,
+            "plan_workspace_seconds": 0.6652129000576679,
+            "postprocess_seconds": 0.01385283804484061,
+            "preprocess_seconds": 0.058064913861016976,
+            "reference_seconds": {
+              "cpu_fp32": 0.45382040700133075,
+              "declared_fp16_path": 0.8883405979977397
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.02708062199963024,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.0031018359986774158,
+            "weight_load_seconds": 0.003506081000523409
+          },
+          "top1_agreement": 1.0
+        },
+        "tiny_vit.b8": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "8": 64
+            },
+            "calls": 64,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.038425445556640625,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 3.0041002901270986e-05,
+            "end_to_end_seconds": 0.4313886440031638,
+            "execution_seconds": 0.41207654403478955,
+            "executor_overhead_seconds": 0.051674221129360376,
+            "host_action_seconds": 0.1343080399419705,
+            "model_call_seconds": 0.4313586030002625,
+            "plan_call_seconds": 0.24299286895620753,
+            "plan_workspace_seconds": 0.23191113499706262,
+            "postprocess_seconds": 0.0022195519995875657,
+            "preprocess_seconds": 0.014709074996062554,
+            "reference_seconds": {
+              "cpu_fp32": 0.3812511420001101,
+              "declared_fp16_path": 0.5750892359974387
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.0681975279985636,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.005852509999385802,
+            "weight_load_seconds": 0.003506081000523409
+          },
+          "top1_agreement": 1.0
+        }
+      }
+    },
+    "core-4": {
+      "layer_trace": {
+        "golden_rebuild": {
+          "mlp.logits": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "mlp.x_padded": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "relu_probe.output": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.act": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_merged": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.attn_projection": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.ffn": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.gate": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h1": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h2": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.h2_tokens": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.k_t_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.logits": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.logits_padded": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.norm1": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.norm2": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_flat": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_projection": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patches": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.pooled": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.positioned": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.probs_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.q_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.qkv": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.scores_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.up": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "tiny_vit.v_heads": {
+            "max_abs_diff": 0.0,
+            "ok": true
+          }
+        },
+        "layers": {
+          "mlp.logits": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "mlp.x_padded": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "relu_probe.output": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.act": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.attn_heads": {
+            "atol": 0.0009765625,
+            "max_abs": 0.00048828125,
+            "ok": true
+          },
+          "tiny_vit.attn_merged": {
+            "atol": 0.0009765625,
+            "max_abs": 0.00048828125,
+            "ok": true
+          },
+          "tiny_vit.attn_projection": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.ffn": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.gate": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.h1": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.h2": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.h2_tokens": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.k_t_heads": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.logits": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.logits_padded": {
+            "atol": 0.03125,
+            "max_abs": 0.015625,
+            "ok": true
+          },
+          "tiny_vit.norm1": {
+            "atol": 0.000244140625,
+            "max_abs": 0.0001220703125,
+            "ok": true
+          },
+          "tiny_vit.norm2": {
+            "atol": 0.00390625,
+            "max_abs": 0.001953125,
+            "ok": true
+          },
+          "tiny_vit.patch_flat": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.patch_projection": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.patches": {
+            "atol": 0.0,
+            "max_abs": 0.0,
+            "ok": true
+          },
+          "tiny_vit.pooled": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.positioned": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.probs_heads": {
+            "atol": 0.00048828125,
+            "max_abs": 0.000244140625,
+            "ok": true
+          },
+          "tiny_vit.q_heads": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          },
+          "tiny_vit.qkv": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          },
+          "tiny_vit.scores_heads": {
+            "atol": 0.015625,
+            "max_abs": 0.0078125,
+            "ok": true
+          },
+          "tiny_vit.up": {
+            "atol": 0.0078125,
+            "max_abs": 0.00390625,
+            "ok": true
+          },
+          "tiny_vit.v_heads": {
+            "atol": 0.001953125,
+            "max_abs": 0.0009765625,
+            "ok": true
+          }
+        },
+        "ok": true,
+        "path": "model_eval.layers.npz"
+      },
+      "rows": {
+        "mnist_mlp.b1": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "1": 512
+            },
+            "calls": 512,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.0078125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.04933929443359375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 0.00015283199900295585,
+            "end_to_end_seconds": 0.9180833530008385,
+            "execution_seconds": 0.8137271020132175,
+            "executor_overhead_seconds": 0.07973108595979284,
+            "host_action_seconds": 0.09100157395005226,
+            "model_call_seconds": 0.9179305210018356,
+            "plan_call_seconds": 0.7339960160534247,
+            "plan_workspace_seconds": 0.6828805950026435,
+            "postprocess_seconds": 0.021241608024865855,
+            "preprocess_seconds": 0.06991279792418936,
+            "reference_seconds": {
+              "cpu_fp32": 0.136408015001507,
+              "declared_fp16_path": 1.2209204680002586
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.017278409999562427,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.0018625609991431702,
+            "weight_load_seconds": 0.012640968001505826
+          },
+          "top1_agreement": 1.0
+        },
+        "mnist_mlp.b32": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "32": 16
+            },
+            "calls": 16,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.0078125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.049335479736328125,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 3.0625000363215804e-05,
+            "end_to_end_seconds": 0.02827294099915889,
+            "execution_seconds": 0.02207364598507411,
+            "executor_overhead_seconds": 0.0017202329945575912,
+            "host_action_seconds": 0.005886924005608307,
+            "model_call_seconds": 0.028242315998795675,
+            "plan_call_seconds": 0.020353412990516517,
+            "plan_workspace_seconds": 0.018168857001001015,
+            "postprocess_seconds": 0.00047949399959179573,
+            "preprocess_seconds": 0.005438055006379727,
+            "reference_seconds": {
+              "cpu_fp32": 0.11435524700209498,
+              "declared_fp16_path": 0.18610931399962283
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.017819153999880655,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.002554094000515761,
+            "weight_load_seconds": 0.012640968001505826
+          },
+          "top1_agreement": 1.0
+        },
+        "mnist_mlp.b8": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "8": 64
+            },
+            "calls": 64,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.0078125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.04933929443359375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 3.558300159056671e-05,
+            "end_to_end_seconds": 0.13177369800177985,
+            "execution_seconds": 0.11130737598796259,
+            "executor_overhead_seconds": 0.011072703993704636,
+            "host_action_seconds": 0.018664720995730022,
+            "model_call_seconds": 0.13173811500018928,
+            "plan_call_seconds": 0.10023467199425795,
+            "plan_workspace_seconds": 0.09137453599760192,
+            "postprocess_seconds": 0.002880464009649586,
+            "preprocess_seconds": 0.015819839987671003,
+            "reference_seconds": {
+              "cpu_fp32": 0.11814728299941635,
+              "declared_fp16_path": 0.28781688600065536
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.017790278998290887,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.0019176850000803825,
+            "weight_load_seconds": 0.012640968001505826
+          },
+          "top1_agreement": 1.0
+        },
+        "tiny_vit.b1": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "1": 512
+            },
+            "calls": 512,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.038421630859375,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 3.2083000405691564e-05,
+            "end_to_end_seconds": 1.3361131220008247,
+            "execution_seconds": 1.2595211799634853,
+            "executor_overhead_seconds": 0.28547111511579715,
+            "host_action_seconds": 0.3752958409822895,
+            "model_call_seconds": 1.336081039000419,
+            "plan_call_seconds": 0.6653538879363623,
+            "plan_workspace_seconds": 0.6079590989647841,
+            "postprocess_seconds": 0.012349302065558732,
+            "preprocess_seconds": 0.05428244500581059,
+            "reference_seconds": {
+              "cpu_fp32": 0.4560023390004062,
+              "declared_fp16_path": 0.8863674959975469
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.026880833000177518,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.003010838001500815,
+            "weight_load_seconds": 0.003538455999660073
+          },
+          "top1_agreement": 1.0
+        },
+        "tiny_vit.b8": {
+          "accuracy": 0.986328125,
+          "accuracy_delta": 0.0,
+          "batch_schedule": {
+            "batch_histogram": {
+              "8": 64
+            },
+            "calls": 64,
+            "no_dynamic_shapes": true,
+            "tail_calls": 0
+          },
+          "cpu_accuracy": 0.986328125,
+          "declared_max_abs_logit_error": 0.03125,
+          "declared_top1_agreement": 1.0,
+          "max_abs_logit_error": 0.038425445556640625,
+          "n": 512,
+          "timing": {
+            "argmax_seconds": 2.9165999876568094e-05,
+            "end_to_end_seconds": 0.4030444960008026,
+            "execution_seconds": 0.38446029800979886,
+            "executor_overhead_seconds": 0.046792079010629095,
+            "host_action_seconds": 0.13230273392400704,
+            "model_call_seconds": 0.40301533000092604,
+            "plan_call_seconds": 0.22176571007366874,
+            "plan_workspace_seconds": 0.21154493806898245,
+            "postprocess_seconds": 0.002092687012918759,
+            "preprocess_seconds": 0.014336703985463828,
+            "reference_seconds": {
+              "cpu_fp32": 0.3826412079979491,
+              "declared_fp16_path": 0.5774986649994389
+            },
+            "reference_timing": "excluded_from_model_interval",
+            "runner_setup_seconds": 0.06740624700250919,
+            "timing_schema_version": 2,
+            "unattributed_seconds": 0.0,
+            "warmup_seconds": 0.00555705599981593,
+            "weight_load_seconds": 0.003538455999660073
+          },
+          "top1_agreement": 1.0
+        }
+      }
+    }
+  },
+  "cpu_benchmark": {
+    "batch_policy": {
+      "mnist_mlp": {
+        "batch_histogram": {
+          "32": 312,
+          "8": 2
+        },
+        "calls": 314,
+        "no_dynamic_shapes": true,
+        "tail_calls": 2
+      },
+      "tiny_vit": {
+        "batch_histogram": {
+          "8": 1250
+        },
+        "calls": 1250,
+        "no_dynamic_shapes": true,
+        "tail_calls": 0
+      }
+    },
+    "thread_config": {
+      "blas": [],
+      "cpu_affinity": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "cpu_affinity_count": 8,
+      "cpu_count": 8,
+      "cpu_thread_env": {
+        "MKL_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1"
+      },
+      "cpuinfo": {
+        "max_mhz": 2304.0,
+        "mean_mhz": 1578.0,
+        "min_mhz": 408.0
+      },
+      "numpy": {
+        "blas_name": null,
+        "blas_openblas_configuration": null,
+        "blas_version": null,
+        "numpy_version": "1.21.5"
+      },
+      "process_threads": 1
+    }
+  },
+  "hashes": {
+    "data": {
+      "t10k-images-idx3-ubyte.gz": {
+        "actual": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+        "expected": "8d422c7b0a1c1c79245a5bcf07fe86e33eeafee792b84584aec276f5a2dbc4e6",
+        "ok": true
+      },
+      "t10k-labels-idx1-ubyte.gz": {
+        "actual": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6",
+        "expected": "f7ae60f92e00ec6debd23a6088c31dbd2371eca3ffa0defaefb259924204aec6",
+        "ok": true
+      }
+    },
+    "hybrid_manifests": {
+      "mnist_mlp_b1": {
+        "actual": "be0079b70a1797417bd707367f6407b8a85381cf8ebc105b86aff1d5d3873257",
+        "expected": "be0079b70a1797417bd707367f6407b8a85381cf8ebc105b86aff1d5d3873257",
+        "ok": true
+      },
+      "mnist_mlp_b32": {
+        "actual": "2ad9e895b9e5575368f58aa3f6a7a75e7288d20def2451f12a34fb6e793e5818",
+        "expected": "2ad9e895b9e5575368f58aa3f6a7a75e7288d20def2451f12a34fb6e793e5818",
+        "ok": true
+      },
+      "mnist_mlp_b8": {
+        "actual": "a734c04beabb6de53f2b03acd4b34633178c8f5c580dc288906d64195eb38c1a",
+        "expected": "a734c04beabb6de53f2b03acd4b34633178c8f5c580dc288906d64195eb38c1a",
+        "ok": true
+      },
+      "tiny_vit_b1": {
+        "actual": "3643e915f837a256e83701a073c510e6440cb430355f0dd916b3672dd26e4ec6",
+        "expected": "3643e915f837a256e83701a073c510e6440cb430355f0dd916b3672dd26e4ec6",
+        "ok": true
+      },
+      "tiny_vit_b1_deviceffn": {
+        "actual": "ea50f96975abe800795ff2aac45a2e7f999580a4985500b2e501a6023e933bd4",
+        "expected": "ea50f96975abe800795ff2aac45a2e7f999580a4985500b2e501a6023e933bd4",
+        "ok": true
+      },
+      "tiny_vit_b1_hostffn": {
+        "actual": "e73e1c67c0763ecf58bc10f6d7a5e380aff38b4888605311670327839c9c2601",
+        "expected": "e73e1c67c0763ecf58bc10f6d7a5e380aff38b4888605311670327839c9c2601",
+        "ok": true
+      },
+      "tiny_vit_b1_rmsnorm": {
+        "actual": "c375d5df5c8c764f335d6a730cf87e64c17debc5c8a908fd0e83d54233d68e34",
+        "expected": "c375d5df5c8c764f335d6a730cf87e64c17debc5c8a908fd0e83d54233d68e34",
+        "ok": true
+      },
+      "tiny_vit_b1_splitheads": {
+        "actual": "c9dcd6886c74b1a15f6f7bb2e225dbdbb2fc3cb15aa51e9dafcb911a922a7fcf",
+        "expected": "c9dcd6886c74b1a15f6f7bb2e225dbdbb2fc3cb15aa51e9dafcb911a922a7fcf",
+        "ok": true
+      },
+      "tiny_vit_b8": {
+        "actual": "d715e483c303461c21f0458c2ba089e6195322c4eac49ccafa9bae07b4d08993",
+        "expected": "d715e483c303461c21f0458c2ba089e6195322c4eac49ccafa9bae07b4d08993",
+        "ok": true
+      },
+      "tiny_vit_b8_deviceffn": {
+        "actual": "2aefd357e7a83d7193b1c74797fdfb6a34d79750739a12a7b17e518cdd1b5022",
+        "expected": "2aefd357e7a83d7193b1c74797fdfb6a34d79750739a12a7b17e518cdd1b5022",
+        "ok": true
+      },
+      "tiny_vit_b8_hostffn": {
+        "actual": "8f5265181590bf4c7181735a9f78635adcd9362ee326d4121429096322a7c08c",
+        "expected": "8f5265181590bf4c7181735a9f78635adcd9362ee326d4121429096322a7c08c",
+        "ok": true
+      },
+      "tiny_vit_b8_rmsnorm": {
+        "actual": "8d0ce69dc3dfc4f38c0a627ca55dc8b3153a4206aaf8e5f3ac1812600c26593b",
+        "expected": "8d0ce69dc3dfc4f38c0a627ca55dc8b3153a4206aaf8e5f3ac1812600c26593b",
+        "ok": true
+      },
+      "tiny_vit_b8_splitheads": {
+        "actual": "f65ce55acbfe1f7485974f1ebf7274243bf5e28a34df393c07b06e61e97a3a32",
+        "expected": "f65ce55acbfe1f7485974f1ebf7274243bf5e28a34df393c07b06e61e97a3a32",
+        "ok": true
+      }
+    },
+    "numeric": {
+      "golden": {
+        "actual": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
+        "expected": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
+        "ok": true
+      },
+      "spec": {
+        "actual": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f",
+        "expected": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f",
+        "ok": true
+      }
+    },
+    "plans": {
+      "mnist_mlp_b1": {
+        "actual": "a1df244f7a6746c26152e57ddc2cd6d2ef03d5adb2786c3af6f2cfa448a36393",
+        "expected": "a1df244f7a6746c26152e57ddc2cd6d2ef03d5adb2786c3af6f2cfa448a36393",
+        "ok": true
+      },
+      "mnist_mlp_b32": {
+        "actual": "48e6449fb20102515de0486a7a78875ef6a568bd1e4d0c07d029e5dcec323987",
+        "expected": "48e6449fb20102515de0486a7a78875ef6a568bd1e4d0c07d029e5dcec323987",
+        "ok": true
+      },
+      "mnist_mlp_b8": {
+        "actual": "20abc9c7b8c1dff33d595cf0c217955247a5b1f2df35490494d2a7a1fff36c50",
+        "expected": "20abc9c7b8c1dff33d595cf0c217955247a5b1f2df35490494d2a7a1fff36c50",
+        "ok": true
+      },
+      "mnist_mlp_diag_l1_bias": {
+        "actual": "1718b0c06799f7febbb1fbc2abfe3cef9ded9976254b5de537f5ff2bafb01dfd",
+        "expected": "1718b0c06799f7febbb1fbc2abfe3cef9ded9976254b5de537f5ff2bafb01dfd",
+        "ok": true
+      },
+      "mnist_mlp_diag_l1_relu": {
+        "actual": "88d8984f0553db058c09310209a41ef2fa5e3386ac6197ed31b2b5f9fc0799ee",
+        "expected": "88d8984f0553db058c09310209a41ef2fa5e3386ac6197ed31b2b5f9fc0799ee",
+        "ok": true
+      },
+      "mnist_mlp_diag_l2_bias": {
+        "actual": "24ca795c9ef0e238dc4a6bcd9c2ab4329921b7499acf53bc713e0a3b2b2ccbd9",
+        "expected": "24ca795c9ef0e238dc4a6bcd9c2ab4329921b7499acf53bc713e0a3b2b2ccbd9",
+        "ok": true
+      },
+      "mnist_mlp_diag_l2_relu": {
+        "actual": "8f1d625a7f2a017d3ed107d1e12b8bdfa2908d5dfe1eaef93ad6cfd573acf8fb",
+        "expected": "8f1d625a7f2a017d3ed107d1e12b8bdfa2908d5dfe1eaef93ad6cfd573acf8fb",
+        "ok": true
+      },
+      "mnist_mlp_diag_l3_bias": {
+        "actual": "f520050b245b6acebbcc15dd674ece6ed8234b2629325d862f15da1e0b84cbc8",
+        "expected": "f520050b245b6acebbcc15dd674ece6ed8234b2629325d862f15da1e0b84cbc8",
+        "ok": true
+      },
+      "mnist_relu_probe": {
+        "actual": "f9386ef48a72ac4d2c04c0424e8a34aba1012e83136e424093765c6880612bcf",
+        "expected": "f9386ef48a72ac4d2c04c0424e8a34aba1012e83136e424093765c6880612bcf",
+        "ok": true
+      },
+      "tiny_vit_b1_attn_out": {
+        "actual": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3",
+        "expected": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3",
+        "ok": true
+      },
+      "tiny_vit_b1_classifier": {
+        "actual": "ec780abc31a527f5ce44d2496468e160058aeb6d97197209e5ea8c6b096f48ba",
+        "expected": "ec780abc31a527f5ce44d2496468e160058aeb6d97197209e5ea8c6b096f48ba",
+        "ok": true
+      },
+      "tiny_vit_b1_down": {
+        "actual": "ea43d153c27b4d2896d7dc35ad838510f5e29155e231e732b88420d139871cc3",
+        "expected": "ea43d153c27b4d2896d7dc35ad838510f5e29155e231e732b88420d139871cc3",
+        "ok": true
+      },
+      "tiny_vit_b1_ffn": {
+        "actual": "505fb787906b248e170465da0bd7590520dbd871c34972cf0d525a6a338ed854",
+        "expected": "505fb787906b248e170465da0bd7590520dbd871c34972cf0d525a6a338ed854",
+        "ok": true
+      },
+      "tiny_vit_b1_ffn_trace": {
+        "actual": "c709c3b330a7ac51bf9f83a5bc35a018c868938e1e3a8f5265906c45aa328cab",
+        "expected": "c709c3b330a7ac51bf9f83a5bc35a018c868938e1e3a8f5265906c45aa328cab",
+        "ok": true
+      },
+      "tiny_vit_b1_gate": {
+        "actual": "80af518973e90c653c1286764cd9fc1554ff486deb1330b94fe20681a2d09169",
+        "expected": "80af518973e90c653c1286764cd9fc1554ff486deb1330b94fe20681a2d09169",
+        "ok": true
+      },
+      "tiny_vit_b1_gate_up": {
+        "actual": "9f3c55f30c2fdb34e9e78e4b05bb7bf3666d78266db2b61dc3fe6c93cb929477",
+        "expected": "9f3c55f30c2fdb34e9e78e4b05bb7bf3666d78266db2b61dc3fe6c93cb929477",
+        "ok": true
+      },
+      "tiny_vit_b1_patch": {
+        "actual": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3",
+        "expected": "137e789a58b24c4d2cb8cd7e344551fa89645ecf337f7198d81a498b6e4f54f3",
+        "ok": true
+      },
+      "tiny_vit_b1_pv": {
+        "actual": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+        "expected": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+        "ok": true
+      },
+      "tiny_vit_b1_pv_qkv_group": {
+        "actual": "24f866289c08d595577f34a2426600cdffcecf4b6faab03fd58c2caa5598dd4e",
+        "expected": "24f866289c08d595577f34a2426600cdffcecf4b6faab03fd58c2caa5598dd4e",
+        "ok": true
+      },
+      "tiny_vit_b1_qk": {
+        "actual": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+        "expected": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+        "ok": true
+      },
+      "tiny_vit_b1_qk_group": {
+        "actual": "68131a615200172b9273e9ccb9915dc4d588ed06650ca3d2ed3129ac5df87a4b",
+        "expected": "68131a615200172b9273e9ccb9915dc4d588ed06650ca3d2ed3129ac5df87a4b",
+        "ok": true
+      },
+      "tiny_vit_b1_qk_qkv_group": {
+        "actual": "52b9c4dd38611d29b5073a68919733612e705edce23959d1e84198f599e49de6",
+        "expected": "52b9c4dd38611d29b5073a68919733612e705edce23959d1e84198f599e49de6",
+        "ok": true
+      },
+      "tiny_vit_b1_qkv": {
+        "actual": "5f63eaaf615d3e099b28f69c9ad87538c591cb9ee0bfb59d3267cb3658953436",
+        "expected": "5f63eaaf615d3e099b28f69c9ad87538c591cb9ee0bfb59d3267cb3658953436",
+        "ok": true
+      },
+      "tiny_vit_b1_up": {
+        "actual": "80af518973e90c653c1286764cd9fc1554ff486deb1330b94fe20681a2d09169",
+        "expected": "80af518973e90c653c1286764cd9fc1554ff486deb1330b94fe20681a2d09169",
+        "ok": true
+      },
+      "tiny_vit_b8_attn_out": {
+        "actual": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0",
+        "expected": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0",
+        "ok": true
+      },
+      "tiny_vit_b8_classifier": {
+        "actual": "f68f9131075631696750442702bd93cbd9319de85934cb81c99269ea6e8bfe4c",
+        "expected": "f68f9131075631696750442702bd93cbd9319de85934cb81c99269ea6e8bfe4c",
+        "ok": true
+      },
+      "tiny_vit_b8_down": {
+        "actual": "7af7e79f69fc8eeeedd104fb06a9cacb26632e3d2cc8f9812c5ace53829f6706",
+        "expected": "7af7e79f69fc8eeeedd104fb06a9cacb26632e3d2cc8f9812c5ace53829f6706",
+        "ok": true
+      },
+      "tiny_vit_b8_ffn": {
+        "actual": "be069f0f44a1324af0698f2d58a5ce0c5d5178938c72c030aa69ea79a020875b",
+        "expected": "be069f0f44a1324af0698f2d58a5ce0c5d5178938c72c030aa69ea79a020875b",
+        "ok": true
+      },
+      "tiny_vit_b8_ffn_trace": {
+        "actual": "d053efa80f23d2ae8fc963183b3ef39808e0c5bd1cdf2201e8222d6842ff741c",
+        "expected": "d053efa80f23d2ae8fc963183b3ef39808e0c5bd1cdf2201e8222d6842ff741c",
+        "ok": true
+      },
+      "tiny_vit_b8_gate": {
+        "actual": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe",
+        "expected": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe",
+        "ok": true
+      },
+      "tiny_vit_b8_gate_up": {
+        "actual": "4bbebbb73dfe7529f8fd17d220cd542c4f69e6a96b2be80b318e2a4b5d9d5935",
+        "expected": "4bbebbb73dfe7529f8fd17d220cd542c4f69e6a96b2be80b318e2a4b5d9d5935",
+        "ok": true
+      },
+      "tiny_vit_b8_patch": {
+        "actual": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0",
+        "expected": "2c2afbab5c7b0944a915afd952f85311f5bce19db7bd013dcb110b088360bff0",
+        "ok": true
+      },
+      "tiny_vit_b8_pv": {
+        "actual": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+        "expected": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+        "ok": true
+      },
+      "tiny_vit_b8_pv_qkv_group": {
+        "actual": "8bfff8c59cd33367051ab7792d44ad7c3269fba332f22f2e73e7c14e977cd466",
+        "expected": "8bfff8c59cd33367051ab7792d44ad7c3269fba332f22f2e73e7c14e977cd466",
+        "ok": true
+      },
+      "tiny_vit_b8_qk": {
+        "actual": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+        "expected": "555495d707e743e6768e87d8fc7b9bc27bbbd7ddc34a86cb59b24ebd3423b815",
+        "ok": true
+      },
+      "tiny_vit_b8_qk_group": {
+        "actual": "825e8bb1666a72c01af11ed0930989485459e911ff96c6e5518921a98039839b",
+        "expected": "825e8bb1666a72c01af11ed0930989485459e911ff96c6e5518921a98039839b",
+        "ok": true
+      },
+      "tiny_vit_b8_qk_qkv_group": {
+        "actual": "f20c52b74ce9a3f50eebce3c0dea11b3c6cc1b3cd6df8cc70892aee2bdd31209",
+        "expected": "f20c52b74ce9a3f50eebce3c0dea11b3c6cc1b3cd6df8cc70892aee2bdd31209",
+        "ok": true
+      },
+      "tiny_vit_b8_qkv": {
+        "actual": "05cc9c88dfec4da3ddd302b201981fda023340a38f01235cc028e9c1373e7d53",
+        "expected": "05cc9c88dfec4da3ddd302b201981fda023340a38f01235cc028e9c1373e7d53",
+        "ok": true
+      },
+      "tiny_vit_b8_up": {
+        "actual": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe",
+        "expected": "45dab4beb0eddb56eab5325fe2e03a3624a21690cccabfb910a1f6145649fbbe",
+        "ok": true
+      }
+    },
+    "source_hashes": {
+      "models/compiled/manifest.json": {
+        "exists": true,
+        "expected": "16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869",
+        "ok": true
+      },
+      "models/numeric_acceptance.json": {
+        "exists": true,
+        "expected": "e1a4774f3da9a0566d7a2235661c4d3e99c19ccb150bc3719b8db067fd39cf4f",
+        "ok": true
+      },
+      "models/numeric_golden.npz": {
+        "exists": true,
+        "expected": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
+        "ok": true
+      },
+      "models/tilelang_matmul.py": {
+        "exists": true,
+        "expected": "5e14d7986db03cfc4f607d5b358e8f9a921d33d3de0ac99101836a8607d71f9e",
+        "ok": true
+      },
+      "models/tilelang_mlp.py": {
+        "exists": true,
+        "expected": "a244daf9933972a8c46ccc3921ca3059902a969efb59e33facacf3c83e76d2a3",
+        "ok": true
+      },
+      "python/rknpu_backend/hostinfo.py": {
+        "exists": true,
+        "expected": "6503a7d100ceacf0bfa5012b06536b095f8de5926b42410c074845b66419ca03",
+        "ok": true
+      },
+      "python/rknpu_backend/hybrid.py": {
+        "exists": true,
+        "expected": "aee044857ed517bda6ee350adab1cbfd93e4a0e4265e283448e74cb1d172291c",
+        "ok": true
+      },
+      "python/rknpu_backend/model_reference.py": {
+        "exists": true,
+        "expected": "395420db9cc0f82a8980fef06bad38293d2eebeefd528d6a52fe390d8d9992d6",
+        "ok": true
+      },
+      "python/rknpu_backend/models.py": {
+        "exists": true,
+        "expected": "dad45e04037929b8f66425371dfdcbe140ab4b2c134ee8b026a90cbfc82a8db8",
+        "ok": true
+      },
+      "python/rknpu_backend/numeric.py": {
+        "exists": true,
+        "expected": "428f37a5122203edb886981254fe8d0fd9967ede801a65405bb555b4d9b872d9",
+        "ok": true
+      },
+      "tools/benchmark_cpu_models.py": {
+        "exists": true,
+        "expected": "e4c5f3e58705a33be1b66cf375e784b49701f51deaa868116118e233291a2e1f",
+        "ok": true
+      },
+      "tools/evaluate_models.py": {
+        "exists": true,
+        "expected": "f91512ef49ce5411d967f137a33f6d08cd42c61c0673fdb9d1ea175cb536ec77",
+        "ok": true
+      },
+      "tools/verify_model_results.py": {
+        "exists": true,
+        "expected": "096aab08f8b030cc8b53ee7e8e1b02244400cea07142a84e219d0edcbd8019e7",
+        "ok": true
+      }
+    },
+    "weights": {
+      "mnist_mlp.npz": {
+        "actual": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+        "expected": "c7cdd120350625ddf39decfde71c94eaed58e60144230ff29dfe7e4d7690c98e",
+        "ok": true
+      },
+      "numeric_acceptance_test.npz": {
+        "actual": "277a9a0293f9d8f0413b5bd812d07ed0cbbc0f629a36a8663a65dc8fbc8a7ce8",
+        "expected": "277a9a0293f9d8f0413b5bd812d07ed0cbbc0f629a36a8663a65dc8fbc8a7ce8",
+        "ok": true
+      },
+      "numeric_calibration_train.npz": {
+        "actual": "d1cc5db161e93907a5156c9422a5e610071d8eab4b22fe901dba8395b5bc433e",
+        "expected": "d1cc5db161e93907a5156c9422a5e610071d8eab4b22fe901dba8395b5bc433e",
+        "ok": true
+      },
+      "numeric_golden.npz": {
+        "actual": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
+        "expected": "caa526c7695ba66f3e2ec3ec9274562e6d8613dbd5ec16d39fb8c1d2268b9910",
+        "ok": true
+      },
+      "tiny_vit.npz": {
+        "actual": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f",
+        "expected": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f",
+        "ok": true
+      }
+    }
+  },
+  "numeric": {
+    "calibration": {
+      "basis": "Limits are frozen from deterministic layer outputs and raw task-logit comparisons; the same limits are used by the independent verifier.",
+      "observed_layer_traces": [
+        {
+          "path": "evidence/numeric-calibration/core-1/model_eval.layers.npz",
+          "sample_indices": [
+            10,
+            73,
+            171,
+            249,
+            279,
+            349,
+            383,
+            405
+          ],
+          "sha256": "52684282ccfdf06e583b7366406f8ea6da61e79152829750d14a9bcf1f022bb4"
+        },
+        {
+          "path": "evidence/numeric-calibration/core-2/model_eval.layers.npz",
+          "sample_indices": [
+            10,
+            73,
+            171,
+            249,
+            279,
+            349,
+            383,
+            405
+          ],
+          "sha256": "52684282ccfdf06e583b7366406f8ea6da61e79152829750d14a9bcf1f022bb4"
+        },
+        {
+          "path": "evidence/numeric-calibration/core-4/model_eval.layers.npz",
+          "sample_indices": [
+            10,
+            73,
+            171,
+            249,
+            279,
+            349,
+            383,
+            405
+          ],
+          "sha256": "52684282ccfdf06e583b7366406f8ea6da61e79152829750d14a9bcf1f022bb4"
+        }
+      ],
+      "observed_results": [
+        {
+          "path": "evidence/numeric-calibration/core-1/model_eval.json",
+          "sha256": "f1fec312428b9958787437c3c7c79a28c898ea8255a551fcb9c720edcaeb16c4"
+        },
+        {
+          "path": "evidence/numeric-calibration/core-2/model_eval.json",
+          "sha256": "f2a810bd3dafc053bac066307e3fbb5e2fed221a20a5ac7a056db5acbb18e17d"
+        },
+        {
+          "path": "evidence/numeric-calibration/core-4/model_eval.json",
+          "sha256": "969e679099eb5add1ce4c3975d11e9c052c2faa159c6cf7e9e28666bdf69ed8c"
+        }
+      ],
+      "rule": "atol=ceil_2^-12(2*max_observed_abs_error); rtol=0",
+      "status": "frozen",
+      "uses_classification_metric": false
+    },
+    "sample_indices": [
+      10,
+      73,
+      171,
+      249,
+      279,
+      349,
+      383,
+      405
+    ],
+    "status": "frozen",
+    "task_logit_tolerances": {
+      "mnist_mlp.b1": {
+        "atol": 0.015625,
+        "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+        "observed_max_abs_by_source": {
+          "evidence/numeric-calibration/core-1/model_eval.json": 0.0078125,
+          "evidence/numeric-calibration/core-2/model_eval.json": 0.0078125,
+          "evidence/numeric-calibration/core-4/model_eval.json": 0.0078125
+        },
+        "rtol": 0.0
+      },
+      "mnist_mlp.b32": {
+        "atol": 0.03125,
+        "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+        "observed_max_abs_by_source": {
+          "evidence/numeric-calibration/core-1/model_eval.json": 0.015625,
+          "evidence/numeric-calibration/core-2/model_eval.json": 0.0078125,
+          "evidence/numeric-calibration/core-4/model_eval.json": 0.0078125
+        },
+        "rtol": 0.0
+      },
+      "mnist_mlp.b8": {
+        "atol": 0.015625,
+        "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+        "observed_max_abs_by_source": {
+          "evidence/numeric-calibration/core-1/model_eval.json": 0.0078125,
+          "evidence/numeric-calibration/core-2/model_eval.json": 0.0078125,
+          "evidence/numeric-calibration/core-4/model_eval.json": 0.0078125
+        },
+        "rtol": 0.0
+      },
+      "tiny_vit.b1": {
+        "atol": 0.0625,
+        "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+        "observed_max_abs_by_source": {
+          "evidence/numeric-calibration/core-1/model_eval.json": 0.03125,
+          "evidence/numeric-calibration/core-2/model_eval.json": 0.03125,
+          "evidence/numeric-calibration/core-4/model_eval.json": 0.03125
+        },
+        "rtol": 0.0
+      },
+      "tiny_vit.b8": {
+        "atol": 0.0625,
+        "basis": "2x max observed raw-logit error for this exact static batch profile across all core masks, rounded up to 2^-12; rtol=0; classification output is not a tolerance input",
+        "observed_max_abs_by_source": {
+          "evidence/numeric-calibration/core-1/model_eval.json": 0.03125,
+          "evidence/numeric-calibration/core-2/model_eval.json": 0.03125,
+          "evidence/numeric-calibration/core-4/model_eval.json": 0.03125
+        },
+        "rtol": 0.0
+      }
+    }
+  },
+  "problems": [],
+  "status": "PASS",
+  "thresholds": {
+    "accuracy_drop_max": 0.005,
+    "mnist_mlp_accuracy": 0.97,
+    "tiny_vit_accuracy": 0.95,
+    "top1_agreement_min": 0.99
+  }
+}

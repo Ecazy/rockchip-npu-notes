@@ -1,0 +1,43 @@
+{
+ "schema_version": 1,
+ "kind": "smollm-rope-indexed-decode-probe",
+ "model_config": {
+  "q_heads": 9,
+  "kv_heads": 3,
+  "head_dim": 64,
+  "rope_theta": 100000.0,
+  "capacity": 256
+ },
+ "results": {
+  "q": {
+   "tokens": 1,
+   "heads": 9,
+   "head_dim": 64,
+   "plan_hash": "d0ecd01c17a8e9a16e8b5c183021a354b1c8fc2f46308108d2642aa3a86701b6",
+   "task_count": 24,
+   "submit_count": 18,
+   "per_token_upload_bytes": 19968,
+   "per_token_download_bytes": 13824,
+   "device_median_us": 81128.50399993476,
+   "max_abs_diff_vs_production_host": 0.001953125,
+   "finite": true,
+   "coefficient_residency": "CosW/SinW/P are plan constants; one-hot position vector is the only per-token coefficient metadata"
+  },
+  "k": {
+   "tokens": 1,
+   "heads": 3,
+   "head_dim": 64,
+   "plan_hash": "9ed31b8b4f576ef4e054fa0552b7451daa20646ab57706cb93bfeeea9f122392",
+   "task_count": 6,
+   "submit_count": 6,
+   "per_token_upload_bytes": 10752,
+   "per_token_download_bytes": 4608,
+   "device_median_us": 18824.091000169574,
+   "max_abs_diff_vs_production_host": 0.001953125,
+   "finite": true,
+   "coefficient_residency": "CosW/SinW/P are plan constants; one-hot position vector is the only per-token coefficient metadata"
+  }
+ },
+ "problems": [],
+ "pass": true
+}

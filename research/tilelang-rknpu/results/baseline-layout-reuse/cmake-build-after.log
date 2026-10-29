@@ -1,0 +1,112 @@
+[  2%] Built target rknpu-submit
+[  4%] Built target two_task_trace
+[  6%] Built target interference_load
+[  8%] Built target fp16_scan_test
+[ 10%] Built target task_ref_test
+[ 12%] Built target provider_context_test
+[ 28%] Built target custom_ops
+[ 30%] Building C object CMakeFiles/ktiling_host_test.dir/tests/c/ktiling_host_test.c.o
+[ 31%] Building C object CMakeFiles/two_task_probe.dir/tools/c/two_task_probe.c.o
+[ 31%] Building C object CMakeFiles/custom_ops_probe.dir/tools/c/probe.c.o
+[ 32%] Building C object CMakeFiles/linear_hardsigmoid.dir/tools/c/operator_cli.c.o
+[ 34%] Linking C executable linear_hardsigmoid
+[ 34%] Linking C executable ktiling_host_test
+[ 35%] Linking C executable two_task_probe
+[ 35%] Built target ktiling_host_test
+[ 35%] Built target linear_hardsigmoid
+[ 35%] Building C object CMakeFiles/ktiling_probe.dir/tools/c/ktiling_probe.c.o
+[ 36%] Building C object CMakeFiles/co_schedule.dir/src/co_schedule.c.o
+[ 36%] Built target two_task_probe
+[ 36%] Linking C executable custom_ops_probe
+[ 37%] Building C object CMakeFiles/multitile_host_test.dir/tests/c/multitile_host_test.c.o
+[ 38%] Linking C static library libco_schedule.a
+[ 38%] Built target custom_ops_probe
+[ 39%] Building C object CMakeFiles/multitile_probe.dir/tools/c/multitile_probe.c.o
+[ 40%] Linking C executable multitile_host_test
+[ 40%] Built target co_schedule
+[ 40%] Built target multitile_host_test
+[ 41%] Linking C executable multitile_probe
+[ 42%] Linking C executable ktiling_probe
+[ 43%] Building C object CMakeFiles/graph_host_test.dir/tests/c/graph_host_test.c.o
+[ 44%] Building C object CMakeFiles/graph_ffn.dir/tools/c/graph_cli.c.o
+[ 44%] Built target multitile_probe
+[ 44%] Built target ktiling_probe
+[ 44%] Building C object CMakeFiles/attention_probe.dir/tools/c/attention_probe.c.o
+[ 46%] Building C object CMakeFiles/row_graph.dir/tools/c/row_cli.c.o
+[ 46%] Linking C executable graph_ffn
+[ 46%] Built target graph_ffn
+[ 47%] Linking C executable row_graph
+[ 48%] Building C object CMakeFiles/decoder_probe.dir/tools/c/decoder_probe.c.o
+[ 49%] Linking C executable attention_probe
+[ 50%] Linking C executable graph_host_test
+[ 50%] Built target row_graph
+[ 50%] Built target attention_probe
+[ 50%] Built target graph_host_test
+[ 51%] Building C object CMakeFiles/regcmd_overlap_probe.dir/tools/c/regcmd_overlap_probe.c.o
+[ 52%] Building C object CMakeFiles/gdn_probe.dir/tools/c/gdn_probe.c.o
+[ 53%] Linking C executable decoder_probe
+[ 54%] Building C object CMakeFiles/gdn_experiments.dir/tools/c/gdn_experiments.c.o
+[ 54%] Built target decoder_probe
+[ 55%] Building C object CMakeFiles/gdn_cpu_test.dir/tests/c/gdn_cpu_test.c.o
+[ 56%] Linking C executable gdn_experiments
+[ 57%] Linking C executable gdn_probe
+[ 57%] Linking C executable gdn_cpu_test
+[ 57%] Built target gdn_experiments
+[ 58%] Built target rk_plan_core
+[ 59%] Linking C executable regcmd_overlap_probe
+[ 59%] Built target gdn_probe
+[ 59%] Built target gdn_cpu_test
+[ 61%] Built target rk_plan_runtime_obj
+[ 63%] Building C object CMakeFiles/rk_plan_runtime_noprobe_obj.dir/src/rk_plan_runtime.c.o
+[ 63%] Building C object CMakeFiles/mock_signature_probe.dir/tests/mock/npu_mock.c.o
+[ 64%] Building C object CMakeFiles/rk_mock_scenarios.dir/tests/c/mock_scenarios.c.o
+[ 64%] Built target regcmd_overlap_probe
+[ 65%] Building C object CMakeFiles/rk_plan_runtime_noprobe_obj.dir/src/rk_plan_emit.c.o
+[ 66%] Building C object CMakeFiles/output_sync_test.dir/tests/c/output_sync_test.c.o
+[ 67%] Building C object CMakeFiles/rk_mock_scenarios.dir/tests/mock/npu_mock.c.o
+[ 68%] Linking C executable mock_signature_probe
+[ 69%] Building C object CMakeFiles/output_sync_test.dir/tests/mock/npu_mock.c.o
+[ 70%] Built target mock_signature_probe
+[ 71%] Building C object CMakeFiles/command_cache_test.dir/tests/mock/npu_mock.c.o
+[ 72%] Linking C executable rk_mock_scenarios
+[ 72%] Built target rk_plan_runtime_noprobe_obj
+[ 72%] Linking C executable output_sync_test
+[ 72%] Built target rk_mock_scenarios
+[ 73%] Building C object CMakeFiles/guard_scan_test.dir/tests/c/guard_scan_test.c.o
+[ 74%] Building C object CMakeFiles/download_fastpath_test.dir/tests/c/download_fastpath_test.c.o
+[ 75%] Linking C executable command_cache_test
+[ 75%] Built target output_sync_test
+[ 76%] Building C object CMakeFiles/guard_scan_test.dir/tests/mock/npu_mock.c.o
+[ 77%] Building C object CMakeFiles/download_fastpath_test.dir/tests/mock/npu_mock.c.o
+[ 78%] Building C object CMakeFiles/rk_plan_contract_test.dir/tests/c/rk_plan_contract_test.c.o
+[ 79%] Built target command_cache_test
+[ 80%] Building C object CMakeFiles/rk_plan_host_test.dir/tests/c/rk_plan_host_test.c.o
+[ 81%] Linking C executable rk_plan_contract_test
+[ 82%] Linking C executable download_fastpath_test
+[ 83%] Linking C executable guard_scan_test
+[ 83%] Built target rk_plan_contract_test
+[ 84%] Building C object CMakeFiles/plan_envelope_probe.dir/tools/c/plan_envelope_probe.c.o
+[ 84%] Built target download_fastpath_test
+[ 84%] Built target guard_scan_test
+[ 85%] Building C object CMakeFiles/rk_plan_host_test.dir/tests/mock/npu_mock.c.o
+[ 86%] Building C object CMakeFiles/independent_mm_chain_probe.dir/tools/c/independent_mm_chain_probe.c.o
+[ 87%] Linking C executable plan_envelope_probe
+[ 87%] Built target plan_envelope_probe
+[ 88%] Linking C executable independent_mm_chain_probe
+[ 89%] Building C object CMakeFiles/schedule_probe.dir/tools/c/schedule_probe.c.o
+[ 90%] Building C object CMakeFiles/overlap_probe.dir/tools/c/overlap_probe.c.o
+[ 91%] Linking C executable rk_plan_host_test
+[ 91%] Built target independent_mm_chain_probe
+[ 91%] Built target rk_plan_host_test
+[ 92%] Building C object CMakeFiles/cost_probe.dir/tools/c/cost_probe.c.o
+[ 93%] Linking C executable schedule_probe
+[ 95%] Built target rknpu_plan
+[ 96%] Building C object CMakeFiles/rknpu_plan_noprobe.dir/src/rk_plan_target.c.o
+[ 96%] Built target schedule_probe
+[ 97%] Built target rknpu_plan_mock
+[ 98%] Linking C shared library librknpu_plan_noprobe.so
+[ 99%] Linking C executable overlap_probe
+[100%] Linking C executable cost_probe
+[100%] Built target rknpu_plan_noprobe
+[100%] Built target cost_probe
+[100%] Built target overlap_probe

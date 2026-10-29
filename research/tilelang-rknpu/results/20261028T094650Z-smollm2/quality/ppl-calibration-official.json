@@ -1,0 +1,65 @@
+{
+ "attn_implementation": "eager",
+ "config_sha256": "8eb740e8bbe4cff95ea7b4588d17a2432deb16e8075bc5828ff7ba9be94d982a",
+ "deterministic": true,
+ "dtype": "float32",
+ "kind": "smollm2-official-reference",
+ "mean_nll": 2.883856773376465,
+ "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+ "model_dir": ".data/models/SmolLM2-135M-Instruct",
+ "nll_sha256": "fb38fcb4c415759bd5f3feb077df97a4200762de9b63ee418900d76cf13404aa",
+ "ppl": 17.88311195373535,
+ "revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+ "scored_tokens": 1275,
+ "source": ".data/models/SmolLM2-135M-Instruct/README.md",
+ "source_sha256": "4f97533ad95b1b2fea15fbc075c01b94578ebdd7c8138888fa43fa3abd530dc4",
+ "sum_nll": 3676.91748046875,
+ "tokenizer_sha256": "9ca9acddb6525a194ec8ac7a87f24fbba7232a9a15ffa1af0c1224fcd888e47c",
+ "top1_accuracy": 0.48,
+ "torch": "2.9.0+cpu",
+ "transformers": "4.57.1",
+ "weights_sha256": "5af571cbf074e6d21a03528d2330792e532ca608f24ac70a143f6b369968ab8c",
+ "window_size": 256,
+ "windows": [
+  {
+   "mean_nll": 2.9264724254608154,
+   "ppl": 18.661684036254883,
+   "scored_tokens": 255,
+   "sum_nll": 746.25048828125,
+   "top1_accuracy": 0.47843137254901963,
+   "window": 0
+  },
+  {
+   "mean_nll": 3.6793527603149414,
+   "ppl": 39.62074279785156,
+   "scored_tokens": 255,
+   "sum_nll": 938.2349243164062,
+   "top1_accuracy": 0.3764705882352941,
+   "window": 1
+  },
+  {
+   "mean_nll": 2.707164764404297,
+   "ppl": 14.986723899841309,
+   "scored_tokens": 255,
+   "sum_nll": 690.3270263671875,
+   "top1_accuracy": 0.5098039215686274,
+   "window": 2
+  },
+  {
+   "mean_nll": 2.442244291305542,
+   "ppl": 11.498818397521973,
+   "scored_tokens": 255,
+   "sum_nll": 622.7722778320312,
+   "top1_accuracy": 0.5372549019607843,
+   "window": 3
+  },
+  {
+   "mean_nll": 2.6640493869781494,
+   "ppl": 14.354297637939453,
+   "scored_tokens": 255,
+   "sum_nll": 679.3325805664062,
+   "top1_accuracy": 0.4980392156862745,
+   "window": 4
+  }
+ ]
+}
