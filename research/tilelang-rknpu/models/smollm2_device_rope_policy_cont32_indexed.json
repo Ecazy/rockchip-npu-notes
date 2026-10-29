@@ -1,0 +1,45 @@
+{
+ "acceptance": {
+  "aba_request_isolation_bitwise": true,
+  "decode_all_top1_equal": true,
+  "decode_logits_max_abs_diff": 0.14453125,
+  "incremental_vs_full_prefix_max_abs": 0.0,
+  "prefill_logits_max_abs_diff": 0.046875,
+  "prompt": "prompt-1-ids.json"
+ },
+ "calibration": {
+  "aba_request_isolation_bitwise": true,
+  "decode_all_top1_equal": true,
+  "decode_logits_max_abs_diff": 0.119140625,
+  "incremental_vs_full_prefix_max_abs": 0.0,
+  "prefill_logits_max_abs_diff": 0.0546875,
+  "prompt": "prompt-0-ids.json"
+ },
+ "decode_steps": 32,
+ "gates": {
+  "aba_bitwise_required": true,
+  "decode_max_abs": 0.23828125,
+  "finite_required": true,
+  "incremental_vs_full_max_abs": 0.0,
+  "prefill_max_abs": 0.109375,
+  "top1_required": true
+ },
+ "kind": "smollm2-device-rope-continuous-indexed-policy",
+ "numeric_policy": {
+  "decode": "one-hot position gather from resident CosW/SinW via device MM, then FP16 P/EW",
+  "host_reference": "smollm.rope_half.v1 production Host action",
+  "prefill": "FP16 P reorder + FP16 EW; Cos/Sin/P resident constants"
+ },
+ "package_manifest_sha256": "b923fc5b427cc2ee6f0f88e7d096444a7ab44babdfbd79cc64fe07f5771548be",
+ "pass": true,
+ "plan_hashes": {
+  "decode_3h": "28537b3e6df9450161bcad1aa1d61e1a7efbcc7a5f6a9cf7bff156e2d3f69083",
+  "decode_9h": "c2042a8f3ab2b3649460afa3945496475f559dd17342fef55b780e74198fd88d",
+  "decode_indexed_3h": "4ce73947929e6b2bedcd94f5b75845914547245c209d7c0f223dc4c0dd3fc161",
+  "decode_indexed_9h": "6931b322dd1ae7e6a7ecaf675bbf060c2faba556e8d9515e34cf663bf1e1113b",
+  "prefill_3h": "79ebcd195dcbfa0f70ad5a4db57da06e36ce11e8ed0876db3bb0e17d2bc9f054",
+  "prefill_9h": "ef68a70b17c0aa2c74e7a7d4d06685e2ad98937c9cc13b9bacba8ea500473234"
+ },
+ "schema_version": 1,
+ "status": "experimental_not_default"
+}

@@ -43,6 +43,10 @@ int rk_emit_action(const rk_plan *plan, const co_view *views,
     case RK_TEMPLATE_LUT_GELU_GATE_F16:
         rc = co_emit_lut(out, views[a->inputs[0]], views[a->outputs[0]], CO_GELU_GATE);
         break;
+    case RK_TEMPLATE_LUT_RSQRT_F16:
+        rc = co_emit_lut(out, views[a->inputs[0]], views[a->outputs[0]],
+                         CO_RSQRT_BOUNDED);
+        break;
     default:
         rc = RK_E_UNSUPPORTED;
         break;

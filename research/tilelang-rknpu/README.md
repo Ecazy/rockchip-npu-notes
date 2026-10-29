@@ -6,7 +6,10 @@
 
 - 后端 MVP 已在声明支持域内完成；仍是实验性后端，不承诺未知设备故障后的恢复。
 - MNIST MLP 与显式 hybrid Tiny Transformer 完整模型里程碑已关闭，证据统一见 [ACCEPTANCE.md](ACCEPTANCE.md)。
+- SmolLM2-135M-Instruct 固定 revision 的完整 30 层、49152 词表推理链已在 RK3588 上跑通：prefill、持久 KV cache decode、chat template、独立声明参考和官方 FP32 参考均已验收；入口见 [models/README.md](models/README.md#smollm2-135m-instruct)。
 - 默认模型优化、最终 baseline/current 复验及厂商 RKNN 对照统一见 [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md)。不同数值政策及不同 campaign 的性能分开解释。
+- 2026-10-28 的 A 切片打包、共享 packed 权重、KV native 驻留与 SmolLM2 端到端对照见 [LAYOUT-REUSE-REPORT.md](LAYOUT-REUSE-REPORT.md)。
+- TinyTransformer 图级 Submit 融合、device FFN、残差 Add、RMSNorm 实验与 b1/b8 成对测量见 [GRAPH-FUSION-REPORT.md](GRAPH-FUSION-REPORT.md)。
 - 后端重构主线已完成：编译边界收敛到 codegen，新增 `compile_artifact` 直接实例化入口，旧入口与持久化重放保持；TVM 原生图试点已完成但未采用为默认，计算表示继续使用薄 RKIR。结论与证据见 [refactor-specific.md](refactor-specific.md) 第 15 节。原始设计与重构方案各保留一对 overview/specific，按下面的适用范围阅读。
 
 ## 开发规范

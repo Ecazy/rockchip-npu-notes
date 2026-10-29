@@ -26,6 +26,13 @@ class CompileOptions:
     # by an EW_MAX(zero) with one co.ew_add_relu template.  This is separate
     # from Submit grouping and is gated on the capability manifest.
     fuse_add_relu: bool = True
+    # General task-chain fusion: merge adjacent, dependency-connected Submit
+    # groups into one CO_CHAIN envelope when the tasks are contiguous in action
+    # order and every NPU dependency is satisfied by an earlier task in the
+    # merged envelope.  This changes no task, buffer, arithmetic or transfer;
+    # it only reduces submit/command/sync envelopes.  Opt-in until the mixed
+    # template chain has its own board probe.
+    fuse_task_chain: bool = False
     # Experimental patterns are opt-in: only ``enabled`` capabilities are selected
     # by default (P2).
     allow_experimental: bool = False
@@ -50,7 +57,7 @@ class CompileOptions:
         if self.tile_limit != 256:
             reject(RK_E_UNSUPPORTED, "MVP tile_limit is fixed at 256",
                    stage="options", actual=self.tile_limit, required=256)
-        for name in ("fuse_epilogue", "fuse_add_relu"):
+        for name in ("fuse_epilogue", "fuse_add_relu", "fuse_task_chain"):
             if not isinstance(getattr(self, name), bool):
                 reject(RK_E_UNSUPPORTED, f"{name} must be a boolean",
                        stage="options")

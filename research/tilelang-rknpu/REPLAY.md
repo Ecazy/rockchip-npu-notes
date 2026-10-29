@@ -203,3 +203,301 @@ git -C ../upstream-components/rknpu-submit apply \
 
 The provider C test `provider_context` covers queued shared-fd submission,
 task-BO non-rewrite, faulted-close retention and healthy-close compatibility.
+
+## SmolLM2-135M-Instruct
+
+One model driver handles fixed-revision fetch, Host compile, isolated board
+setup, chat generation and generic board requests.  Credentials continue to come
+from the repository's ignored `.env`; the script never prints them.
+
+```bash
+cd research/tilelang-rknpu
+
+# Host-only tokenizer/reference dependencies (torch/numpy are in requirements.lock).
+python3 -m pip install --target .pydeps-p0 -r requirements-smollm2.lock
+
+# Fixed model files and SHA-256 verification (HF mirror by default).
+./scripts/run-smollm2.sh fetch
+
+# Canonical FP16 weights + 268 real-TileLang RKPlans.
+./scripts/run-smollm2.sh compile
+
+# Host regression: full pytest suite and existing C tests.
+./scripts/run-smollm2.sh host-check
+
+# One-time isolated board source bundle, production C build and package upload.
+./scripts/run-smollm2.sh setup-board
+
+# Chat-template driven greedy generation on the RK3588.
+./scripts/run-smollm2.sh chat \
+  "Name the capital of France." 32
+```
+
+The generic board entry accepts a JSON containing `runs` with
+`generate`, `prefill`, `capture`, `teacher_forcing`, `incremental`, `score` or
+`expect_reject` modes:
+
+```bash
+./scripts/run-smollm2.sh board-run /tmp/smollm-request.json \
+  results/$(date -u +%Y%m%dT%H%M%SZ)-smollm2
+```
+
+The committed evidence manifest is
+`results/20261028T094650Z-smollm2/manifest.json`.  Raw 25 MB
+`all-logits`/teacher-forcing arrays and the official reference arrays are kept
+under the ignored local path `.data/evidence/smollm2-20261028T094650Z/`; their
+hashes and replay identities are in that manifest.
+
+Independent references and frozen acceptance:
+
+```bash
+export PYTHONPATH=$PWD/python:$PWD/tools:$PWD/.pydeps-p0
+
+# Fixed text windows for NLL/PPL (calibration and disjoint acceptance sources).
+python3 tools/make_smollm2_ppl_windows.py \
+  --source .data/models/SmolLM2-135M-Instruct/README.md \
+  --out /tmp/smollm-ppl-calibration.json
+python3 tools/make_smollm2_ppl_windows.py \
+  --source ACCEPTANCE.md --out /tmp/smollm-ppl-acceptance.json
+
+# Official FP32 semantic/quality reference.
+python3 tools/smollm2_official.py --mode logits \
+  --ids-json /tmp/calibration-ids.json \
+  --out /tmp/official-calibration
+python3 tools/smollm2_official.py --mode score \
+  --windows-json /tmp/smollm-ppl-calibration.json \
+  --out /tmp/official-ppl-calibration
+
+# Independent declared-reference implementation (FP16, 256-wide K writeback).
+python3 tools/smollm2_reference.py \
+  --package .data/models/smollm2_135m_instruct_package \
+  --ids-json /tmp/calibration-ids.json \
+  --capture-layers 0,15,29 --out /tmp/ref-calibration
+
+# Re-freeze only from calibration observations, then verify disjoint acceptance.
+python3 tools/calibrate_smollm2.py \
+  --board .data/evidence/smollm2-20261028T094650Z/calibration \
+  --reference .data/evidence/smollm2-20261028T094650Z/calibration-reference \
+  --reference-tf .data/evidence/smollm2-20261028T094650Z/calibration-tf-reference \
+  --official-logits .data/evidence/smollm2-20261028T094650Z/official/official-logits-calibration/logits.npy \
+  --ppl-board .data/evidence/smollm2-20261028T094650Z/ppl/calibration-board \
+  --ppl-official .data/evidence/smollm2-20261028T094650Z/official/official-ppl-calibration/result.json \
+  --ppl-source-json .data/evidence/smollm2-20261028T094650Z/official/ppl-calibration-windows.json \
+  --prompt-text "Name the capital of France." \
+  --out models/smollm2_numeric_acceptance.json
+
+python3 tools/verify_smollm2.py \
+  --spec models/smollm2_numeric_acceptance.json \
+  --board .data/evidence/smollm2-20261028T094650Z/acceptance \
+  --reference .data/evidence/smollm2-20261028T094650Z/acceptance-reference \
+  --reference-tf .data/evidence/smollm2-20261028T094650Z/acceptance-tf-reference \
+  --official-logits .data/evidence/smollm2-20261028T094650Z/official/official-logits-acceptance/logits.npy \
+  --ppl-board .data/evidence/smollm2-20261028T094650Z/ppl/acceptance-board \
+  --ppl-official .data/evidence/smollm2-20261028T094650Z/official/official-ppl-acceptance/result.json \
+  --acceptance-source-json .data/evidence/smollm2-20261028T094650Z/official/ppl-acceptance-windows.json \
+  --out /tmp/verify-smollm2.json
+```
+
+## Layout reuse / A-B campaign (2026-10-28)
+
+Final report: [LAYOUT-REUSE-REPORT.md](LAYOUT-REUSE-REPORT.md).
+
+The benchmark request uses a fixed 42-token prompt and three 16-token greedy
+generations.  The baseline package keeps the pre-P0 plans and runs with
+`--no-share-constants --no-persistent-kv`; the current package runs with both
+features enabled.  The driver accepts either remote package directory.
+
+```bash
+# one-time isolated board setup; uploads current and baseline packages
+RK_SMOLLM_BASELINE_PACKAGE=$PWD/.data/models/smollm2_baseline_package \
+  ./scripts/run-smollm2.sh setup-board
+
+# baseline
+RK_SMOLLM_REMOTE_PACKAGE=package-baseline \
+RK_SMOLLM_RUNNER_ARGS='--no-share-constants --no-persistent-kv' \
+  ./scripts/run-smollm2.sh board-run \
+  results/baseline-layout-reuse/request-benchmark.json \
+  results/baseline-layout-reuse/board-final4-baseline-r1-benchmark
+
+# current
+RK_SMOLLM_REMOTE_PACKAGE=package \
+  ./scripts/run-smollm2.sh board-run \
+  results/baseline-layout-reuse/request-benchmark.json \
+  results/baseline-layout-reuse/board-final4-current-r1-benchmark
+
+# frozen teacher-forcing / capture / incremental acceptance
+RK_SMOLLM_REMOTE_PACKAGE=package \
+  ./scripts/run-smollm2.sh board-run \
+  results/baseline-layout-reuse/request-acceptance.json \
+  results/baseline-layout-reuse/board-final4-current-acceptance
+
+PYTHONPATH=$PWD/python:$PWD python3 tools/verify_smollm2.py \
+  --spec models/smollm2_numeric_acceptance.json \
+  --board results/baseline-layout-reuse/board-final4-current-acceptance \
+  --reference .data/evidence/smollm2-20261028T094650Z/acceptance-reference \
+  --reference-tf .data/evidence/smollm2-20261028T094650Z/acceptance-tf-reference \
+  --official-logits .data/evidence/smollm2-20261028T094650Z/official/official-logits-acceptance/logits.npy \
+  --acceptance-prompt "$(cat .data/evidence/smollm2-20261028T094650Z/official/prompt-acceptance.txt)" \
+  --acceptance-source-json .data/evidence/smollm2-20261028T094650Z/official/prompt-0-ids.json \
+  --out results/baseline-layout-reuse/verify-final4-current-acceptance.json
+```
+
+Host contract tests:
+
+```bash
+PYTHONPATH=$PWD/python:$PWD RKNPU_PLAN_MOCK_LIB=$PWD/../custom-ops/build-host-mvp/librknpu_plan_mock.so \
+  python3 -m pytest -q tests/test_shared_constants.py
+PYTHONPATH=$PWD/python:$PWD RKNPU_PLAN_MOCK_LIB=$PWD/../custom-ops/build-host-mvp/librknpu_plan_mock.so \
+  RKNPU_SMOLLM_SLOW_TESTS=1 python3 -m pytest -q \
+  tests/test_smollm2_host.py::SmolLM2HostActionTests::test_persistent_kv_reset_replays_identical
+```
+
+## Graph fusion / device residency campaign (2026-10-28)
+
+Final report: [GRAPH-FUSION-REPORT.md](GRAPH-FUSION-REPORT.md).
+
+Regenerate the two isolated packages:
+
+```bash
+# default-policy graph-fusion package (new plans do not replace the frozen
+# models/compiled baseline)
+python3 tools/compile_models.py --out models/compiled_graph_fusion
+
+# independently named approximate RMSNorm package/profile
+python3 tools/compile_models.py \
+  --out models/compiled_rmsnorm_lut \
+  --profile capabilities/rk3588_vendor_co_v1_rmsnorm_lut.json \
+  --include-rmsnorm-approx
+```
+
+Paired RK3588 evaluation (the driver builds the current runtime and uploads the
+selected package):
+
+```bash
+RK_GF_PLANS_NAME=compiled_graph_fusion ./scripts/run-graph-fusion-eval.sh setup
+RK_GF_LIMIT=512 RK_GF_ROUNDS=5 \
+RK_GF_ARMS=':default:_deviceffn_fused' \
+  ./scripts/run-graph-fusion-eval.sh run \
+  results/20261028T113459Z-graph-fusion/board-gf-pair-512
+
+# same-policy residual-Add and old device-FFN controls
+RK_GF_LIMIT=512 RK_GF_ROUNDS=3 \
+RK_GF_ARMS=':default:_deviceffn:_deviceffn_fused:_addfused' \
+  ./scripts/run-graph-fusion-eval.sh run \
+  results/20261028T113459Z-graph-fusion/board-gf-final-512
+
+# full 10k progress for the explicit fused-FFN policy
+RK_GF_PLANS_NAME=compiled_rmsnorm_lut ./scripts/run-graph-fusion-eval.sh setup
+RK_GF_LIMIT=0 RK_GF_ROUNDS=1 RK_GF_ARMS=':_deviceffn_fused' \
+  ./scripts/run-graph-fusion-eval.sh run \
+  results/20261028T113459Z-graph-fusion/board-gf-full2
+```
+
+Host fusion/operator tests:
+
+```bash
+PYTHONPATH=$PWD/python:$PWD RKNPU_PLAN_MOCK_LIB=$PWD/../custom-ops/build-host-mvp/librknpu_plan_mock.so \
+  python3 -m pytest -q tests/test_graph_fusion.py
+```
+
+## Stage 2: tightened admission, RMSNorm acceptance, RoPE, PV→O, AB/BA
+
+```bash
+# AB/BA scheduling attribution (old device FFN vs fused; same numeric path)
+for spec in "ab:5::_deviceffn:_deviceffn_fused" \
+            "ba:5::_deviceffn_fused:_deviceffn" \
+            "dab:5::default:_deviceffn_fused" \
+            "dba:5::_deviceffn_fused:default" \
+            "nab:5::default:_deviceffn" \
+            "nba:5::_deviceffn:default"; do
+  IFS=: read -r name rounds _ arms <<<"$spec"
+  RK_GF_LIMIT=512 RK_GF_ROUNDS=$rounds RK_GF_ARMS="$arms" \
+    ./scripts/run-graph-fusion-eval.sh run \
+    results/20261028T113459Z-graph-fusion/abba-$name
+done
+
+# RMSNorm operator-level independent acceptance
+RK_GF_PLANS_NAME=compiled_rmsnorm_lut ./scripts/run-graph-fusion-eval.sh setup
+./scripts/run-graph-fusion-eval.sh rmsnorm-probe \
+  results/20261028T113459Z-graph-fusion/rmsnorm-operator-board-domain.json
+
+# RoPE minimal device reorder probe (1 submit, 4 tasks)
+RK_GF_PLANS_NAME=compiled_graph_fusion ./scripts/run-graph-fusion-eval.sh setup
+./scripts/run-graph-fusion-eval.sh rope-probe \
+  results/20261028T113459Z-graph-fusion/rope-device-interleaved-board.json \
+  interleaved 64
+./scripts/run-graph-fusion-eval.sh rope-probe \
+  results/20261028T113459Z-graph-fusion/rope-device-split32-board.json \
+  split_half 32
+
+# PV→O real device producer→consumer probe
+./scripts/run-graph-fusion-eval.sh pv-o-probe \
+  results/20261028T113459Z-graph-fusion/pv-o-device-board.json
+```
+
+Negative chain/QKV→QK tests:
+
+```bash
+python3 -m pytest -q tests/test_graph_fusion.py
+```
+
+## Stage 3: corrected evidence and layout-boundary work
+
+```bash
+# RMSNorm: calibration/freeze, then a separate acceptance process
+RK_GF_PLANS_NAME=compiled_rmsnorm_lut ./scripts/run-graph-fusion-eval.sh setup
+./scripts/run-graph-fusion-eval.sh rmsnorm-calibrate \
+  results/20261028T113459Z-graph-fusion/rmsnorm-calibrate-frozen.json
+# copy .spec.json/.spec.sha256 to models/rmsnorm_approx_acceptance.json(.sha256)
+./scripts/run-graph-fusion-eval.sh rmsnorm-verify \
+  results/20261028T113459Z-graph-fusion/rmsnorm-verify-frozen.json \
+  models/rmsnorm_approx_acceptance.json
+
+# QKV->QK address-level constraint proof and negative lowering tests
+python3 tools/analyze_cube_weight_mapping.py
+python3 -m pytest -q tests/test_graph_fusion.py
+
+# Actual Smol shape device RoPE vs production Host action; PV->O b8 grouping
+RK_GF_PLANS_NAME=compiled_graph_fusion ./scripts/run-graph-fusion-eval.sh setup
+./scripts/run-graph-fusion-eval.sh smollm-rope-probe \
+  results/20261028T113459Z-graph-fusion/smollm-rope-device-board.json
+./scripts/run-graph-fusion-eval.sh smollm-rope-residency \
+  results/20261028T113459Z-graph-fusion/smollm-rope-residency-board.json
+./scripts/run-graph-fusion-eval.sh pv-o-b8-probe \
+  results/20261028T113459Z-graph-fusion/pv-o-b8-device-board.json
+
+# Opt-in Smol 30-layer device-RoPE integration; acceptance prompt with policy
+./scripts/run-smollm2.sh setup-board
+./scripts/run-smollm2.sh device-rope-probe \
+  .data/evidence/smollm2-20261028T094650Z/official/prompt-1-ids.json \
+  results/20261028T113459Z-graph-fusion/smollm-device-rope-policy-verify.json \
+  models/smollm2_device_rope_policy.json
+```
+
+## Stage 4: continuous decode and position-indexed RoPE
+
+```bash
+# Actual Smol-shape decode table gather: resident CosW/SinW/P, one-hot position only
+RK_GF_PLANS_NAME=compiled_graph_fusion ./scripts/run-graph-fusion-eval.sh setup
+./scripts/run-graph-fusion-eval.sh smollm-rope-indexed \
+  results/20261028T113459Z-graph-fusion/smollm-rope-indexed-board.json
+
+# Continuous 32-step opt-in device-RoPE integration
+./scripts/run-smollm2.sh setup-board
+./scripts/run-smollm2.sh device-rope-probe \
+  .data/evidence/smollm2-20261028T094650Z/official/prompt-0-ids.json \
+  results/20261028T113459Z-graph-fusion/smollm-device-rope-cont-p0.json
+./scripts/run-smollm2.sh device-rope-probe \
+  .data/evidence/smollm2-20261028T094650Z/official/prompt-1-ids.json \
+  results/20261028T113459Z-graph-fusion/smollm-device-rope-cont-p1-contpolicy.json \
+  models/smollm2_device_rope_policy_cont32.json
+```
+
+Continuous decode with position-indexed device gather:
+
+```bash
+RK_SMOLLM_DECODE_INDEXED=1 ./scripts/run-smollm2.sh device-rope-probe \
+  .data/evidence/smollm2-20261028T094650Z/official/prompt-1-ids.json \
+  results/20261028T113459Z-graph-fusion/smollm-device-rope-indexed-cont-p1-policy.json \
+  models/smollm2_device_rope_policy_cont32_indexed.json
+```

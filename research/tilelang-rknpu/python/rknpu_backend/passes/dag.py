@@ -467,7 +467,7 @@ class _Builder:
         # action-id liveness disagree with the runtime's Host-first phase.
         identity_cols: set[int] = set()
         for op in self.module.ops:
-            if op.opcode in {"relu", "silu", "gelu"}:
+            if op.opcode in {"relu", "silu", "gelu", "rsqrt"}:
                 rows, cols = self.module.value(op.inputs[0]).type.shape
                 identity_cols.add(cube_layout(rows, cols)[1])
             elif op.opcode in {"add", "mul"}:
@@ -512,7 +512,8 @@ class _Builder:
 
             if op.id in self._skip_fused_relu:
                 continue
-            if op.opcode in {"relu", "silu", "gelu", "sigmoid", "hardsigmoid"}:
+            if op.opcode in {"relu", "silu", "gelu", "sigmoid", "hardsigmoid",
+                             "rsqrt"}:
                 in_id = op.inputs[0]
                 in_view = self.value_views.get(in_id)
                 if in_view is None:
@@ -1237,60 +1238,87 @@ class _Builder:
         source_k_loop = self.legalized.matmul_op.attrs.get("source_k_loop")
         source_mn_tiling = self.legalized.matmul_op.attrs.get("source_mn_tiling")
 
+        # A packed external slice is a pure function of (binding identity,
+        # source region, source stride/transpose, destination layout).  Several
+        # output tiles read the *same* A row block and K slice; packing it once
+        # per tile wasted upload actions, BO slots and device bytes without
+        # changing the math.  The cache is deliberately per-lowering-call: it
+        # is only valid for one static execution/dataflow version, where every
+        # upload reads the caller's binding once before any NPU submit.  There
+        # is no cross-run content assumption and no Host-pointer identity test.
+        #
+        # Dynamic B is cached with the same rule inside this call.  This covers
+        # the M-tiled attention plans whose K/V binding is repeated for every M
+        # tile; immutable constants also get this dedup for free.
+        x_tile_cache: dict[tuple[Any, ...], tuple[int, int, int]] = {}
+        w_tile_cache: dict[tuple[Any, ...], tuple[int, int, int]] = {}
+
         for tile_index, tile in enumerate(tiles):
             rows, cols = tile.rows, tile.cols
             cube_rows, cube_cols, cube_bytes = cube_layout(rows, cols)
 
-            x_buffers: list[int] = []
             x_views: list[int] = []
-            w_buffers: list[int] = []
-            w_views: list[int] = []
-            upload_ids: list[int] = []
-            x_buffers: list[int] = []
-            x_views: list[int] = []
-            w_buffers: list[int] = []
             w_views: list[int] = []
             upload_ids: list[int] = []
             for kslice in ktiles:
-                pr, pc, pbytes = input_layout(rows, kslice.extent)
-                x_layout = TensorLayout("float16", CUBE_LAYOUT, rows,
-                                        kslice.extent, pr, pc, 8, pbytes)
-                xb = self.add_buffer(role="input_slice", capacity=pbytes,
-                                     layout_id=CUBE_LAYOUT, reuse=False,
-                                     padding_state="zero")
-                xv = self.add_view(xb, 0, x_layout)
-                x_buffers.append(xb)
-                x_views.append(xv)
-                upload_ids.append(self.add_action(
-                    "upload", outputs=(xv,), origin="host_pack:input",
-                    attrs={"source_binding": a_binding,
-                           "src_row_offset": tile.m0,
-                           "src_col_offset": kslice.k0,
-                           "src_row_stride": k,
-                           "transpose_source": False,
-                           "cache": "input"}))
+                # Keep the tile extent in the identity: a ragged tail K slice
+                # has different physical columns and must never alias the full
+                # 256-wide slice even if its source offset happened to match.
+                x_key = (a_binding, tile.m0, rows, kslice.k0,
+                         kslice.extent, k)
+                cached = x_tile_cache.get(x_key)
+                if cached is None:
+                    pr, pc, pbytes = input_layout(rows, kslice.extent)
+                    x_layout = TensorLayout("float16", CUBE_LAYOUT, rows,
+                                            kslice.extent, pr, pc, 8, pbytes)
+                    xb = self.add_buffer(role="input_slice", capacity=pbytes,
+                                         layout_id=CUBE_LAYOUT, reuse=False,
+                                         padding_state="zero")
+                    xv = self.add_view(xb, 0, x_layout)
+                    upload = self.add_action(
+                        "upload", outputs=(xv,), origin="host_pack:input",
+                        attrs={"source_binding": a_binding,
+                               "src_row_offset": tile.m0,
+                               "src_col_offset": kslice.k0,
+                               "src_row_stride": k,
+                               "transpose_source": False,
+                               "cache": "input"})
+                    cached = (xb, xv, upload)
+                    x_tile_cache[x_key] = cached
+                x_views.append(cached[1])
+                upload_ids.append(cached[2])
             for kslice in ktiles:
-                wr, wc, wbytes = weight_layout(cols, kslice.extent)
-                w_layout = TensorLayout("float16", WEIGHT_LAYOUT, cols,
-                                        kslice.extent, wr, wc, 32, wbytes)
-                wb = self.add_buffer(role="weight", capacity=wbytes,
-                                     layout_id=WEIGHT_LAYOUT, reuse=False,
-                                     padding_state="zero")
-                wv = self.add_view(wb, 0, w_layout)
-                w_buffers.append(wb)
-                w_views.append(wv)
                 if b_layout == "kn":
                     src_row, src_col, stride = kslice.k0, tile.n0, n
                 else:
                     src_row, src_col, stride = tile.n0, kslice.k0, k
-                upload_ids.append(self.add_action(
-                    "upload", outputs=(wv,), origin="host_pack:weight",
-                    attrs={"source_binding": b_binding,
-                           "src_row_offset": src_row,
-                           "src_col_offset": src_col,
-                           "src_row_stride": stride,
-                           "transpose_source": b_layout == "kn",
-                           "cache": "constant" if b_is_constant else "input"}))
+                w_key = (b_binding, tile.n0, cols, kslice.k0,
+                         kslice.extent, b_layout, stride)
+                cached = w_tile_cache.get(w_key)
+                if cached is None:
+                    wr, wc, wbytes = weight_layout(cols, kslice.extent)
+                    w_layout = TensorLayout("float16", WEIGHT_LAYOUT, cols,
+                                            kslice.extent, wr, wc, 32, wbytes)
+                    wb = self.add_buffer(role="weight", capacity=wbytes,
+                                         layout_id=WEIGHT_LAYOUT, reuse=False,
+                                         padding_state="zero")
+                    wv = self.add_view(wb, 0, w_layout)
+                    upload = self.add_action(
+                        "upload", outputs=(wv,), origin="host_pack:weight",
+                        attrs={"source_binding": b_binding,
+                               "src_row_offset": src_row,
+                               "src_col_offset": src_col,
+                               "src_row_stride": stride,
+                               "transpose_source": b_layout == "kn",
+                               "cache": ("constant" if b_is_constant
+                                         else "input")})
+                    cached = (wb, wv, upload)
+                    w_tile_cache[w_key] = cached
+                w_views.append(cached[1])
+                upload_ids.append(cached[2])
+            # A tile can mention the same packed slice twice only if a future
+            # K schedule revisits it; deps are sets at this boundary.
+            upload_ids = list(dict.fromkeys(upload_ids))
 
             acc_buffers: list[int] = []
             acc_views: list[int] = []
@@ -1613,8 +1641,9 @@ class _Builder:
                 self.add_view(out_buffer, byte_offset, linear, (0, 1, 0, count)))
         lut_tasks: list[int] = []
         template = ("co.lut.hardsigmoid.f16.v1"
-                    if activation == "hardsigmoid"
-                    else "co.lut.sigmoid.f16.v1")
+                    if activation == "hardsigmoid" else
+                    ("co.lut.rsqrt.f16.v1" if activation == "rsqrt"
+                     else "co.lut.sigmoid.f16.v1"))
         for index, (src_view, dst_view) in enumerate(
                 zip(input_linear_views, out_linear_views)):
             task_deps = deps if index == 0 else (lut_tasks[-1],)

@@ -254,7 +254,8 @@ static int template_arity(uint32_t template_id, uint32_t *nin, uint32_t *nout) {
     case RK_TEMPLATE_EW_ADD_RELU_F16: *nin = 3; *nout = 1; return 0;
     case RK_TEMPLATE_LUT_SIGMOID_F16:
     case RK_TEMPLATE_LUT_HARDSIGMOID_F16:
-    case RK_TEMPLATE_LUT_GELU_GATE_F16: *nin = 1; *nout = 1; return 0;
+    case RK_TEMPLATE_LUT_GELU_GATE_F16:
+    case RK_TEMPLATE_LUT_RSQRT_F16: *nin = 1; *nout = 1; return 0;
     default: return -1;
     }
 }
@@ -354,8 +355,10 @@ static int validate_template(const rk_plan_desc *desc, const rk_action_desc *a, 
             return fail(diag, RK_E_SHAPE, "validate", "EW identity weight geometry mismatch");
         if (x->buffer_id == o->buffer_id || y->buffer_id == o->buffer_id)
             return fail(diag, RK_E_ALIAS, "validate", "EW output aliases an operand");
-    } else if (a->template_id >= RK_TEMPLATE_LUT_SIGMOID_F16 &&
-               a->template_id <= RK_TEMPLATE_LUT_GELU_GATE_F16) {
+    } else if (a->template_id == RK_TEMPLATE_LUT_SIGMOID_F16 ||
+               a->template_id == RK_TEMPLATE_LUT_HARDSIGMOID_F16 ||
+               a->template_id == RK_TEMPLATE_LUT_GELU_GATE_F16 ||
+               a->template_id == RK_TEMPLATE_LUT_RSQRT_F16) {
         if (a->ninputs != 1 || a->noutputs != 1)
             return fail(diag, RK_E_SHAPE, "validate", "LUT requires one input and one output");
         const rk_view_desc *x = view_at(desc, a->inputs[0]);
@@ -1077,6 +1080,117 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
                 }
             }
             if (all_plain_mm && s->ntask_ids > 1) continue;  /* admitted group */
+            /* Exact mixed-template chain admission.  There are three
+             * validated sequences: staged SwiGLU FFN, approximate RMSNorm and
+             * the single-head device RoPE reorder.  Structural "looks ordered"
+             * chains are rejected; a new sequence requires both a Python
+             * allowlist entry and this C table. */
+            if (s->ntask_ids > 1u &&
+                s->task_ids[0] + s->ntask_ids - 1u ==
+                    s->task_ids[s->ntask_ids - 1u]) {
+                typedef struct { uint32_t n; uint32_t t[16]; } chain_rule;
+                static const chain_rule chains[4] = {
+                    { 7u, { RK_TEMPLATE_MM_F16, RK_TEMPLATE_MM_F16,
+                            RK_TEMPLATE_LUT_SIGMOID_F16,
+                            RK_TEMPLATE_EW_MUL_F16, RK_TEMPLATE_EW_MUL_F16,
+                            RK_TEMPLATE_MM_F16, RK_TEMPLATE_EW_ADD_F16 } },
+                    { 7u, { RK_TEMPLATE_EW_MUL_F16, RK_TEMPLATE_MM_F16,
+                            RK_TEMPLATE_EW_MUL_F16,
+                            RK_TEMPLATE_EW_ADD_F16,
+                            RK_TEMPLATE_LUT_RSQRT_F16,
+                            RK_TEMPLATE_MM_F16,
+                            RK_TEMPLATE_EW_MUL_F16 } },
+                    { 4u, { RK_TEMPLATE_MM_F16, RK_TEMPLATE_EW_MUL_F16,
+                            RK_TEMPLATE_EW_MUL_F16,
+                            RK_TEMPLATE_EW_ADD_F16 } },
+                    { 11u, { RK_TEMPLATE_MM_F16, RK_TEMPLATE_MM_F16,
+                             RK_TEMPLATE_MM_F16, RK_TEMPLATE_MM_F16,
+                             RK_TEMPLATE_MM_F16, RK_TEMPLATE_MM_F16,
+                             RK_TEMPLATE_MM_F16, RK_TEMPLATE_MM_F16,
+                             RK_TEMPLATE_EW_ADD_F16,
+                             RK_TEMPLATE_EW_ADD_F16,
+                             RK_TEMPLATE_EW_ADD_F16 } }
+                };
+                const uint32_t *chain = NULL;
+                uint32_t ntask = 0;
+                for (uint32_t c = 0; c < 4u && !chain; c++) {
+                    if (chains[c].n != s->ntask_ids) continue;
+                    int match = 1;
+                    for (uint32_t j = 0; j < s->ntask_ids && match; j++)
+                        if (desc->actions[s->task_ids[j]].template_id !=
+                            chains[c].t[j])
+                            match = 0;
+                    if (match) { chain = chains[c].t; ntask = chains[c].n; }
+                }
+                int chain_ok = chain != NULL;
+                for (uint32_t j = 0; j < ntask && chain_ok; j++) {
+                    if (s->task_ids[j] != s->task_ids[0] + j ||
+                        desc->actions[s->task_ids[j]].template_id != chain[j])
+                        chain_ok = 0;
+                }
+                /* Explicit dependencies must be earlier in the chain or in an
+                 * earlier Submit. */
+                for (uint32_t j = 0; j < ntask && chain_ok; j++) {
+                    const rk_action_desc *a = &desc->actions[s->task_ids[j]];
+                    for (uint32_t q = 0; q < a->ndeps; q++) {
+                        uint32_t dep = a->deps[q];
+                        if (dep >= desc->nactions) { chain_ok = 0; break; }
+                        if (desc->actions[dep].kind != RK_ACTION_NPU_TASK)
+                            continue;
+                        uint32_t pos = UINT32_MAX;
+                        for (uint32_t k = 0; k < ntask; k++)
+                            if (s->task_ids[k] == dep) { pos = k; break; }
+                        if (pos == UINT32_MAX) {
+                            if (dep > s->task_ids[j] ||
+                                task_submit[dep] == UINT32_MAX) chain_ok = 0;
+                        } else if (pos >= j) {
+                            chain_ok = 0;
+                        }
+                        if (!chain_ok) break;
+                    }
+                }
+                /* Implicit dataflow must not depend on a task outside this
+                 * chain that appears later; every device input buffer needs an
+                 * earlier producer. */
+                for (uint32_t j = 0; j < ntask && chain_ok; j++) {
+                    const rk_action_desc *consumer = &desc->actions[s->task_ids[j]];
+                    for (uint32_t ii = 0; ii < consumer->ninputs && chain_ok; ii++) {
+                        const rk_view_desc *iv = view_at(desc, consumer->inputs[ii]);
+                        if (!iv) { chain_ok = 0; break; }
+                        for (uint32_t w = 0; w < desc->nactions && chain_ok; w++) {
+                            const rk_action_desc *wa = &desc->actions[w];
+                            if (wa->kind != RK_ACTION_NPU_TASK) continue;
+                            for (uint32_t oo = 0; oo < wa->noutputs; oo++) {
+                                const rk_view_desc *ov = view_at(desc, wa->outputs[oo]);
+                                if (!ov || ov->buffer_id != iv->buffer_id) continue;
+                                if (w >= s->task_ids[j]) chain_ok = 0;
+                                break;
+                            }
+                        }
+                    }
+                }
+                /* Written regions must be pairwise disjoint. */
+                for (uint32_t j = 0; j < ntask && chain_ok; j++) {
+                    const rk_action_desc *aj = &desc->actions[s->task_ids[j]];
+                    const rk_view_desc *oj = view_at(desc, aj->outputs[0]);
+                    const rk_buffer_desc *obj = oj ? buffer_at(desc, oj->buffer_id) : NULL;
+                    if (!oj || !obj || aj->noutputs != 1) { chain_ok = 0; break; }
+                    uint64_t js = obj->offset + oj->offset_bytes;
+                    uint64_t je = js + oj->tensor.bytes;
+                    for (uint32_t k = j + 1; k < ntask; k++) {
+                        const rk_action_desc *ak = &desc->actions[s->task_ids[k]];
+                        const rk_view_desc *ok = view_at(desc, ak->outputs[0]);
+                        const rk_buffer_desc *obk = ok ? buffer_at(desc, ok->buffer_id) : NULL;
+                        if (!ok || !obk || ak->noutputs != 1) { chain_ok = 0; break; }
+                        uint64_t ks = obk->offset + ok->offset_bytes;
+                        uint64_t ke = ks + ok->tensor.bytes;
+                        if (oj->buffer_id == ok->buffer_id && js < ke && ks < je) {
+                            chain_ok = 0; break;
+                        }
+                    }
+                }
+                if (chain_ok) continue;
+            }
             /* Generic Linear-epilogue chain: MM / MM_ACC* followed by an
              * optional EW_ADD and then an optional EW_MAX.  Each epilogue task
              * must directly depend on the previous task, so this is the same
@@ -1126,7 +1240,8 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
                     ok = tpl == RK_TEMPLATE_MM_ACC_F16;
                 else if (first_tpl == RK_TEMPLATE_LUT_SIGMOID_F16 ||
                          first_tpl == RK_TEMPLATE_LUT_HARDSIGMOID_F16 ||
-                         first_tpl == RK_TEMPLATE_LUT_GELU_GATE_F16)
+                         first_tpl == RK_TEMPLATE_LUT_GELU_GATE_F16 ||
+                         first_tpl == RK_TEMPLATE_LUT_RSQRT_F16)
                     ok = tpl == first_tpl ||
                          (tpl == RK_TEMPLATE_EW_MUL_F16 && j + 1u == s->ntask_ids);
                 else

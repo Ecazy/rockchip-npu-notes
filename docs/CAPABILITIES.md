@@ -55,7 +55,7 @@ CBUF/bank 容量规划、SDP precision、DMA stride 等可参考 [硬件概览](
 | `co_gated_activation` | SiLU、erf-GELU；LUT gate + EW multiply | 本地真机；设备中间 Cube，无 CPU 激活阶段 |
 | `CO_EXP_BOUNDED` | exp，输入域 `[-4,4]` | 本地真机原型；当前验收绝对误差门限 0.0625；不等于通用 Softmax |
 | `CO_EXP_NEG4` | exp，输入域 `[-4,0]`、unit scale | 用于分段稳定Softmax；不直接接受任意负尾输入 |
-| `CO_RSQRT_BOUNDED` | rsqrt，输入域 `[0.25,4]` | 本地真机原型；当前验收门限 0.003；调用者保证值域 |
+| `CO_RSQRT_BOUNDED` | rsqrt，表域 `[0.125,6.32]`；2026-10-28 RMSNorm 实验在 scaled 域 `[0.125,6.32]` 完成独立 operator acceptance（max_abs 0.0235，gate 0.0391） | 本地真机原型；默认 profile 不使用；调用者保证值域 |
 | `co_ones_upload` + MatMul | 末维 sum/mean，K 在单 tile 范围内 | 本地真机；mean 系数先量化到 FP16，不是任意轴归约 |
 | `co_emit_pool` | FP16 max/average/global pooling 配方 | 本地真机；无 padding，kernel=stride，各轴整除，空间面≤256；核各轴1..16，average各轴至少2 |
 | `co_emit_reformat_8x8x8` | 固定 512 元素重排，`out[c,a,b]=in[a,b,c]` | 本地真机；不是通用 ONNX transpose |

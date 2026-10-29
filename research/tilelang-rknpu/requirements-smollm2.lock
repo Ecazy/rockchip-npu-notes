@@ -1,0 +1,15 @@
+# Host-only dependencies for the fixed SmolLM2 fetch, chat tokenizer, official
+# FP32 reference and PPL scoring.  Install into the existing ignored Host dep
+# directory; the board only needs numpy and the compiled rknpu_plan library.
+#
+#   python3 -m pip install --target .pydeps-p0 -r requirements-smollm2.lock
+#
+# torch 2.9.0+cpu and numpy 2.5.4 are already pinned by requirements.lock.
+transformers==4.57.1
+tokenizers==0.22.1
+safetensors==0.8.0
+huggingface_hub==0.36.0
+regex==2026.9.29
+requests==2.34.2
+PyYAML==6.0.3
+mpmath==1.4.1

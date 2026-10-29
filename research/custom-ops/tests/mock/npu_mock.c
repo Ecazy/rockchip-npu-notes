@@ -38,7 +38,12 @@ static unsigned mock_handle_seq = 0x40000u;
 #define MOCK_DMA_BASE 0x01000000u
 #define MOCK_DMA_LIMIT 0xF0000000u
 struct mock_bo_entry { uint32_t handle; uint32_t dma; size_t size; void *host; };
-static struct mock_bo_entry mock_bos[512];
+/* A complete SmolLM2 load holds thousands of logical tile BOs even after
+ * immutable-weight sharing.  The host mock tracks the same allocation shape as
+ * the provider; 512 was an old small-fixture bound and falsely exhausted before
+ * a full package could be instantiated. */
+#define MOCK_BO_CAPACITY 65536u
+static struct mock_bo_entry mock_bos[MOCK_BO_CAPACITY];
 static unsigned mock_bo_count;
 static unsigned mock_dma_next;   /* next free byte offset inside the window */ /* unique, 32-bit, never pointer-derived */
 static unsigned mock_execs;      /* how many times the device path was entered */
@@ -169,7 +174,7 @@ int __wrap_rocket_bo_alloc32(int fd, size_t size, rocket_bo *bo) {
     if (!bo) return ROCKET_E_SHAPE;
     memset(bo, 0, sizeof(*bo));       /* never leave fields uninitialised */
     if (++mock_allocs == mock_fail_alloc) return ROCKET_E_NOMEM;
-    if (mock_bo_count >= sizeof(mock_bos) / sizeof(mock_bos[0]))
+    if (mock_bo_count >= MOCK_BO_CAPACITY)
         return ROCKET_E_NOMEM;        /* table exhausted: no host memory taken */
     if (size > SIZE_MAX - 15u) return ROCKET_E_NOMEM;  /* alignment overflow */
     size_t aligned = (size + 15u) & ~(size_t)15u;
@@ -384,10 +389,14 @@ static int mock_execute_profiled_impl(int fd, const co_program *p,
                         out = fmin(1.0, fmax(0.0, v / 6.0 + 0.5)); break;
                     case CO_GELU_GATE:
                         out = 0.5 * (1.0 + erf(v / sqrt(2.0))); break;
-                    case CO_EXP_BOUNDED: out = exp(v) / 64.0; break;
+                    case CO_EXP_BOUNDED: out = exp(v); break;
                     case CO_EXP_NEG4: out = exp(fmin(0.0, v)); break;
                     case CO_RSQRT_BOUNDED:
-                        out = 1.0 / (4.0 * sqrt(fmax(0.125, v))); break;
+                        /* The emitter stores q=round(y*32768) with y scaled by
+                         * 1/4; the hardware output converter restores the
+                         * declared rsqrt result by a factor of 4.  The mock must
+                         * model the public result, not the LUT table entry. */
+                        out = 1.0 / sqrt(fmax(0.125, v)); break;
                     default: return ROCKET_E_SHAPE; /* not modelled */
                     }
                     dst[co_index(&y.tensor, r, c)] = (_Float16)out;

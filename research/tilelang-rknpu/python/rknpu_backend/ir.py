@@ -19,8 +19,9 @@ SCHEMA_VERSION = 1
 KIND = "rkir"
 DTYPE_F16 = "float16"
 SUPPORTED_DTYPES = {DTYPE_F16}
-SUPPORTED_OPS = {"matmul", "add", "mul", "relu", "silu", "gelu", "sigmoid", "hardsigmoid"}
-UNARY_OPS = {"relu", "silu", "gelu", "sigmoid", "hardsigmoid"}
+SUPPORTED_OPS = {"matmul", "add", "mul", "relu", "silu", "gelu", "sigmoid",
+                 "hardsigmoid", "rsqrt"}
+UNARY_OPS = {"relu", "silu", "gelu", "sigmoid", "hardsigmoid", "rsqrt"}
 BINARY_OPS = {"add", "mul"}
 MAX_EXTENT = 4096
 
@@ -783,6 +784,291 @@ def projection_module(*, m: int, d: int, h: int, name: str = "projection",
     )
     return Module(name=name, values=values, ops=ops, inputs=(0,), outputs=(7,),
                   source_hash="builder", state_signature="")
+
+
+def rmsnorm_approx_module(*, m: int, d: int, name: str = "rmsnorm_approx",
+                          source: str = "rk-builder:rmsnorm-approx") -> Module:
+    """Build the explicit full-device RMSNorm reduction chain.
+
+    The graph is intentionally expressed in the existing primitive set:
+    square -> row sum via an MM with a ones weight -> mean -> +eps -> rsqrt LUT
+    -> gamma expansion via a second MM -> multiply.  Every intermediate is a
+    device value.  The LUT rsqrt is an approximate, bounded-domain path and is
+    therefore a distinct numeric policy from the Host FP32 reduction/rsqrt path.
+    """
+    contract = _builder_contract("rk_f16_tiled")
+    x_ty = TensorType(DTYPE_F16, (m, d))
+    row_ty = TensorType(DTYPE_F16, (m, 1))
+    values = (
+        Value(0, "X", x_ty, None, "input"),
+        Value(1, "Ones", TensorType(DTYPE_F16, (1, d)), None, "constant"),
+        Value(2, "InvD", row_ty, None, "constant"),
+        Value(3, "Eps", row_ty, None, "constant"),
+        Value(4, "GammaW", TensorType(DTYPE_F16, (d, 1)), None, "constant"),
+        Value(5, "Sq", x_ty, 0, "temporary"),
+        Value(6, "Stats", row_ty, 1, "temporary"),
+        Value(7, "Mean", row_ty, 2, "temporary"),
+        Value(8, "MeanEps", row_ty, 3, "temporary"),
+        Value(9, "Scale", row_ty, 4, "temporary"),
+        Value(10, "Coeff", x_ty, 5, "temporary"),
+        Value(11, "Y", x_ty, 6, "output"),
+    )
+    attrs = {"b_layout": "nk", "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    ops = (
+        Op(0, "mul", (0, 0), (5,), {}, source),
+        Op(1, "matmul", (5, 1), (6,), dict(attrs), source),
+        Op(2, "mul", (6, 2), (7,), {}, source),
+        Op(3, "add", (7, 3), (8,), {}, source),
+        Op(4, "rsqrt", (8,), (9,), {}, source),
+        Op(5, "matmul", (9, 4), (10,), dict(attrs), source),
+        Op(6, "mul", (0, 10), (11,), {}, source),
+    )
+    return Module(name=name, values=values, ops=ops, inputs=(0,),
+                  outputs=(11,), source_hash="builder", state_signature="")
+
+
+def rope_device_module(*, m: int, width: int,
+                       name: str = "rope_device",
+                       source: str = "rk-builder:rope-device") -> Module:
+    """Single-head (or one contiguous head block) device RoPE reorder.
+
+    ``P`` is a block-diagonal signed permutation constant supplied by the
+    caller.  ``Cos`` and ``Sin`` are runtime inputs carrying the precomputed
+    position coefficients; non-rotary dimensions use cos=1, sin=0.  Arithmetic
+    after the reorder is exactly three FP16 EW tasks.  The Host never reads the
+    activation: P/Cos/Sin enter as uploads and the output is a device value.
+    """
+    contract = _builder_contract("rk_f16_tiled")
+    ty = TensorType(DTYPE_F16, (m, width))
+    attrs = {"b_layout": "nk", "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    values = (
+        Value(0, "X", ty, None, "input"),
+        Value(1, "Cos", ty, None, "input"),
+        Value(2, "Sin", ty, None, "input"),
+        Value(3, "P", TensorType(DTYPE_F16, (width, width)), None,
+              "constant"),
+        Value(4, "Rot", ty, 0, "temporary"),
+        Value(5, "XCos", ty, 1, "temporary"),
+        Value(6, "RotSin", ty, 2, "temporary"),
+        Value(7, "Y", ty, 3, "output"),
+    )
+    ops = (
+        Op(0, "matmul", (0, 3), (4,), dict(attrs), source),
+        Op(1, "mul", (0, 1), (5,), {}, source),
+        Op(2, "mul", (4, 2), (6,), {}, source),
+        Op(3, "add", (5, 6), (7,), {}, source),
+    )
+    return Module(name=name, values=values, ops=ops, inputs=(0, 1, 2),
+                  outputs=(7,), source_hash="builder", state_signature="")
+
+
+def rope_device_constant_module(*, m: int, width: int,
+                                name: str = "rope_device_constant",
+                                source: str = "rk-builder:rope-device-constant") -> Module:
+    """Device RoPE reorder with Cos/Sin supplied as plan constants.
+
+    For a fixed prefill bucket the coefficient table is uploaded once when the
+    PlanCall/workspace is created and can be reused by every layer.  Decode needs
+    a dynamic position-indexed device view, which is not represented here.
+    """
+    contract = _builder_contract("rk_f16_tiled")
+    ty = TensorType(DTYPE_F16, (m, width))
+    attrs = {"b_layout": "nk", "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    values = (
+        Value(0, "X", ty, None, "input"),
+        Value(1, "Cos", ty, None, "constant"),
+        Value(2, "Sin", ty, None, "constant"),
+        Value(3, "P", TensorType(DTYPE_F16, (width, width)), None,
+              "constant"),
+        Value(4, "Rot", ty, 0, "temporary"),
+        Value(5, "XCos", ty, 1, "temporary"),
+        Value(6, "RotSin", ty, 2, "temporary"),
+        Value(7, "Y", ty, 3, "output"),
+    )
+    ops = (
+        Op(0, "matmul", (0, 3), (4,), dict(attrs), source),
+        Op(1, "mul", (0, 1), (5,), {}, source),
+        Op(2, "mul", (4, 2), (6,), {}, source),
+        Op(3, "add", (5, 6), (7,), {}, source),
+    )
+    return Module(name=name, values=values, ops=ops, inputs=(0,),
+                  outputs=(7,), source_hash="builder", state_signature="")
+
+
+def rope_decode_indexed_module(*, width: int, capacity: int,
+                               name: str = "rope_decode_indexed",
+                               source: str = "rk-builder:rope-decode-indexed") -> Module:
+    """Decode RoPE with a resident coefficient table and one-hot position gather.
+
+    CosW/SinW are resident WEIGHT constants [width,capacity].  The Host only
+    uploads a one-hot F16 position vector [1,capacity]; the device MM gathers the
+    coefficient row.  The gathered Cos/Sin then feed the same FP16 reorder and
+    three EW tasks as the other RoPE variants.
+    """
+    contract = _builder_contract("rk_f16_tiled")
+    x_ty = TensorType(DTYPE_F16, (1, width))
+    pos_ty = TensorType(DTYPE_F16, (1, capacity))
+    attrs = {"b_layout": "nk", "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    values = (
+        Value(0, "X", x_ty, None, "input"),
+        Value(1, "PosOneHot", pos_ty, None, "input"),
+        Value(2, "CosW", TensorType(DTYPE_F16, (width, capacity)), None,
+              "constant"),
+        Value(3, "SinW", TensorType(DTYPE_F16, (width, capacity)), None,
+              "constant"),
+        Value(4, "P", TensorType(DTYPE_F16, (width, width)), None,
+              "constant"),
+        Value(5, "Cos", x_ty, 0, "temporary"),
+        Value(6, "Sin", x_ty, 1, "temporary"),
+        Value(7, "Rot", x_ty, 2, "temporary"),
+        Value(8, "XCos", x_ty, 3, "temporary"),
+        Value(9, "RotSin", x_ty, 4, "temporary"),
+        Value(10, "Y", x_ty, 5, "output"),
+    )
+    ops = (
+        Op(0, "matmul", (1, 2), (5,), dict(attrs), source),
+        Op(1, "matmul", (1, 3), (6,), dict(attrs), source),
+        Op(2, "matmul", (0, 4), (7,), dict(attrs), source),
+        Op(3, "mul", (0, 5), (8,), {}, source),
+        Op(4, "mul", (7, 6), (9,), {}, source),
+        Op(5, "add", (8, 9), (10,), {}, source),
+    )
+    return Module(name=name, values=values, ops=ops, inputs=(0, 1),
+                  outputs=(10,), source_hash="builder", state_signature="")
+
+
+def pv_o_device_module(*, m: int, heads: int = 4, head_dim: int = 16,
+                       out_dim: int = 64, name: str = "pv_o_device",
+                       source: str = "rk-builder:pv-o-device") -> Module:
+    """Attention PV heads feeding the O projection entirely on device.
+
+    Each ``Vt_h`` is the transposed V head ``[head_dim,head_dim]`` because the
+    MMA B operand convention is ``[n,k]``.  Each ``W_h`` is the corresponding
+    O-weight slice ``[out_dim,head_dim]``.  The four PV results are direct
+    producers for four O matmuls, followed by three FP16 EW adds.  No Host
+    merge of the head outputs is required.
+    """
+    contract = _builder_contract("rk_f16_tiled")
+    ty_pv = TensorType(DTYPE_F16, (m, head_dim))
+    ty_o = TensorType(DTYPE_F16, (m, out_dim))
+    values: list[Value] = []
+    for h in range(heads):
+        values.append(Value(len(values), f"P{h}", ty_pv, None, "input"))
+    for h in range(heads):
+        values.append(Value(len(values), f"Vt{h}",
+                            TensorType(DTYPE_F16, (head_dim, head_dim)),
+                            None, "input"))
+    for h in range(heads):
+        values.append(Value(len(values), f"W{h}",
+                            TensorType(DTYPE_F16, (out_dim, head_dim)),
+                            None, "constant"))
+    pv_ids = []
+    for h in range(heads):
+        pv_ids.append(len(values))
+        values.append(Value(len(values), f"PV{h}", ty_pv, len(pv_ids) - 1,
+                            "temporary"))
+    o_ids = []
+    for h in range(heads):
+        o_ids.append(len(values))
+        values.append(Value(len(values), f"O{h}", ty_o, heads + h,
+                            "temporary"))
+    add_ids = []
+    for h in range(heads - 1):
+        add_ids.append(len(values))
+        role = "output" if h == heads - 2 else "temporary"
+        values.append(Value(len(values), f"A{h + 1}", ty_o,
+                            len(pv_ids) + len(o_ids) + h, role))
+    attrs = {"b_layout": "nk", "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    ops: list[Op] = []
+    for h in range(heads):
+        ops.append(Op(len(ops), "matmul", (h, heads + h), (pv_ids[h],),
+                      dict(attrs), source))
+    for h in range(heads):
+        ops.append(Op(len(ops), "matmul", (pv_ids[h], 2 * heads + h),
+                      (o_ids[h],), dict(attrs), source))
+    prev = o_ids[0]
+    for h in range(heads - 1):
+        ops.append(Op(len(ops), "add", (prev, o_ids[h + 1]),
+                      (add_ids[h],), {}, source))
+        prev = add_ids[h]
+    return Module(name=name, values=tuple(values), ops=tuple(ops),
+                  inputs=tuple(range(2 * heads)),
+                  outputs=(add_ids[-1],), source_hash="builder",
+                  state_signature="")
+
+
+def pv_o_device_batches_module(*, batches: int = 8, m: int = 16,
+                               heads: int = 4, head_dim: int = 16,
+                               out_dim: int = 64,
+                               name: str = "pv_o_device_b8",
+                               source: str = "rk-builder:pv-o-device-b8") -> Module:
+    """Eight independent Tiny-ViT PV→O chains in one workspace.
+
+    Each batch contributes four PV head MM tasks, four O slice MM tasks and
+    three FP16 EW adds.  The chains have no cross-batch dependency; the planner
+    may keep them as multiple Submit groups, but all intermediates remain in the
+    same device workspace.
+    """
+    contract = _builder_contract("rk_f16_tiled")
+    ty_pv = TensorType(DTYPE_F16, (m, head_dim))
+    ty_o = TensorType(DTYPE_F16, (m, out_dim))
+    values: list[Value] = []
+    for b in range(batches):
+        for h in range(heads):
+            values.append(Value(len(values), f"P{b}_{h}", ty_pv, None, "input"))
+    for b in range(batches):
+        for h in range(heads):
+            values.append(Value(len(values), f"Vt{b}_{h}",
+                                TensorType(DTYPE_F16, (head_dim, head_dim)),
+                                None, "input"))
+    for h in range(heads):
+        values.append(Value(len(values), f"W{h}",
+                            TensorType(DTYPE_F16, (out_dim, head_dim)),
+                            None, "constant"))
+    attrs = {"b_layout": "nk", "numeric_contract": contract.to_dict(),
+             "source_accumulator_dtype": "float32"}
+    ops: list[Op] = []
+    outputs: list[int] = []
+    op_id = 0
+    for b in range(batches):
+        pv_ids = []
+        for h in range(heads):
+            pv_ids.append(len(values))
+            values.append(Value(len(values), f"PV{b}_{h}", ty_pv, op_id,
+                                "temporary"))
+            ops.append(Op(op_id, "matmul",
+                          (b * heads + h,
+                           batches * heads + b * heads + h),
+                          (pv_ids[h],), dict(attrs), source))
+            op_id += 1
+        o_ids = []
+        for h in range(heads):
+            o_ids.append(len(values))
+            values.append(Value(len(values), f"O{b}_{h}", ty_o, op_id,
+                                "temporary"))
+            ops.append(Op(op_id, "matmul",
+                          (pv_ids[h], 2 * batches * heads + h),
+                          (o_ids[h],), dict(attrs), source))
+            op_id += 1
+        prev = o_ids[0]
+        for h in range(heads - 1):
+            out_id = len(values)
+            role = "output" if h == heads - 2 else "temporary"
+            values.append(Value(out_id, f"A{b}_{h + 1}", ty_o, op_id, role))
+            ops.append(Op(op_id, "add", (prev, o_ids[h + 1]), (out_id,), {},
+                          source))
+            prev = out_id
+            op_id += 1
+        outputs.append(prev)
+    return Module(name=name, values=tuple(values), ops=tuple(ops),
+                  inputs=tuple(range(2 * batches * heads)),
+                  outputs=tuple(outputs), source_hash="builder",
+                  state_signature="")
 
 
 def branch_outputs_module(*, m: int, k: int, n1: int, n2: int,

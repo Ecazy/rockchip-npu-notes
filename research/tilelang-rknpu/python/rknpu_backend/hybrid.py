@@ -32,7 +32,8 @@ from .runtime.ffi import LibRKPlan
 HYBRID_SCHEMA_VERSION = 1
 HYBRID_KIND = "rkhybrid"
 HOST_ACTIONS_VERSION = 1
-DTYPES = {"uint8": np.uint8, "float16": np.float16, "float32": np.float32}
+DTYPES = {"uint8": np.uint8, "int32": np.int32,
+          "float16": np.float16, "float32": np.float32}
 PHASES = {"preprocess", "execution", "postprocess"}
 _F16 = np.dtype("<f2")
 
@@ -498,14 +499,26 @@ def _parse_constant(obj: Any, where: str) -> dict[str, Any]:
                 "axis": axis}
     if kind == "weight_repeat_pad":
         _keys(obj, {"kind", "name", "reshape"},
-              {"repeat_rows"}, where=where)
+              {"repeat_rows", "scale"}, where=where)
         reshape = _int_tuple(obj["reshape"], f"{where}.reshape", positive=True)
         if len(reshape) != 2:
             reject(RK_E_SHAPE, f"{where}.reshape must be 2-D", stage="hybrid")
         repeat_rows = _int(obj.get("repeat_rows", 1),
                            f"{where}.repeat_rows", minimum=1)
+        scale = obj.get("scale", 1.0)
+        if not isinstance(scale, (int, float)) or isinstance(scale, bool) or                 not np.isfinite(float(scale)):
+            reject(RK_E_INVALID, f"{where}.scale must be finite", stage="hybrid")
         return {"kind": kind, "name": _string(obj["name"], f"{where}.name"),
-                "reshape": reshape, "repeat_rows": repeat_rows}
+                "reshape": reshape, "repeat_rows": repeat_rows,
+                "scale": float(scale)}
+    if kind == "fill":
+        _keys(obj, {"kind", "value"}, where=where)
+        value = obj["value"]
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            reject(RK_E_SCHEMA, f"{where}.value must be numeric", stage="hybrid")
+        if not np.isfinite(float(value)):
+            reject(RK_E_INVALID, f"{where}.value must be finite", stage="hybrid")
+        return {"kind": kind, "value": float(value)}
     if kind == "generated":
         _keys(obj, {"kind", "generator"}, where=where)
         generator = _string(obj["generator"], f"{where}.generator")
@@ -798,6 +811,33 @@ def _swiglu_packed(inputs: dict[str, np.ndarray],
     return {"gate": gate, "up": up, "act": act}
 
 
+def _swiglu_packed_act(inputs: dict[str, np.ndarray],
+                       attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    """SwiGLU with only the fused activation result as a declared output.
+
+    The historical ``swiglu.packed_gate_up.v1`` action also materialises its
+    gate and up halves as separate contiguous arrays.  The Smol runner consumes
+    only ``act``; making that contract explicit removes two full-width copies
+    while preserving the exact FP16 input, FP32 sigmoid/product, and FP16
+    writeback sequence.  The legacy action remains available for callers that
+    genuinely need the split tensors.
+    """
+    _action_attrs(attrs, set())
+    packed = np.asarray(inputs["gate_up"])
+    if packed.dtype != _F16 or packed.ndim != 2 or packed.shape[1] % 2:
+        reject(RK_E_SHAPE,
+               "swiglu.packed_gate_up_act requires FP16 [M,2H] input",
+               stage="host_action", actual=list(packed.shape))
+    half = packed.shape[1] // 2
+    # Slices are converted directly to FP32; no intermediate contiguous FP16
+    # gate/up copies are needed because both operands are read exactly once.
+    g = packed[:, :half].astype(np.float32)
+    u = packed[:, half:].astype(np.float32)
+    sigmoid = np.float32(1.0) / (np.float32(1.0) + np.exp(-g))
+    act = np.ascontiguousarray(g * sigmoid * u, dtype=np.float16)
+    return {"act": act}
+
+
 def _mean_axis(inputs: dict[str, np.ndarray],
                attrs: dict[str, Any]) -> dict[str, np.ndarray]:
     _action_attrs(attrs, {"axis"})
@@ -818,6 +858,247 @@ def _logits_prefix(inputs: dict[str, np.ndarray],
         reject(RK_E_SHAPE, "logits_prefix requires FP16 logits and valid cols",
                stage="host_action", actual=list(x.shape))
     return {"y": np.ascontiguousarray(x[:, :cols], dtype=np.float32)}
+
+
+# ---------------------------------------------------------------------------
+# SmolLM2/Llama-shape Host actions.  These are deliberately narrow: they are
+# the non-matrix boundaries of the LLM runner (embedding lookup, RoPE, GQA
+# layout, deterministic softmax, in-place KV append and greedy selection).
+# Every call is metered by the model runner; none of them substitutes for a
+# matrix operation that is required to be an RKPlan.
+# ---------------------------------------------------------------------------
+
+def _smollm_embed_padded(inputs: dict[str, np.ndarray],
+                         attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    _action_attrs(attrs, {"bucket", "hidden"})
+    bucket = _int(attrs["bucket"], "smollm.embed.bucket", minimum=1)
+    hidden = _int(attrs["hidden"], "smollm.embed.hidden", minimum=1)
+    ids = np.asarray(inputs["token_ids"])
+    table = np.asarray(inputs["table"])
+    if ids.dtype != np.dtype("<i4") or ids.ndim != 1 or ids.size > bucket:
+        reject(RK_E_SHAPE,
+               "smollm.embed token_ids must be a 1-D int32 array <= bucket",
+               stage="host_action", actual=[str(ids.dtype), list(ids.shape)])
+    if table.dtype != _F16 or table.ndim != 2 or table.shape[1] != hidden:
+        reject(RK_E_SHAPE,
+               "smollm.embed table must be FP16 [vocab,hidden]",
+               stage="host_action", actual=[str(table.dtype), list(table.shape)])
+    if ids.size and (int(ids.min()) < 0 or int(ids.max()) >= table.shape[0]):
+        reject(RK_E_SHAPE, "smollm.embed token id outside vocabulary",
+               stage="host_action", actual=[int(ids.min()), int(ids.max())],
+               required=[0, table.shape[0] - 1])
+    out = np.zeros((bucket, hidden), dtype=np.float16)
+    if ids.size:
+        out[:ids.size] = table[ids]
+    return {"x": out}
+
+
+def _smollm_rope(inputs: dict[str, np.ndarray],
+                 attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    _action_attrs(attrs, {"theta", "interleaved"})
+    theta = float(attrs["theta"])
+    if not math.isfinite(theta) or theta <= 1.0:
+        reject(RK_E_INVALID, "smollm.rope theta must be finite and > 1",
+               stage="host_action")
+    if attrs["interleaved"] is not False:
+        reject(RK_E_UNSUPPORTED,
+               "smollm.rope supports only the HF Llama half-split convention",
+               stage="host_action", actual=attrs["interleaved"])
+    x = np.asarray(inputs["x"])
+    pos = np.asarray(inputs["positions"])
+    if x.dtype != _F16 or x.ndim != 3 or x.shape[-1] % 2:
+        reject(RK_E_SHAPE,
+               "smollm.rope x must be FP16 [tokens,heads,even_dim]",
+               stage="host_action", actual=[str(x.dtype), list(x.shape)])
+    if pos.dtype != np.dtype("<i4") or pos.shape != (x.shape[0],):
+        reject(RK_E_SHAPE,
+               "smollm.rope positions must be int32 [tokens]",
+               stage="host_action", actual=[str(pos.dtype), list(pos.shape)])
+    if pos.size and int(pos.min()) < 0:
+        reject(RK_E_SHAPE, "smollm.rope positions must be non-negative",
+               stage="host_action", actual=int(pos.min()))
+    dim = x.shape[-1]
+    inv = np.power(np.float32(theta),
+                   -np.arange(0, dim, 2, dtype=np.float32) /
+                   np.float32(dim))
+    freqs = pos.astype(np.float32)[:, None] * inv[None, :]
+    emb = np.concatenate((freqs, freqs), axis=-1)
+    cos = np.cos(emb).astype(np.float32)[:, None, :]
+    sin = np.sin(emb).astype(np.float32)[:, None, :]
+    xf = x.astype(np.float32)
+    half = dim // 2
+    rotated = np.concatenate((-xf[..., half:], xf[..., :half]), axis=-1)
+    return {"y": np.ascontiguousarray(xf * cos + rotated * sin,
+                                      dtype=np.float16)}
+
+
+def _smollm_qkv_split_gqa(inputs: dict[str, np.ndarray],
+                          attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    _action_attrs(attrs, {"q_heads", "kv_heads", "head_dim"})
+    qh = _int(attrs["q_heads"], "smollm.qkv.q_heads", minimum=1)
+    kh = _int(attrs["kv_heads"], "smollm.qkv.kv_heads", minimum=1)
+    d = _int(attrs["head_dim"], "smollm.qkv.head_dim", minimum=1)
+    if qh % kh:
+        reject(RK_E_SHAPE, "smollm.qkv q_heads must be divisible by kv_heads",
+               stage="host_action", actual=[qh, kh])
+    qkv = np.asarray(inputs["qkv"])
+    expected = qh * d + 2 * kh * d
+    if qkv.dtype != _F16 or qkv.ndim != 2 or qkv.shape[1] != expected:
+        reject(RK_E_SHAPE,
+               "smollm.qkv input must be FP16 [tokens,q_heads*d+2*kv_heads*d]",
+               stage="host_action", actual=[str(qkv.dtype), list(qkv.shape)],
+               required=list(expected))
+    t = qkv.shape[0]
+    q_end = qh * d
+    k_end = q_end + kh * d
+    q = qkv[:, :q_end].reshape(t, qh, d)
+    k = qkv[:, q_end:k_end].reshape(t, kh, d)
+    v = qkv[:, k_end:].reshape(t, kh, d)
+    return {"q": np.ascontiguousarray(q, dtype=np.float16),
+            "k": np.ascontiguousarray(k, dtype=np.float16),
+            "v": np.ascontiguousarray(v, dtype=np.float16)}
+
+
+def _smollm_kv_append(inputs: dict[str, np.ndarray],
+                      attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    """Append a prefix to the persistent cache in place.
+
+    The action is intentionally stateful at the cache boundary, but it is still
+    explicit, registered, shape-checked and metered by the model runner.  It
+    returns the same arrays so callers can chain the action result without a
+    hidden alias assumption.
+    """
+    _action_attrs(attrs, {"capacity"})
+    capacity = _int(attrs["capacity"], "smollm.kv.capacity", minimum=1)
+    ck, cv = np.asarray(inputs["cache_k"]), np.asarray(inputs["cache_v"])
+    k, v = np.asarray(inputs["k"]), np.asarray(inputs["v"])
+    start = np.asarray(inputs["start"])
+    if ck.dtype != _F16 or cv.dtype != _F16 or k.dtype != _F16 or \
+            v.dtype != _F16:
+        reject(RK_E_INVALID, "smollm.kv append requires FP16 tensors",
+               stage="host_action")
+    if ck.ndim != 3 or cv.shape != ck.shape or ck.shape[1] != capacity:
+        reject(RK_E_SHAPE,
+               "smollm.kv cache_k/cache_v must be [kv_heads,capacity,head_dim]",
+               stage="host_action", actual=[list(ck.shape), list(cv.shape)],
+               required=capacity)
+    if k.ndim != 3 or k.shape[1:] != (ck.shape[0], ck.shape[2]) or \
+            v.shape != k.shape:
+        reject(RK_E_SHAPE,
+               "smollm.kv k/v must be [tokens,kv_heads,head_dim]",
+               stage="host_action", actual=[list(k.shape), list(v.shape)])
+    if start.dtype != np.dtype("<i4") or start.shape != (1,):
+        reject(RK_E_SHAPE, "smollm.kv start must be int32 [1]",
+               stage="host_action", actual=[str(start.dtype), list(start.shape)])
+    s = int(start[0])
+    if s < 0 or s + k.shape[0] > capacity:
+        reject(RK_E_SHAPE, "smollm.kv append exceeds persistent cache",
+               stage="host_action", actual=[s, k.shape[0], capacity])
+    ck[:, s:s + k.shape[0], :] = k.transpose(1, 0, 2)
+    cv[:, s:s + k.shape[0], :] = v.transpose(1, 0, 2)
+    return {"cache_k": ck, "cache_v": cv}
+
+
+def _smollm_causal_softmax(inputs: dict[str, np.ndarray],
+                           attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    _action_attrs(attrs, {"scale"})
+    scale = float(attrs["scale"])
+    if not math.isfinite(scale) or scale <= 0:
+        reject(RK_E_INVALID, "smollm.softmax scale must be finite and positive",
+               stage="host_action")
+    scores = np.asarray(inputs["scores"])
+    valid = np.asarray(inputs["valid_lengths"])
+    if scores.dtype != _F16 or scores.ndim != 2:
+        reject(RK_E_SHAPE, "smollm.softmax scores must be FP16 rank 2",
+               stage="host_action", actual=[str(scores.dtype), list(scores.shape)])
+    if valid.dtype != np.dtype("<i4") or valid.shape != (scores.shape[0],):
+        reject(RK_E_SHAPE,
+               "smollm.softmax valid_lengths must be int32 [rows]",
+               stage="host_action",
+               actual=[str(valid.dtype), list(valid.shape)])
+    rows, cols = scores.shape
+    sf = scores.astype(np.float32) * np.float32(scale)
+    idx = np.arange(cols, dtype=np.int32)[None, :]
+    mask = idx < valid[:, None]
+    sf = np.where(mask, sf, np.float32(-np.inf))
+    mx = np.max(sf, axis=1, keepdims=True)
+    mx = np.where(np.isfinite(mx), mx, np.float32(0.0))
+    with np.errstate(invalid="ignore", over="ignore"):
+        e = np.exp(sf - mx) * mask.astype(np.float32)
+    den = np.sum(e, axis=1, keepdims=True)
+    probs = np.zeros((rows, cols), dtype=np.float32)
+    np.divide(e, den, out=probs, where=den > 0)
+    return {"probs": np.ascontiguousarray(probs, dtype=np.float16)}
+
+
+def _smollm_qk_layout(inputs: dict[str, np.ndarray],
+                      attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    _action_attrs(attrs, {"q_heads", "kv_heads", "head_dim"})
+    qh = _int(attrs["q_heads"], "smollm.qk_layout.q_heads", minimum=1)
+    kh = _int(attrs["kv_heads"], "smollm.qk_layout.kv_heads", minimum=1)
+    d = _int(attrs["head_dim"], "smollm.qk_layout.head_dim", minimum=1)
+    q = np.asarray(inputs["q"])
+    if q.dtype != _F16 or q.ndim != 3 or q.shape[1:] != (qh, d) or qh % kh:
+        reject(RK_E_SHAPE,
+               "smollm.qk_layout q must be FP16 [tokens,q_heads,head_dim]",
+               stage="host_action", actual=[str(q.dtype), list(q.shape)])
+    t = q.shape[0]
+    per = qh // kh
+    a = q.reshape(t, kh, per, d).transpose(1, 2, 0, 3)
+    return {"a": np.ascontiguousarray(a.reshape(kh, per * t, d),
+                                      dtype=np.float16)}
+
+
+def _smollm_merge_gqa(inputs: dict[str, np.ndarray],
+                      attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    _action_attrs(attrs, {"tokens", "q_heads", "kv_heads", "head_dim"})
+    t = _int(attrs["tokens"], "smollm.merge.tokens", minimum=1)
+    qh = _int(attrs["q_heads"], "smollm.merge.q_heads", minimum=1)
+    kh = _int(attrs["kv_heads"], "smollm.merge.kv_heads", minimum=1)
+    d = _int(attrs["head_dim"], "smollm.merge.head_dim", minimum=1)
+    ctx = np.asarray(inputs["contexts"])
+    per = qh // kh if kh and qh % kh == 0 else 0
+    if ctx.dtype != _F16 or per == 0 or ctx.shape != (kh, per * t, d):
+        reject(RK_E_SHAPE,
+               "smollm.merge contexts must be FP16 [kv_heads,q_per_kv*tokens,head_dim]",
+               stage="host_action", actual=[str(ctx.dtype), list(ctx.shape)])
+    merged = ctx.reshape(kh, per, t, d).transpose(2, 0, 1, 3)
+    return {"merged": np.ascontiguousarray(merged.reshape(t, qh * d),
+                                           dtype=np.float16)}
+
+
+def _smollm_concat_logits(inputs: dict[str, np.ndarray],
+                          attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    _action_attrs(attrs, {"rows", "vocab_size", "shards"})
+    rows = _int(attrs["rows"], "smollm.concat.rows", minimum=1)
+    vocab = _int(attrs["vocab_size"], "smollm.concat.vocab_size", minimum=1)
+    shards = _int(attrs["shards"], "smollm.concat.shards", minimum=1)
+    out = np.empty((rows, vocab), dtype=np.float16)
+    width = (vocab + shards - 1) // shards
+    for i in range(shards):
+        x = np.asarray(inputs[f"shard{i}"])
+        start = i * width
+        stop = min(vocab, start + width)
+        if x.dtype != _F16 or x.ndim != 2 or x.shape != (rows, stop - start):
+            reject(RK_E_SHAPE,
+                   f"smollm.concat shard{i} has the wrong FP16 shape",
+                   stage="host_action", actual=[str(x.dtype), list(x.shape)],
+                   required=[rows, stop - start])
+        out[:, start:stop] = x
+    return {"logits": out}
+
+
+def _smollm_greedy(inputs: dict[str, np.ndarray],
+                   attrs: dict[str, Any]) -> dict[str, np.ndarray]:
+    _action_attrs(attrs, {"vocab_size"})
+    vocab = _int(attrs["vocab_size"], "smollm.greedy.vocab_size", minimum=1)
+    logits = np.asarray(inputs["logits"])
+    if logits.dtype != _F16 or logits.ndim != 2 or logits.shape[1] != vocab:
+        reject(RK_E_SHAPE,
+               "smollm.greedy logits must be FP16 [rows,vocab_size]",
+               stage="host_action", actual=[str(logits.dtype), list(logits.shape)])
+    return {"token_ids": np.ascontiguousarray(
+        np.argmax(logits.astype(np.float32), axis=1), dtype=np.int32)}
 
 
 HOST_ACTIONS: dict[str, HostAction] = {
@@ -848,10 +1129,33 @@ HOST_ACTIONS: dict[str, HostAction] = {
                    ("gate", "up"), ("y",), _swiglu),
         HostAction("swiglu.packed_gate_up.v1", HOST_ACTIONS_VERSION,
                    ("gate_up",), ("gate", "up", "act"), _swiglu_packed),
+        HostAction("swiglu.packed_gate_up_act.v1", HOST_ACTIONS_VERSION,
+                   ("gate_up",), ("act",), _swiglu_packed_act),
         HostAction("tensor.mean_axis.v1", HOST_ACTIONS_VERSION,
                    ("x",), ("y",), _mean_axis),
         HostAction("logits.prefix.v1", HOST_ACTIONS_VERSION,
                    ("logits",), ("y",), _logits_prefix),
+        HostAction("smollm.embed_padded.v1", HOST_ACTIONS_VERSION,
+                   ("token_ids", "table"), ("x",), _smollm_embed_padded),
+        HostAction("smollm.rope_half.v1", HOST_ACTIONS_VERSION,
+                   ("x", "positions"), ("y",), _smollm_rope),
+        HostAction("smollm.qkv_split_gqa.v1", HOST_ACTIONS_VERSION,
+                   ("qkv",), ("q", "k", "v"), _smollm_qkv_split_gqa),
+        HostAction("smollm.kv_append_inplace.v1", HOST_ACTIONS_VERSION,
+                   ("cache_k", "cache_v", "k", "v", "start"),
+                   ("cache_k", "cache_v"), _smollm_kv_append),
+        HostAction("smollm.causal_softmax.v1", HOST_ACTIONS_VERSION,
+                   ("scores", "valid_lengths"), ("probs",),
+                   _smollm_causal_softmax),
+        HostAction("smollm.qk_layout_gqa.v1", HOST_ACTIONS_VERSION,
+                   ("q",), ("a",), _smollm_qk_layout),
+        HostAction("smollm.merge_gqa_heads.v1", HOST_ACTIONS_VERSION,
+                   ("contexts",), ("merged",), _smollm_merge_gqa),
+        HostAction("smollm.concat_logits.v1", HOST_ACTIONS_VERSION,
+                   tuple(f"shard{i}" for i in range(12)), ("logits",),
+                   _smollm_concat_logits),
+        HostAction("smollm.greedy_sample.v1", HOST_ACTIONS_VERSION,
+                   ("logits",), ("token_ids",), _smollm_greedy),
     )
 }
 
@@ -1552,6 +1856,12 @@ def _materialize_constant(desc: dict[str, Any], plan_spec: Any,
                           weights: dict[str, np.ndarray],
                           weights_meta: dict[str, Any]) -> np.ndarray:
     target = tuple(plan_spec.shape)
+    if desc["kind"] == "fill":
+        value = desc.get("value")
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            reject(RK_E_SCHEMA, "fill constant requires a numeric value",
+                   stage="hybrid")
+        return np.full(target, np.float16(value), dtype=np.float16)
     if desc["kind"] == "generated":
         if plan_spec.generator != desc["generator"]:
             reject(RK_E_SCHEMA,
@@ -1603,6 +1913,8 @@ def _materialize_constant(desc: dict[str, Any], plan_spec: Any,
                    required=list(target))
         if repeat_rows > 1:
             arr = np.tile(arr, (repeat_rows, 1))
+    if desc.get("scale", 1.0) != 1.0:
+        arr = arr * np.float16(desc["scale"])
     if arr.shape != target:
         if arr.shape[0] > target[0] or arr.shape[1] > target[1] or \
                 desc["kind"] != "weight_repeat_pad":

@@ -147,6 +147,60 @@ destroy-failure, run-error + destroy-failure, healthy close, and caller-owned fd
 behavior.  `tests/test_runtime_abi.py` checks the vendor header declaration, the
 ctypes `void` configuration and the compile-time C probe against `rocket_npu.h`.
 
+## Shared immutable packed constants
+
+`rk_shared_constant_get_or_create` (declared in `include/rk_plan.h`) caches one
+already-packed upload destination BO.  The caller supplies an opaque key; the
+Python planner derives it from the actual FP16 source bytes plus source region,
+stride/transpose flags, destination tensor geometry, layout id, buffer
+capacity/offset/alignment and padding state.  The C runtime additionally
+re-checks the action's source region, stride/transpose flags and destination
+tensor/padding geometry, and stores the provider fd with the handle.
+
+The sharing domain is deliberately narrow:
+
+- same live `fd`/provider context only; there is no cross-fd or cross-IOMMU
+  domain BO import in this target;
+- the handle must stay alive; cache entries disappear when the last workspace
+  releases them;
+- a workspace retains each unique handle and releases it only after a confirmed
+  workspace destroy;
+- `rk_workspace_create_shared` skips creation-time uploads for those exact
+  actions and maps all plan views of that destination buffer to the shared BO;
+- a destination buffer may not mix shared and owned uploads.
+
+The key is never based on shape alone or on a Host pointer.  Unit coverage is in
+`tests/test_shared_constants.py` (same-content reuse, same-pointer content
+mutation, changed weights, fd mismatch, incompatible destination geometry,
+A/B/A release order and run-time numerical equality).
+
+## Persistent upload state
+
+`rk_workspace_set_persistent_upload` nominates one existing single-output upload
+action whose destination BO survives across runs.  Normal run uploads are
+skipped for that action.  The caller must initialize, clear and incrementally
+update the destination through:
+
+- `rk_workspace_update_upload_region` — packs one source rectangle into one
+  destination logical rectangle using an explicitly selected row-major or
+  transposed source mapping; it does not clear untouched bytes;
+- `rk_workspace_clear_upload_destination` — zeros the complete destination for
+  reset/initialization boundaries.
+
+Every state mutation takes the same non-blocking `busy` ownership gate as a run,
+checks poison/provider-context state, validates the full source and destination
+ranges before writing, and performs one `rocket_bo_prep`/`fini` pair around the
+copy.  A pre-submit validation failure leaves the workspace healthy.  A provider
+failure follows the existing quarantine/stop contract.
+
+The Smol runner creates decode QK/PV workspaces per layer and KV head, performs a
+full capacity initialization after reset/prefill, then appends only the new token
+stripes.  The first and reset boundaries are counted separately
+(`kv_state_init_*`, `kv_state_clear_*`); steady-state append bytes are reported as
+`kv_state_append_*`.  Capacity-256 prefill/incremental, reset replay, A/B/A
+interleaving, 257-token rejection and post-rejection health are covered in
+`results/baseline-layout-reuse/board-final4-current-*`.
+
 ## Evidence boundary
 
 No dangerous real-device timeout or submit failure has been injected.  The
@@ -154,3 +208,40 @@ real-device submit-failure/recovery path is therefore **unmeasured on RK3588**;
 only the Host/mock ownership and poisoning policy above is verified.  This record
 does not claim that driver quiescence, context recovery, or physical resource
 release has succeeded.
+
+## Dependency-ordered mixed-template task chains
+
+The planner can emit a `dependency_chain_v1` Submit when `fuse_task_chain=true`.
+Before the C descriptor is built, the planner hoists upload actions ahead of all
+device tasks and rebuilds action ids, dependencies and buffer live ranges.  It
+merges only adjacent Submit groups whose action ids are contiguous, whose NPU
+dependencies are earlier tasks in the merged group (or an earlier Submit), and
+whose task count stays within the ABI limit.
+
+The C verifier independently requires: consecutive task ids, every NPU
+dependency earlier in the chain or in an earlier Submit, at least one non-MM
+task, and pairwise-disjoint written regions.  The normal read-after-write,
+alias, publish and lifecycle checks still run.  This is an envelope change only:
+tasks, buffers, uploads/downloads, numeric points and device-internal DDR writes
+are unchanged.  Unit coverage is in `tests/test_graph_fusion.py`; the device FFN
+control and fused arm are bitwise identical when only this envelope changes.
+
+## Approximate rsqrt capability profile
+
+`co.lut.rsqrt.f16.v1` is exposed only by
+`capabilities/rk3588_vendor_co_v1_rmsnorm_lut.json`; the default profile remains
+unchanged and continues to reject it.  The template maps to the bounded
+`CO_RSQRT_BOUNDED` LUT emitter and is intended for independently calibrated
+experimental compositions.  `rmsnorm_approx_module` is a generic seven-task
+device graph, not a model-specific runtime shortcut.  Its input domain and FP16
+narrowing points are declared in the resulting hybrid manifest metadata; it is
+not a replacement for the default Host FP32 RMSNorm path.
+
+The mixed-template allowlist is intentionally closed.  As of the 2026-10-28
+stage-2 probe the only admitted sequences are the seven-task staged SwiGLU FFN,
+the seven-task approximate RMSNorm chain, the four-task device RoPE reorder,
+and the eleven-task PV→O composition.  Each has a matching Python tuple in
+`passes/schedule.py` and a C table entry in `rk_plan_validate.c`; a structural
+dependency chain outside this set is rejected even if all action ids happen to
+be ordered.  Negative tests cover non-consecutive ids, template mismatch,
+overlapping writes, and a device-produced value used as an MM weight operand.

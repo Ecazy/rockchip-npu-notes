@@ -61,6 +61,35 @@ class LoweringTests(unittest.TestCase):
         # Activation itself is two LUTs plus one EW multiply; the MatMul is extra.
         self.assertEqual(result.plan.accounting.task_count, 4)
 
+    def test_shared_a_slices_are_packed_once_per_m_k_region(self):
+        # M=300 -> two row tiles; N=1024 -> four column tiles; K=576 -> three
+        # K slices.  The packed A region is independent of the N tile, so each
+        # of the six (M,K) slices must appear once, not once per output tile.
+        result = self._compile(m=300, k=576, n=1024)
+        plan = result.plan
+        uploads = [a for a in plan.actions if a.kind == "upload"]
+        a_sources = [a for a in uploads
+                     if plan.bindings[a.attrs["source_binding"]].name == "A"]
+        b_sources = [a for a in uploads
+                     if plan.bindings[a.attrs["source_binding"]].name == "B"]
+        self.assertEqual(len(a_sources), 6)
+        self.assertEqual(len(b_sources), 12)
+        a_regions = {(a.attrs["src_row_offset"], a.attrs["src_col_offset"],
+                      a.attrs["src_row_stride"], a.attrs["transpose_source"])
+                     for a in a_sources}
+        self.assertEqual(len(a_regions), 6)
+        # A single packed A view must be consumed by more than one N/M task.
+        consumers = {}
+        for action in plan.actions:
+            if action.kind != "npu_task":
+                continue
+            for view_id in action.inputs:
+                view = plan.views[view_id]
+                consumers.setdefault(view.buffer_id, 0)
+                consumers[view.buffer_id] += 1
+        a_buffers = {plan.views[a.outputs[0]].buffer_id for a in a_sources}
+        self.assertTrue(all(consumers[b] > 1 for b in a_buffers))
+
     def test_k_over_4096_rejected(self):
         with self.assertRaises(BackendError) as ctx:
             self._compile(k=4097)

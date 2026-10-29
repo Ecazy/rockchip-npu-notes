@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sched.h>
 
 /* Wall-clock counter for the timing probes.  ``now_us_calls`` lets an entry
  * point report how much time its own instrumentation consumed, so a reader can
@@ -155,7 +156,10 @@ static int refresh_views(rk_workspace *ws, rk_diag *diag) {
             return RK_E_SHAPE;
         }
         co_tensor t = tensor_from_desc(&v->tensor);
-        int rc = co_view_init(&ws->views[i], &ws->slots[b->slot_id],
+        co_buffer *owner = ws->shared_buffers
+                               ? ws->shared_buffers[v->buffer_id] : NULL;
+        if (!owner) owner = &ws->slots[b->slot_id];
+        int rc = co_view_init(&ws->views[i], owner,
                               (size_t)(b->offset + v->offset_bytes), &t);
         if (rc) return fail_native(diag, "workspace", "co_view_init rejected a view",
                                    UINT32_MAX, rc);
@@ -235,17 +239,21 @@ static int fixed_pack_16x16(const co_tensor *dst, _Float16 *base,
     return 0;
 }
 
-static int upload_action(rk_workspace *ws, const rk_action_desc *a,
-                         const rk_binding *binding, uint64_t *bytes_out,
-                         rk_pack_times *times, int manage_sync,
-                         rk_diag *diag) {
-    if (!a || a->kind != RK_ACTION_UPLOAD || a->noutputs != 1) return RK_E_INVALID;
-    co_view *dst = &ws->views[a->outputs[0]];
+/* Pack one upload destination.  ``fast_pack`` is a workspace policy snapshot,
+ * not device state; passing it explicitly lets the shared-constant cache use
+ * the exact same packing implementation without constructing a workspace. */
+static int pack_upload_into(int fd, uint32_t fast_pack,
+                            const rk_action_desc *a, co_view *dst,
+                            const rk_binding *binding, uint64_t *bytes_out,
+                            rk_pack_times *times, int manage_sync,
+                            rk_diag *diag) {
+    if (!a || a->kind != RK_ACTION_UPLOAD || a->noutputs != 1 || !dst ||
+        !binding) return RK_E_INVALID;
     if (!dst->buffer || !dst->buffer->bo.handle) return RK_E_INVALID;
     int rc = 0;
     if (manage_sync) {
         double t0 = now_us();
-        rc = rocket_bo_prep(ws->fd, &dst->buffer->bo, 1, 2000000000ull);
+        rc = rocket_bo_prep(fd, &dst->buffer->bo, 1, 2000000000ull);
         if (times) times->prep_us += now_us() - t0;
         if (rc) return fail_native(diag, "upload", "rocket_bo_prep(write) failed",
                                    a->id, rc);
@@ -260,7 +268,7 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
     uint32_t broadcast_channel = (a->flags & RK_ACTION_FLAG_BROADCAST_CHANNEL) != 0;
     const uint64_t elements = binding->nbytes / 2u;
     double l0 = now_us();
-    if (ws->upload_fast_pack && !broadcast_scalar && !broadcast_channel &&
+    if (fast_pack && !broadcast_scalar && !broadcast_channel &&
         a->source_row_offset == 0 &&
         fixed_pack_16x16(&dst->tensor, base, src, transpose,
                          a->source_row_stride, a->source_col_offset,
@@ -268,7 +276,7 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
         if (times) times->layout_us += now_us() - l0;
         if (manage_sync) {
             double f0 = now_us();
-            rc = rocket_bo_fini(ws->fd, &dst->buffer->bo);
+            rc = rocket_bo_fini(fd, &dst->buffer->bo);
             if (times) times->fini_us += now_us() - f0;
             if (rc) return fail_native(diag, "upload", "rocket_bo_fini failed",
                                        a->id, rc);
@@ -281,7 +289,7 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
             _Float16 value;
             if (broadcast_scalar) {
                 if (elements != 1u) {
-                    if (manage_sync) (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    if (manage_sync) (void)rocket_bo_fini(fd, &dst->buffer->bo);
                     rk_diag_set(diag, RK_E_SHAPE, "upload",
                                 "scalar broadcast binding is not one element", "",
                                 a->id, 0);
@@ -291,7 +299,7 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
             } else if (broadcast_channel) {
                 uint64_t source_col = (uint64_t)a->source_col_offset + c;
                 if (source_col >= elements) {
-                    if (manage_sync) (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    if (manage_sync) (void)rocket_bo_fini(fd, &dst->buffer->bo);
                     rk_diag_set(diag, RK_E_SHAPE, "upload",
                                 "channel broadcast binding is shorter than the "
                                 "destination row", "", a->id, 0);
@@ -307,7 +315,7 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
                  * packing loop must never index outside the borrowed binding even if
                  * a future caller bypasses rk_plan_create. */
                 if ((uint64_t)sr * a->source_row_stride + sc >= elements) {
-                    if (manage_sync) (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+                    if (manage_sync) (void)rocket_bo_fini(fd, &dst->buffer->bo);
                     rk_diag_set(diag, RK_E_SHAPE, "upload",
                                 "packer source index exceeds the binding", "", a->id, 0);
                     return RK_E_SHAPE;
@@ -320,7 +328,7 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
     if (times) times->layout_us += now_us() - l0;
     if (manage_sync) {
         double f0 = now_us();
-        rc = rocket_bo_fini(ws->fd, &dst->buffer->bo);
+        rc = rocket_bo_fini(fd, &dst->buffer->bo);
         if (times) times->fini_us += now_us() - f0;
         if (rc) return fail_native(diag, "upload", "rocket_bo_fini failed",
                                    a->id, rc);
@@ -331,12 +339,322 @@ static int upload_action(rk_workspace *ws, const rk_action_desc *a,
     return 0;
 }
 
+static int upload_action(rk_workspace *ws, const rk_action_desc *a,
+                         const rk_binding *binding, uint64_t *bytes_out,
+                         rk_pack_times *times, int manage_sync,
+                         rk_diag *diag) {
+    if (!a || a->kind != RK_ACTION_UPLOAD || a->noutputs != 1) return RK_E_INVALID;
+    co_view *dst = &ws->views[a->outputs[0]];
+    return pack_upload_into(ws->fd, ws->upload_fast_pack, a, dst, binding,
+                            bytes_out, times, manage_sync, diag);
+}
+
+
+/* -------------------------------------------------------------------------
+ * Process-local immutable packed-constant cache.
+ *
+ * The device provider in this tree allocates BOs per fd and has no import
+ * operation.  We therefore share only within one live fd/context and only while
+ * at least one workspace retains the handle.  A cache lookup is O(live tiles),
+ * which is bounded by the model's resident packed tiles; keys are supplied by
+ * the planner and include the actual source bytes, source region/stride,
+ * transpose, dtype, destination physical geometry and padding state.
+ * ---------------------------------------------------------------------- */
+struct rk_shared_constant {
+    struct rk_shared_constant *next;
+    char *key;
+    int fd;
+    co_buffer buffer;          /* owned packed destination BO */
+    uint32_t refs;             /* protected by shared_cache_lock */
+    uint32_t source_binding;
+    uint64_t source_nbytes;
+    uint32_t source_row_offset;
+    uint32_t source_col_offset;
+    uint32_t source_row_stride;
+    uint32_t flags;
+    uint32_t padding_state;
+    uint64_t view_offset;
+    uint64_t buffer_capacity;
+    rk_tensor_desc tensor;
+};
+
+static atomic_flag shared_cache_lock = ATOMIC_FLAG_INIT;
+static rk_shared_constant *shared_cache_head;
+static uint32_t shared_cache_live;
+
+static void shared_lock(void) {
+    while (atomic_flag_test_and_set_explicit(&shared_cache_lock,
+                                             memory_order_acquire))
+        sched_yield();
+}
+static void shared_unlock(void) {
+    atomic_flag_clear_explicit(&shared_cache_lock, memory_order_release);
+}
+
+static int shared_tensor_equal(const rk_tensor_desc *a,
+                               const rk_tensor_desc *b) {
+    return a->dtype == b->dtype && a->layout == b->layout &&
+           a->rows == b->rows && a->cols == b->cols &&
+           a->physical_rows == b->physical_rows &&
+           a->physical_cols == b->physical_cols && a->atom == b->atom &&
+           a->bytes == b->bytes;
+}
+
+static void shared_free(rk_shared_constant *node) {
+    if (!node) return;
+    co_buffer_free(&node->buffer);
+    free(node->key);
+    free(node);
+}
+
+uint32_t rk_shared_constant_live(void) {
+    shared_lock();
+    uint32_t live = shared_cache_live;
+    shared_unlock();
+    return live;
+}
+
+uint64_t rk_shared_constant_bytes(const rk_shared_constant *constant) {
+    if (!constant) return 0;
+    return (uint64_t)constant->buffer.bo.size;
+}
+
+void rk_shared_constant_retain(rk_shared_constant *constant) {
+    if (!constant) return;
+    shared_lock();
+    constant->refs++;
+    shared_unlock();
+}
+
+void rk_shared_constant_release(rk_shared_constant *constant) {
+    if (!constant) return;
+    int free_it = 0;
+    shared_lock();
+    if (constant->refs > 0) constant->refs--;
+    if (constant->refs == 0) {
+        rk_shared_constant **link = &shared_cache_head;
+        while (*link && *link != constant) link = &(*link)->next;
+        if (*link == constant) *link = constant->next;
+        if (shared_cache_live) shared_cache_live--;
+        free_it = 1;
+    }
+    shared_unlock();
+    if (free_it) shared_free(constant);
+}
+
+/* Match the cache handle's immutable source/destination identity against one
+ * upload action in the plan that wants to consume it.  The content digest is
+ * carried by the caller key; this check proves layout compatibility inside C as
+ * well, so a stale or caller-forged key cannot make a differently packed BO a
+ * workspace view. */
+static int shared_action_compatible(const rk_shared_constant *node,
+                                    const rk_plan *plan, uint32_t action_id,
+                                    const rk_binding *source,
+                                    const rk_buffer_desc **buffer_out,
+                                    const rk_view_desc **view_out,
+                                    rk_diag *diag) {
+    if (!node || !plan || !source || action_id >= plan->nactions) {
+        rk_diag_set(diag, RK_E_SCHEMA, "shared_constant",
+                    "invalid shared handle/action", "", action_id, 0);
+        return RK_E_SCHEMA;
+    }
+    const rk_action_desc *a = &plan->actions[action_id];
+    if (a->kind != RK_ACTION_UPLOAD || a->noutputs != 1) {
+        rk_diag_set(diag, RK_E_SCHEMA, "shared_constant",
+                    "shared destination must be a single-output upload",
+                    "", action_id, 0);
+        return RK_E_SCHEMA;
+    }
+    const rk_value_desc *value = rk_plan_value(plan, a->source_binding);
+    if (!value || value->role != RK_ROLE_CONSTANT || !source) {
+        rk_diag_set(diag, RK_E_SCHEMA, "shared_constant",
+                    "shared pack is only valid for a constant upload",
+                    "", action_id, 0);
+        return RK_E_SCHEMA;
+    }
+    if (source->nbytes != node->source_nbytes ||
+        a->source_row_offset != node->source_row_offset ||
+        a->source_col_offset != node->source_col_offset ||
+        a->source_row_stride != node->source_row_stride ||
+        a->flags != node->flags) {
+        rk_diag_set(diag, RK_E_SHAPE, "shared_constant",
+                    "source region/stride/transpose differs from packed handle",
+                    "", action_id, 0);
+        return RK_E_SHAPE;
+    }
+    const rk_view_desc *view = rk_plan_view(plan, a->outputs[0]);
+    if (!view || view->buffer_id >= plan->nbuffers) {
+        rk_diag_set(diag, RK_E_SHAPE, "shared_constant",
+                    "shared upload destination view/buffer is missing",
+                    "", action_id, 0);
+        return RK_E_SHAPE;
+    }
+    const rk_buffer_desc *buffer = rk_plan_buffer(plan, view->buffer_id);
+    if (!buffer || buffer->offset != 0 || view->offset_bytes != node->view_offset ||
+        buffer->capacity > node->buffer_capacity ||
+        buffer->padding_state != node->padding_state ||
+        !shared_tensor_equal(&view->tensor, &node->tensor)) {
+        rk_diag_set(diag, RK_E_SHAPE, "shared_constant",
+                    "destination offset/geometry differs from packed handle",
+                    "", action_id, 0);
+        return RK_E_SHAPE;
+    }
+    if (buffer_out) *buffer_out = buffer;
+    if (view_out) *view_out = view;
+    return 0;
+}
+
+int rk_shared_constant_get_or_create(int fd, const rk_plan *plan,
+                                     uint32_t action_id,
+                                     const rk_binding *source,
+                                     const char *key,
+                                     rk_shared_constant **out,
+                                     uint32_t *created, rk_diag *diag) {
+    rk_diag_clear(diag);
+    if (out) *out = NULL;
+    if (created) *created = 0;
+    if (fd < 0 || !plan || !source || !out || !key || !*key) {
+        rk_diag_set(diag, RK_E_INVALID, "shared_constant",
+                    "fd>=0, plan, source, key and out are required", "",
+                    action_id, 0);
+        return RK_E_INVALID;
+    }
+    int context_rc = rocket_context_faulted(fd);
+    if (context_rc != 0) {
+        int code = context_rc > 0 ? RK_E_POISONED : RK_E_DEVICE;
+        rk_diag_set(diag, code, "shared_constant",
+                    "provider context is not healthy; refusing packed reuse",
+                    "", action_id, context_rc);
+        return code;
+    }
+    const rk_buffer_desc *buffer = NULL;
+    const rk_view_desc *view = NULL;
+    /* Validate source binding against the plan before touching cache state. */
+    const rk_action_desc *a = &plan->actions[action_id];
+    const rk_value_desc *value = rk_plan_value(plan, a->source_binding);
+    if (!value || value->role != RK_ROLE_CONSTANT ||
+        binding_matches(value, source, diag, "shared_constant")) {
+        if (diag && !diag->code)
+            rk_diag_set(diag, RK_E_SCHEMA, "shared_constant",
+                        "shared pack requires the exact constant binding",
+                        "", action_id, 0);
+        return diag && diag->code ? diag->code : RK_E_SCHEMA;
+    }
+    if (check_finite_binding(source, diag)) return diag->code;
+    /* A temporary node is used both for compatibility validation and as the
+     * miss payload.  Values that are plan-derived are filled before lookup. */
+    rk_shared_constant *fresh = calloc(1, sizeof(*fresh));
+    if (!fresh) return RK_E_NOMEM;
+    fresh->fd = fd;
+    fresh->source_binding = a->source_binding;
+    fresh->source_nbytes = source->nbytes;
+    fresh->source_row_offset = a->source_row_offset;
+    fresh->source_col_offset = a->source_col_offset;
+    fresh->source_row_stride = a->source_row_stride;
+    fresh->flags = a->flags;
+    /* Find the matching action metadata once; the cache hit path still runs the
+     * full compatibility check against the current plan. */
+    if (a->kind != RK_ACTION_UPLOAD || a->noutputs != 1) {
+        free(fresh);
+        rk_diag_set(diag, RK_E_SCHEMA, "shared_constant",
+                    "shared destination must be a single-output upload",
+                    "", action_id, 0);
+        return RK_E_SCHEMA;
+    }
+    view = rk_plan_view(plan, a->outputs[0]);
+    if (!view || view->buffer_id >= plan->nbuffers) {
+        free(fresh);
+        rk_diag_set(diag, RK_E_SHAPE, "shared_constant",
+                    "shared upload destination view/buffer is missing",
+                    "", action_id, 0);
+        return RK_E_SHAPE;
+    }
+    buffer = rk_plan_buffer(plan, view->buffer_id);
+    if (!buffer || buffer->offset != 0) {
+        free(fresh);
+        rk_diag_set(diag, RK_E_SHAPE, "shared_constant",
+                    "shared buffer must start at offset zero", "", action_id, 0);
+        return RK_E_SHAPE;
+    }
+    fresh->view_offset = view->offset_bytes;
+    fresh->buffer_capacity = buffer->capacity;
+    fresh->padding_state = buffer->padding_state;
+    fresh->tensor = view->tensor;
+    fresh->key = strdup(key);
+    if (!fresh->key) { free(fresh); return RK_E_NOMEM; }
+
+    /* Look for a live compatible handle.  Key equality is necessary; the
+     * structural check is also re-run, so a key collision cannot alias a BO
+     * with incompatible geometry. */
+    shared_lock();
+    for (rk_shared_constant *node = shared_cache_head; node; node = node->next) {
+        if (node->fd == fd && strcmp(node->key, key) == 0) {
+            int compat = shared_action_compatible(node, plan, action_id,
+                                                   source, NULL, NULL, diag);
+            if (!compat) node->refs++;
+            shared_unlock();
+            if (compat) { shared_free(fresh); return compat; }
+            *out = node;
+            shared_free(fresh);
+            return 0;
+        }
+    }
+    shared_unlock();
+
+    /* Miss: allocate and pack outside the cache lock. */
+    int rc = co_buffer_alloc(fd, (size_t)buffer->capacity, &fresh->buffer);
+    if (rc) {
+        shared_free(fresh);
+        return fail_native(diag, "shared_constant",
+                           "co_buffer_alloc failed", action_id, rc);
+    }
+    co_tensor tensor = tensor_from_desc(&view->tensor);
+    co_view dst;
+    memset(&dst, 0, sizeof(dst));
+    rc = co_view_init(&dst, &fresh->buffer, (size_t)view->offset_bytes, &tensor);
+    if (rc) {
+        shared_free(fresh);
+        return fail_native(diag, "shared_constant",
+                           "co_view_init rejected shared destination",
+                           action_id, rc);
+    }
+    rc = pack_upload_into(fd, env_flag_enabled("RK_PLAN_UPLOAD_FAST_PACK", 1),
+                          a, &dst, source, NULL, NULL, 1, diag);
+    if (rc) { shared_free(fresh); return rc; }
+
+    /* Publish under the lock.  If another thread won the race, discard our BO
+     * and return the live winner after compatibility validation. */
+    shared_lock();
+    for (rk_shared_constant *node = shared_cache_head; node; node = node->next) {
+        if (node->fd == fd && strcmp(node->key, key) == 0) {
+            int compat = shared_action_compatible(node, plan, action_id,
+                                                   source, NULL, NULL, diag);
+            if (!compat) node->refs++;
+            shared_unlock();
+            if (compat) { shared_free(fresh); return compat; }
+            *out = node;
+            shared_free(fresh);
+            return 0;
+        }
+    }
+    fresh->refs = 1;
+    fresh->next = shared_cache_head;
+    shared_cache_head = fresh;
+    shared_cache_live++;
+    shared_unlock();
+    if (created) *created = 1;
+    *out = fresh;
+    return 0;
+}
+
 static int upload_role(rk_workspace *ws, uint32_t role,
                        const rk_binding *bindings, uint32_t nbindings,
                        uint64_t *calls, uint64_t *bytes, rk_diag *diag) {
     for (uint32_t i = 0; i < ws->plan->nactions; i++) {
         const rk_action_desc *a = &ws->plan->actions[i];
         if (a->kind != RK_ACTION_UPLOAD) continue;
+        if (ws->shared_actions && ws->shared_actions[i]) continue;
+        if (ws->persistent_actions && ws->persistent_actions[i]) continue;
         const rk_value_desc *v = rk_plan_value(ws->plan, a->source_binding);
         if (!v || v->role != role) continue;
         const rk_binding *b = find_binding(bindings, nbindings, a->source_binding);
@@ -359,13 +677,15 @@ static void drop_command_cache(rk_workspace *ws);
 static void build_multi_submit_cache(rk_workspace *ws, rk_diag *diag);
 static void drop_multi_submit_cache(rk_workspace *ws);
 
-int rk_workspace_create(int fd, const rk_plan *plan,
-                        const rk_binding *constants, uint32_t nconstants,
-                        rk_workspace **out, rk_diag *diag) {
+static int workspace_create_impl(int fd, const rk_plan *plan,
+                                 const rk_binding *constants, uint32_t nconstants,
+                                 const rk_shared_constant_binding *shared,
+                                 uint32_t nshared,
+                                 rk_workspace **out, rk_diag *diag) {
     rk_diag_clear(diag);
     if (!out) return RK_E_INVALID;
     *out = NULL;
-    if (!plan || fd < 0) {
+    if (!plan || fd < 0 || (nshared && !shared)) {
         rk_diag_set(diag, RK_E_INVALID, "workspace_create",
                     "fd>=0 and a validated plan are required", "", UINT32_MAX, 0);
         return RK_E_INVALID;
@@ -386,6 +706,12 @@ int rk_workspace_create(int fd, const rk_plan *plan,
     if ((nconstants && !constants) || nconstants > plan->nvalues) {
         rk_diag_set(diag, RK_E_SCHEMA, "workspace_create",
                     "constant pointer/count mismatch", "", UINT32_MAX, 0);
+        return RK_E_SCHEMA;
+    }
+    if (nshared > plan->nactions) {
+        rk_diag_set(diag, RK_E_SCHEMA, "workspace_create",
+                    "shared-constant binding count exceeds plan actions",
+                    "", UINT32_MAX, 0);
         return RK_E_SCHEMA;
     }
     rk_workspace *ws = calloc(1, sizeof(*ws));
@@ -445,6 +771,78 @@ int rk_workspace_create(int fd, const rk_plan *plan,
         }
     }
 
+    if (nshared) {
+        ws->shared_buffers = calloc(plan->nbuffers ? plan->nbuffers : 1u,
+                                    sizeof(*ws->shared_buffers));
+        ws->shared_actions = calloc(plan->nactions ? plan->nactions : 1u,
+                                    sizeof(*ws->shared_actions));
+        ws->shared_handles = calloc(nshared, sizeof(*ws->shared_handles));
+        if (!ws->shared_buffers || !ws->shared_actions || !ws->shared_handles)
+            goto nomem;
+        for (uint32_t i = 0; i < nshared; i++) {
+            uint32_t action_id = shared[i].action_id;
+            rk_shared_constant *handle = shared[i].constant;
+            if (!handle || action_id >= plan->nactions) {
+                rk_diag_set(diag, RK_E_SCHEMA, "workspace_create",
+                            "invalid shared-constant action/handle", "",
+                            action_id, 0);
+                goto fail;
+            }
+            if (handle->fd != fd) {
+                rk_diag_set(diag, RK_E_DOMAIN, "workspace_create",
+                            "shared constant belongs to a different fd/device "
+                            "context", "", action_id, 0);
+                goto fail;
+            }
+            const rk_action_desc *a = &plan->actions[action_id];
+            const rk_binding *source = find_binding(
+                constants, nconstants, a->source_binding);
+            const rk_buffer_desc *buffer = NULL;
+            if (!source) {
+                rk_diag_set(diag, RK_E_SCHEMA, "workspace_create",
+                            "shared action source constant binding missing",
+                            "", action_id, 0);
+                goto fail;
+            }
+            int rc = shared_action_compatible(handle, plan, action_id, source,
+                                              &buffer, NULL, diag);
+            if (rc) goto fail;
+            co_buffer *shared_bo = &handle->buffer;
+            if (ws->shared_buffers[buffer->id] &&
+                ws->shared_buffers[buffer->id] != shared_bo) {
+                rk_diag_set(diag, RK_E_ALIAS, "workspace_create",
+                            "one plan buffer maps to two shared BOs", "",
+                            action_id, 0);
+                goto fail;
+            }
+            ws->shared_buffers[buffer->id] = shared_bo;
+            ws->shared_actions[action_id] = 1;
+            uint32_t seen = 0;
+            for (uint32_t q = 0; q < ws->nshared_handles; q++)
+                if (ws->shared_handles[q] == handle) { seen = 1; break; }
+            if (!seen) ws->shared_handles[ws->nshared_handles++] = handle;
+        }
+        /* Every upload into a shared destination buffer must itself be shared.
+         * Otherwise creation-time upload_role would overwrite a BO owned by
+         * another workspace. */
+        for (uint32_t i = 0; i < plan->nactions; i++) {
+            const rk_action_desc *a = &plan->actions[i];
+            if (a->kind != RK_ACTION_UPLOAD || a->noutputs != 1) continue;
+            const rk_view_desc *v = rk_plan_view(plan, a->outputs[0]);
+            if (!v || !ws->shared_buffers[v->buffer_id]) continue;
+            if (!ws->shared_actions[i]) {
+                rk_diag_set(diag, RK_E_ALIAS, "workspace_create",
+                            "a shared destination also has an unshared upload",
+                            "", i, 0);
+                goto fail;
+            }
+        }
+        /* Retain only after all structural checks; the fail path below releases
+         * exactly the handles in ws->shared_handles. */
+        for (uint32_t i = 0; i < ws->nshared_handles; i++)
+            rk_shared_constant_retain(ws->shared_handles[i]);
+    }
+
     /* Constants must match every constant binding exactly once. */
     uint32_t max_slot = 0;
     for (uint32_t i = 0; i < ws->plan->nbuffers; i++)
@@ -456,11 +854,60 @@ int rk_workspace_create(int fd, const rk_plan *plan,
     if (!ws->slots || !ws->views) goto nomem;
     uint64_t *slot_cap = calloc(ws->nslots ? ws->nslots : 1u, sizeof(uint64_t));
     if (!slot_cap) goto nomem;
+    co_buffer **slot_shared = calloc(ws->nslots ? ws->nslots : 1u,
+                                     sizeof(*slot_shared));
+    uint8_t *slot_owned = calloc(ws->nslots ? ws->nslots : 1u,
+                                 sizeof(*slot_owned));
+    if (!slot_shared || !slot_owned) {
+        free(slot_cap);
+        free(slot_shared);
+        free(slot_owned);
+        goto nomem;
+    }
     for (uint32_t i = 0; i < ws->plan->nbuffers; i++) {
         const rk_buffer_desc *b = &ws->plan->buffers[i];
+        co_buffer *shared_bo = ws->shared_buffers
+                                   ? ws->shared_buffers[b->id] : NULL;
+        if (shared_bo) {
+            if (slot_owned[b->slot_id] ||
+                (slot_shared[b->slot_id] &&
+                 slot_shared[b->slot_id] != shared_bo)) {
+                rk_diag_set(diag, RK_E_ALIAS, "workspace_create",
+                            "shared and owned buffers cannot share one slot",
+                            "", UINT32_MAX, 0);
+                free(slot_cap);
+                free(slot_shared);
+                free(slot_owned);
+                goto fail;
+            }
+            if (b->offset != 0 ||
+                b->capacity > shared_bo->payload) {
+                rk_diag_set(diag, RK_E_SHAPE, "workspace_create",
+                            "shared buffer capacity/offset is incompatible",
+                            "", UINT32_MAX, 0);
+                free(slot_cap);
+                free(slot_shared);
+                free(slot_owned);
+                goto fail;
+            }
+            slot_shared[b->slot_id] = shared_bo;
+            continue;
+        }
+        if (slot_shared[b->slot_id]) {
+            rk_diag_set(diag, RK_E_ALIAS, "workspace_create",
+                        "owned and shared buffers cannot share one slot",
+                        "", UINT32_MAX, 0);
+            free(slot_cap);
+            free(slot_shared);
+            free(slot_owned);
+            goto fail;
+        }
+        slot_owned[b->slot_id] = 1;
         uint64_t end = b->offset + b->capacity;
         if (end > slot_cap[b->slot_id]) slot_cap[b->slot_id] = end;
     }
+    free(slot_shared);
+    free(slot_owned);
     for (uint32_t i = 0; i < ws->nslots; i++) {
         if (!slot_cap[i]) continue;
         int rc = co_buffer_alloc(fd, (size_t)slot_cap[i], &ws->slots[i]);
@@ -587,11 +1034,33 @@ fail:
     free(ws->emit_index);
     free(ws->prepared_inputs);
     free(ws->prepared_outputs);
+    for (uint32_t i = 0; i < ws->nshared_handles; i++)
+        rk_shared_constant_release(ws->shared_handles[i]);
+    free(ws->shared_handles);
+    free(ws->shared_buffers);
+    free(ws->shared_actions);
+    free(ws->persistent_actions);
     drop_multi_submit_cache(ws);
     drop_command_cache(ws);
     rk_plan_free(ws->plan);
     free(ws);
     return diag && diag->code ? diag->code : RK_E_INVALID;
+}
+
+int rk_workspace_create(int fd, const rk_plan *plan,
+                        const rk_binding *constants, uint32_t nconstants,
+                        rk_workspace **out, rk_diag *diag) {
+    return workspace_create_impl(fd, plan, constants, nconstants, NULL, 0,
+                                 out, diag);
+}
+
+int rk_workspace_create_shared(int fd, const rk_plan *plan,
+                               const rk_binding *constants, uint32_t nconstants,
+                               const rk_shared_constant_binding *shared,
+                               uint32_t nshared,
+                               rk_workspace **out, rk_diag *diag) {
+    return workspace_create_impl(fd, plan, constants, nconstants, shared,
+                                 nshared, out, diag);
 }
 
 /* Build the bounded experiment's creation-time co_program cache.  The only
@@ -682,6 +1151,12 @@ static uint64_t workspace_device_request_bytes(const rk_workspace *ws) {
     uint64_t total = 0;
     for (uint32_t i = 0; i < ws->nslots; i++)
         total += (uint64_t)ws->slots[i].bo.size;
+    /* A shared BO replaces the workspace slot that the plan counted.  Add each
+     * retained handle once so the device-room check still sees the real plan
+     * footprint without double-counting one handle referenced by many views. */
+    for (uint32_t i = 0; i < ws->nshared_handles; i++)
+        if (ws->shared_handles[i])
+            total += (uint64_t)ws->shared_handles[i]->buffer.bo.size;
     if (ws->execute_workspace_ready)
         total += (uint64_t)ws->execute_workspace.commands.size;
     return total;
@@ -1334,6 +1809,7 @@ static int run_upload_run(rk_workspace *ws, uint32_t begin, uint32_t end,
             return RK_E_SCHEMA;
         }
         if (v->role == RK_ROLE_CONSTANT) continue; /* uploaded once at create */
+        if (ws->persistent_actions && ws->persistent_actions[i]) continue;
         if (count >= RK_MAX_COALESCED_UPLOADS) {
             too_many = 1;
             break;
@@ -1417,6 +1893,8 @@ static int run_upload_run(rk_workspace *ws, uint32_t begin, uint32_t end,
                 const rk_value_desc *v = rk_plan_value(ws->plan,
                                                        a->source_binding);
                 if (v && v->role == RK_ROLE_CONSTANT) continue;
+                if (ws->persistent_actions && ws->persistent_actions[i])
+                    continue;
                 b = find_binding(inputs, ninputs, a->source_binding);
                 if (!b) {
                     rk_diag_set(diag, RK_E_SHAPE, "run",
@@ -1641,12 +2119,29 @@ static int run_repeat(rk_workspace *ws, const rk_binding *inputs,
 static int publication_gate(rk_workspace *ws, rk_run_state *st, rk_diag *diag) {
     double g0 = now_us();
     for (uint32_t slot = 0; slot < ws->nslots; slot++) {
+        /* A slot fully replaced by shared immutable constants was never
+         * allocated.  Its co_buffer is zero-initialised and must not be fed to
+         * the native guard ioctl. */
+        if (!ws->slots[slot].bo.handle) continue;
         int native = co_guard_check(&ws->slots[slot]);
         if (native) {
             st->guard_us += now_us() - g0;
             atomic_store_explicit(&ws->poisoned, 1, memory_order_release);
             rk_diag_set(diag, RK_E_DEVICE, "run",
                         "data BO slack/guard check failed; refusing to publish",
+                        "", UINT32_MAX, native);
+            return RK_E_DEVICE;
+        }
+    }
+    /* Shared packed constants are immutable; checking their guard bytes detects
+     * an out-of-range device write just like an owned slot. */
+    for (uint32_t i = 0; i < ws->nshared_handles; i++) {
+        int native = co_guard_check(&ws->shared_handles[i]->buffer);
+        if (native) {
+            st->guard_us += now_us() - g0;
+            atomic_store_explicit(&ws->poisoned, 1, memory_order_release);
+            rk_diag_set(diag, RK_E_DEVICE, "run",
+                        "shared constant BO guard check failed; refusing to publish",
                         "", UINT32_MAX, native);
             return RK_E_DEVICE;
         }
@@ -1880,6 +2375,238 @@ out:
     return result;
 }
 
+
+/* Acquire the workspace ownership gate for a Host-side state mutation.  These
+ * operations write BOs directly, so they must never overlap a run or destroy. */
+static int state_gate(rk_workspace *ws, rk_diag *diag) {
+    if (!ws) return RK_E_INVALID;
+    if (atomic_exchange_explicit(&ws->busy, 1, memory_order_acq_rel)) {
+        rk_diag_set(diag, RK_E_BUSY, "state",
+                    "workspace is already running or destroying", "",
+                    UINT32_MAX, 0);
+        return RK_E_BUSY;
+    }
+    if (atomic_load_explicit(&ws->poisoned, memory_order_acquire)) {
+        atomic_store_explicit(&ws->busy, 0, memory_order_release);
+        rk_diag_set(diag, RK_E_POISONED, "state",
+                    "workspace is poisoned; state mutation refused", "",
+                    UINT32_MAX, 0);
+        return RK_E_POISONED;
+    }
+    int context_rc = rocket_context_faulted(ws->fd);
+    if (context_rc != 0) {
+        int code = context_rc > 0 ? RK_E_POISONED : RK_E_DEVICE;
+        atomic_store_explicit(&ws->busy, 0, memory_order_release);
+        rk_diag_set(diag, code, "state",
+                    "provider context is quarantined; state mutation refused",
+                    "", UINT32_MAX, context_rc);
+        return code;
+    }
+    return 0;
+}
+
+int rk_workspace_set_persistent_upload(rk_workspace *ws,
+                                       uint32_t action_id,
+                                       rk_diag *diag) {
+    rk_diag_clear(diag);
+    int rc = state_gate(ws, diag);
+    if (rc) return rc;
+    if (!ws->plan || action_id >= ws->plan->nactions) {
+        rc = RK_E_SCHEMA;
+        rk_diag_set(diag, rc, "state", "invalid persistent upload action",
+                    "", action_id, 0);
+        goto out;
+    }
+    const rk_action_desc *a = &ws->plan->actions[action_id];
+    if (a->kind != RK_ACTION_UPLOAD || a->noutputs != 1) {
+        rc = RK_E_SCHEMA;
+        rk_diag_set(diag, rc, "state",
+                    "persistent state requires a single-output upload action",
+                    "", action_id, 0);
+        goto out;
+    }
+    const rk_view_desc *view = rk_plan_view(ws->plan, a->outputs[0]);
+    if (!view || view->buffer_id >= ws->plan->nbuffers) {
+        rc = RK_E_SHAPE;
+        rk_diag_set(diag, rc, "state",
+                    "persistent upload destination view is missing",
+                    "", action_id, 0);
+        goto out;
+    }
+    const rk_buffer_desc *buffer = rk_plan_buffer(ws->plan, view->buffer_id);
+    if (!buffer || (ws->shared_buffers && ws->shared_buffers[view->buffer_id])) {
+        rc = RK_E_UNSUPPORTED;
+        rk_diag_set(diag, rc, "state",
+                    "shared immutable constants cannot be persistent state",
+                    "", action_id, 0);
+        goto out;
+    }
+    const rk_value_desc *value = rk_plan_value(ws->plan, a->source_binding);
+    if (!value) {
+        rc = RK_E_SCHEMA;
+        rk_diag_set(diag, rc, "state",
+                    "persistent upload source binding is missing",
+                    "", action_id, 0);
+        goto out;
+    }
+    if (!ws->persistent_actions) {
+        ws->persistent_actions = calloc(ws->plan->nactions ? ws->plan->nactions : 1u,
+                                        sizeof(*ws->persistent_actions));
+        if (!ws->persistent_actions) {
+            rc = RK_E_NOMEM;
+            rk_diag_set(diag, rc, "state",
+                        "out of memory for persistent-action policy",
+                        "", action_id, 0);
+            goto out;
+        }
+    }
+    ws->persistent_actions[action_id] = 1;
+out:
+    atomic_store_explicit(&ws->busy, 0, memory_order_release);
+    return rc;
+}
+
+int rk_workspace_update_upload_region(rk_workspace *ws, uint32_t action_id,
+                                      const rk_state_source *source,
+                                      uint32_t src_row, uint32_t src_col,
+                                      uint32_t dst_row, uint32_t dst_col,
+                                      uint32_t rows, uint32_t cols,
+                                      rk_diag *diag) {
+    rk_diag_clear(diag);
+    int rc = state_gate(ws, diag);
+    if (rc) return rc;
+    co_view *dst = NULL;
+    int synced = 0;
+    if (!ws->plan || action_id >= ws->plan->nactions ||
+        !ws->persistent_actions || !ws->persistent_actions[action_id]) {
+        rc = RK_E_SCHEMA;
+        rk_diag_set(diag, rc, "state",
+                    "region update requires a persistent upload action",
+                    "", action_id, 0);
+        goto out;
+    }
+    const rk_action_desc *a = &ws->plan->actions[action_id];
+    if (a->kind != RK_ACTION_UPLOAD || a->noutputs != 1 || !source ||
+        !source->data || !source->nbytes || !rows || !cols ||
+        !source->row_stride) {
+        rc = RK_E_SCHEMA;
+        rk_diag_set(diag, rc, "state",
+                    "invalid state source or upload action", "", action_id, 0);
+        goto out;
+    }
+    dst = &ws->views[a->outputs[0]];
+    if (!dst->buffer || !dst->buffer->bo.handle ||
+        (uint32_t)dst_row + rows > dst->tensor.rows ||
+        (uint32_t)dst_col + cols > dst->tensor.cols) {
+        rc = RK_E_SHAPE;
+        rk_diag_set(diag, rc, "state",
+                    "state region is outside the destination tensor",
+                    "", action_id, 0);
+        goto out;
+    }
+    const uint64_t elements = source->nbytes / 2u;
+    /* The action supplies the persistent destination geometry.  The caller
+     * explicitly chooses how its source rectangle maps onto that destination;
+     * this keeps a row-major KV cache usable without first materialising the
+     * action's historical transposed upload layout. */
+    const uint32_t transpose =
+        (source->flags & RK_STATE_SOURCE_TRANSPOSE) != 0;
+    /* Validate the full source rectangle before mutating the BO. */
+    for (uint32_t r = 0; r < rows && !rc; r++) {
+        for (uint32_t c = 0; c < cols; c++) {
+            uint32_t sr = transpose ? src_row + c : src_row + r;
+            uint32_t sc = transpose ? src_col + r : src_col + c;
+            if ((uint64_t)sr * source->row_stride + sc >= elements) {
+                rc = RK_E_SHAPE;
+                rk_diag_set(diag, rc, "state",
+                            "state source region exceeds the supplied buffer",
+                            "", action_id, 0);
+                break;
+            }
+        }
+    }
+    if (rc) goto out;
+    rc = rocket_bo_prep(ws->fd, &dst->buffer->bo, 1, 2000000000ull);
+    if (rc) {
+        rc = fail_native(diag, "state", "rocket_bo_prep(write) failed",
+                         action_id, rc);
+        goto out;
+    }
+    synced = 1;
+    const _Float16 *src = (const _Float16 *)source->data;
+    _Float16 *base = (_Float16 *)((char *)dst->buffer->bo.ptr + dst->offset);
+    for (uint32_t r = 0; r < rows; r++) {
+        for (uint32_t c = 0; c < cols; c++) {
+            uint32_t sr = transpose ? src_row + c : src_row + r;
+            uint32_t sc = transpose ? src_col + r : src_col + c;
+            base[co_index(&dst->tensor, dst_row + r, dst_col + c)] =
+                src[(size_t)sr * source->row_stride + sc];
+        }
+    }
+    rc = rocket_bo_fini(ws->fd, &dst->buffer->bo);
+    if (rc) {
+        synced = 0;
+        rc = fail_native(diag, "state", "rocket_bo_fini failed",
+                         action_id, rc);
+    }
+out:
+    if (synced && rc && dst && dst->buffer)
+        (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+    atomic_store_explicit(&ws->busy, 0, memory_order_release);
+    return rc;
+}
+
+int rk_workspace_clear_upload_destination(rk_workspace *ws,
+                                          uint32_t action_id,
+                                          rk_diag *diag) {
+    rk_diag_clear(diag);
+    int rc = state_gate(ws, diag);
+    if (rc) return rc;
+    co_view *dst = NULL;
+    int synced = 0;
+    if (!ws->plan || action_id >= ws->plan->nactions ||
+        !ws->persistent_actions || !ws->persistent_actions[action_id]) {
+        rc = RK_E_SCHEMA;
+        rk_diag_set(diag, rc, "state",
+                    "clear requires a persistent upload action",
+                    "", action_id, 0);
+        goto out;
+    }
+    const rk_action_desc *a = &ws->plan->actions[action_id];
+    if (a->kind != RK_ACTION_UPLOAD || a->noutputs != 1) {
+        rc = RK_E_SCHEMA;
+        rk_diag_set(diag, rc, "state", "invalid upload action",
+                    "", action_id, 0);
+        goto out;
+    }
+    dst = &ws->views[a->outputs[0]];
+    if (!dst->buffer || !dst->buffer->bo.handle) {
+        rc = RK_E_SHAPE;
+        rk_diag_set(diag, rc, "state", "destination BO missing",
+                    "", action_id, 0);
+        goto out;
+    }
+    rc = rocket_bo_prep(ws->fd, &dst->buffer->bo, 1, 2000000000ull);
+    if (rc) {
+        rc = fail_native(diag, "state", "rocket_bo_prep(write) failed",
+                         action_id, rc);
+        goto out;
+    }
+    synced = 1;
+    memset((char *)dst->buffer->bo.ptr + dst->offset, 0, dst->tensor.bytes);
+    rc = rocket_bo_fini(ws->fd, &dst->buffer->bo);
+    if (rc) {
+        synced = 0;
+        rc = fail_native(diag, "state", "rocket_bo_fini failed",
+                         action_id, rc);
+    }
+out:
+    if (synced && rc && dst && dst->buffer)
+        (void)rocket_bo_fini(ws->fd, &dst->buffer->bo);
+    atomic_store_explicit(&ws->busy, 0, memory_order_release);
+    return rc;
+}
+
 int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag) {
     rk_diag_clear(diag);
     if (!ws) return 0;
@@ -1910,6 +2637,12 @@ int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag) {
     free(ws->emit_index);
     free(ws->prepared_inputs);
     free(ws->prepared_outputs);
+    for (uint32_t i = 0; i < ws->nshared_handles; i++)
+        rk_shared_constant_release(ws->shared_handles[i]);
+    free(ws->shared_handles);
+    free(ws->shared_buffers);
+    free(ws->shared_actions);
+    free(ws->persistent_actions);
     drop_multi_submit_cache(ws);
     drop_command_cache(ws);
     rk_plan_free(ws->plan);

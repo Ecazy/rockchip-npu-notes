@@ -1,0 +1,289 @@
+{
+  "capabilities": [
+    {
+      "alias": "inputs_and_output_distinct_bos",
+      "chain_recipe": "linear_k_acc_v1",
+      "emitter": "co_emit_mm",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.mm.f16.v1",
+      "inputs": [
+        "cube_f16",
+        "weight_f16"
+      ],
+      "numeric": "f16_writeback",
+      "op": "rk.matmul",
+      "output": "cube_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "hardware internal accumulator order not bit-exact"
+      ],
+      "validation_domain": "M/N/K physical tiles <=256; FP16; finite host inputs"
+    },
+    {
+      "alias": "prior_and_output_distinct_bos",
+      "chain_recipe": "linear_k_acc_v1",
+      "emitter": "co_emit_mm_acc",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.mm_acc.f16.v1",
+      "inputs": [
+        "cube_f16",
+        "weight_f16",
+        "cube_f16"
+      ],
+      "numeric": "ordered_k_tiles_with_f16_writeback",
+      "op": "rk.matmul_acc",
+      "output": "cube_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "no fp32-exact accumulation"
+      ],
+      "validation_domain": "one <=256-wide K tile per primitive; prior/output same shape"
+    },
+    {
+      "alias": "output_distinct_bos",
+      "chain_recipe": "gate_ew_v1",
+      "emitter": "co_emit_ew",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.ew_mul.f16.v1",
+      "inputs": [
+        "cube_f16",
+        "cube_f16",
+        "identity_weight_f16"
+      ],
+      "numeric": "f16_ew",
+      "op": "rk.mul",
+      "output": "cube_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "no general broadcasting"
+      ],
+      "validation_domain": "exact same shape/layout only"
+    },
+    {
+      "alias": "output_distinct_bos",
+      "chain_recipe": "gate_ew_v1",
+      "emitter": "co_emit_ew",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.ew_add.f16.v1",
+      "inputs": [
+        "cube_f16",
+        "cube_f16",
+        "identity_weight_f16"
+      ],
+      "numeric": "f16_ew",
+      "op": "rk.add",
+      "output": "cube_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "no general broadcasting"
+      ],
+      "validation_domain": "exact same shape/layout only"
+    },
+    {
+      "alias": "output_distinct_bos",
+      "chain_recipe": "gate_ew_v1",
+      "emitter": "co_emit_ew_max",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.ew_max.f16.v1",
+      "inputs": [
+        "cube_f16",
+        "cube_f16",
+        "identity_weight_f16"
+      ],
+      "numeric": "f16_ew_exact_max",
+      "op": "rk.max",
+      "output": "cube_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "no general broadcasting"
+      ],
+      "validation_domain": "exact same shape/layout only; ReLU uses a zero cube operand"
+    },
+    {
+      "alias": "input_output_distinct_bos",
+      "chain_recipe": "lut_chunked_v1",
+      "emitter": "co_emit_lut",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.lut.sigmoid.f16.v1",
+      "inputs": [
+        "cube_or_linear_f16"
+      ],
+      "numeric": "lut_approx",
+      "op": "rk.sigmoid",
+      "output": "cube_or_linear_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "approx tolerance is recipe-specific"
+      ],
+      "validation_domain": "physical_elements/8 < 8191; one chunk <=32768"
+    },
+    {
+      "alias": "input_output_distinct_bos",
+      "chain_recipe": "lut_chunked_v1",
+      "emitter": "co_emit_lut",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.lut.hardsigmoid.f16.v1",
+      "inputs": [
+        "cube_or_linear_f16"
+      ],
+      "numeric": "lut_approx",
+      "op": "rk.hardsigmoid",
+      "output": "cube_or_linear_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "approx tolerance is recipe-specific"
+      ],
+      "validation_domain": "physical_elements/8 < 8191; one chunk <=32768"
+    },
+    {
+      "alias": "input_output_distinct_bos",
+      "chain_recipe": "gate_ew_v1",
+      "emitter": "co_emit_lut",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.lut.gelu_gate.f16.v1",
+      "inputs": [
+        "cube_or_linear_f16"
+      ],
+      "numeric": "lut_approx",
+      "op": "rk.gelu_gate",
+      "output": "cube_or_linear_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "approx tolerance is recipe-specific"
+      ],
+      "validation_domain": "physical_elements/8 < 8191; one chunk <=32768"
+    },
+    {
+      "alias": "input_output_distinct_bos",
+      "chain_recipe": "none",
+      "emitter": "co_emit_scale_native",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.scale_native.f16.v1",
+      "inputs": [
+        "cube_f16"
+      ],
+      "numeric": "f16_scale",
+      "op": "rk.scale_native",
+      "output": "cube_f16",
+      "status": "experimental",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "not a default broadcast lowering"
+      ],
+      "validation_domain": "specific experimental shapes only"
+    },
+    {
+      "alias": "every_stage_device_distinct_bos",
+      "chain_recipe": "swiglu_ffn_v1",
+      "emitter": "composite:co_emit_mm+co_emit_lut+co_emit_ew",
+      "evidence": "research/custom-ops/tests/c/graph_host_test.c",
+      "id": "co.swiglu_ffn.f16.v1",
+      "inputs": [
+        "cube_f16",
+        "weight_f16",
+        "weight_f16",
+        "weight_f16",
+        "identity_f16"
+      ],
+      "numeric": "f16_tiled_k_acc_plus_lut_gate",
+      "op": "rk.swiglu_ffn",
+      "output": "cube_f16",
+      "status": "experimental",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "no composed numeric execution test yet (Host mock covers mm/EW-add only)",
+        "no TileLang frontend path: the RKIR graph is built by the debug builder",
+        "single primitive tile per stage only",
+        "LUT approximation tolerance is recipe-specific"
+      ],
+      "validation_domain": "single primitive tile per stage: M<=256, d<=256, h<=256"
+    },
+    {
+      "alias": "output_distinct_bos",
+      "chain_recipe": "linear_epilogue_v1",
+      "emitter": "co_emit_ew_add_relu",
+      "evidence": "results/20261028T075310Z-add-relu-primitive/",
+      "id": "co.ew_add_relu.f16.v1",
+      "inputs": [
+        "cube_f16",
+        "cube_f16",
+        "identity_weight_f16"
+      ],
+      "numeric": "f16_ew_add_then_ew_relu_before_out_cvt",
+      "op": "rk.add_relu",
+      "output": "cube_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "NaN/Inf are outside the default finite-input numeric policy; the hardware probe reports them separately",
+        "signed zero is probed bitwise but not claimed as a general IEEE contract"
+      ],
+      "validation_domain": "exact add->relu; same cube shape/layout; M>=12, M%4, physical extent <=256; finite FP16; add intermediate has no other consumer and is not exported"
+    },
+    {
+      "alias": "input_output_distinct_bos",
+      "chain_recipe": "lut_chunked_v1",
+      "emitter": "co_emit_lut",
+      "evidence": "docs/CAPABILITIES.md#3",
+      "id": "co.lut.rsqrt.f16.v1",
+      "inputs": [
+        "cube_or_linear_f16"
+      ],
+      "numeric": "lut_approx",
+      "op": "rk.rsqrt",
+      "output": "cube_or_linear_f16",
+      "status": "enabled",
+      "target_profile": "rk3588_vendor_co_v1",
+      "uncovered_risks": [
+        "independent operator acceptance covers the declared in-domain range; out-of-domain values are outside the contract"
+      ],
+      "validation_domain": "scaled input [0.125,6.32]; original mean-square at scale=0.75 is [0.1667,8.43]; Tiny ViT calibrated subrange [0.17,6.10]"
+    }
+  ],
+  "profile": {
+    "capability_manifest_hash": "855d1102f21fa70e33fa511103eecd461c55eca5e04b6c3f986f064cc3a3a662",
+    "chip_id": "rk3588",
+    "custom_ops_source_hash": "6513279a1158c3eeb6e63560b89cc1b5c80d557950f9b28a129754c214540410",
+    "device_budget": 268435456,
+    "driver_abi_id": "rockchip-rknpu-0.9.8",
+    "execution_policy": [
+      "synchronous",
+      "single_core_per_submit"
+    ],
+    "fallback_policy": "error",
+    "generator_source_hash": "e0b8a48383bd6249d766aa0f280f64d09071b2c36a763fa69cc9260bd3c03100",
+    "host_budget": 268435456,
+    "max_programs_per_submit": 64,
+    "max_words_per_program": 2048,
+    "numeric_policy": "rk_f16_tiled_or_strict",
+    "primitive_extent_limit": 256,
+    "runtime_abi_id": "rk-plan-v1",
+    "schema_version": 1,
+    "template_versions": [
+      "co.mm.f16.v1",
+      "co.mm_acc.f16.v1",
+      "co.ew_add.f16.v1",
+      "co.ew_mul.f16.v1",
+      "co.ew_max.f16.v1",
+      "co.lut.sigmoid.f16.v1",
+      "co.lut.hardsigmoid.f16.v1",
+      "co.lut.gelu_gate.f16.v1",
+      "co.ew_add_relu.f16.v1",
+      "co.lut.rsqrt.f16.v1"
+    ],
+    "tensor_layout_versions": [
+      "co.cube.f16.v1",
+      "co.weight.f16.v1",
+      "co.linear.f16.v1"
+    ]
+  },
+  "schema_version": 1
+}

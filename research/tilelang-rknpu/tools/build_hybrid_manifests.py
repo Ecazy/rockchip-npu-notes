@@ -18,6 +18,7 @@ import numpy as np
 from rknpu_backend import load_plan
 
 ROOT = Path(__file__).resolve().parents[1]
+_PLANS_DIR = ROOT / "models" / "compiled"
 HYBRID_SCHEMA_VERSION = 1
 
 
@@ -136,7 +137,7 @@ def mlp_manifest(batch: int, compiled: dict, weights: dict,
         tensor("logits_padded", "float16", (m, 16), ("batch", "padded_class")),
         tensor("logits", "float32", (m, 10), ("batch", "class")),
     ]
-    plan = load_plan(str((ROOT / "models" / "compiled" /
+    plan = load_plan(str((_PLANS_DIR /
                          compiled["plans"][f"mnist_mlp_b{batch}"]["path"])))
     constants = weight_constants(plan, {
         "W1": {"kind": "weight_repeat_pad", "name": "W1",
@@ -204,13 +205,19 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                  weights_sha: str, profile_hash: str, *,
                  ffn_mode: str = "packed",
                  rmsnorm_mode: str = "host",
-                 attn_layout: str = "materialized") -> dict:
-    if ffn_mode not in {"device", "packed", "host"}:
+                 attn_layout: str = "materialized",
+                 residual_add_mode: str = "host") -> dict:
+    if ffn_mode not in {"device", "device_fused", "packed", "host"}:
         raise SystemExit(f"unknown FFN mode {ffn_mode!r}")
-    if rmsnorm_mode not in {"host", "fused"}:
+    if rmsnorm_mode not in {"host", "fused", "device_approx"}:
         raise SystemExit(f"unknown RMSNorm mode {rmsnorm_mode!r}")
     if attn_layout not in {"materialized", "qkv"}:
         raise SystemExit(f"unknown attention input layout {attn_layout!r}")
+    if residual_add_mode not in {"host", "device"}:
+        raise SystemExit(f"unknown residual-add mode {residual_add_mode!r}")
+    if residual_add_mode == "device" and ffn_mode != "packed":
+        raise SystemExit("device residual-add manifests currently require the "
+                         "packed FFN control")
     b, t, d, h, hd = batch, 16, 64, 4, 16
     m = b * t
     tensors = [
@@ -243,31 +250,52 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
     if ffn_mode == "packed":
         tensors.insert(16, tensor("gate_up", "float16", (m, 256),
                                   ("batch_token", "gate_up")))
-    patch_plan = load_plan(str(ROOT / "models" / "compiled" /
+    patch_plan = load_plan(str(_PLANS_DIR /
                                compiled["plans"][f"tiny_vit_b{batch}_patch"]["path"]))
-    qkv_plan = load_plan(str(ROOT / "models" / "compiled" /
+    qkv_plan = load_plan(str(_PLANS_DIR /
                              compiled["plans"][f"tiny_vit_b{batch}_qkv"]["path"]))
-    attn_plan = load_plan(str(ROOT / "models" / "compiled" /
+    attn_plan = load_plan(str(_PLANS_DIR /
                               compiled["plans"][f"tiny_vit_b{batch}_attn_out"]["path"]))
-    ffn_plan = load_plan(str(ROOT / "models" / "compiled" /
-                             compiled["plans"][f"tiny_vit_b{batch}_ffn"]["path"]))
+    ffn_plan_key = (f"tiny_vit_b{batch}_ffn_fused"
+                    if ffn_mode == "device_fused"
+                    else f"tiny_vit_b{batch}_ffn")
+    ffn_plan = load_plan(str(_PLANS_DIR /
+                             compiled["plans"][ffn_plan_key]["path"]))
     ffn_trace_plan = load_plan(
-        str(ROOT / "models" / "compiled" /
+        str(_PLANS_DIR /
             compiled["plans"][f"tiny_vit_b{batch}_ffn_trace"]["path"]))
     if ffn_mode in {"host", "packed"}:
         gate_up_plan = load_plan(
-            str(ROOT / "models" / "compiled" /
+            str(_PLANS_DIR /
                 compiled["plans"][f"tiny_vit_b{batch}_gate_up"]["path"]))
-        down_plan = load_plan(str(ROOT / "models" / "compiled" /
+        down_plan = load_plan(str(_PLANS_DIR /
                                   compiled["plans"][f"tiny_vit_b{batch}_down"]["path"]))
     if ffn_mode == "host":
-        gate_plan = load_plan(str(ROOT / "models" / "compiled" /
+        gate_plan = load_plan(str(_PLANS_DIR /
                                   compiled["plans"][f"tiny_vit_b{batch}_gate"]["path"]))
-        up_plan = load_plan(str(ROOT / "models" / "compiled" /
+        up_plan = load_plan(str(_PLANS_DIR /
                                 compiled["plans"][f"tiny_vit_b{batch}_up"]["path"]))
-    cls_plan = load_plan(str(ROOT / "models" / "compiled" /
+    attn_out_add_plan = None
+    down_add_plan = None
+    if residual_add_mode == "device":
+        attn_out_add_plan = load_plan(
+            str(_PLANS_DIR /
+                compiled["plans"][f"tiny_vit_b{batch}_attn_out_add"]["path"]))
+        down_add_plan = load_plan(
+            str(_PLANS_DIR /
+                compiled["plans"][f"tiny_vit_b{batch}_down_add"]["path"]))
+    rmsnorm_approx_plan = None
+    rmsnorm_approx_plan2 = None
+    if rmsnorm_mode == "device_approx":
+        rmsnorm_approx_plan = load_plan(
+            str(_PLANS_DIR /
+                compiled["plans"][f"tiny_vit_b{batch}_rmsnorm1_approx"]["path"]))
+        rmsnorm_approx_plan2 = load_plan(
+            str(_PLANS_DIR /
+                compiled["plans"][f"tiny_vit_b{batch}_rmsnorm2_approx"]["path"]))
+    cls_plan = load_plan(str(_PLANS_DIR /
                              compiled["plans"][f"tiny_vit_b{batch}_classifier"]["path"]))
-    dyn_plan = load_plan(str(ROOT / "models" / "compiled" /
+    dyn_plan = load_plan(str(_PLANS_DIR /
                              compiled["plans"][f"tiny_vit_b{batch}_qk"]["path"]))
     plans = {
         "patch": plan_entry(compiled, f"tiny_vit_b{batch}_patch"),
@@ -290,9 +318,9 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
             "attn_pv_qkv_group": plan_entry(
                 compiled, f"tiny_vit_b{batch}_pv_qkv_group"),
         })
-    if ffn_mode == "device":
+    if ffn_mode in {"device", "device_fused"}:
         plans.update({
-            "ffn": plan_entry(compiled, f"tiny_vit_b{batch}_ffn"),
+            "ffn": plan_entry(compiled, ffn_plan_key),
             "ffn_trace": plan_entry(compiled, f"tiny_vit_b{batch}_ffn_trace"),
         })
     elif ffn_mode == "packed":
@@ -306,6 +334,18 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
             "up": plan_entry(compiled, f"tiny_vit_b{batch}_up"),
             "down": plan_entry(compiled, f"tiny_vit_b{batch}_down"),
         })
+    if residual_add_mode == "device":
+        plans.update({
+            "attn_out_add": plan_entry(
+                compiled, f"tiny_vit_b{batch}_attn_out_add"),
+            "down_add": plan_entry(
+                compiled, f"tiny_vit_b{batch}_down_add"),
+        })
+    if rmsnorm_mode == "device_approx":
+        plans["rmsnorm1_approx"] = plan_entry(
+            compiled, f"tiny_vit_b{batch}_rmsnorm1_approx")
+        plans["rmsnorm2_approx"] = plan_entry(
+            compiled, f"tiny_vit_b{batch}_rmsnorm2_approx")
     plan_numeric = {
         "storage": "float16", "accumulation": "float32_single_tile",
         "writeback": "float16_after_gemm",
@@ -331,6 +371,27 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         "writeback": "float16",
         "semantics": "float32_reduction_then_one_float16_store",
     }
+    lut_scale = 0.75
+    approx_norm = {
+        "storage": "float16", "accumulation": "device_f16_staged",
+        "writeback": "float16_after_each_stage",
+        "semantics": ("device_square_fp16_row_sum_mean_eps_scaled_bounded_"
+                      "rsqrt_lut_gamma_expand_mul;"
+                      f"lut_scale={lut_scale};lut_table_domain=[0.125,6.32];"
+                      "validated_original_mean_square=[0.17,6.10];"
+                      f"gamma_scale={float(np.sqrt(lut_scale))}"),
+    }
+    rmsnorm_constants = None
+    if rmsnorm_mode == "device_approx":
+        rmsnorm_constants = weight_constants(rmsnorm_approx_plan, {
+            "Ones": {"kind": "fill", "value": 1.0},
+            "InvD": {"kind": "fill", "value": lut_scale / d},
+            "Eps": {"kind": "fill", "value": lut_scale * 1e-6},
+            "GammaW": {"kind": "weight_repeat_pad",
+                       "name": "norm1_gamma", "reshape": [d, 1],
+                       "scale": float(np.sqrt(lut_scale))},
+        })
+    # GammaW is bound separately for norm1/norm2 below.
     ffn_weights = {
         "Wg": {"kind": "weight", "name": "ffn_gate_w"},
         "Wu": {"kind": "weight", "name": "ffn_up_w"},
@@ -342,7 +403,7 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                   else "rmsnorm2")
     h1_node = ("residual_rmsnorm2" if rmsnorm_mode == "fused"
                else "residual_attention")
-    if ffn_mode == "device":
+    if ffn_mode in {"device", "device_fused"}:
         # One device-resident FFN plan: gate/up -> SiLU -> gated product ->
         # down -> residual.  The old gate/up/down plans remain on disk as
         # diagnostics, but the measured graph has one device boundary.
@@ -415,6 +476,33 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                       depends_nodes=[h1_node, "down"],
                       numeric=host_norm),
         ]
+    if residual_add_mode == "device":
+        # Replace the packed-path down + Host residual with one device plan
+        # that consumes the gated activation and the attention residual.  The
+        # Host h1 value is still the declared FP16 residual input; the add and
+        # its writeback happen on the NPU inside one Submit.
+        gate_up_node, swiglu_node = ffn_nodes[0], ffn_nodes[1]
+        down_add_constants = weight_constants(down_add_plan, {
+            "B": {"kind": "weight", "name": "ffn_down_w"}})
+        ffn_nodes = [
+            gate_up_node,
+            swiglu_node,
+            plan_node("down_add", "down_add",
+                      {"A": ref("act"), "R": ref("h1")},
+                      {"Y": ref("h2")}, down_add_constants,
+                      deps=["swiglu", "attn_out_add"], numeric=plan_numeric),
+        ]
+        h1_node = "attn_out_add"
+        if rmsnorm_mode == "fused":
+            raise SystemExit("device residual-add variant does not support "
+                             "fused residual+rmsnorm")
+        norm2_nodes = [
+            host_node("rmsnorm2", "rmsnorm.last_axis.v1",
+                      {"x": ref("h1"), "gamma": ref("norm2_gamma")},
+                      {"y": ref("norm2")},
+                      depends_nodes=["attn_out_add"],
+                      attrs={"eps": 1e-6}, numeric=host_norm),
+        ]
     if rmsnorm_mode == "fused":
         # The residual sum is still narrowed to FP16 before RMSNorm reads it;
         # only the Host action boundary is removed.  h1 remains exported for the
@@ -429,7 +517,24 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                       depends_nodes=["position_add", "attn_out"],
                       attrs={"eps": 1e-6}, numeric=host_norm),
         ]
-    else:
+    elif rmsnorm_mode == "device_approx":
+        norm2_constants = dict(rmsnorm_constants)
+        norm2_constants["GammaW"] = {
+            "kind": "weight_repeat_pad", "name": "norm2_gamma",
+            "reshape": [d, 1], "scale": float(np.sqrt(lut_scale))}
+        norm2_nodes = [
+            host_node("residual_attention", "tensor.add.v1",
+                      {"a": ref("positioned"),
+                       "b": ref("attn_projection")},
+                      {"y": ref("h1")},
+                      depends_nodes=["position_add", "attn_out"],
+                      numeric=host_norm),
+            plan_node("rmsnorm2", "rmsnorm2_approx",
+                      {"X": ref("h1")}, {"Y": ref("norm2")},
+                      norm2_constants, deps=["residual_attention"],
+                      numeric=approx_norm),
+        ]
+    elif residual_add_mode != "device":
         norm2_nodes = [
             host_node("residual_attention", "tensor.add.v1",
                       {"a": ref("positioned"),
@@ -443,6 +548,36 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                       depends_nodes=["residual_attention"],
                       attrs={"eps": 1e-6}, numeric=host_norm),
         ]
+    attn_out_trace_node = None
+    down_trace_node = None
+    if residual_add_mode == "device":
+        attn_out_node = plan_node(
+            "attn_out_add", "attn_out_add",
+            {"A": ref("attn_merged"), "R": ref("positioned")},
+            {"Y": ref("h1")},
+            weight_constants(attn_out_add_plan, {
+                "B": {"kind": "weight", "name": "attn_out_w"}}),
+            deps=["merge_heads", "position_add"], numeric=plan_numeric)
+        # Capture-only probes keep the frozen layer traces without adding a
+        # device round trip to the measured production path.
+        attn_out_trace_node = plan_node(
+            "attn_out_trace", "attn_out", {"A": ref("attn_merged")},
+            {"Y": ref("attn_projection")},
+            weight_constants(attn_plan, {
+                "B": {"kind": "weight", "name": "attn_out_w"}}),
+            deps=["merge_heads"], numeric=plan_numeric, capture_only=True)
+        down_trace_node = plan_node(
+            "down_trace", "down", {"A": ref("act")}, {"Y": ref("ffn")},
+            weight_constants(down_plan, {
+                "B": {"kind": "weight", "name": "ffn_down_w"}}),
+            deps=["swiglu"], numeric=plan_numeric, capture_only=True)
+    else:
+        attn_out_node = plan_node(
+            "attn_out", "attn_out", {"A": ref("attn_merged")},
+            {"Y": ref("attn_projection")},
+            weight_constants(attn_plan, {
+                "B": {"kind": "weight", "name": "attn_out_w"}}),
+            deps=["merge_heads"], numeric=plan_numeric)
     repeat_attn = [
         {"name": "bi", "extent": b, "axis": "batch"},
         {"name": "hi", "extent": h, "axis": "head"},
@@ -563,10 +698,18 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                   {"x": ref("patch_projection"), "pos": ref("pos")},
                   {"y": ref("positioned")}, depends_nodes=["patch"],
                   attrs={"batch": b, "tokens": t}, numeric=host_norm),
-        host_node("rmsnorm1", "rmsnorm.last_axis.v1",
-                  {"x": ref("positioned"), "gamma": ref("norm1_gamma")},
-                  {"y": ref("norm1")}, depends_nodes=["position_add"],
-                  attrs={"eps": 1e-6}, numeric=host_norm),
+        (plan_node("rmsnorm1", "rmsnorm1_approx",
+                   {"X": ref("positioned")}, {"Y": ref("norm1")},
+                   dict(rmsnorm_constants, GammaW={
+                       "kind": "weight_repeat_pad", "name": "norm1_gamma",
+                       "reshape": [d, 1],
+                       "scale": float(np.sqrt(lut_scale))}),
+                   deps=["position_add"], numeric=approx_norm)
+         if rmsnorm_mode == "device_approx" else
+         host_node("rmsnorm1", "rmsnorm.last_axis.v1",
+                   {"x": ref("positioned"), "gamma": ref("norm1_gamma")},
+                   {"y": ref("norm1")}, depends_nodes=["position_add"],
+                   attrs={"eps": 1e-6}, numeric=host_norm)),
         plan_node("qkv", "qkv", {"A": ref("norm1")}, {"Y": ref("qkv")},
                   weight_constants(qkv_plan, {
                       "B": {"kind": "weight", "name": "qkv_w"}}),
@@ -586,17 +729,16 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
                   depends_nodes=["pv"],
                   attrs={"batch": b, "tokens": t, "heads": h,
                          "head_dim": hd}, numeric=layout_numeric),
-        plan_node("attn_out", "attn_out", {"A": ref("attn_merged")},
-                  {"Y": ref("attn_projection")},
-                  weight_constants(attn_plan, {
-                      "B": {"kind": "weight", "name": "attn_out_w"}}),
-                  deps=["merge_heads"], numeric=plan_numeric),
+        attn_out_node,
+        *((attn_out_trace_node,) if attn_out_trace_node is not None else ()),
         *norm2_nodes,
         *ffn_nodes,
+        *((down_trace_node,) if down_trace_node is not None else ()),
         host_node("reshape_tokens", "tensor.reshape.v1",
                   {"x": ref("h2")}, {"y": ref("h2_tokens")},
-                  depends_nodes=["ffn" if ffn_mode == "device"
-                                 else "residual_ffn"],
+                  depends_nodes=(["down_add"] if residual_add_mode == "device"
+                                 else ["ffn" if ffn_mode in {"device", "device_fused"}
+                                       else "residual_ffn"]),
                   attrs={"shape": [b, t, d]}, numeric=layout_numeric),
         host_node("mean_pool", "tensor.mean_axis.v1",
                   {"x": ref("h2_tokens")}, {"y": ref("pooled")},
@@ -633,19 +775,29 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
         "norm2", "gate", "up", "act", "ffn", "h2", "h2_tokens", "pooled",
         "logits_padded", "logits",
     ]
+    if residual_add_mode == "device":
+        model_name = f"tiny_vit_b{batch}_addfused"
+    else:
+        model_name = (
+            f"tiny_vit_b{batch}" if
+            (ffn_mode == "packed" and rmsnorm_mode == "host" and
+             attn_layout == "qkv") else
+            (f"tiny_vit_b{batch}_splitheads" if
+             (ffn_mode == "packed" and rmsnorm_mode == "host" and
+              attn_layout == "materialized") else
+             (f"tiny_vit_b{batch}_rmsnorm_approx"
+              if (ffn_mode == "packed" and rmsnorm_mode == "device_approx")
+              else
+              (f"tiny_vit_b{batch}_rmsnorm" if
+               (ffn_mode == "packed" and rmsnorm_mode == "fused") else
+              (f"tiny_vit_b{batch}_deviceffn_fused"
+               if ffn_mode == "device_fused" else
+                (f"tiny_vit_b{batch}_deviceffn" if ffn_mode == "device"
+                 else f"tiny_vit_b{batch}_hostffn"))))))
     exec_policy, bridge_policy = policy()
     return {
         "schema_version": HYBRID_SCHEMA_VERSION, "kind": "rkhybrid",
-        "name": (f"tiny_vit_b{batch}" if
-                 (ffn_mode == "packed" and rmsnorm_mode == "host" and
-                  attn_layout == "qkv") else
-                 (f"tiny_vit_b{batch}_splitheads" if
-                  (ffn_mode == "packed" and rmsnorm_mode == "host" and
-                   attn_layout == "materialized") else
-                  (f"tiny_vit_b{batch}_rmsnorm" if
-                   (ffn_mode == "packed" and rmsnorm_mode == "fused") else
-                   (f"tiny_vit_b{batch}_deviceffn" if ffn_mode == "device"
-                    else f"tiny_vit_b{batch}_hostffn")))),
+        "name": model_name,
         "model": "tiny_vit", "batch": batch,
         "profile_hash": profile_hash,
         "execution_policy": exec_policy, "bridge_policy": bridge_policy,
@@ -660,6 +812,7 @@ def vit_manifest(batch: int, compiled: dict, weights: dict,
 
 
 def main() -> int:
+    global _PLANS_DIR
     ap = argparse.ArgumentParser()
     ap.add_argument("--plans-dir", default=str(ROOT / "models" / "compiled"))
     ap.add_argument("--weights-dir", default=str(ROOT / "models"))
@@ -672,6 +825,7 @@ def main() -> int:
                          "independent-policy candidate; off by default")
     args = ap.parse_args()
     plans_dir = Path(args.plans_dir).resolve()
+    _PLANS_DIR = plans_dir
     weights_dir = Path(args.weights_dir).resolve()
     compiled_path = plans_dir / "manifest.json"
     compiled = json.loads(compiled_path.read_text())
@@ -698,13 +852,29 @@ def main() -> int:
                 ("packed", "qkv", ""),
                 ("packed", "materialized", "_splitheads"),
                 ("device", "materialized", "_deviceffn"),
-                ("host", "materialized", "_hostffn")):
-            key = f"tiny_vit_b{batch}{suffix}"
-            path = plans_dir / f"{key}.rkhybrid.json"
+                ("device_fused", "materialized", "_deviceffn_fused"),
+                ("host", "materialized", "_hostffn"),
+                ("packed", "materialized", "_addfused"),
+                ("packed", "materialized", "_rmsnorm_approx")):
+            if suffix == "_rmsnorm_approx" and (
+                    f"tiny_vit_b{batch}_rmsnorm1_approx"
+                    not in compiled["plans"] or
+                    f"tiny_vit_b{batch}_rmsnorm2_approx"
+                    not in compiled["plans"]):
+                continue
             data = vit_manifest(batch, compiled, weights["tiny_vit"],
                                 weights_sha["tiny_vit"],
                                 compiled["profile_hash"], ffn_mode=mode,
-                                attn_layout=attn)
+                                attn_layout=attn,
+                                residual_add_mode=(
+                                    "device" if suffix == "_addfused"
+                                    else "host"),
+                                rmsnorm_mode=(
+                                    "device_approx"
+                                    if suffix == "_rmsnorm_approx"
+                                    else "host"))
+            key = str(data["name"])
+            path = plans_dir / f"{key}.rkhybrid.json"
             path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
             written[key] = {"path": path.name, "model": "tiny_vit",
                             "batch": batch, "ffn_mode": mode,

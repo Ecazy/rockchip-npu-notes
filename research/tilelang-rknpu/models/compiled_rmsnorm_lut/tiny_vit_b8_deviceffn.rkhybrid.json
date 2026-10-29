@@ -1,0 +1,1394 @@
+{
+  "batch": 8,
+  "bridge_policy": {
+    "final_output": "host_materialized",
+    "host_action": "sum_resolved_input_output_tensor_bytes",
+    "npu_fallback": "forbidden",
+    "rkplan": "C_RKRunReport_upload_plus_download_bytes"
+  },
+  "execution_policy": {
+    "dynamic_shapes": "forbidden",
+    "host_actions_version": 1,
+    "host_fallback": "forbidden",
+    "mode": "explicit_hybrid",
+    "npu_fallback": "forbidden",
+    "plan_reuse": "per_plan_workspace",
+    "unknown_action": "reject"
+  },
+  "host_constants": {
+    "norm1_gamma": {
+      "axes": [
+        "d"
+      ],
+      "dtype": "float16",
+      "shape": [
+        64
+      ],
+      "weight": "norm1_gamma"
+    },
+    "norm2_gamma": {
+      "axes": [
+        "d"
+      ],
+      "dtype": "float16",
+      "shape": [
+        64
+      ],
+      "weight": "norm2_gamma"
+    },
+    "pos": {
+      "axes": [
+        "token",
+        "d"
+      ],
+      "dtype": "float16",
+      "shape": [
+        16,
+        64
+      ],
+      "weight": "pos"
+    }
+  },
+  "input": {
+    "axes": [
+      "batch",
+      "row",
+      "col"
+    ],
+    "dtype": "uint8",
+    "name": "raw",
+    "shape": [
+      8,
+      28,
+      28
+    ]
+  },
+  "kind": "rkhybrid",
+  "model": "tiny_vit",
+  "name": "tiny_vit_b8_deviceffn",
+  "nodes": [
+    {
+      "action": "mnist.patchify_norm.v1",
+      "action_version": 1,
+      "attrs": {},
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [],
+      "id": "patchify",
+      "inputs": {
+        "raw": {
+          "tensor": "raw"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "float32",
+        "semantics": "normalize_then_7x7_raster_patchify_float16",
+        "storage": "float16",
+        "writeback": "float16"
+      },
+      "outputs": {
+        "patches": {
+          "tensor": "patches"
+        }
+      },
+      "phase": "preprocess",
+      "repeat": []
+    },
+    {
+      "action": "tensor.pad_2d.v1",
+      "action_version": 1,
+      "attrs": {
+        "copy_shape": [
+          128,
+          49
+        ],
+        "input_shape": [
+          128,
+          49
+        ],
+        "output_shape": [
+          128,
+          64
+        ]
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "patchify"
+      ],
+      "id": "patch_pad",
+      "inputs": {
+        "x": {
+          "tensor": "patches"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "none",
+        "semantics": "flatten_tokens_and_pad_49_to_64",
+        "storage": "float16",
+        "writeback": "zero_pad_top_left"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "patch_flat"
+        }
+      },
+      "phase": "preprocess",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "constants": {
+        "B": {
+          "kind": "weight_repeat_pad",
+          "name": "patch_w",
+          "reshape": [
+            49,
+            64
+          ]
+        }
+      },
+      "depends_on": [
+        "patch_pad"
+      ],
+      "id": "patch",
+      "inputs": {
+        "A": {
+          "tensor": "patch_flat"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "float32_single_tile",
+        "semantics": "real_tilelang_one_tile_matmul_fp32_accumulate_one_fp16_writeback",
+        "storage": "float16",
+        "writeback": "float16_after_gemm"
+      },
+      "outputs": {
+        "Y": {
+          "tensor": "patch_projection"
+        }
+      },
+      "phase": "execution",
+      "plan": "patch",
+      "repeat": []
+    },
+    {
+      "action": "tiny_vit.position_add.v1",
+      "action_version": 1,
+      "attrs": {
+        "batch": 8,
+        "tokens": 16
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "patch"
+      ],
+      "id": "position_add",
+      "inputs": {
+        "pos": {
+          "tensor": "pos"
+        },
+        "x": {
+          "tensor": "patch_projection"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "float32",
+        "semantics": "float32_reduction_then_one_float16_store",
+        "storage": "float16",
+        "writeback": "float16"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "positioned"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "action": "rmsnorm.last_axis.v1",
+      "action_version": 1,
+      "attrs": {
+        "eps": 1e-06
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "position_add"
+      ],
+      "id": "rmsnorm1",
+      "inputs": {
+        "gamma": {
+          "tensor": "norm1_gamma"
+        },
+        "x": {
+          "tensor": "positioned"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "float32",
+        "semantics": "float32_reduction_then_one_float16_store",
+        "storage": "float16",
+        "writeback": "float16"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "norm1"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "constants": {
+        "B": {
+          "kind": "weight",
+          "name": "qkv_w"
+        }
+      },
+      "depends_on": [
+        "rmsnorm1"
+      ],
+      "id": "qkv",
+      "inputs": {
+        "A": {
+          "tensor": "norm1"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "float32_single_tile",
+        "semantics": "real_tilelang_one_tile_matmul_fp32_accumulate_one_fp16_writeback",
+        "storage": "float16",
+        "writeback": "float16_after_gemm"
+      },
+      "outputs": {
+        "Y": {
+          "tensor": "qkv"
+        }
+      },
+      "phase": "execution",
+      "plan": "qkv",
+      "repeat": []
+    },
+    {
+      "action": "tiny_vit.qkv_split_heads.v1",
+      "action_version": 1,
+      "attrs": {
+        "batch": 8,
+        "head_dim": 16,
+        "heads": 4,
+        "tokens": 16
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "qkv"
+      ],
+      "id": "split_heads",
+      "inputs": {
+        "qkv": {
+          "tensor": "qkv"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "none",
+        "semantics": "explicit_static_axis_transform",
+        "storage": "float16",
+        "writeback": "layout_preserving"
+      },
+      "outputs": {
+        "k_t": {
+          "tensor": "k_t_heads"
+        },
+        "q": {
+          "tensor": "q_heads"
+        },
+        "v": {
+          "tensor": "v_heads"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "constants": {},
+      "depends_on": [
+        "split_heads"
+      ],
+      "group_plan": "attn_matmul_group",
+      "id": "qk",
+      "inputs": {
+        "A": {
+          "index": [
+            "bi",
+            "hi"
+          ],
+          "tensor": "q_heads"
+        },
+        "B": {
+          "index": [
+            "bi",
+            "hi"
+          ],
+          "tensor": "k_t_heads"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "float32_single_tile",
+        "dynamic_b": true,
+        "semantics": "real_tilelang_16x16_dynamic_b_matmul_reused_across_batch_heads",
+        "storage": "float16",
+        "writeback": "float16_after_gemm"
+      },
+      "outputs": {
+        "Y": {
+          "index": [
+            "bi",
+            "hi"
+          ],
+          "tensor": "scores_heads"
+        }
+      },
+      "phase": "execution",
+      "plan": "attn_matmul",
+      "repeat": [
+        {
+          "axis": "batch",
+          "extent": 8,
+          "name": "bi"
+        },
+        {
+          "axis": "head",
+          "extent": 4,
+          "name": "hi"
+        }
+      ],
+      "repeat_submit": "shared_group"
+    },
+    {
+      "action": "attention.scaled_softmax.v1",
+      "action_version": 1,
+      "attrs": {
+        "axis": -1,
+        "scale": 0.25
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "qk"
+      ],
+      "id": "softmax",
+      "inputs": {
+        "scores": {
+          "tensor": "scores_heads"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "float32",
+        "scale": 0.25,
+        "semantics": "stable_max_subtract_exp_normalize_float32_then_float16",
+        "storage": "float16",
+        "writeback": "float16"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "probs_heads"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "constants": {},
+      "depends_on": [
+        "softmax",
+        "split_heads"
+      ],
+      "group_plan": "attn_matmul_group",
+      "id": "pv",
+      "inputs": {
+        "A": {
+          "index": [
+            "bi",
+            "hi"
+          ],
+          "tensor": "probs_heads"
+        },
+        "B": {
+          "index": [
+            "bi",
+            "hi"
+          ],
+          "tensor": "v_heads"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "float32_single_tile",
+        "dynamic_b": true,
+        "semantics": "real_tilelang_16x16_dynamic_b_matmul_reused_across_batch_heads",
+        "storage": "float16",
+        "writeback": "float16_after_gemm"
+      },
+      "outputs": {
+        "Y": {
+          "index": [
+            "bi",
+            "hi"
+          ],
+          "tensor": "attn_heads"
+        }
+      },
+      "phase": "execution",
+      "plan": "attn_matmul",
+      "repeat": [
+        {
+          "axis": "batch",
+          "extent": 8,
+          "name": "bi"
+        },
+        {
+          "axis": "head",
+          "extent": 4,
+          "name": "hi"
+        }
+      ],
+      "repeat_submit": "shared_group"
+    },
+    {
+      "action": "tiny_vit.merge_heads.v1",
+      "action_version": 1,
+      "attrs": {
+        "batch": 8,
+        "head_dim": 16,
+        "heads": 4,
+        "tokens": 16
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "pv"
+      ],
+      "id": "merge_heads",
+      "inputs": {
+        "heads": {
+          "tensor": "attn_heads"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "none",
+        "semantics": "explicit_static_axis_transform",
+        "storage": "float16",
+        "writeback": "layout_preserving"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "attn_merged"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "constants": {
+        "B": {
+          "kind": "weight",
+          "name": "attn_out_w"
+        }
+      },
+      "depends_on": [
+        "merge_heads"
+      ],
+      "id": "attn_out",
+      "inputs": {
+        "A": {
+          "tensor": "attn_merged"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "float32_single_tile",
+        "semantics": "real_tilelang_one_tile_matmul_fp32_accumulate_one_fp16_writeback",
+        "storage": "float16",
+        "writeback": "float16_after_gemm"
+      },
+      "outputs": {
+        "Y": {
+          "tensor": "attn_projection"
+        }
+      },
+      "phase": "execution",
+      "plan": "attn_out",
+      "repeat": []
+    },
+    {
+      "action": "tensor.add.v1",
+      "action_version": 1,
+      "attrs": {},
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "position_add",
+        "attn_out"
+      ],
+      "id": "residual_attention",
+      "inputs": {
+        "a": {
+          "tensor": "positioned"
+        },
+        "b": {
+          "tensor": "attn_projection"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "float32",
+        "semantics": "float32_reduction_then_one_float16_store",
+        "storage": "float16",
+        "writeback": "float16"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "h1"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "action": "rmsnorm.last_axis.v1",
+      "action_version": 1,
+      "attrs": {
+        "eps": 1e-06
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "residual_attention"
+      ],
+      "id": "rmsnorm2",
+      "inputs": {
+        "gamma": {
+          "tensor": "norm2_gamma"
+        },
+        "x": {
+          "tensor": "h1"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "float32",
+        "semantics": "float32_reduction_then_one_float16_store",
+        "storage": "float16",
+        "writeback": "float16"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "norm2"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "constants": {
+        "Wd": {
+          "kind": "weight",
+          "name": "ffn_down_w"
+        },
+        "Wg": {
+          "kind": "weight",
+          "name": "ffn_gate_w"
+        },
+        "Wu": {
+          "kind": "weight",
+          "name": "ffn_up_w"
+        },
+        "__identity_128": {
+          "generator": "identity",
+          "kind": "generated"
+        },
+        "__identity_64": {
+          "generator": "identity",
+          "kind": "generated"
+        }
+      },
+      "depends_on": [
+        "rmsnorm2",
+        "residual_attention"
+      ],
+      "id": "ffn",
+      "inputs": {
+        "H": {
+          "tensor": "h1"
+        },
+        "X": {
+          "tensor": "norm2"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "staged_device_f16_per_stage",
+        "semantics": "device_resident_swiglu_ffn_gate_up_silu_mul_projection_residual",
+        "storage": "float16",
+        "writeback": "float16_after_each_stage"
+      },
+      "outputs": {
+        "Y": {
+          "tensor": "h2"
+        }
+      },
+      "phase": "execution",
+      "plan": "ffn",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "capture_only": true,
+      "constants": {
+        "Wd": {
+          "kind": "weight",
+          "name": "ffn_down_w"
+        },
+        "Wg": {
+          "kind": "weight",
+          "name": "ffn_gate_w"
+        },
+        "Wu": {
+          "kind": "weight",
+          "name": "ffn_up_w"
+        },
+        "__identity_128": {
+          "generator": "identity",
+          "kind": "generated"
+        }
+      },
+      "depends_on": [
+        "rmsnorm2",
+        "residual_attention"
+      ],
+      "id": "ffn_trace",
+      "inputs": {
+        "H": {
+          "tensor": "h1"
+        },
+        "X": {
+          "tensor": "norm2"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "staged_device_f16_per_stage",
+        "semantics": "device_resident_swiglu_ffn_gate_up_silu_mul_projection_residual",
+        "storage": "float16",
+        "writeback": "float16_after_each_stage"
+      },
+      "outputs": {
+        "act": {
+          "tensor": "act"
+        },
+        "ffn": {
+          "tensor": "ffn"
+        },
+        "gate": {
+          "tensor": "gate"
+        },
+        "up": {
+          "tensor": "up"
+        }
+      },
+      "phase": "execution",
+      "plan": "ffn_trace",
+      "repeat": []
+    },
+    {
+      "action": "tensor.reshape.v1",
+      "action_version": 1,
+      "attrs": {
+        "shape": [
+          8,
+          16,
+          64
+        ]
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "ffn"
+      ],
+      "id": "reshape_tokens",
+      "inputs": {
+        "x": {
+          "tensor": "h2"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "none",
+        "semantics": "explicit_static_axis_transform",
+        "storage": "float16",
+        "writeback": "layout_preserving"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "h2_tokens"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "action": "tensor.mean_axis.v1",
+      "action_version": 1,
+      "attrs": {
+        "axis": 1
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "reshape_tokens"
+      ],
+      "id": "mean_pool",
+      "inputs": {
+        "x": {
+          "tensor": "h2_tokens"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "float32",
+        "semantics": "mean_over_16_tokens_in_float32_then_float16",
+        "storage": "float16",
+        "writeback": "float16"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "pooled"
+        }
+      },
+      "phase": "execution",
+      "repeat": []
+    },
+    {
+      "bridge": {
+        "accounting": "runtime_report",
+        "kind": "rkplan_transfer"
+      },
+      "constants": {
+        "B": {
+          "kind": "weight_repeat_pad",
+          "name": "class_w",
+          "reshape": [
+            64,
+            10
+          ]
+        }
+      },
+      "depends_on": [
+        "mean_pool"
+      ],
+      "id": "classifier",
+      "inputs": {
+        "A": {
+          "tensor": "pooled"
+        }
+      },
+      "kind": "rkplan",
+      "numeric_contract": {
+        "accumulation": "float32_single_tile",
+        "semantics": "real_tilelang_one_tile_matmul_fp32_accumulate_one_fp16_writeback",
+        "storage": "float16",
+        "writeback": "float16_after_gemm"
+      },
+      "outputs": {
+        "Y": {
+          "tensor": "logits_padded"
+        }
+      },
+      "phase": "execution",
+      "plan": "classifier",
+      "repeat": []
+    },
+    {
+      "action": "logits.prefix.v1",
+      "action_version": 1,
+      "attrs": {
+        "cols": 10
+      },
+      "bridge": {
+        "accounting": "tensor_bytes",
+        "kind": "host_tensor_materialization"
+      },
+      "depends_on": [
+        "classifier"
+      ],
+      "id": "export_logits",
+      "inputs": {
+        "logits": {
+          "tensor": "logits_padded"
+        }
+      },
+      "kind": "host_action",
+      "numeric_contract": {
+        "accumulation": "none",
+        "semantics": "first_10_of_padded_16_logits",
+        "storage": "float32",
+        "writeback": "float32_prefix"
+      },
+      "outputs": {
+        "y": {
+          "tensor": "logits"
+        }
+      },
+      "phase": "postprocess",
+      "repeat": []
+    }
+  ],
+  "outputs": {
+    "logits": "logits"
+  },
+  "plans": {
+    "attn_matmul": {
+      "dynamic_operand": "B",
+      "path": "tiny_vit_b8_qk.rkplan.json",
+      "plan_hash": "380b7324759b23ca8febcdbbe84f97f12d1f3b4dcf94eaa62bafeedb9d937d97",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "attn_matmul_group": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b8_qk_group.rkplan.json",
+      "plan_hash": "0c9b84750e339b123fd379504a39df5187f7a1763125b95ef4ca53821d8e957b",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)|repeat_expand:n=32"
+    },
+    "attn_out": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b8_attn_out.rkplan.json",
+      "plan_hash": "b277d72d1ac6850e17c338931d5ad9781459baace7efc52860672257f06b0358",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "classifier": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b8_classifier.rkplan.json",
+      "plan_hash": "7cef9e08f38e3c171535a2e15a043f2340276dcfe605db4a3d9d5a02e5a6f6b5",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "ffn": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b8_ffn.rkplan.json",
+      "plan_hash": "b76419b09b1e734ab5af584c9e07c38ed693302e6ddcc1fc1ca8fab1549df528",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 40, 40, 1, 1048576)"
+    },
+    "ffn_trace": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b8_ffn_trace.rkplan.json",
+      "plan_hash": "eaddff25f8bf4f55a59b91aff238a39585c57fddd4514844c42ab92a5f42b8d4",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 40, 40, 1, 1048576)"
+    },
+    "patch": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b8_patch.rkplan.json",
+      "plan_hash": "b277d72d1ac6850e17c338931d5ad9781459baace7efc52860672257f06b0358",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "qkv": {
+      "dynamic_operand": null,
+      "path": "tiny_vit_b8_qkv.rkplan.json",
+      "plan_hash": "f794c71e6e7b4e7a862ddf7db55a42a145192d1eb637cc39798e0ec7b71f8a33",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    }
+  },
+  "profile_hash": "c6b8d3e71acaf317a37a21d186cc7252c3ca7e0e61d201da12aba35480bddaf6",
+  "schema_version": 1,
+  "tensors": [
+    {
+      "axes": [
+        "batch",
+        "token",
+        "patch"
+      ],
+      "dtype": "float16",
+      "name": "patches",
+      "shape": [
+        8,
+        16,
+        49
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "patch_flat",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "patch_projection",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "positioned",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "norm1",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "qkv_head_dim"
+      ],
+      "dtype": "float16",
+      "name": "qkv",
+      "shape": [
+        128,
+        192
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "head",
+        "token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "q_heads",
+      "shape": [
+        8,
+        4,
+        16,
+        16
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "head",
+        "d",
+        "token"
+      ],
+      "dtype": "float16",
+      "name": "k_t_heads",
+      "shape": [
+        8,
+        4,
+        16,
+        16
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "head",
+        "token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "v_heads",
+      "shape": [
+        8,
+        4,
+        16,
+        16
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "head",
+        "query",
+        "key"
+      ],
+      "dtype": "float16",
+      "name": "scores_heads",
+      "shape": [
+        8,
+        4,
+        16,
+        16
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "head",
+        "query",
+        "key"
+      ],
+      "dtype": "float16",
+      "name": "probs_heads",
+      "shape": [
+        8,
+        4,
+        16,
+        16
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "head",
+        "token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "attn_heads",
+      "shape": [
+        8,
+        4,
+        16,
+        16
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "head_d"
+      ],
+      "dtype": "float16",
+      "name": "attn_merged",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "attn_projection",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "h1",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "norm2",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "ffn"
+      ],
+      "dtype": "float16",
+      "name": "gate",
+      "shape": [
+        128,
+        128
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "ffn"
+      ],
+      "dtype": "float16",
+      "name": "up",
+      "shape": [
+        128,
+        128
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "ffn"
+      ],
+      "dtype": "float16",
+      "name": "act",
+      "shape": [
+        128,
+        128
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "ffn",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch_token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "h2",
+      "shape": [
+        128,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "token",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "h2_tokens",
+      "shape": [
+        8,
+        16,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "d"
+      ],
+      "dtype": "float16",
+      "name": "pooled",
+      "shape": [
+        8,
+        64
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "padded_class"
+      ],
+      "dtype": "float16",
+      "name": "logits_padded",
+      "shape": [
+        8,
+        16
+      ]
+    },
+    {
+      "axes": [
+        "batch",
+        "class"
+      ],
+      "dtype": "float32",
+      "name": "logits",
+      "shape": [
+        8,
+        10
+      ]
+    }
+  ],
+  "trace_tensors": [
+    "patches",
+    "patch_flat",
+    "patch_projection",
+    "positioned",
+    "norm1",
+    "qkv",
+    "q_heads",
+    "k_t_heads",
+    "v_heads",
+    "scores_heads",
+    "probs_heads",
+    "attn_heads",
+    "attn_merged",
+    "attn_projection",
+    "h1",
+    "norm2",
+    "gate",
+    "up",
+    "act",
+    "ffn",
+    "h2",
+    "h2_tokens",
+    "pooled",
+    "logits_padded",
+    "logits"
+  ],
+  "weights": {
+    "file": "tiny_vit.npz",
+    "host_precision": "float16",
+    "keys": {
+      "attn_out_w": {
+        "dtype": "float32",
+        "shape": [
+          64,
+          64
+        ]
+      },
+      "class_w": {
+        "dtype": "float32",
+        "shape": [
+          64,
+          10
+        ]
+      },
+      "ffn_down_w": {
+        "dtype": "float32",
+        "shape": [
+          128,
+          64
+        ]
+      },
+      "ffn_gate_w": {
+        "dtype": "float32",
+        "shape": [
+          64,
+          128
+        ]
+      },
+      "ffn_up_w": {
+        "dtype": "float32",
+        "shape": [
+          64,
+          128
+        ]
+      },
+      "norm1_gamma": {
+        "dtype": "float32",
+        "shape": [
+          64
+        ]
+      },
+      "norm2_gamma": {
+        "dtype": "float32",
+        "shape": [
+          64
+        ]
+      },
+      "patch_w": {
+        "dtype": "float32",
+        "shape": [
+          49,
+          64
+        ]
+      },
+      "pos": {
+        "dtype": "float32",
+        "shape": [
+          16,
+          64
+        ]
+      },
+      "qkv_w": {
+        "dtype": "float32",
+        "shape": [
+          64,
+          192
+        ]
+      }
+    },
+    "sha256": "0190412619e2603853e52c308fc06caa90bf54f92c15caa0ad3ea4e27e37000f"
+  }
+}

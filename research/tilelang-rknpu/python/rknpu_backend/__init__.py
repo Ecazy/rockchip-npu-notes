@@ -18,7 +18,10 @@ from .errors import (BackendError, Diagnostic, RK_E_ALIAS, RK_E_BUDGET,
                      RK_E_BUSY)
 from .ir import (Module, NumericContract, Op, TensorType, Value,
                  activation_module, branch_outputs_module, matmul_module,
-                 projection_module, swiglu_module)
+                 projection_module, pv_o_device_batches_module,
+                 pv_o_device_module, rmsnorm_approx_module,
+                 rope_decode_indexed_module, rope_device_constant_module,
+                 rope_device_module, swiglu_module)
 from .options import CompileOptions
 from .plan import Plan
 from .runtime.bindings import Workspace
@@ -31,7 +34,11 @@ __all__ = [
     "compile_tilelang",
     "default_profile", "explain_plan", "load_plan", "load_profile",
     "load_target_profile", "activation_module", "branch_outputs_module",
-    "matmul_module", "projection_module", "swiglu_module", "save_plan",
+    "matmul_module", "projection_module", "rmsnorm_approx_module",
+    "pv_o_device_batches_module", "pv_o_device_module",
+    "rope_decode_indexed_module", "rope_device_constant_module",
+    "rope_device_module",
+    "swiglu_module", "save_plan",
     "RK_E_INVALID", "RK_E_UNSUPPORTED", "RK_E_SHAPE", "RK_E_NUMERIC_CONTRACT",
     "RK_E_BUDGET", "RK_E_TARGET_MISMATCH", "RK_E_ALIAS", "RK_E_NOMEM",
     "RK_E_DEVICE", "RK_E_BUSY", "RK_E_POISONED", "RK_E_SCHEMA", "RK_E_DOMAIN",

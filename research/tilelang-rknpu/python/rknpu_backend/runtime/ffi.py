@@ -46,6 +46,7 @@ from ..codegen.descriptor import (BUFFER_ROLE_MAP, KIND_MAP, LAYOUT_MAP,
                                   RK_TEMPLATE_LUT_GELU_GATE_F16,
                                   RK_TEMPLATE_LUT_HARDSIGMOID_F16,
                                   RK_TEMPLATE_LUT_SIGMOID_F16,
+                                  RK_TEMPLATE_LUT_RSQRT_F16,
                                   RK_TEMPLATE_MM_ACC_F16, RK_TEMPLATE_MM_F16,
                                   TEMPLATE_MAP, RKActionDesc, RKBufferDesc,
                                   RKPlanDesc, RKPublishDesc, RKSubmitDesc,
@@ -153,6 +154,30 @@ def _new_attribution() -> "RKAttribution":
     return report
 
 
+class RKSharedConstantBinding(ctypes.Structure):
+    """Mirror of ``rk_shared_constant_binding``.
+
+    ``constant`` is an opaque cache-owned handle; the workspace retains it and
+    releases it on confirmed destroy.  The Python side only keeps the handle
+    alive long enough to hand it to workspace creation.
+    """
+    _fields_ = [
+        ("action_id", ctypes.c_uint32),
+        ("reserved", ctypes.c_uint32),
+        ("constant", ctypes.c_void_p),
+    ]
+
+
+class RKStateSource(ctypes.Structure):
+    """Mirror of ``rk_state_source`` for persistent upload-region updates."""
+    _fields_ = [
+        ("data", ctypes.c_void_p),
+        ("nbytes", ctypes.c_uint64),
+        ("row_stride", ctypes.c_uint32),
+        ("flags", ctypes.c_uint32),
+    ]
+
+
 class RKDiag(ctypes.Structure):
     _fields_ = [
         ("abi_version", ctypes.c_uint32), ("struct_size", ctypes.c_uint32),
@@ -241,6 +266,47 @@ class LibRKPlan:
         fn.rk_workspace_destroy.argtypes = [ctypes.c_void_p,
                                             ctypes.POINTER(RKDiag)]
         fn.rk_workspace_destroy.restype = ctypes.c_int
+        # Optional immutable packed-constant sharing ABI.  Keeping this
+        # feature-detected lets diagnostics continue with an older library while
+        # production code explicitly checks ``supports_shared_constants``.
+        self.supports_shared_constants = hasattr(
+            fn, "rk_shared_constant_get_or_create")
+        if self.supports_shared_constants:
+            fn.rk_shared_constant_get_or_create.argtypes = [
+                ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32,
+                ctypes.POINTER(RKBinding), ctypes.c_char_p,
+                ctypes.POINTER(ctypes.c_void_p),
+                ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(RKDiag)]
+            fn.rk_shared_constant_get_or_create.restype = ctypes.c_int
+            fn.rk_shared_constant_retain.argtypes = [ctypes.c_void_p]
+            fn.rk_shared_constant_retain.restype = None
+            fn.rk_shared_constant_release.argtypes = [ctypes.c_void_p]
+            fn.rk_shared_constant_release.restype = None
+            fn.rk_shared_constant_bytes.argtypes = [ctypes.c_void_p]
+            fn.rk_shared_constant_bytes.restype = ctypes.c_uint64
+            fn.rk_shared_constant_live.argtypes = []
+            fn.rk_shared_constant_live.restype = ctypes.c_uint32
+            fn.rk_workspace_create_shared.argtypes = [
+                ctypes.c_int, ctypes.c_void_p, ctypes.POINTER(RKBinding),
+                ctypes.c_uint32, ctypes.POINTER(RKSharedConstantBinding),
+                ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p),
+                ctypes.POINTER(RKDiag)]
+            fn.rk_workspace_create_shared.restype = ctypes.c_int
+        self.supports_persistent_state = hasattr(
+            fn, "rk_workspace_update_upload_region")
+        if self.supports_persistent_state:
+            fn.rk_workspace_set_persistent_upload.argtypes = [
+                ctypes.c_void_p, ctypes.c_uint32, ctypes.POINTER(RKDiag)]
+            fn.rk_workspace_set_persistent_upload.restype = ctypes.c_int
+            fn.rk_workspace_update_upload_region.argtypes = [
+                ctypes.c_void_p, ctypes.c_uint32,
+                ctypes.POINTER(RKStateSource), ctypes.c_uint32,
+                ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32,
+                ctypes.c_uint32, ctypes.c_uint32, ctypes.POINTER(RKDiag)]
+            fn.rk_workspace_update_upload_region.restype = ctypes.c_int
+            fn.rk_workspace_clear_upload_destination.argtypes = [
+                ctypes.c_void_p, ctypes.c_uint32, ctypes.POINTER(RKDiag)]
+            fn.rk_workspace_clear_upload_destination.restype = ctypes.c_int
         self.fn = fn
         if self.abi_version() != RK_ABI_VERSION:
             reject(RK_E_UNSUPPORTED, "rknpu_plan ABI version mismatch",
@@ -321,6 +387,113 @@ class LibRKPlan:
         if rc:
             raise _diag_to_exception(diag, "workspace_create")
         return CWorkspace(lib=self, handle=handle)
+
+    def create_shared_constant_on(self, fd: int, plan: CPlan,
+                                  action_id: int, source: RKBinding,
+                                  key: str) -> tuple:
+        if not self.supports_shared_constants:
+            reject(RK_E_UNSUPPORTED,
+                   "rknpu_plan library does not expose shared-constant packing",
+                   stage="ffi")
+        handle = ctypes.c_void_p()
+        created = ctypes.c_uint32(0)
+        diag = RKDiag()
+        rc = self.cdll.rk_shared_constant_get_or_create(
+            int(fd), plan._ptr, int(action_id), ctypes.byref(source),
+            key.encode("utf-8"), ctypes.byref(handle),
+            ctypes.byref(created), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "shared_constant")
+        return handle, bool(created.value)
+
+    def release_shared_constant(self, handle) -> None:
+        if handle and self.supports_shared_constants:
+            self.cdll.rk_shared_constant_release(handle)
+
+    def shared_constant_live(self) -> int:
+        if not self.supports_shared_constants:
+            return 0
+        return int(self.cdll.rk_shared_constant_live())
+
+    def create_workspace_shared(self, plan: CPlan, constants: list,
+                                shared: list[tuple[int, Any]], *,
+                                fd: int = 0) -> CWorkspace:
+        """Create a workspace that borrows compatible packed-constant BOs.
+
+        ``shared`` entries are ``(action_id, opaque_handle)``.  The workspace
+        retains each unique handle; the caller still owns the reference returned
+        by ``create_shared_constant_*`` and must release it after this call.
+        """
+        if not self.supports_shared_constants:
+            reject(RK_E_UNSUPPORTED,
+                   "rknpu_plan library does not expose shared workspaces",
+                   stage="ffi")
+        arr = (RKBinding * max(len(constants), 1))()
+        for i, binding in enumerate(constants):
+            arr[i] = binding
+        shared_arr = (RKSharedConstantBinding * max(len(shared), 1))()
+        for i, (action_id, handle) in enumerate(shared):
+            shared_arr[i].action_id = int(action_id)
+            shared_arr[i].reserved = 0
+            shared_arr[i].constant = handle
+        out = ctypes.c_void_p()
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_create_shared(
+            int(fd), plan._ptr, arr, len(constants), shared_arr, len(shared),
+            ctypes.byref(out), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "workspace_create_shared")
+        return CWorkspace(lib=self, handle=out)
+
+    def set_persistent_upload(self, workspace: CWorkspace,
+                              action_id: int) -> None:
+        if not self.supports_persistent_state:
+            reject(RK_E_UNSUPPORTED,
+                   "rknpu_plan library does not expose persistent upload state",
+                   stage="ffi")
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_set_persistent_upload(
+            workspace.handle, int(action_id), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "set_persistent_upload")
+
+    def update_upload_region(self, workspace: CWorkspace, action_id: int,
+                             array: np.ndarray, *, src_row: int, src_col: int,
+                             dst_row: int, dst_col: int, rows: int,
+                             cols: int, transpose_source: bool = False) -> None:
+        if not self.supports_persistent_state:
+            reject(RK_E_UNSUPPORTED,
+                   "rknpu_plan library does not expose persistent upload state",
+                   stage="ffi")
+        arr = np.asarray(array)
+        if arr.dtype != np.dtype("<f2") or not arr.flags.c_contiguous:
+            reject(RK_E_INVALID,
+                   "state source must be contiguous native FP16",
+                   stage="ffi", actual=[str(arr.dtype),
+                                        bool(arr.flags.c_contiguous)])
+        source = RKStateSource(
+            data=arr.ctypes.data_as(ctypes.c_void_p), nbytes=int(arr.nbytes),
+            row_stride=int(arr.shape[1]) if arr.ndim == 2 else int(arr.size),
+            flags=(1 if transpose_source else 0))
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_update_upload_region(
+            workspace.handle, int(action_id), ctypes.byref(source),
+            int(src_row), int(src_col), int(dst_row), int(dst_col),
+            int(rows), int(cols), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "update_upload_region")
+
+    def clear_upload_destination(self, workspace: CWorkspace,
+                                 action_id: int) -> None:
+        if not self.supports_persistent_state:
+            reject(RK_E_UNSUPPORTED,
+                   "rknpu_plan library does not expose persistent upload state",
+                   stage="ffi")
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_clear_upload_destination(
+            workspace.handle, int(action_id), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "clear_upload_destination")
 
     @staticmethod
     def _binding_array(bindings: list):

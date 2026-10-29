@@ -81,6 +81,20 @@ typedef struct rk_workspace {
     co_buffer *slots;
     uint32_t nslots;
     co_view *views;
+    /* Optional immutable packed destinations supplied by the shared-constant
+     * cache.  ``shared_buffers`` is indexed by plan buffer id and points at the
+     * cache-owned BO; it is NULL for ordinary workspace-owned buffers.
+     * ``shared_actions`` is indexed by action id and suppresses the
+     * creation-time upload for an already-packed destination.  The unique
+     * handles are retained in ``shared_handles`` and released only after a
+     * confirmed workspace destroy. */
+    co_buffer **shared_buffers;
+    uint8_t *shared_actions;
+    rk_shared_constant **shared_handles;
+    uint32_t nshared_handles;
+    /* Optional per-upload-action persistent-state policy.  NULL means every
+     * upload retains the historical per-run rewrite behavior. */
+    uint8_t *persistent_actions;
     co_execute_workspace execute_workspace;
     int execute_workspace_ready;
     atomic_int busy;

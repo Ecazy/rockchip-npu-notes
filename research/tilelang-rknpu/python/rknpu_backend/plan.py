@@ -25,7 +25,7 @@ TEMPLATE_IDS = {
     "co.mm.f16.v1", "co.mm_acc.f16.v1", "co.ew_add.f16.v1",
     "co.ew_mul.f16.v1", "co.ew_max.f16.v1", "co.ew_add_relu.f16.v1",
     "co.lut.sigmoid.f16.v1", "co.lut.hardsigmoid.f16.v1",
-    "co.lut.gelu_gate.f16.v1",
+    "co.lut.gelu_gate.f16.v1", "co.lut.rsqrt.f16.v1",
 }
 ACTION_KINDS = {"host_pack", "host_expand", "host_check", "upload", "npu_task",
                 "download", "host_compute", "commit"}
@@ -52,6 +52,10 @@ RECIPE_SIGNATURES = {
         ("co.ew_mul.f16.v1", None, None),
         ("co.ew_add.f16.v1", None, None),
     ],
+    # A mixed-template chain admitted only after a board probe.  The C
+    # verifier independently proves action-order contiguity, dependency order,
+    # disjoint writes and the existing read/write alias contract.
+    "dependency_chain_v1": [],
     "gate_ew_v1": [
         # chunked LUT, optionally followed by the gated multiply
         ("co.lut.sigmoid.f16.v1", "co.lut.sigmoid.f16.v1", None),
@@ -90,6 +94,8 @@ def _recipe_matches(recipe: str, templates: list[str]) -> bool:
         return i == len(templates)
     if recipe == "ew_add_relu_v1":
         return templates == ["co.ew_add.f16.v1", "co.ew_max.f16.v1"]
+    if recipe == "dependency_chain_v1":
+        return bool(templates)
     signatures = RECIPE_SIGNATURES.get(recipe)
     if not signatures or not templates:
         return False

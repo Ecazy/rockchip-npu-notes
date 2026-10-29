@@ -12,7 +12,8 @@ from dataclasses import replace
 from pathlib import Path
 
 from rknpu_backend import (CompileOptions, compile_rkir, compile_tilelang,
-                           default_profile, save_plan)
+                           default_profile, load_profile, matmul_module,
+                           rmsnorm_approx_module, save_plan)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,10 +45,16 @@ def transformer_shapes(batch: int):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(ROOT / "models" / "compiled"))
+    ap.add_argument("--profile", default="",
+                    help="optional capability profile path for an isolated "
+                         "experimental package")
+    ap.add_argument("--include-rmsnorm-approx", action="store_true",
+                    help="compile the independent approximate full-device "
+                         "RMSNorm plans into this package")
     args = ap.parse_args()
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    profile = default_profile()
+    profile = load_profile(args.profile) if args.profile else default_profile()
     options = CompileOptions(numeric_mode="rk_f16_tiled",
                              allow_approx_lut=False)
     # The numeric probe is intentionally the frozen two-task Add+Max oracle.
@@ -137,6 +144,54 @@ def main() -> int:
             plans[name] = compile_tilelang(
                 tmm.make_matmul_prim(m, k, n), profile=profile,
                 options=options, b_is_input=binp).plan
+        # Same-policy residual Add on device: the existing EW_ADD template is
+        # consumed directly by the following resident value.  The plan keeps
+        # the GEMM and Add in one chain; no arithmetic or transfer is silently
+        # removed.  The host-add manifests remain the control.
+        add_options = CompileOptions(numeric_mode="rk_f16_tiled",
+                                     allow_approx_lut=False,
+                                     fuse_task_chain=True)
+        m = batch * 16
+        plans["attn_out_add"] = compile_rkir(
+            matmul_module(m=m, k=64, n=64, residual="add", b_layout="kn",
+                          name=f"tiny_vit_b{batch}_attn_out_add"),
+            profile=profile, options=add_options).plan
+        plans["down_add"] = compile_rkir(
+            matmul_module(m=m, k=128, n=64, residual="add", b_layout="kn",
+                          name=f"tiny_vit_b{batch}_down_add"),
+            profile=profile, options=add_options).plan
+        write(plans["attn_out_add"], f"tiny_vit_b{batch}_attn_out_add")
+        manifest["plans"][f"tiny_vit_b{batch}_attn_out_add"].update({
+            "role": "device-residual-add-attn-out",
+            "submit_count": len(plans["attn_out_add"].submits),
+        })
+        write(plans["down_add"], f"tiny_vit_b{batch}_down_add")
+        manifest["plans"][f"tiny_vit_b{batch}_down_add"].update({
+            "role": "device-residual-add-down",
+            "submit_count": len(plans["down_add"].submits),
+        })
+        # Full-device RMSNorm candidate: FP16 square/reduction, bounded rsqrt
+        # LUT and gamma expansion are all device tasks in one chain.  This is a
+        # distinct approximate numeric policy; the Host FP32 path stays default.
+        if args.include_rmsnorm_approx:
+            rmsnorm_options = CompileOptions(
+                numeric_mode="rk_f16_tiled", allow_approx_lut=True,
+                fuse_task_chain=True)
+            for norm_id in (1, 2):
+                rmsnorm_plan = compile_rkir(
+                    rmsnorm_approx_module(
+                        m=m, d=64,
+                        name=f"tiny_vit_b{batch}_rmsnorm{norm_id}_approx"),
+                    profile=profile, options=rmsnorm_options).plan
+                plan_name = f"tiny_vit_b{batch}_rmsnorm{norm_id}_approx"
+                write(rmsnorm_plan, plan_name)
+                manifest["plans"][plan_name].update({
+                    "role": f"device-approx-rmsnorm-{norm_id}",
+                    "templates": [a.template_id for a in rmsnorm_plan.actions
+                                  if a.kind == "npu_task"],
+                    "submit_count": len(rmsnorm_plan.submits),
+                    "transfers": rmsnorm_plan.accounting.transfers,
+                })
         # QK and PV use the same 16x16 dynamic-B primitive; one immutable plan is
         # intentionally reused by the model runner for both operations.
         plans["qk"] = compile_tilelang(tmm.make_matmul_prim(16, 16, 16),
@@ -159,6 +214,24 @@ def main() -> int:
             "templates": [a.template_id for a in ffn.actions
                           if a.kind == "npu_task"],
             "transfers": ffn.accounting.transfers,
+        })
+        # Same tasks, buffers, arithmetic and transfers as the device FFN
+        # control, but one dependency-ordered CO_CHAIN Submit instead of six
+        # stage envelopes.  The mixed-template chain is independently validated
+        # by the C verifier; the per-stage plan above stays as the control.
+        ffn_fused_options = CompileOptions(
+            numeric_mode="rk_f16_tiled", allow_approx_lut=True,
+            fuse_task_chain=True)
+        ffn_fused = compile_tilelang(ffn_kernel, profile=profile,
+                                     options=ffn_fused_options).plan
+        write(ffn_fused, f"tiny_vit_b{batch}_ffn_fused")
+        manifest["plans"][f"tiny_vit_b{batch}_ffn_fused"].update({
+            "role": "device-resident-swiglu-ffn-fused-submit",
+            "source_plan": f"tiny_vit_b{batch}_ffn",
+            "templates": [a.template_id for a in ffn_fused.actions
+                          if a.kind == "npu_task"],
+            "transfers": ffn_fused.accounting.transfers,
+            "submit_count": len(ffn_fused.submits),
         })
         # Capture-only trace plan: same extracted graph and primitive tasks, but
         # exports the intermediates that the frozen numeric layer gates require.

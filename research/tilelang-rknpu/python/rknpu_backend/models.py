@@ -9,6 +9,8 @@ softmax, layout bridge and mean pooling are explicit Host work.
 from __future__ import annotations
 
 import ctypes
+import hashlib
+import struct
 import threading
 import time
 from dataclasses import dataclass, field
@@ -146,6 +148,26 @@ class RunStats:
     # independent executions of the same immutable plan.
     plan_group_calls: int = 0
     plan_repeats: int = 0
+    # Load-time immutable packed-constant reuse.  These are construction/load
+    # costs, deliberately separate from steady-state plan pack counters.
+    load_us: float = 0.0
+    load_plan_call_us: float = 0.0
+    load_shared_constant_actions: int = 0
+    load_shared_constant_created: int = 0
+    load_shared_constant_reused: int = 0
+    load_shared_constant_bytes: int = 0
+    # Persistent KV native-layout state updates.  These are separate from the
+    # plan upload counters because the C runtime owns the destination BO and the
+    # model only writes newly required stripes.
+    kv_state_init_calls: int = 0
+    kv_state_init_bytes: int = 0
+    kv_state_init_us: float = 0.0
+    kv_state_append_calls: int = 0
+    kv_state_append_bytes: int = 0
+    kv_state_append_us: float = 0.0
+    kv_state_clear_calls: int = 0
+    kv_state_clear_bytes: int = 0
+    kv_state_clear_us: float = 0.0
     # Compiled graph execution: metadata-only view nodes and trace-only writes
     # elided from the production path.  These are structural counters, not time.
     graph_view_ops: int = 0
@@ -167,10 +189,21 @@ class RunStats:
 
     def add_host_action(self, name: str, phase: str, elapsed_us: float,
                         inputs: tuple[np.ndarray, ...] = (),
-                        outputs: tuple[np.ndarray, ...] = ()) -> None:
-        """Record one registered Host boundary action and its Host bytes."""
+                        outputs: tuple[np.ndarray, ...] = (),
+                        *, nbytes: int | None = None) -> None:
+        """Record one registered Host boundary action and its Host bytes.
+
+        ``nbytes`` may be supplied by actions such as an in-place KV append
+        where the bound arrays span the whole persistent cache but only one
+        slot is actually touched.  The override is explicit; the default keeps
+        the historical resolved-input-plus-output byte count.
+        """
         phase = self._phase(phase)
-        nbytes = _nbytes(tuple(inputs) + tuple(outputs))
+        if nbytes is None:
+            nbytes = _nbytes(tuple(inputs) + tuple(outputs))
+        elif not isinstance(nbytes, int) or isinstance(nbytes, bool) or nbytes < 0:
+            reject(RK_E_INVALID, "host action nbytes override must be >= 0",
+                   stage="model")
         self.host_action_us += float(elapsed_us)
         self.host_action_bytes += nbytes
         self._phase_add(phase, elapsed_us)
@@ -368,9 +401,75 @@ class RunStats:
             "graph_skipped_trace_output_writes":
                 int(self.graph_skipped_trace_output_writes),
             "bridge_bytes": self.upload_bytes + self.download_bytes,
+            "load_us": float(self.load_us),
+            "load_plan_call_us": float(self.load_plan_call_us),
+            "load_shared_constant_actions": int(
+                self.load_shared_constant_actions),
+            "load_shared_constant_created": int(
+                self.load_shared_constant_created),
+            "load_shared_constant_reused": int(
+                self.load_shared_constant_reused),
+            "load_shared_constant_bytes": int(
+                self.load_shared_constant_bytes),
+            "kv_state_init_calls": int(self.kv_state_init_calls),
+            "kv_state_init_bytes": int(self.kv_state_init_bytes),
+            "kv_state_init_us": float(self.kv_state_init_us),
+            "kv_state_append_calls": int(self.kv_state_append_calls),
+            "kv_state_append_bytes": int(self.kv_state_append_bytes),
+            "kv_state_append_us": float(self.kv_state_append_us),
+            "kv_state_clear_calls": int(self.kv_state_clear_calls),
+            "kv_state_clear_bytes": int(self.kv_state_clear_bytes),
+            "kv_state_clear_us": float(self.kv_state_clear_us),
             "plans": list(self.plans),
             "host_actions": list(self.host_actions),
         }
+
+def _shared_constant_pack_key(plan: Plan, action: Any,
+                                source: Any, source_sha256: str) -> str:
+    """Identity for one immutable packed upload destination.
+
+    The key binds the actual source bytes to the source region, stride and
+    transpose plus the destination tensor's complete physical geometry.  It
+    deliberately excludes the plan/profile/binding id: two profiles may share a
+    weight tile, but they must not share it if any byte-level or layout-level
+    input differs.  The C runtime independently re-checks the same structural
+    fields and the same fd/context.
+    """
+    if action.kind != "upload" or len(action.outputs) != 1:
+        reject(RK_E_SCHEMA, "shared constant must be a single-output upload",
+               stage="model", action_id=action.id)
+    view = plan.views[action.outputs[0]]
+    tensor = view.tensor
+    buffer = plan.buffers[view.buffer_id]
+    attrs = action.attrs
+    h = hashlib.sha256()
+    h.update(b"rk-shared-packed-constant-v1\0")
+    h.update(bytes.fromhex(source_sha256))
+    h.update(struct.pack(
+        "<QQQQQQQQQQQ",
+        int(source.nbytes),
+        int(attrs.get("src_row_offset", 0)),
+        int(attrs.get("src_col_offset", 0)),
+        int(attrs.get("src_row_stride", 0)),
+        int(bool(attrs.get("transpose_source", False))),
+        int(view.offset_bytes),
+        int(tensor.rows), int(tensor.cols),
+        int(tensor.physical_rows), int(tensor.physical_cols),
+        int(tensor.atom)))
+    h.update(tensor.layout.encode("ascii"))
+    h.update(b"\0")
+    h.update(tensor.dtype.encode("ascii"))
+    h.update(b"\0")
+    h.update(struct.pack("<Q", int(tensor.bytes)))
+    h.update(str(attrs.get("broadcast", "")).encode("ascii"))
+    h.update(b"\0")
+    h.update(buffer.layout_id.encode("ascii"))
+    h.update(b"\0")
+    h.update(buffer.padding_state.encode("ascii"))
+    h.update(struct.pack("<QQQ", int(buffer.capacity), int(buffer.offset),
+                         int(buffer.alignment)))
+    return h.hexdigest()
+
 
 class PlanCall:
     """Reusable workspace for one immutable plan and its constants.
@@ -384,13 +483,21 @@ class PlanCall:
 
     def __init__(self, lib: LibRKPlan, plan: Plan, constants: dict[str, np.ndarray],
                  *, fd: int = 0, entry: str = "attributed",
-                 reuse_bindings: bool = True):
+                 reuse_bindings: bool = True,
+                 share_constants: bool = False):
         if entry not in ("attributed", "legacy"):
             reject(RK_E_INVALID, f"unknown plan entry {entry!r}", stage="model")
         if not isinstance(reuse_bindings, bool):
             reject(RK_E_INVALID, "reuse_bindings must be boolean", stage="model")
+        if not isinstance(share_constants, bool):
+            reject(RK_E_INVALID, "share_constants must be boolean", stage="model")
         self.entry = entry
         self.reuse_bindings = reuse_bindings
+        self.share_constants = bool(share_constants)
+        self.shared_constant_actions = 0
+        self.shared_constant_created = 0
+        self.shared_constant_reused = 0
+        self.shared_constant_bytes = 0
         self.lib = lib
         self.plan = plan
         self.cplan: CPlan | None = None
@@ -401,6 +508,7 @@ class PlanCall:
         try:
             # A missing/mismatched Host constant is a construction error before
             # any C resource exists.
+            digest_by_binding: dict[int, str] = {}
             for spec in plan.constants:
                 if spec.name not in constants:
                     raise KeyError(
@@ -413,9 +521,49 @@ class PlanCall:
                            required=list(expected))
                 self._const_arrays.append(arr)
                 bindings.append(make_binding(spec.binding_id, arr))
+                digest_by_binding[spec.binding_id] = hashlib.sha256(
+                    memoryview(arr).cast("B")).hexdigest()
             self.cplan = lib.create_plan(plan)
-            self.workspace = lib.create_workspace(
-                self.cplan, bindings, fd=fd)
+            shared_entries: list[tuple[int, Any]] = []
+            shared_handles: list[Any] = []
+            if self.share_constants:
+                if not getattr(lib, "supports_shared_constants", False):
+                    reject(RK_E_UNSUPPORTED,
+                           "this rknpu_plan library does not support shared "
+                           "immutable constants", stage="model")
+                constant_by_binding = {b.binding_id: b for b in plan.constants}
+                try:
+                    for action in plan.actions:
+                        if action.kind != "upload":
+                            continue
+                        source_id = int(action.attrs.get("source_binding", -1))
+                        spec = constant_by_binding.get(source_id)
+                        if spec is None:
+                            continue
+                        source = next(b for b in bindings
+                                      if int(b.id) == source_id)
+                        key = _shared_constant_pack_key(
+                            plan, action, spec, digest_by_binding[source_id])
+                        handle, created = lib.create_shared_constant_on(
+                            fd, self.cplan, action.id, source, key)
+                        shared_handles.append(handle)
+                        shared_entries.append((action.id, handle))
+                        self.shared_constant_actions += 1
+                        self.shared_constant_created += int(created)
+                        self.shared_constant_reused += int(not created)
+                        self.shared_constant_bytes += int(
+                            lib.cdll.rk_shared_constant_bytes(handle))
+                    self.workspace = lib.create_workspace_shared(
+                        self.cplan, bindings, shared_entries, fd=fd)
+                finally:
+                    # The workspace retained every unique handle.  Drop this
+                    # builder's references even on failure so a failed load
+                    # cannot keep cache BOs alive.
+                    for handle in shared_handles:
+                        lib.release_shared_constant(handle)
+            else:
+                self.workspace = lib.create_workspace(
+                    self.cplan, bindings, fd=fd)
         except BaseException as exc:
             cleanup_errors = []
             workspace, cplan = self.workspace, self.cplan
@@ -452,6 +600,42 @@ class PlanCall:
         # alive for the whole workspace lifetime.
         self._prepared_single: dict[str, tuple[Any, ...]] = {}
         self._prepared_group: dict[str, tuple[Any, ...]] = {}
+        self.persistent_actions: set[int] = set()
+
+    def set_persistent_upload(self, action_id: int) -> None:
+        """Mark one workspace upload action as caller-managed persistent state.
+
+        The normal run no longer rewrites that destination.  The caller must
+        initialize/update it through :meth:`update_upload_region` and clear it on
+        reset.  The C runtime still owns the BO and validates every region.
+        """
+        if self.workspace is None:
+            reject(RK_E_INVALID, "model plan workspace is already closed",
+                   stage="model")
+        self.lib.set_persistent_upload(self.workspace, int(action_id))
+        self.persistent_actions.add(int(action_id))
+
+    def update_upload_region(self, action_id: int, array: np.ndarray, *,
+                             src_row: int, src_col: int,
+                             dst_row: int, dst_col: int,
+                             rows: int, cols: int,
+                             transpose_source: bool = False) -> None:
+        if int(action_id) not in self.persistent_actions:
+            reject(RK_E_INVALID,
+                   "upload action is not marked persistent", stage="model",
+                   actual=int(action_id))
+        self.lib.update_upload_region(
+            self.workspace, int(action_id), array, src_row=int(src_row),
+            src_col=int(src_col), dst_row=int(dst_row), dst_col=int(dst_col),
+            rows=int(rows), cols=int(cols),
+            transpose_source=bool(transpose_source))
+
+    def clear_upload_destination(self, action_id: int) -> None:
+        if int(action_id) not in self.persistent_actions:
+            reject(RK_E_INVALID,
+                   "upload action is not marked persistent", stage="model",
+                   actual=int(action_id))
+        self.lib.clear_upload_destination(self.workspace, int(action_id))
 
     def _lock_descriptors(self) -> None:
         if not self._descriptor_lock.acquire(blocking=False):

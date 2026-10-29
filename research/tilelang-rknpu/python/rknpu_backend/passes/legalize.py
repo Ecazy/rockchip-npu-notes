@@ -15,6 +15,7 @@ ACTIVATION_CAPABILITY = {
     "gelu": "co.lut.gelu_gate.f16.v1",
     "sigmoid": "co.lut.sigmoid.f16.v1",
     "hardsigmoid": "co.lut.hardsigmoid.f16.v1",
+    "rsqrt": "co.lut.rsqrt.f16.v1",
 }
 BINARY_CAPABILITY = {"add": "co.ew_add.f16.v1", "mul": "co.ew_mul.f16.v1"}
 

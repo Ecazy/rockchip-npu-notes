@@ -28,6 +28,10 @@ The optional TileLang import stays inside this module, so importing
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import os
+from pathlib import Path
+import re
 from typing import Any, Iterable
 
 from ..errors import (RK_E_NUMERIC_CONTRACT, RK_E_SHAPE, RK_E_UNSUPPORTED,
@@ -593,11 +597,40 @@ def _si_lu_ok(store: Any, item: _Item, tirx: Any, acc: Any,
     return False, "activation is not acc * sigmoid(acc) on identical indices"
 
 
+_SOURCE_NAME = re.compile(r"SourceName\((.+?), 0x[0-9a-fA-F]+\)")
+
+
+def _canonical_source_name(path: str) -> str:
+    """Stable source identity independent of checkout path and TVM address.
+
+    ``str(tvm.Span)`` embeds the Python object address of the ``SourceName``.
+    Using it directly made otherwise identical recompilations produce different
+    plan hashes.  We replace that address with a fixed marker and bind the
+    identity to the source file's relative path and content digest.
+    """
+    resolved = Path(path).resolve()
+    package_root = Path(__file__).resolve().parents[3]
+    try:
+        relative = str(resolved.relative_to(package_root))
+    except ValueError:
+        relative = resolved.name
+    try:
+        digest = hashlib.sha256(resolved.read_bytes()).hexdigest()[:16]
+    except OSError:
+        digest = "unreadable"
+    return f"{relative}#sha256:{digest}"
+
+
 def _source_span(prim_func: Any) -> str:
     try:
         span = prim_func.span
         if span is not None:
-            return str(span)
+            text = str(span)
+            text = _SOURCE_NAME.sub(
+                lambda match: f"SourceName({_canonical_source_name(match.group(1))}, 0x0)",
+                text)
+            # Any remaining TVM address is identity-irrelevant.
+            return re.sub(r"0x[0-9a-fA-F]+", "0x0", text)
     except Exception:
         pass
     try:
@@ -4379,12 +4412,15 @@ def extract(prim_func: Any, *, options: CompileOptions,
     if not (1 <= gm <= 4096 and 1 <= gn <= 4096 and 1 <= gk <= 4096):
         reject(RK_E_SHAPE, "M/N/K must be in 1..4096", stage="frontend",
                source=span, actual=[gm, gn, gk])
-    if max(gm, gn, gk) > 256:
-        reject(RK_E_UNSUPPORTED,
-               "the minimal structural extractor accepts one primitive-sized "
-               "M/N/K tile (<=256); K tiling and multi-tile extraction are not "
-               "implemented yet", stage="frontend", source=span,
-               actual=[gm, gn, gk])
+    # A full logical GEMM may exceed the 256-element primitive extent.  The
+    # recognizer still proves that the source copies the complete parameter
+    # regions into its logical GEMM operands and writes the complete output.
+    # The target planner lowers that logical operation to 256x256 output tiles
+    # and 256-wide K slices; the source's alloc_shared extent is a TileLang
+    # staging declaration, not an RKNPU primitive size.  This remains limited
+    # to the same closed single-GEMM dataflow above (one fill, three copies and
+    # one GEMM), so it does not admit an arbitrary loop nest or unmaterialised
+    # shared-memory arrangement.
 
     a_shape = tuple(int(x) for x in a_param.shape)
     b_shape = tuple(int(x) for x in b_param.shape)

@@ -89,7 +89,8 @@ enum rk_template_id {
     RK_TEMPLATE_LUT_HARDSIGMOID_F16 = 6,
     RK_TEMPLATE_LUT_GELU_GATE_F16 = 7,
     RK_TEMPLATE_EW_MAX_F16 = 8,
-    RK_TEMPLATE_EW_ADD_RELU_F16 = 9
+    RK_TEMPLATE_EW_ADD_RELU_F16 = 9,
+    RK_TEMPLATE_LUT_RSQRT_F16 = 10
 };
 enum rk_act_kind {
     RK_ACT_NONE = 0,
@@ -389,7 +390,48 @@ typedef struct rk_group_report {
 typedef struct rk_plan rk_plan;
 typedef struct rk_workspace rk_workspace;
 
+/* Immutable packed-constant sharing.
+ *
+ * A shared constant is one already-packed upload destination BO.  It is keyed
+ * by the caller's full content/layout identity (the runtime treats the key as
+ * opaque, but the Python planner derives it from the actual FP16 bytes plus
+ * source region, transpose/stride, dtype, destination tensor geometry and
+ * padding).  The runtime additionally verifies that a workspace's action and
+ * destination view are byte-for-byte compatible with the handle that produced
+ * the BO.  Sharing is limited to one fd and to handles that are alive: the
+ * provider has no cross-fd or cross-context BO import on this target.
+ *
+ * ``rk_shared_constant_get_or_create`` returns one reference in *out* on
+ * success.  A workspace created with a handle retains it independently, so the
+ * caller releases its reference after workspace creation.  When the last
+ * workspace releases the handle its BO is freed and the cache entry disappears;
+ * a later request repacks rather than reusing an unowned BO. */
+typedef struct rk_shared_constant rk_shared_constant;
+typedef struct rk_shared_constant_binding {
+    uint32_t action_id;
+    uint32_t reserved;
+    rk_shared_constant *constant;
+} rk_shared_constant_binding;
+
 uint32_t rk_abi_version(void);
+/* Pack/select one immutable upload destination.  ``action_id`` must name an
+ * upload action of ``plan`` whose source binding is a constant; ``source`` is
+ * that constant binding.  ``key`` is a NUL-terminated caller identity and must
+ * be non-empty.  ``created`` (optional) reports whether this call packed a new
+ * BO (1) or reused a live compatible one (0). */
+int rk_shared_constant_get_or_create(int fd, const rk_plan *plan,
+                                     uint32_t action_id,
+                                     const rk_binding *source,
+                                     const char *key,
+                                     rk_shared_constant **out,
+                                     uint32_t *created, rk_diag *diag);
+void rk_shared_constant_retain(rk_shared_constant *constant);
+void rk_shared_constant_release(rk_shared_constant *constant);
+/* Request bytes of the shared packed destination, for accounting/tests. */
+uint64_t rk_shared_constant_bytes(const rk_shared_constant *constant);
+/* Number of live shared-constant cache entries including the handles owned by
+ * workspaces.  Diagnostic only; never used as an execution decision. */
+uint32_t rk_shared_constant_live(void);
 /* Production target identity check.  The RK3588 build verifies the board
  * compatible string and kernel driver version before a workspace is created;
  * the test-only mock build intentionally supplies only the weak no-op. */
@@ -404,6 +446,18 @@ void rk_plan_destroy(rk_plan *plan);
 int rk_workspace_create(int fd, const rk_plan *plan,
                         const rk_binding *constants, uint32_t nconstants,
                         rk_workspace **out, rk_diag *diag);
+/* Workspace creation with zero or more immutable packed upload destinations
+ * supplied by the shared-constant cache.  Each entry replaces the destination
+ * buffer of exactly one upload action; that upload is skipped at creation and
+ * all of its task reads use the shared BO.  Shared handles must belong to the
+ * same fd and must be compatible with this plan's action, source stride,
+ * transpose and destination tensor geometry.  The workspace retains every
+ * unique handle and releases it on a confirmed destroy. */
+int rk_workspace_create_shared(int fd, const rk_plan *plan,
+                               const rk_binding *constants, uint32_t nconstants,
+                               const rk_shared_constant_binding *shared,
+                               uint32_t nshared,
+                               rk_workspace **out, rk_diag *diag);
 int rk_workspace_run(rk_workspace *ws,
                      const rk_binding *inputs, uint32_t ninputs,
                      const rk_binding *outputs, uint32_t noutputs,
@@ -427,6 +481,46 @@ int rk_workspace_run_ex(rk_workspace *ws,
                         const rk_binding *outputs, uint32_t noutputs,
                         rk_run_attribution *envelope, rk_diag *diag);
 int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag);
+
+/* Generic persistent-upload state support.
+ *
+ * A model may nominate one existing upload action as persistent.  The action's
+ * destination BO is still allocated by the workspace, but the normal upload
+ * phase no longer rewrites it on every run.  The caller then owns the update
+ * discipline through the two region helpers below: initial/full fill, reset,
+ * and incremental append.  The upload action's source region, transpose flag
+ * and destination tensor remain the authority for how a source rectangle maps
+ * to a destination rectangle, so this cannot silently reinterpret the plan.
+ *
+ * This is deliberately a planner/runtime primitive, not a Smol-specific bypass:
+ * arbitrary stateful plans may use it, and all range/geometry checks run in C.
+ */
+#define RK_STATE_SOURCE_TRANSPOSE 1u
+typedef struct rk_state_source {
+    const void *data;
+    uint64_t nbytes;
+    uint32_t row_stride;      /* elements, FP16 */
+    uint32_t flags;            /* RK_STATE_SOURCE_TRANSPOSE or zero */
+} rk_state_source;
+
+int rk_workspace_set_persistent_upload(rk_workspace *ws,
+                                       uint32_t action_id,
+                                       rk_diag *diag);
+/* Pack one source rectangle into one destination logical rectangle using the
+ * upload action's transpose/stride convention.  It does not clear untouched
+ * destination bytes.  The source is a caller-owned FP16 buffer with
+ * ``row_stride`` elements per row and ``nbytes`` addressable bytes. */
+int rk_workspace_update_upload_region(rk_workspace *ws, uint32_t action_id,
+                                      const rk_state_source *source,
+                                      uint32_t src_row, uint32_t src_col,
+                                      uint32_t dst_row, uint32_t dst_col,
+                                      uint32_t rows, uint32_t cols,
+                                      rk_diag *diag);
+/* Zero the full destination tensor of a persistent upload action.  The caller
+ * uses this on reset before a new request's first initialization/full fill. */
+int rk_workspace_clear_upload_destination(rk_workspace *ws,
+                                          uint32_t action_id,
+                                          rk_diag *diag);
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,616 @@
+{
+  "allow_approx_lut": false,
+  "compiler": "real TileLang PrimFunc -> rknpu_backend.compile_tilelang",
+  "hybrid_manifests": {
+    "mnist_mlp_b1": {
+      "batch": 1,
+      "model": "mnist_mlp",
+      "path": "mnist_mlp_b1.rkhybrid.json",
+      "sha256": "7bc687bf7475a876ac825588078dec88f3515281a7cc5296189168f1c9159112"
+    },
+    "mnist_mlp_b32": {
+      "batch": 32,
+      "model": "mnist_mlp",
+      "path": "mnist_mlp_b32.rkhybrid.json",
+      "sha256": "fe106daa1f6b23ab4f9f18cce14b3a9e6b5d12bcf5ba20d1ee243a0941eb7cb0"
+    },
+    "mnist_mlp_b8": {
+      "batch": 8,
+      "model": "mnist_mlp",
+      "path": "mnist_mlp_b8.rkhybrid.json",
+      "sha256": "d938dcb0d159a7b240b2fe06cfc0f9620204cd95c6fb6084bf93b1443f1afc94"
+    },
+    "tiny_vit_b1": {
+      "attn_layout": "qkv",
+      "batch": 1,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "798a62111a328fb6325d6511a361222b05aed905807811c9b1722e9fe5e8e6bc"
+    },
+    "tiny_vit_b1_addfused": {
+      "attn_layout": "materialized",
+      "batch": 1,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1_addfused.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "fbc239cf1497fe78ace53c1205850a36f33fdce28134409f80d9373925ac8444"
+    },
+    "tiny_vit_b1_deviceffn": {
+      "attn_layout": "materialized",
+      "batch": 1,
+      "ffn_mode": "device",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1_deviceffn.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "9d3fb6da1891bcb3feef6815f0078f94e85b6b0ded7885a4a167c5281b553186"
+    },
+    "tiny_vit_b1_deviceffn_fused": {
+      "attn_layout": "materialized",
+      "batch": 1,
+      "ffn_mode": "device_fused",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1_deviceffn_fused.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "cb309399bd6b631ca948a2bb272936a903a6bf4fd2723bd4746fec4ebef00636"
+    },
+    "tiny_vit_b1_hostffn": {
+      "attn_layout": "materialized",
+      "batch": 1,
+      "ffn_mode": "host",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1_hostffn.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "7c662c7dc512f2c9e6684999b14bbfe4a0c9b5b95420ce8b0cada1879d184814"
+    },
+    "tiny_vit_b1_rmsnorm": {
+      "batch": 1,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1_rmsnorm.rkhybrid.json",
+      "rmsnorm_mode": "fused",
+      "sha256": "700b7b588cf118b4cac67b12d9ee6acdeef89393983f146800582c74ab35ac8f"
+    },
+    "tiny_vit_b1_splitheads": {
+      "attn_layout": "materialized",
+      "batch": 1,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b1_splitheads.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "1884ef90f2d250b89b2b03c9c41521cfcc9aa680f3fd23f34b8adf02091c7ffa"
+    },
+    "tiny_vit_b8": {
+      "attn_layout": "qkv",
+      "batch": 8,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "356dfdda49d5a2454afe377fa8b86f642fe80a7c0a9ffe87df6eaf263f810f2e"
+    },
+    "tiny_vit_b8_addfused": {
+      "attn_layout": "materialized",
+      "batch": 8,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8_addfused.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "9a3215295d90bcc21c699809663d8834a90ddf8ab1846b457d706dfaf262d8cd"
+    },
+    "tiny_vit_b8_deviceffn": {
+      "attn_layout": "materialized",
+      "batch": 8,
+      "ffn_mode": "device",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8_deviceffn.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "2837dac8bec44a90b474e0441e7e2a5043945ae2019f6ebf6fef0c4c31494fbd"
+    },
+    "tiny_vit_b8_deviceffn_fused": {
+      "attn_layout": "materialized",
+      "batch": 8,
+      "ffn_mode": "device_fused",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8_deviceffn_fused.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "b99d284b56dadc43a85ea704a9095c84f1f845b7c98f46d5ecfcad721bf7d8e5"
+    },
+    "tiny_vit_b8_hostffn": {
+      "attn_layout": "materialized",
+      "batch": 8,
+      "ffn_mode": "host",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8_hostffn.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "ebdf25fa224403c13fc188c44a823e9e8e809601f5095fe0480f53e0336e8164"
+    },
+    "tiny_vit_b8_rmsnorm": {
+      "batch": 8,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8_rmsnorm.rkhybrid.json",
+      "rmsnorm_mode": "fused",
+      "sha256": "0dec3b73c8b19f1072aa2f3e3de6e1a3ab4c31299ec769a60ba1ad6e9f18798e"
+    },
+    "tiny_vit_b8_splitheads": {
+      "attn_layout": "materialized",
+      "batch": 8,
+      "ffn_mode": "packed",
+      "model": "tiny_vit",
+      "path": "tiny_vit_b8_splitheads.rkhybrid.json",
+      "rmsnorm_mode": "host",
+      "sha256": "d3fa6dd535ff930522f5a082f1753d5b7d240f6c5eaef253a000bea9c5399413"
+    }
+  },
+  "hybrid_policy": {
+    "dynamic_shapes": "forbidden",
+    "host_actions": "rknpu_backend.hybrid.HOST_ACTIONS",
+    "host_actions_version": 1,
+    "host_fallback": "forbidden",
+    "kind": "explicit_versioned_rkhybrid",
+    "npu_fallback": "forbidden",
+    "unknown_action": "reject"
+  },
+  "hybrid_schema_version": 1,
+  "mlp_hidden_diagnostics": {
+    "mnist_mlp_diag_l1_bias": {
+      "output_binding": "Y",
+      "plan_hash": "e3a8fd3d8a1031021f80441b202547e2de5223b99988d3cf6d22c07600561986",
+      "role": "layer1-pre-relu-bias",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    },
+    "mnist_mlp_diag_l1_relu": {
+      "output_binding": "Y",
+      "plan_hash": "e90915323bb44864afe2f149f73431a583a606da54582994798a2dc55e5b9c09",
+      "role": "layer1-exact-relu",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add_relu.f16.v1"
+      ]
+    },
+    "mnist_mlp_diag_l2_bias": {
+      "output_binding": "Y",
+      "plan_hash": "edc53c195ec03604bfbf07f3204289ad72fa1bd45de3ed9456f60132e612c74d",
+      "role": "layer2-pre-relu-bias",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    },
+    "mnist_mlp_diag_l2_relu": {
+      "output_binding": "Y",
+      "plan_hash": "45011acf5b9f738c8b9979361c7312981e9a9a7e4c4da8b0893a92501e336aad",
+      "role": "layer2-exact-relu",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.ew_add_relu.f16.v1"
+      ]
+    },
+    "mnist_mlp_diag_l3_bias": {
+      "output_binding": "Y",
+      "plan_hash": "6b9934553ae4ad6565dca06ef90d7e001eb19570d6983b3cb53462f49c044339",
+      "role": "layer3-final-preactivation-bias",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    }
+  },
+  "numeric_mode": "rk_f16_tiled",
+  "plans": {
+    "mnist_mlp_b1": {
+      "batch": 1,
+      "path": "mnist_mlp_b1.rkplan.json",
+      "plan_hash": "8dd66f295abebea61fb523e1e5261c235306641154bcdaeeeee8e0d0e4be2dac",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 22, 22, 1, 1048576)"
+    },
+    "mnist_mlp_b32": {
+      "batch": 32,
+      "path": "mnist_mlp_b32.rkplan.json",
+      "plan_hash": "200427dec4368ff6baa3bb5be2f079063b7303b388195e54cfea92daf9206840",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 22, 22, 1, 1048576)"
+    },
+    "mnist_mlp_b8": {
+      "batch": 8,
+      "path": "mnist_mlp_b8.rkplan.json",
+      "plan_hash": "8f1f1c20f9d02c95ba86269626553f84ca3b1e5830121614d4f435679c9070ad",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 22, 22, 1, 1048576)"
+    },
+    "mnist_mlp_diag_l1_bias": {
+      "batch": 8,
+      "path": "mnist_mlp_diag_l1_bias.rkplan.json",
+      "plan_hash": "e3a8fd3d8a1031021f80441b202547e2de5223b99988d3cf6d22c07600561986",
+      "role": "numeric-acceptance-mlp-layer1-pre-relu-bias",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 210, 210, 1, 1048576)",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    },
+    "mnist_mlp_diag_l1_relu": {
+      "batch": 8,
+      "path": "mnist_mlp_diag_l1_relu.rkplan.json",
+      "plan_hash": "e90915323bb44864afe2f149f73431a583a606da54582994798a2dc55e5b9c09",
+      "role": "numeric-acceptance-mlp-layer1-exact-relu",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 170, 170, 1, 1048576)",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.mm_acc.f16.v1",
+        "co.ew_add_relu.f16.v1"
+      ]
+    },
+    "mnist_mlp_diag_l2_bias": {
+      "batch": 8,
+      "path": "mnist_mlp_diag_l2_bias.rkplan.json",
+      "plan_hash": "edc53c195ec03604bfbf07f3204289ad72fa1bd45de3ed9456f60132e612c74d",
+      "role": "numeric-acceptance-mlp-layer2-pre-relu-bias",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 294, 294, 1, 1048576)",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    },
+    "mnist_mlp_diag_l2_relu": {
+      "batch": 8,
+      "path": "mnist_mlp_diag_l2_relu.rkplan.json",
+      "plan_hash": "45011acf5b9f738c8b9979361c7312981e9a9a7e4c4da8b0893a92501e336aad",
+      "role": "numeric-acceptance-mlp-layer2-exact-relu",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 256, 256, 1, 1048576)",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.ew_add_relu.f16.v1"
+      ]
+    },
+    "mnist_mlp_diag_l3_bias": {
+      "batch": 8,
+      "path": "mnist_mlp_diag_l3_bias.rkplan.json",
+      "plan_hash": "6b9934553ae4ad6565dca06ef90d7e001eb19570d6983b3cb53462f49c044339",
+      "role": "numeric-acceptance-mlp-layer3-final-preactivation-bias",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 338, 338, 1, 1048576)",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ]
+    },
+    "mnist_relu_probe": {
+      "batch": 2,
+      "constant_inputs": [
+        "X",
+        "B"
+      ],
+      "path": "mnist_relu_probe.rkplan.json",
+      "plan_hash": "e916acfe37dfc1d83c68e54da035884e73abdb7ff81f7dd87d0d203678b4e2bc",
+      "role": "numeric-acceptance-relu-probe",
+      "source_hash": "Span(SourceName(models/tilelang_mlp.py#sha256:a244daf9933972a8, 0x0), 135, 135, 1, 1048576)",
+      "templates": [
+        "co.ew_add.f16.v1",
+        "co.ew_max.f16.v1"
+      ]
+    },
+    "tiny_vit_b1_attn_out": {
+      "batch": 16,
+      "path": "tiny_vit_b1_attn_out.rkplan.json",
+      "plan_hash": "6bd83023ad3d847365e7cb3e8a341a9e66498a045a0fa40b2fd10e724881e80e",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_attn_out_add": {
+      "batch": 16,
+      "path": "tiny_vit_b1_attn_out_add.rkplan.json",
+      "plan_hash": "c44f84e9380ca8fdf8f62f68caf47e5bb8183029df7ea7ed58ef8651f6b8def4",
+      "source_hash": "builder"
+    },
+    "tiny_vit_b1_classifier": {
+      "batch": 1,
+      "path": "tiny_vit_b1_classifier.rkplan.json",
+      "plan_hash": "324986de23526ab213474a02812d2f5d133b0a79345e092b79a689542994f92b",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_down": {
+      "batch": 16,
+      "path": "tiny_vit_b1_down.rkplan.json",
+      "plan_hash": "f3de416a41996c42209a5e66b46cbf1a6d254c81e9582418999939bfdb4de07b",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_down_add": {
+      "batch": 16,
+      "path": "tiny_vit_b1_down_add.rkplan.json",
+      "plan_hash": "9d769e0fe4d6a9f308e8ebe04d9bd9d6e846449857fa7ee43d60bd9869282c29",
+      "source_hash": "builder"
+    },
+    "tiny_vit_b1_ffn": {
+      "batch": 16,
+      "path": "tiny_vit_b1_ffn.rkplan.json",
+      "plan_hash": "a33d6711c09f5712e9d7153ab1bb13aa09f92878d1116929d7b7e8126702d751",
+      "role": "device-resident-swiglu-ffn",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 40, 40, 1, 1048576)",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "transfers": 8
+    },
+    "tiny_vit_b1_ffn_fused": {
+      "batch": 16,
+      "path": "tiny_vit_b1_ffn_fused.rkplan.json",
+      "plan_hash": "35dad386b305c416edb92d3311e4acf589dd29def0e3fb90fcdf2ecf2f8d694d",
+      "role": "device-resident-swiglu-ffn-fused-submit",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 40, 40, 1, 1048576)",
+      "source_plan": "tiny_vit_b1_ffn",
+      "submit_count": 1,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "transfers": 8
+    },
+    "tiny_vit_b1_ffn_trace": {
+      "batch": 16,
+      "outputs": [
+        "gate",
+        "up",
+        "act",
+        "ffn"
+      ],
+      "path": "tiny_vit_b1_ffn_trace.rkplan.json",
+      "plan_hash": "11e6f4492a7631f034596fcf47ef2dc452de6321d79db298f09c748a60a3a866",
+      "role": "numeric-capture-trace",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 40, 40, 1, 1048576)",
+      "source_plan": "tiny_vit_b1_ffn"
+    },
+    "tiny_vit_b1_gate": {
+      "batch": 16,
+      "path": "tiny_vit_b1_gate.rkplan.json",
+      "plan_hash": "70f316f699807e290a056a9e207265538330bac588fe2185552459457c8c6c52",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_gate_up": {
+      "batch": 16,
+      "path": "tiny_vit_b1_gate_up.rkplan.json",
+      "plan_hash": "3262faf459db6c4ec24fe1085605cdb066fa4f2f8a5a9410f199953ce510fb19",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_patch": {
+      "batch": 16,
+      "path": "tiny_vit_b1_patch.rkplan.json",
+      "plan_hash": "6bd83023ad3d847365e7cb3e8a341a9e66498a045a0fa40b2fd10e724881e80e",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_pv": {
+      "batch": 16,
+      "path": "tiny_vit_b1_pv.rkplan.json",
+      "plan_hash": "38fc223463f50aef0e54b28e33e7d871eec1530a6a05adcef3031d2fbaab48ab",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_pv_qkv_group": {
+      "batch": 16,
+      "input_map_version": 1,
+      "path": "tiny_vit_b1_pv_qkv_group.rkplan.json",
+      "plan_hash": "d01ddd74839b81c126f10d19582295da645c01825c7807579862601ac0556ddc",
+      "repeat": 4,
+      "role": "mapped-qkv-attn-group",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)|repeat_expand:n=4",
+      "source_plan": "tiny_vit_b1_qk"
+    },
+    "tiny_vit_b1_qk": {
+      "batch": 16,
+      "path": "tiny_vit_b1_qk.rkplan.json",
+      "plan_hash": "38fc223463f50aef0e54b28e33e7d871eec1530a6a05adcef3031d2fbaab48ab",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_qk_group": {
+      "batch": 16,
+      "path": "tiny_vit_b1_qk_group.rkplan.json",
+      "plan_hash": "28c0e44851ce8b7fab4279381df6bfd988cb30d6100f2d44e21b4726e05c1952",
+      "repeat": 4,
+      "role": "static-repeat-group",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)|repeat_expand:n=4",
+      "source_plan": "tiny_vit_b1_qk"
+    },
+    "tiny_vit_b1_qk_qkv_group": {
+      "batch": 16,
+      "input_map_version": 1,
+      "path": "tiny_vit_b1_qk_qkv_group.rkplan.json",
+      "plan_hash": "7b8d76a73373fd8673c932e432b922e63b79c3bbd3704368565038308175170f",
+      "repeat": 4,
+      "role": "mapped-qkv-attn-group",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)|repeat_expand:n=4",
+      "source_plan": "tiny_vit_b1_qk"
+    },
+    "tiny_vit_b1_qkv": {
+      "batch": 16,
+      "path": "tiny_vit_b1_qkv.rkplan.json",
+      "plan_hash": "93123fa9e4fde903775e6ae7da79759eb7ad95d0b0eb097f549cbafa583c8b53",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b1_up": {
+      "batch": 16,
+      "path": "tiny_vit_b1_up.rkplan.json",
+      "plan_hash": "70f316f699807e290a056a9e207265538330bac588fe2185552459457c8c6c52",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_attn_out": {
+      "batch": 128,
+      "path": "tiny_vit_b8_attn_out.rkplan.json",
+      "plan_hash": "fa053d6f39e224d8524057ec447797f98d13966c05530740df67037b2ab6c66e",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_attn_out_add": {
+      "batch": 128,
+      "path": "tiny_vit_b8_attn_out_add.rkplan.json",
+      "plan_hash": "65228e317c3a70b4f1ce4060f1fa0a73d78451bc4d8214bed3d6eb889cd1a751",
+      "source_hash": "builder"
+    },
+    "tiny_vit_b8_classifier": {
+      "batch": 8,
+      "path": "tiny_vit_b8_classifier.rkplan.json",
+      "plan_hash": "40f7549ce6c23ce4d9bdca593d37d2950c2382809e5ab60d890e9c536d52daff",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_down": {
+      "batch": 128,
+      "path": "tiny_vit_b8_down.rkplan.json",
+      "plan_hash": "9a288f5e512cee28958bb51515d5b7064d8a0419c5a5088395b3ea47d62a7918",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_down_add": {
+      "batch": 128,
+      "path": "tiny_vit_b8_down_add.rkplan.json",
+      "plan_hash": "c1b55b4f87aa0e882a85894ecb2c4d9b2a6476dfcbf165c35da0eadd9dcce6e1",
+      "source_hash": "builder"
+    },
+    "tiny_vit_b8_ffn": {
+      "batch": 128,
+      "path": "tiny_vit_b8_ffn.rkplan.json",
+      "plan_hash": "ec5db174e0ca2f8f3c98f4efe8464491d6b57f356a5380cf7cb1e15b5b5d2f7f",
+      "role": "device-resident-swiglu-ffn",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 40, 40, 1, 1048576)",
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "transfers": 8
+    },
+    "tiny_vit_b8_ffn_fused": {
+      "batch": 128,
+      "path": "tiny_vit_b8_ffn_fused.rkplan.json",
+      "plan_hash": "ee2ba01664eb724f8f87a55e3508d4071fd5d128d4323909854d3c2649b9d5b1",
+      "role": "device-resident-swiglu-ffn-fused-submit",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 40, 40, 1, 1048576)",
+      "source_plan": "tiny_vit_b8_ffn",
+      "submit_count": 1,
+      "templates": [
+        "co.mm.f16.v1",
+        "co.mm.f16.v1",
+        "co.lut.sigmoid.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.ew_mul.f16.v1",
+        "co.mm.f16.v1",
+        "co.ew_add.f16.v1"
+      ],
+      "transfers": 8
+    },
+    "tiny_vit_b8_ffn_trace": {
+      "batch": 128,
+      "outputs": [
+        "gate",
+        "up",
+        "act",
+        "ffn"
+      ],
+      "path": "tiny_vit_b8_ffn_trace.rkplan.json",
+      "plan_hash": "4af90a37c82631e21fb779b7335aa381a90fdcde8bc2f907bf7e1f72c42f5c75",
+      "role": "numeric-capture-trace",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 40, 40, 1, 1048576)",
+      "source_plan": "tiny_vit_b8_ffn"
+    },
+    "tiny_vit_b8_gate": {
+      "batch": 128,
+      "path": "tiny_vit_b8_gate.rkplan.json",
+      "plan_hash": "454146109cf433db84545b7e1f790b8c24968fffb29649f138f73f0a0d6d854d",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_gate_up": {
+      "batch": 128,
+      "path": "tiny_vit_b8_gate_up.rkplan.json",
+      "plan_hash": "566b6143487a62f2b9fad9d7cea74b054dfa4aad73248f8683b483bea7ee07dc",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_patch": {
+      "batch": 128,
+      "path": "tiny_vit_b8_patch.rkplan.json",
+      "plan_hash": "fa053d6f39e224d8524057ec447797f98d13966c05530740df67037b2ab6c66e",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_pv": {
+      "batch": 16,
+      "path": "tiny_vit_b8_pv.rkplan.json",
+      "plan_hash": "38fc223463f50aef0e54b28e33e7d871eec1530a6a05adcef3031d2fbaab48ab",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_pv_qkv_group": {
+      "batch": 16,
+      "input_map_version": 1,
+      "path": "tiny_vit_b8_pv_qkv_group.rkplan.json",
+      "plan_hash": "4734e764962238c5aa8ed868276630a688dc248bfa6eeca69d2606dfe434d90a",
+      "repeat": 32,
+      "role": "mapped-qkv-attn-group",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)|repeat_expand:n=32",
+      "source_plan": "tiny_vit_b8_qk"
+    },
+    "tiny_vit_b8_qk": {
+      "batch": 16,
+      "path": "tiny_vit_b8_qk.rkplan.json",
+      "plan_hash": "38fc223463f50aef0e54b28e33e7d871eec1530a6a05adcef3031d2fbaab48ab",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_qk_group": {
+      "batch": 16,
+      "path": "tiny_vit_b8_qk_group.rkplan.json",
+      "plan_hash": "594a8aeba7eb7214022660bfb02e32d05f67df2c1a5137dd10bb388a89131507",
+      "repeat": 32,
+      "role": "static-repeat-group",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)|repeat_expand:n=32",
+      "source_plan": "tiny_vit_b8_qk"
+    },
+    "tiny_vit_b8_qk_qkv_group": {
+      "batch": 16,
+      "input_map_version": 1,
+      "path": "tiny_vit_b8_qk_qkv_group.rkplan.json",
+      "plan_hash": "6712743b6ee9c72079b8dbb10b1e115286321aa4380f7db33bf91e95bb97a2de",
+      "repeat": 32,
+      "role": "mapped-qkv-attn-group",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)|repeat_expand:n=32",
+      "source_plan": "tiny_vit_b8_qk"
+    },
+    "tiny_vit_b8_qkv": {
+      "batch": 128,
+      "path": "tiny_vit_b8_qkv.rkplan.json",
+      "plan_hash": "354db432c8033be8bc5cb8f24925487af69a54694283af438181e33ded6c29a3",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    },
+    "tiny_vit_b8_up": {
+      "batch": 128,
+      "path": "tiny_vit_b8_up.rkplan.json",
+      "plan_hash": "454146109cf433db84545b7e1f790b8c24968fffb29649f138f73f0a0d6d854d",
+      "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:5e14d7986db03cfc, 0x0), 13, 13, 1, 1048576)"
+    }
+  },
+  "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+  "schema_version": 1,
+  "source_files": {
+    "models/tilelang_matmul.py": "5e14d7986db03cfc4f607d5b358e8f9a921d33d3de0ac99101836a8607d71f9e",
+    "models/tilelang_mlp.py": "a244daf9933972a8c46ccc3921ca3059902a969efb59e33facacf3c83e76d2a3"
+  }
+}

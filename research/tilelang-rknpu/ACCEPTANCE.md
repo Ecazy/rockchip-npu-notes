@@ -480,3 +480,148 @@ TileLang control flow/masks, CNN operator coverage, NPU training, INT8/INT4,
 full LLM loading, KV cache/state, RK1228 support, multi-board/concurrent
 throughput, or post-fault recovery.  The Transformer's Host bridge is reported
 and timed rather than hidden; it is not claimed to be pure NPU.
+
+<a id="smollm2-135m-instruct"></a>
+## SmolLM2-135M-Instruct 完整推理验收（2026-10-28）
+
+### 结论与设备
+
+在 RK3588（Orange Pi 5 Plus，kernel
+`6.1.43-rockchip-rk3588-rknpu098`，driver v0.9.8，单核 mask 1）上，以固定
+revision `12fd25f77366fa6b3b4b768ec3050bf629380bac` 的
+HuggingFaceTB/SmolLM2-135M-Instruct 完成 batch=1、容量 256 token 的真实权重推理：
+30 层全部执行，词表 49152 全量执行；prefill、持久 KV cache 的逐 token decode、
+chat template、EOS/max_new_tokens、reset 重放和独立数值/质量验收均通过。
+
+本里程碑不是 RKNN/RKLLM 路径，也没有 CPU 整模型执行或 CPU 矩阵 fallback。
+Embedding、RMSNorm、RoPE、GQA layout/merge、稳定 causal softmax、SwiGLU
+elementwise、residual add、logits 拼接和采样是明确注册并计量的 Host action；
+所有 Q/K/V/O、gate/up/down、attention QK/PV 和 lm_head 分片的矩阵任务均来自
+`models/tilelang_matmul.py:make_matmul_prim` 的真实 TileLang PrimFunc，经
+`compile_tilelang` 生成 RKPlan 后在板端提交。`lm_head` 用 12 个 4096 宽分片覆盖
+49152 词表。
+
+### 固定模型身份
+
+| 项 | 值 |
+|---|---|
+| revision | `12fd25f77366fa6b3b4b768ec3050bf629380bac` |
+| config / tokenizer / weights SHA-256 | 见 `results/20261028T094650Z-smollm2/manifest.json` |
+| layers / hidden / intermediate / vocab | 30 / 576 / 1536 / 49152 |
+| Q heads / KV heads / head_dim | 9 / 3 / 64 |
+| activation / eps / RoPE | SiLU / 1e-5 / theta=100000, HF half-split |
+| tied embeddings | true |
+| BOS / EOS / pad | 1 `<|im_start|>` / 2 `<|im_end|>` / 2 |
+| chat template | tokenizer_config 内嵌模板，Host 侧应用 |
+
+### 计划与执行资源
+
+| 项 | 实测/声明 |
+|---|---:|
+| RKPlan 数 | 268 |
+| NPU tasks / submits | 5660 / 1712 |
+| 每 decoder 层每 token 的矩阵计划调用 | QKV + O + gate/up + down + 3 QK + 3 PV = 9 |
+| decode lm_head 计划 | 12 |
+| 每 token 计划调用总数 | 282（30×9 + 12） |
+| 权重文件 | 269,077,440 B FP16 |
+| 部署计划常量（decode+prefill） | 537,919,488 B |
+| Host KV cache | 30×3×256×64×2×2 = 5,898,240 B |
+| Plan artifact 文本 | 10,784,213 B |
+| 峰值 RSS | 2,049,200 kB |
+
+268 个计划的 `templates` 均只包含 `co.mm.f16.v1` / `co.mm_acc.f16.v1`；无
+Host 矩阵计划、未知 action 或静默 fallback。QK/PV 使用运行时 B operand；KV 追加
+仍是 Host 侧显式、带边界检查的 in-place action。
+
+### 数值验收
+
+门限只用 calibration prompt（“Name the capital of France.”，36 token）上的
+观测冻结，验收使用不重叠的 prompt（“Write a Python function that returns the
+square of an integer.”，42 token）。完整 spec 与哈希：
+`models/smollm2_numeric_acceptance.json`（56 个 gate）。独立 declared reference
+显式实现 FP16 权重/激活、每个 256-wide K tile 的 FP16 writeback、FP32 RMSNorm
+归约、FP32 RoPE/softmax 和单次 FP16 收窄；官方参考为 HF Transformers float32、
+`attn_implementation=eager`、固定随机种子。
+
+| 检查 | 观测 | 冻结门限 | 结果 |
+|---|---|---|---|
+| full logits vs declared reference | max_abs 0.138671875, RMSE 0.0256602, top1 42/42, top5 均值 4.952 | atol 0.296875, RMSE 0.07421875, top1 ≥0.99 | PASS |
+| full logits vs official FP32 | max_abs 0.1135664, RMSE 0.0224003, top1 42/42, top5 均值 4.976 | atol 0.1955566, RMSE 0.0625, top1 ≥0.99 | PASS |
+| teacher-forcing 74 positions vs declared reference | max_abs 0.1464844, RMSE 0.0239630, top1 74/74 | atol 0.34765625, RMSE 0.0869141, top1 ≥0.99 | PASS |
+| incremental KV decode vs full-prefix recompute | 9/9 位置逐元素完全相等（max_abs=0, RMSE=0） | atol/RMSE 2^-12, top1 ≥0.99 | PASS |
+| 首/中/末层 captures（layer 0/15/29） | 见 verifier JSON | 校准冻结的 per-tensor atol/RMSE | PASS（56/56） |
+| lm_head shard 覆盖 | 12×4096=49152；每个 shard 与 declared reference 数值 gate | 校准冻结 | PASS |
+
+补充：per-shard 内部 rank 本身不作为 gate。验收中 shard 08 在 42 个位置里有 1
+个近 tie（top1 从 2670 变 1317，差 0.0078，整词表 top1 仍全对）；这属于硬件
+FP16 近 tie，不是词表索引/拼接错误。V1 policy 曾误把 per-shard rank 作为 gate，
+并误把官方 continuation 本身作为 gate；V2 保留所有 atol/RMSE 值与 full-vocab
+rank gate 不变，只把这两项改为诊断，原始 V1 观测保留在 evidence 中。
+
+### 质量与自由生成
+
+| 项 | Backend | Official FP32 |
+|---|---:|---:|
+| 验收文本 1275 scored tokens, mean NLL | 3.23915684 | 3.23910809 |
+| 验收文本 PPL | 25.512202 | 25.510958 |
+| 验收文本 top1 accuracy | 0.43843137 | 0.43843137 |
+| 校准文本 1275 tokens, mean NLL | 2.88394461 | 2.88385677 |
+| 校准文本 PPL | 17.884682 | 17.883112 |
+
+固定 instruction prompts（chat template，greedy，32 token）：
+- prompt 0 “What is 2+2? Answer with one short sentence.”：32/32 token 与官方
+  一致，首个分叉 None；
+- prompt 1 “Name the capital of France.”：21/32 一致，首个分叉 index 20；
+- prompt 2 “Write a Python function that returns the square of an integer.”：
+  8/32 一致，首个分叉 index 6；
+- prompt 3 “In one sentence, explain why the sky appears blue.”：32/32 一致，
+  首个分叉 None。
+Prompt 0 的实际文本为
+`Two and two is equal to four.<|im_end|>`；teacher forcing 对官方 continuation
+的 top1 为 31/32（首个分叉 index 6），作为质量差异报告而不作为后端数值 gate。
+
+### 性能与资源
+
+3 次独立 generate（同一进程，每次 reset，32 new tokens）：
+
+| 指标 | 观测 |
+|---|---:|
+| Host 权重转换 + 268 plan 编译（本机实测） | 4.977 s |
+| 进程内模型/包/268 workspace 初始化 | 7.713 s |
+| 冷 TTFT（初始化 + prefill，不含 SSH/tokenization） | 10.594 s |
+| 暖 prefill / TTFT | 2.644–2.907 s |
+| decode 总时长（32 token） | 13.049–15.192 s |
+| decode 稳态中位/均值 | 465.85 / 445.17 ms/token |
+| decode tokens/s（warm） | 2.45 |
+| 3 次总量：plan dwell / Host actions | 23.484 s / 5.898 s |
+| 每 decode token 平均 upload / download | 29.92 MB / 9.51 MB |
+| 每 decode token pack / submit wait | 60.44 ms / 87.79 ms |
+| 峰值 RSS | 2,049,200 kB |
+
+计时边界：`prefill_us` 从 Host `prefill()` 入口（embedding 起）到 12 个
+lm_head shard 和 logits 拼接完成；`decode_us` 从 `decode_one()` 入口到下一 token
+logits 完成，包含 30 层、QK/PV、head shards 和所有 Host action。TTFT 不含 Host
+chat template/tokenization、SSH、结果下载。未与 RKNN/RKLLM/CPU 做同口径加速比较。
+
+### 证据与重放
+
+- 汇总与全部文件哈希：`results/20261028T094650Z-smollm2/manifest.json`
+- 验收 verifier：`results/20261028T094650Z-smollm2/verify/verify-summary.json`
+- raw arrays（all-logits、teacher-forcing、reference、official）：本地 ignored
+  `.data/evidence/smollm2-20261028T094650Z/`，路径和哈希见上述 manifest
+- 数值 spec：`models/smollm2_numeric_acceptance.json`
+- model package compile/fetch/chat/replay：`models/README.md#smollm2-135m-instruct`
+  与 [REPLAY.md](REPLAY.md#smollm2-135m-instruct)
+- host 回归：371 pytest PASS、33/33 ctest PASS；日志在 evidence `host/`
+- board 回归：既有 current MLP/TinyViT hybrid plans 各 8 张图的 admission smoke
+  PASS（MLP b1/b8/b32 与 TinyViT b1/b8 accuracy 1.0，top1 agreement 1.0），
+  证明本次通用 extractor/identity 修改未破坏既有模型路径；这不是历史
+  full-split 验收的替代。原始结果在 evidence `regression/`。
+- 边界：prompt len 1/2/3/255/256、257 拒绝、255+2 拒绝、空 prompt 拒绝、
+  EOS 停止、max_new_tokens 停止、两次 reset 结果一致。
+
+### 非声明
+
+本验收只覆盖上述单板、单核、batch=1、FP16、固定 256-token profile 的
+SmolLM2 几何；不声明任意 LLM importer、动态 shape、设备驻 KV cache、量化、
+并发请求、多板、故障后恢复、RK1228 或性能优势。
