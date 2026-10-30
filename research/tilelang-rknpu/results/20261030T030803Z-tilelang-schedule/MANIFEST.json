@@ -1,0 +1,1766 @@
+{
+ "board_runs": {
+  "attn-qk-decode": {
+   "backend": "board",
+   "environment": {
+    "core_mask": "1",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64"
+   },
+   "geometry": {
+    "k": 64,
+    "m": 3,
+    "n": 256
+   },
+   "lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+   "pass": true,
+   "reference_pass_all": true,
+   "runs": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 3,
+     "data_bo_count": 3,
+     "median_us": 226.33100161328912,
+     "min_us": 224.58100283984095,
+     "name": "default",
+     "plan_hash": "aab6ae151a504b1ddaad5c85b94720bdfc20dde087b95248b51c6fac0a5db28a",
+     "publish_count": 1,
+     "publish_order": [
+      [
+       0,
+       0,
+       3,
+       256
+      ]
+     ],
+     "reference_max_abs": 9.5367431640625e-07,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": null,
+     "submit_count": 1,
+     "task_count": 1
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 5,
+     "data_bo_count": 4,
+     "median_us": 1099.5689954143018,
+     "min_us": 1033.360997098498,
+     "name": "n128",
+     "plan_hash": "2dfddd72b6e377e2486e2436ac99d74a3757c69330c0429bfec3ecc34dcadaf6",
+     "publish_count": 2,
+     "publish_order": [
+      [
+       0,
+       0,
+       3,
+       128
+      ],
+      [
+       0,
+       128,
+       3,
+       128
+      ]
+     ],
+     "reference_max_abs": 9.5367431640625e-07,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 2,
+     "task_count": 2
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 1,
+      "tile_n": 256
+     },
+     "buffer_count": 7,
+     "data_bo_count": 5,
+     "median_us": 419.70198799390346,
+     "min_us": 283.4960032487288,
+     "name": "m1",
+     "plan_hash": "58d74a162a78f2397b113505f045b9b96b457848aa85e92fae64b3113f43db8c",
+     "publish_count": 3,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       256
+      ],
+      [
+       1,
+       0,
+       1,
+       256
+      ],
+      [
+       2,
+       0,
+       1,
+       256
+      ]
+     ],
+     "reference_max_abs": 9.5367431640625e-07,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 1,
+      "tile_n": 256
+     },
+     "submit_count": 3,
+     "task_count": 3
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 1,
+      "tile_n": 128
+     },
+     "buffer_count": 11,
+     "data_bo_count": 6,
+     "median_us": 647.783002932556,
+     "min_us": 627.0749872783199,
+     "name": "m1_n128_nmajor",
+     "plan_hash": "28dc958b0855567e24aa4593664d0a3215f44d3ee1be975eaaec5abd208c97b6",
+     "publish_count": 6,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       128
+      ],
+      [
+       1,
+       0,
+       1,
+       128
+      ],
+      [
+       2,
+       0,
+       1,
+       128
+      ],
+      [
+       0,
+       128,
+       1,
+       128
+      ],
+      [
+       1,
+       128,
+       1,
+       128
+      ],
+      [
+       2,
+       128,
+       1,
+       128
+      ]
+     ],
+     "reference_max_abs": 9.5367431640625e-07,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 1,
+      "tile_n": 128
+     },
+     "submit_count": 6,
+     "task_count": 6
+    }
+   ],
+   "schedule_equal_all": true
+  },
+  "attn-qk-prefill": {
+   "backend": "board",
+   "environment": {
+    "core_mask": "1",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64"
+   },
+   "geometry": {
+    "k": 64,
+    "m": 768,
+    "n": 256
+   },
+   "lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+   "pass": true,
+   "reference_pass_all": true,
+   "runs": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 7,
+     "data_bo_count": 5,
+     "median_us": 2377.0520056132227,
+     "min_us": 2347.009998629801,
+     "name": "default",
+     "plan_hash": "1fe0fe8cbf0ae516c77cd0200c56f8f0b25bed04bdd8bc496fb1c64b32b32e4f",
+     "publish_count": 3,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       256
+      ],
+      [
+       256,
+       0,
+       256,
+       256
+      ],
+      [
+       512,
+       0,
+       256,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": null,
+     "submit_count": 3,
+     "task_count": 3
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 11,
+     "data_bo_count": 6,
+     "median_us": 1965.2240007417277,
+     "min_us": 1936.9320070836693,
+     "name": "n128",
+     "plan_hash": "693a70118bdcd271c3a39c92bd2bf5df528192f4652fc597258667d449c969e0",
+     "publish_count": 6,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       256,
+       0,
+       256,
+       128
+      ],
+      [
+       256,
+       128,
+       256,
+       128
+      ],
+      [
+       512,
+       0,
+       256,
+       128
+      ],
+      [
+       512,
+       128,
+       256,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 6,
+     "task_count": 6
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 11,
+     "data_bo_count": 6,
+     "median_us": 1972.5159945664927,
+     "min_us": 1940.4319900786504,
+     "name": "n128_nmajor",
+     "plan_hash": "f7e6197050d5edac300799cb620853a15a81abefc2bc8179490f31b254af72e3",
+     "publish_count": 6,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       256,
+       0,
+       256,
+       128
+      ],
+      [
+       512,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       256,
+       128,
+       256,
+       128
+      ],
+      [
+       512,
+       128,
+       256,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 6,
+     "task_count": 6
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 256
+     },
+     "buffer_count": 13,
+     "data_bo_count": 8,
+     "median_us": 2704.589001950808,
+     "min_us": 2643.3390012243763,
+     "name": "m128",
+     "plan_hash": "9ff8522a075df41fec02191990ced36b28ffe7ccf73de93bd8861ad9e05eee57",
+     "publish_count": 6,
+     "publish_order": [
+      [
+       0,
+       0,
+       128,
+       256
+      ],
+      [
+       128,
+       0,
+       128,
+       256
+      ],
+      [
+       256,
+       0,
+       128,
+       256
+      ],
+      [
+       384,
+       0,
+       128,
+       256
+      ],
+      [
+       512,
+       0,
+       128,
+       256
+      ],
+      [
+       640,
+       0,
+       128,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 256
+     },
+     "submit_count": 6,
+     "task_count": 6
+    }
+   ],
+   "schedule_equal_all": true
+  },
+  "direct-rkir": {
+   "backend": "board",
+   "environment": {
+    "core_mask": "1",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64"
+   },
+   "geometry": {
+    "k": 576,
+    "m": 256,
+    "n": 960
+   },
+   "lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+   "pass": true,
+   "reference_pass_all": true,
+   "runs": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 23,
+     "data_bo_count": 17,
+     "median_us": 7118.614012142643,
+     "min_us": 6310.708005912602,
+     "name": "default",
+     "plan_hash": "2b0c8ee7b7e22ab31c6fdf25e046f2e42fec700b2cb98e129782b68fe1cde493",
+     "publish_count": 4,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       256
+      ],
+      [
+       0,
+       256,
+       256,
+       256
+      ],
+      [
+       0,
+       512,
+       256,
+       256
+      ],
+      [
+       0,
+       768,
+       256,
+       192
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": null,
+     "submit_count": 4,
+     "task_count": 12
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 23,
+     "data_bo_count": 17,
+     "median_us": 7741.5220002876595,
+     "min_us": 7603.940000990406,
+     "name": "direct_default",
+     "plan_hash": "9076a16df3e61b5b8a68ada49fc46c1cc0918462a7b50d1916fe61ca9d647340",
+     "publish_count": 4,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       256
+      ],
+      [
+       0,
+       256,
+       256,
+       256
+      ],
+      [
+       0,
+       512,
+       256,
+       256
+      ],
+      [
+       0,
+       768,
+       256,
+       192
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": null,
+     "submit_count": 4,
+     "task_count": 12
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "data_bo_count": 29,
+     "median_us": 8660.925988806412,
+     "min_us": 7063.198005198501,
+     "name": "tn128",
+     "plan_hash": "dff23eb86f69a454caaa59a56dabbee93e0d1fac0c7ac08d8c8e45c7d0c4789d",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       0,
+       256,
+       256,
+       128
+      ],
+      [
+       0,
+       384,
+       256,
+       128
+      ],
+      [
+       0,
+       512,
+       256,
+       128
+      ],
+      [
+       0,
+       640,
+       256,
+       128
+      ],
+      [
+       0,
+       768,
+       256,
+       128
+      ],
+      [
+       0,
+       896,
+       256,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "task_count": 24
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "data_bo_count": 29,
+     "median_us": 8448.804001091048,
+     "min_us": 7036.655995761976,
+     "name": "direct_tn128",
+     "plan_hash": "597ab32d7b1dfc60cd248b502c200a47138a38cf6b013b087e6a199ac3eb3001",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       0,
+       256,
+       256,
+       128
+      ],
+      [
+       0,
+       384,
+       256,
+       128
+      ],
+      [
+       0,
+       512,
+       256,
+       128
+      ],
+      [
+       0,
+       640,
+       256,
+       128
+      ],
+      [
+       0,
+       768,
+       256,
+       128
+      ],
+      [
+       0,
+       896,
+       256,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "task_count": 24
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "data_bo_count": 29,
+     "median_us": 8179.891010513529,
+     "min_us": 5931.837004027329,
+     "name": "n_major",
+     "plan_hash": "43d742515ed8699bc8c6d6efd2c4b624a51549d4954adc7efd52ef22c8490f88",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       0,
+       256,
+       256,
+       128
+      ],
+      [
+       0,
+       384,
+       256,
+       128
+      ],
+      [
+       0,
+       512,
+       256,
+       128
+      ],
+      [
+       0,
+       640,
+       256,
+       128
+      ],
+      [
+       0,
+       768,
+       256,
+       128
+      ],
+      [
+       0,
+       896,
+       256,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "task_count": 24
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "data_bo_count": 29,
+     "median_us": 8096.849996945821,
+     "min_us": 6572.619997314177,
+     "name": "direct_n_major",
+     "plan_hash": "a7843c92b18012da6b291dea35f7ff0ee185aeca3dc3d593d8d553409e6e5a67",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       0,
+       256,
+       256,
+       128
+      ],
+      [
+       0,
+       384,
+       256,
+       128
+      ],
+      [
+       0,
+       512,
+       256,
+       128
+      ],
+      [
+       0,
+       640,
+       256,
+       128
+      ],
+      [
+       0,
+       768,
+       256,
+       128
+      ],
+      [
+       0,
+       896,
+       256,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "task_count": 24
+    }
+   ],
+   "schedule_equal_all": true
+  },
+  "prefill-qkv": {
+   "backend": "board",
+   "environment": {
+    "core_mask": "1",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64"
+   },
+   "geometry": {
+    "k": 576,
+    "m": 256,
+    "n": 960
+   },
+   "lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+   "pass": true,
+   "reference_pass_all": true,
+   "runs": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 23,
+     "data_bo_count": 17,
+     "median_us": 8060.185005888343,
+     "min_us": 7336.192997172475,
+     "name": "default",
+     "plan_hash": "2b0c8ee7b7e22ab31c6fdf25e046f2e42fec700b2cb98e129782b68fe1cde493",
+     "publish_count": 4,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       256
+      ],
+      [
+       0,
+       256,
+       256,
+       256
+      ],
+      [
+       0,
+       512,
+       256,
+       256
+      ],
+      [
+       0,
+       768,
+       256,
+       192
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": null,
+     "submit_count": 4,
+     "task_count": 12
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 256
+     },
+     "buffer_count": 34,
+     "data_bo_count": 20,
+     "median_us": 9280.417012632824,
+     "min_us": 8014.017992536537,
+     "name": "tm128",
+     "plan_hash": "69485d6c177df108af23eb466e6010ffe70933b1a98a6d89ea93ce7dc7a61e7b",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       128,
+       256
+      ],
+      [
+       0,
+       256,
+       128,
+       256
+      ],
+      [
+       0,
+       512,
+       128,
+       256
+      ],
+      [
+       0,
+       768,
+       128,
+       192
+      ],
+      [
+       128,
+       0,
+       128,
+       256
+      ],
+      [
+       128,
+       256,
+       128,
+       256
+      ],
+      [
+       128,
+       512,
+       128,
+       256
+      ],
+      [
+       128,
+       768,
+       128,
+       192
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 256
+     },
+     "submit_count": 8,
+     "task_count": 24
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "data_bo_count": 29,
+     "median_us": 8819.757989840582,
+     "min_us": 8611.926998128183,
+     "name": "tn128",
+     "plan_hash": "dff23eb86f69a454caaa59a56dabbee93e0d1fac0c7ac08d8c8e45c7d0c4789d",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       0,
+       256,
+       256,
+       128
+      ],
+      [
+       0,
+       384,
+       256,
+       128
+      ],
+      [
+       0,
+       512,
+       256,
+       128
+      ],
+      [
+       0,
+       640,
+       256,
+       128
+      ],
+      [
+       0,
+       768,
+       256,
+       128
+      ],
+      [
+       0,
+       896,
+       256,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "task_count": 24
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "data_bo_count": 29,
+     "median_us": 8579.34400846716,
+     "min_us": 6766.867998521775,
+     "name": "n_major",
+     "plan_hash": "43d742515ed8699bc8c6d6efd2c4b624a51549d4954adc7efd52ef22c8490f88",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       0,
+       256,
+       256,
+       128
+      ],
+      [
+       0,
+       384,
+       256,
+       128
+      ],
+      [
+       0,
+       512,
+       256,
+       128
+      ],
+      [
+       0,
+       640,
+       256,
+       128
+      ],
+      [
+       0,
+       768,
+       256,
+       128
+      ],
+      [
+       0,
+       896,
+       256,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "task_count": 24
+    }
+   ],
+   "schedule_equal_all": true
+  },
+  "small-geometry": {
+   "backend": "board",
+   "environment": {
+    "core_mask": "1",
+    "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+    "machine": "aarch64"
+   },
+   "geometry": {
+    "k": 512,
+    "m": 512,
+    "n": 384
+   },
+   "lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+   "pass": true,
+   "reference_pass_all": true,
+   "runs": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 22,
+     "data_bo_count": 12,
+     "median_us": 7138.154993299395,
+     "min_us": 5323.136996594258,
+     "name": "base_256x128",
+     "plan_hash": "3662f2580758e8f830a129ea72ab2a028abc6c721be754d44cd5edcdb6a13ffc",
+     "publish_count": 6,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       0,
+       256,
+       256,
+       128
+      ],
+      [
+       256,
+       0,
+       256,
+       128
+      ],
+      [
+       256,
+       128,
+       256,
+       128
+      ],
+      [
+       256,
+       256,
+       256,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 6,
+     "task_count": 12
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 38,
+     "data_bo_count": 16,
+     "median_us": 8787.508006207645,
+     "min_us": 6816.4510012138635,
+     "name": "tile_128x128",
+     "plan_hash": "48a0e1f0c02afb8ba40f53d3ec1295971a1ce9345fe4ff631da6f07a92160a05",
+     "publish_count": 12,
+     "publish_order": [
+      [
+       0,
+       0,
+       128,
+       128
+      ],
+      [
+       0,
+       128,
+       128,
+       128
+      ],
+      [
+       0,
+       256,
+       128,
+       128
+      ],
+      [
+       128,
+       0,
+       128,
+       128
+      ],
+      [
+       128,
+       128,
+       128,
+       128
+      ],
+      [
+       128,
+       256,
+       128,
+       128
+      ],
+      [
+       256,
+       0,
+       128,
+       128
+      ],
+      [
+       256,
+       128,
+       128,
+       128
+      ],
+      [
+       256,
+       256,
+       128,
+       128
+      ],
+      [
+       384,
+       0,
+       128,
+       128
+      ],
+      [
+       384,
+       128,
+       128,
+       128
+      ],
+      [
+       384,
+       256,
+       128,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 12,
+     "task_count": 24
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 38,
+     "data_bo_count": 16,
+     "median_us": 8819.508002488874,
+     "min_us": 6779.992996598594,
+     "name": "tile_128x128_nmajor",
+     "plan_hash": "f360bea8f36297bbd8fab0ad44457d6decb8c9a8735b67721380c0c056c732f5",
+     "publish_count": 12,
+     "publish_order": [
+      [
+       0,
+       0,
+       128,
+       128
+      ],
+      [
+       128,
+       0,
+       128,
+       128
+      ],
+      [
+       256,
+       0,
+       128,
+       128
+      ],
+      [
+       384,
+       0,
+       128,
+       128
+      ],
+      [
+       0,
+       128,
+       128,
+       128
+      ],
+      [
+       128,
+       128,
+       128,
+       128
+      ],
+      [
+       256,
+       128,
+       128,
+       128
+      ],
+      [
+       384,
+       128,
+       128,
+       128
+      ],
+      [
+       0,
+       256,
+       128,
+       128
+      ],
+      [
+       128,
+       256,
+       128,
+       128
+      ],
+      [
+       256,
+       256,
+       128,
+       128
+      ],
+      [
+       384,
+       256,
+       128,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.00048828125,
+     "reference_pass": true,
+     "schedule_equal_to_baseline": true,
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 12,
+     "task_count": 24
+    }
+   ],
+   "schedule_equal_all": true
+  }
+ },
+ "code_commit": "16d84a55fd502d5e0986d353edf07e6d6f4db5b1",
+ "code_sha256": {
+  "models/tilelang_matmul.py": "ce4fd32db95c3c4704bc5816d1e319ccaedb161a367866054a2e457d4eb764a7",
+  "python/rknpu_backend/codegen/pipeline.py": "f539c581fc102ba79cbd99205e93a86f9560263fc6c826b029291d0e29ec3916",
+  "python/rknpu_backend/frontend/tilelang_adapter.py": "11cc69e4c97a2f27a97b3df36f9d7510dfd6eae4d0a2a84dd2666fdb4bf1379f",
+  "python/rknpu_backend/passes/dag.py": "8aa558e1e9a2c43d6949d0f7c97567bde3fb8cabf555b5374920d102c9a57fcb",
+  "python/rknpu_backend/passes/tile.py": "4b67b2e7f2ee2c244b8f61c6df8c83d37e8786f78e72ebc152bb3cb1161a67fe",
+  "scripts/run-smollm2.sh": "2a1b50ff90028d5f1bdf180be1dc55427d6e78b478c5e72f30ed517df9a1127f",
+  "tests/test_schedule_contract.py": "9171e1ac156260c7c2ab67cc2cc0cbf003d6438c8cbbc86770cddf5436c3d1f5",
+  "tools/run_schedule_experiment.py": "162a069c1332d69005e03937a07bc84840b50d968f20d0cd902e23284e90fe9b"
+ },
+ "contract": {
+  "accumulation": "ordered_ascending_f16_writeback",
+  "k_tile": 256,
+  "orders": [
+   "m_major",
+   "n_major"
+  ],
+  "source": "TILELANG-SCHEDULE.md",
+  "tile_range": [
+   1,
+   256
+  ],
+  "version": "mn_tiles_v1"
+ },
+ "dirty_paths": [
+  " M research/custom-ops/CMakeLists.txt",
+  " M research/tilelang-rknpu/GRAPH-FUSION-REPORT.md",
+  " M research/tilelang-rknpu/results/20261028T113459Z-graph-fusion/analysis-fusion.json",
+  " M research/tilelang-rknpu/results/20261028T113459Z-graph-fusion/final-source-identity.txt",
+  " M research/tilelang-rknpu/scripts/run-graph-fusion-eval.sh",
+  "?? research/custom-ops/tools/c/int16_tp_layout_probe.c",
+  "?? research/tilelang-rknpu/tools/analyze_tp_org_consumer.py"
+ ],
+ "files": {
+  "SCHEDULE-REPORT.md": {
+   "bytes": 5493,
+   "sha256": "348e687f740392e0a00e1de4cd689a8b53287d5c7800eaff6d6e4f853f14a815"
+  },
+  "attn-qk-decode/board.json": {
+   "bytes": 6623,
+   "sha256": "e760f5112d65599d284c641f3eb29764745adbbf663b791b173a40012a85b702"
+  },
+  "attn-qk-decode/board.log": {
+   "bytes": 148,
+   "sha256": "1a8f0976b7d51a9c6ca02b4da947f3efb38ddc0a02dcb6ed45a6b3f358f68c47"
+  },
+  "attn-qk-decode/compile.log": {
+   "bytes": 1285,
+   "sha256": "16e3cb0e04360d9dbb2267ec1400eb32f81978cdbc1eb77e801faa54b1389344"
+  },
+  "attn-qk-decode/plans/default.rkplan.json": {
+   "bytes": 3294,
+   "sha256": "314c954c7984f00a314c6689fc0d82fb8ca7fd136731e4b09f93b69b6d1f1d9c"
+  },
+  "attn-qk-decode/plans/m1.rkplan.json": {
+   "bytes": 7128,
+   "sha256": "50af78c796c70182098dba2a2fbb11986b31efc6ccf266c4a0e02bcf1ce91b9c"
+  },
+  "attn-qk-decode/plans/m1_n128_nmajor.rkplan.json": {
+   "bytes": 11529,
+   "sha256": "4c427be402e4557af505681b31a7bffa7f8e0bedf66b34cd87b72d50d890cd27"
+  },
+  "attn-qk-decode/plans/manifest.json": {
+   "bytes": 4232,
+   "sha256": "e7d84e94774b86e066f784bda1654e73b984df3e9cf7b1a6edf65e63d07185d4"
+  },
+  "attn-qk-decode/plans/n128.rkplan.json": {
+   "bytes": 5291,
+   "sha256": "76c63660d15ca2673337a6aa6523289964b54842915c3988c06273165798990f"
+  },
+  "attn-qk-prefill/board.json": {
+   "bytes": 7113,
+   "sha256": "b11ab333b08c169e3dd078917a7e0945ce27eddddee04cf6d9536f6f636b18cc"
+  },
+  "attn-qk-prefill/board.log": {
+   "bytes": 150,
+   "sha256": "06456796528549b14287d9fcfa9f30c6446ed3c91abddde7b650332054d0273a"
+  },
+  "attn-qk-prefill/compile.log": {
+   "bytes": 1290,
+   "sha256": "8d5a34ba3d441d0c76749d2892cddfcc476d573af36fe83f5ca771a2b74e328a"
+  },
+  "attn-qk-prefill/plans/default.rkplan.json": {
+   "bytes": 6836,
+   "sha256": "b803e9dbb262853d941f623709dd9bee2cf1d432c4dc280689919076fed6aa71"
+  },
+  "attn-qk-prefill/plans/m128.rkplan.json": {
+   "bytes": 12896,
+   "sha256": "b27e09891f74295badfd32dbc85dfecd4da84ff1e9571630149b7095dc2c647a"
+  },
+  "attn-qk-prefill/plans/manifest.json": {
+   "bytes": 4735,
+   "sha256": "ded411f579ce1968a2783d3a63ca1df2e2f57d279ca04be6f404682cd654056f"
+  },
+  "attn-qk-prefill/plans/n128.rkplan.json": {
+   "bytes": 11645,
+   "sha256": "69f7c6c73112a4d880b6b2e25c87bf28f4679179506bf64732f007a1294847e1"
+  },
+  "attn-qk-prefill/plans/n128_nmajor.rkplan.json": {
+   "bytes": 11646,
+   "sha256": "c3e1ec84a3e01da00cd51e3fefde0595898c6681eab3d7a03603497c3a6a406c"
+  },
+  "ctest.log": {
+   "bytes": 3758,
+   "sha256": "e6a6c69ae4646c910d68d33db4e226df88399646363469495ac77edeb10ff0d1"
+  },
+  "direct-rkir/board.json": {
+   "bytes": 10745,
+   "sha256": "fbc70198e12cbcabe90aabff8d99b6b1ba64ec9ede08b5cfca19b531a54bddba"
+  },
+  "direct-rkir/board.log": {
+   "bytes": 151,
+   "sha256": "7bcaccc25e92e83fc1152ba92b12ef5fd22af51d2c79be81c9c10c7519c2f7da"
+  },
+  "direct-rkir/compile.log": {
+   "bytes": 940,
+   "sha256": "2439acf8e3b8b75362c633a8bdfb3795158ff0444383173c09a30828ca5e087b"
+  },
+  "direct-rkir/mock.json": {
+   "bytes": 10370,
+   "sha256": "dcdea17952fa50b830d4b28576f570964b19d9e27a2f374e9d9d41fcdc295fc1"
+  },
+  "direct-rkir/mock.log": {
+   "bytes": 150,
+   "sha256": "db852573a71b227b41942e17ea6d8a17e17e6d474f8c0cacd7dd24f9bd3c9c2c"
+  },
+  "direct-rkir/plans/default.rkplan.json": {
+   "bytes": 20120,
+   "sha256": "654950d0d01f8ec6e818f9ef0ff4ee6041d52444147ef338dca4349af112c603"
+  },
+  "direct-rkir/plans/direct_default.rkplan.json": {
+   "bytes": 20021,
+   "sha256": "6a81fe684d2756b292a9d97e260884a5cd93ec26b759ad68248191c583a1cf47"
+  },
+  "direct-rkir/plans/direct_n_major.rkplan.json": {
+   "bytes": 40103,
+   "sha256": "fcbc210024f8b0081634b83192d1a521e2b0e85122980fb545825e806fa2212f"
+  },
+  "direct-rkir/plans/direct_tn128.rkplan.json": {
+   "bytes": 40103,
+   "sha256": "cf78f2a9931e2eea047e873ebe41a8f8e3c42769eab8849caa0f4fc775f530ce"
+  },
+  "direct-rkir/plans/manifest.json": {
+   "bytes": 7403,
+   "sha256": "a8dcf6728b160d38a0fa770335e1fbc4f01e520cf55d9e8017fbd7f228c46803"
+  },
+  "direct-rkir/plans/n_major.rkplan.json": {
+   "bytes": 40202,
+   "sha256": "0184fb00483b15c6900fc491529e4f6af1ca61729374a4410fd0e0c9df01bce5"
+  },
+  "direct-rkir/plans/tn128.rkplan.json": {
+   "bytes": 40202,
+   "sha256": "3ccb7e1536709d524a0d6bfb7efb0d4e74cc951d015e864b1d46ca6cce820f04"
+  },
+  "prefill-qkv/board.json": {
+   "bytes": 7445,
+   "sha256": "edbf9c8f8dd13b593d4bfb7413415e857be233f23445576fc545fc27b988f193"
+  },
+  "prefill-qkv/board.log": {
+   "bytes": 151,
+   "sha256": "7bcaccc25e92e83fc1152ba92b12ef5fd22af51d2c79be81c9c10c7519c2f7da"
+  },
+  "prefill-qkv/compile.log": {
+   "bytes": 1297,
+   "sha256": "1f8ff442d60dbdb1766bf0dd54ad6866513b7a99cfcbb7e4900fa60d2f4f2500"
+  },
+  "prefill-qkv/plans/default.rkplan.json": {
+   "bytes": 20120,
+   "sha256": "654950d0d01f8ec6e818f9ef0ff4ee6041d52444147ef338dca4349af112c603"
+  },
+  "prefill-qkv/plans/manifest.json": {
+   "bytes": 5086,
+   "sha256": "a42841a8249c597130544919d42b7f2100eada811c68fbfb9fc73989d1d73443"
+  },
+  "prefill-qkv/plans/n_major.rkplan.json": {
+   "bytes": 40202,
+   "sha256": "0184fb00483b15c6900fc491529e4f6af1ca61729374a4410fd0e0c9df01bce5"
+  },
+  "prefill-qkv/plans/tm128.rkplan.json": {
+   "bytes": 34526,
+   "sha256": "88f92cfa384e90aa29a87e2f0408d38d4b486ad5bdd46f35d8c9ffb53f7fc8ee"
+  },
+  "prefill-qkv/plans/tn128.rkplan.json": {
+   "bytes": 40202,
+   "sha256": "3ccb7e1536709d524a0d6bfb7efb0d4e74cc951d015e864b1d46ca6cce820f04"
+  },
+  "pytest-full.log": {
+   "bytes": 794,
+   "sha256": "c11fc921a5d9645a595a4b8471ee3e8138ace0ee95e7f115492241c39e1c212e"
+  },
+  "setup-board-2.log": {
+   "bytes": 144,
+   "sha256": "f531a0d76ebdbaf674f36c05aad6951a1f1211d9a35846adf2e2c32044662853"
+  },
+  "setup-board.log": {
+   "bytes": 144,
+   "sha256": "ec1217286d48e671d2552a69a3f3b62a10e87334c00ff56065616c02ac20bd42"
+  },
+  "small-geometry/board.json": {
+   "bytes": 6342,
+   "sha256": "1eafa2c5eb4f669dbd288a069e4d01964d1ff8c90ee7a4504074f7241982cd55"
+  },
+  "small-geometry/board.log": {
+   "bytes": 151,
+   "sha256": "6f69086ff910e02fbb2292805da1f1c22ba525270b524f540b601dc94fd30f09"
+  },
+  "small-geometry/compile.log": {
+   "bytes": 1103,
+   "sha256": "f6266c76fde312c174d4c928e32617b8b8a35c2b29d64e07d11045f271e97ab2"
+  },
+  "small-geometry/mock.json": {
+   "bytes": 6240,
+   "sha256": "a93f200acbb26f390122acbd846b4d058d7f5c7a08ffd9f196e4a434b2f67809"
+  },
+  "small-geometry/mock.log": {
+   "bytes": 150,
+   "sha256": "bcd4be4e1661130ad613ef9db1bee899ef215f313b01dd0289ea080fe5ea640c"
+  },
+  "small-geometry/plans/base_256x128.rkplan.json": {
+   "bytes": 23856,
+   "sha256": "c722be585a5579e7db1b7de081e8dbe04f8f2d6c31f719904232355ec584895e"
+  },
+  "small-geometry/plans/manifest.json": {
+   "bytes": 5691,
+   "sha256": "2771b2ea06fc2c0e4a64b96276ef651f8b836894394ca53226b2c847f9d160cb"
+  },
+  "small-geometry/plans/tile_128x128.rkplan.json": {
+   "bytes": 42839,
+   "sha256": "ac9596a4b324fb6d889a461f59e72e4997dbfcaa7c0fee64c7eb60562fc80dae"
+  },
+  "small-geometry/plans/tile_128x128_nmajor.rkplan.json": {
+   "bytes": 42843,
+   "sha256": "8bbd3f6d47e9ab10cae60ffbedbb5691ed4137dd69fe5835e980746d2d7f1d5c"
+  }
+ },
+ "kind": "tilelang-schedule-delivery-manifest",
+ "model_package": {
+  "manifest_sha256": "b923fc5b427cc2ee6f0f88e7d096444a7ab44babdfbd79cc64fe07f5771548be",
+  "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+  "weights_sha256": "ff04cb6f25633772987ff8cfc66e65046004034e526cf1d6d6bb615333b945bf"
+ },
+ "schema_version": 1
+}
