@@ -1,0 +1,1868 @@
+{
+ "candidates": [
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "A",
+   "name": "A_fixed_256_m",
+   "plan": "A_fixed_256_m.rkplan.json",
+   "plan_hash": "df53efff07c5edcb07ee5bdbefbcd35dc0074ab354f7b145ee783d77be616972",
+   "plan_sha256": "366971aed4890a9a51bf897f7a35a6a9cba825951200b79cbdf5eabe252c1706",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "A",
+    "name": "A_fixed_256_m",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     256,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "B",
+   "name": "B_manual_256_m_s1_256x128_n",
+   "plan": "B_manual_256_m_s1_256x128_n.rkplan.json",
+   "plan_hash": "06ac737557e562924f37f7f158514db408eb2e026990b3f80acc76925a78d3b6",
+   "plan_sha256": "7afb5af1cbff0b614291dfdd969188bc03a3038bfc56a66ec011a6fe01cfd44a",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "B",
+    "name": "B_manual_256_m_s1_256x128_n",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     128,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m256_s1_n256_m",
+   "plan": "C_m256_s1_n256_m.rkplan.json",
+   "plan_hash": "df53efff07c5edcb07ee5bdbefbcd35dc0074ab354f7b145ee783d77be616972",
+   "plan_sha256": "366971aed4890a9a51bf897f7a35a6a9cba825951200b79cbdf5eabe252c1706",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m256_s1_n256_m",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     256,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m256_s1_n256_n",
+   "plan": "C_m256_s1_n256_n.rkplan.json",
+   "plan_hash": "8ca2a7d23586165861abe9af8fc8a6764400f52f918a6764e3576129935b769b",
+   "plan_sha256": "14accf462f0f64ed4b547eddc91b5c57e69ab04b2016341626d268eb2172d897",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m256_s1_n256_n",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     256,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m256_s1_n128_m",
+   "plan": "C_m256_s1_n128_m.rkplan.json",
+   "plan_hash": "1f8a40afb5b1e96ec2f7438f75d4badce84fd58de4129c38498b463e12ceaa7e",
+   "plan_sha256": "014d02d30157dcf9168953345c5fbb6ac8c1a74d591cd8c6cb94c087ae47e108",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m256_s1_n128_m",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     128,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m256_s1_n128_n",
+   "plan": "C_m256_s1_n128_n.rkplan.json",
+   "plan_hash": "06ac737557e562924f37f7f158514db408eb2e026990b3f80acc76925a78d3b6",
+   "plan_sha256": "7afb5af1cbff0b614291dfdd969188bc03a3038bfc56a66ec011a6fe01cfd44a",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m256_s1_n128_n",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     128,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 23,
+   "group": "C",
+   "name": "C_m256_s1_n64_m",
+   "plan": "C_m256_s1_n64_m.rkplan.json",
+   "plan_hash": "bf1d43d6463ec9ba947d7b7ac9be8a8eedd303c17c2010e17edb7cae65cff222",
+   "plan_sha256": "ddfa42db01f91d07a8aee39e6d65983484c46144d4803860eed077886e184ad0",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     64
+    ],
+    [
+     0,
+     64,
+     65,
+     33
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m256_s1_n64_m",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     64,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 64
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 64
+   },
+   "submit_count": 5,
+   "task_count": 15
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 23,
+   "group": "C",
+   "name": "C_m256_s1_n64_n",
+   "plan": "C_m256_s1_n64_n.rkplan.json",
+   "plan_hash": "9f0b729eb06f6972a2a8a2aacfab5b7da29bb80b0629157dfd7b4022e2371844",
+   "plan_sha256": "efef4e20e818e61c254feb8b456d761f8e47d6b2ca4dcd00c28c90e3987208ea",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     64
+    ],
+    [
+     0,
+     64,
+     65,
+     33
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m256_s1_n64_n",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     64,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 64
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 64
+   },
+   "submit_count": 5,
+   "task_count": 15
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m256_s1_n192_m",
+   "plan": "C_m256_s1_n192_m.rkplan.json",
+   "plan_hash": "1cf2a32d84ccfb2e51fa576cd8784a5e0f8713eb9a42849eaec498e80e631466",
+   "plan_sha256": "eeef4247fe56996029a3f779ddd2ae4ec01fe9669c2bf06ad133a31b801da7df",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m256_s1_n192_m",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     192,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 192
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 192
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m256_s1_n192_n",
+   "plan": "C_m256_s1_n192_n.rkplan.json",
+   "plan_hash": "b7d015583de8c5b1805a33eacc4c6b403c37fca5e183f7bd51cf14b88c44ce94",
+   "plan_sha256": "c77d62eb37da481c454fb801f67cec5e607e58bb69dcdfb1c5d6c0b83c3c778f",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m256_s1_n192_n",
+    "stage0": [
+     256,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     256,
+     192,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 192
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 192
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m128_s1_n256_m",
+   "plan": "C_m128_s1_n256_m.rkplan.json",
+   "plan_hash": "155fe401bd3f55c232b6ef62de1fea671f5d915a1db9aa935cd2b5a9678d3288",
+   "plan_sha256": "0efccb7ed89b9bf7a0d9af9c908ffe8d7c593877674f7bd1dc8212db3d1d040b",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m128_s1_n256_m",
+    "stage0": [
+     128,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     128,
+     256,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m128_s1_n256_n",
+   "plan": "C_m128_s1_n256_n.rkplan.json",
+   "plan_hash": "5d46622f6fa6e550bc6590a842df32353f46ea66c779003573737083e750869a",
+   "plan_sha256": "b3d3389ae1bc6263264acaa8c45db1697a76f46f9e17e56244ef53474f036ab5",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m128_s1_n256_n",
+    "stage0": [
+     128,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     128,
+     256,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m128_s1_n128_m",
+   "plan": "C_m128_s1_n128_m.rkplan.json",
+   "plan_hash": "65fccbf77ecce1d866a732018b63e56c65564df62804536864818d5e08bcd4ef",
+   "plan_sha256": "6570a5a8f5c035aa0d57cc49fdfed159ae0beb1e9c4174ba1e7121072bf9f8d0",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m128_s1_n128_m",
+    "stage0": [
+     128,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     128,
+     128,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m128_s1_n128_n",
+   "plan": "C_m128_s1_n128_n.rkplan.json",
+   "plan_hash": "1b8a380232b9ccfe6d63847b292a1219e93d79def0153f11b505646aa7bc60ed",
+   "plan_sha256": "839522f56d63a34945e4a2b9eae0b2512358b36cdb2f9c6a283faa0a7525cf4b",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m128_s1_n128_n",
+    "stage0": [
+     128,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     128,
+     128,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 23,
+   "group": "C",
+   "name": "C_m128_s1_n64_m",
+   "plan": "C_m128_s1_n64_m.rkplan.json",
+   "plan_hash": "70b73500fbbd25c87753f1894f0f24b3a8b6c3ced06e140b7e6c2b997d84facd",
+   "plan_sha256": "3958e1c2ecb37a4bfd49787e5ce63ca8c15f47549bb0b11fc5b700a3a0cd4536",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     64
+    ],
+    [
+     0,
+     64,
+     65,
+     33
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m128_s1_n64_m",
+    "stage0": [
+     128,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     128,
+     64,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 64
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 64
+   },
+   "submit_count": 5,
+   "task_count": 15
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 23,
+   "group": "C",
+   "name": "C_m128_s1_n64_n",
+   "plan": "C_m128_s1_n64_n.rkplan.json",
+   "plan_hash": "0bf35b86162f180dfb0f7e15deee3ac053d77f3942806d140e158ad0171a912e",
+   "plan_sha256": "789e1eb51ccba4b6b8703ff6cebbdc3afe7658ff80a76d485a98e137c6c6a1da",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     64
+    ],
+    [
+     0,
+     64,
+     65,
+     33
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m128_s1_n64_n",
+    "stage0": [
+     128,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     128,
+     64,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 64
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 64
+   },
+   "submit_count": 5,
+   "task_count": 15
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m128_s1_n192_m",
+   "plan": "C_m128_s1_n192_m.rkplan.json",
+   "plan_hash": "50ceabb47d0c7e79af253f01122537c359b94100de701991d62ebabfb6367282",
+   "plan_sha256": "2f075da112f806b028d729d57e7fc0be2135107411a4eb9559143b180f1f7bc3",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m128_s1_n192_m",
+    "stage0": [
+     128,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     128,
+     192,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 192
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 192
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 20,
+   "group": "C",
+   "name": "C_m128_s1_n192_n",
+   "plan": "C_m128_s1_n192_n.rkplan.json",
+   "plan_hash": "336c516144b66a5d0c33c473881d280f4243145655dd334eeb97119c5a064e69",
+   "plan_sha256": "44e22a8013edac5cdaebe35c505572982931eecdb80182d1ff91811b3bf9422b",
+   "publish": [
+    [
+     0,
+     0,
+     65,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m128_s1_n192_n",
+    "stage0": [
+     128,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     128,
+     192,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 192
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 192
+   },
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 26,
+   "group": "C",
+   "name": "C_m64_s1_n256_m",
+   "plan": "C_m64_s1_n256_m.rkplan.json",
+   "plan_hash": "eddd230a28e4b515435d2e1a59d47c1b462bb2d06514d1c623acf30ce5064192",
+   "plan_sha256": "db577e3bbd0cec50dd369d7ee0bf6594c5ea7989ff2abb7f0074c87230dd264e",
+   "publish": [
+    [
+     0,
+     0,
+     64,
+     97
+    ],
+    [
+     64,
+     0,
+     1,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m64_s1_n256_m",
+    "stage0": [
+     64,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     64,
+     256,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "submit_count": 8,
+   "task_count": 24
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 26,
+   "group": "C",
+   "name": "C_m64_s1_n256_n",
+   "plan": "C_m64_s1_n256_n.rkplan.json",
+   "plan_hash": "c9789929e8870b4b50c0f59c2cf7811eab108fddc16d7c6c65cb124d9351823c",
+   "plan_sha256": "77b1273f2b99700f5c2443f46cab3ef6678ec9645bd48f438bd1b4dadc72c351",
+   "publish": [
+    [
+     0,
+     0,
+     64,
+     97
+    ],
+    [
+     64,
+     0,
+     1,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m64_s1_n256_n",
+    "stage0": [
+     64,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     64,
+     256,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "submit_count": 8,
+   "task_count": 24
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 26,
+   "group": "C",
+   "name": "C_m64_s1_n128_m",
+   "plan": "C_m64_s1_n128_m.rkplan.json",
+   "plan_hash": "b6868f252e984bdf4e57763258c3a6ccea772bb5148bf9597778803c6aa5dbac",
+   "plan_sha256": "08035047328a93124c39ca7b14272aa95ec3e78de2532d066d4526f2be2c7a3a",
+   "publish": [
+    [
+     0,
+     0,
+     64,
+     97
+    ],
+    [
+     64,
+     0,
+     1,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m64_s1_n128_m",
+    "stage0": [
+     64,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     64,
+     128,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 128
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 128
+   },
+   "submit_count": 8,
+   "task_count": 24
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 26,
+   "group": "C",
+   "name": "C_m64_s1_n128_n",
+   "plan": "C_m64_s1_n128_n.rkplan.json",
+   "plan_hash": "55ffe161f3ae50a0bcc3bcb3800b328c548c96401a7db1c6d7e7f7be7301824a",
+   "plan_sha256": "fb502668524d5acb3285076d5b2eec513da04321cf09b44d4ab6b9f73289c353",
+   "publish": [
+    [
+     0,
+     0,
+     64,
+     97
+    ],
+    [
+     64,
+     0,
+     1,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m64_s1_n128_n",
+    "stage0": [
+     64,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     64,
+     128,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 128
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 128
+   },
+   "submit_count": 8,
+   "task_count": 24
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 30,
+   "group": "C",
+   "name": "C_m64_s1_n64_m",
+   "plan": "C_m64_s1_n64_m.rkplan.json",
+   "plan_hash": "76a89d9ae3e3dc0335826c3ec6f9bf1cb30da475bc8b39ec3e34e92bc6966674",
+   "plan_sha256": "42fa58b9dceebdc4f5a2e11f95944dd31f701fdbcda9ce2f993a5557d59f2984",
+   "publish": [
+    [
+     0,
+     0,
+     64,
+     64
+    ],
+    [
+     0,
+     64,
+     64,
+     33
+    ],
+    [
+     64,
+     0,
+     1,
+     64
+    ],
+    [
+     64,
+     64,
+     1,
+     33
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m64_s1_n64_m",
+    "stage0": [
+     64,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     64,
+     64,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 64
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 64
+   },
+   "submit_count": 10,
+   "task_count": 30
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 30,
+   "group": "C",
+   "name": "C_m64_s1_n64_n",
+   "plan": "C_m64_s1_n64_n.rkplan.json",
+   "plan_hash": "15940f1b4f03fadd16b026ae782a3152d7db143e53f726ef72e85a496e17282e",
+   "plan_sha256": "1c6f04ea2ca7a281d4f96d9860d7229e7384e5b778477eacabafdf58a0108399",
+   "publish": [
+    [
+     0,
+     0,
+     64,
+     64
+    ],
+    [
+     64,
+     0,
+     1,
+     64
+    ],
+    [
+     0,
+     64,
+     64,
+     33
+    ],
+    [
+     64,
+     64,
+     1,
+     33
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m64_s1_n64_n",
+    "stage0": [
+     64,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     64,
+     64,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 64
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 64
+   },
+   "submit_count": 10,
+   "task_count": 30
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 26,
+   "group": "C",
+   "name": "C_m64_s1_n192_m",
+   "plan": "C_m64_s1_n192_m.rkplan.json",
+   "plan_hash": "ac4c3bc09a4ba048ef56dac525a17896de7f6a11cc01e254ccf55eda42e7d1b2",
+   "plan_sha256": "ae8b463966130b58b7fece458b9fc5f8355bd2be1cd1898f4e8b19c1b443fb82",
+   "publish": [
+    [
+     0,
+     0,
+     64,
+     97
+    ],
+    [
+     64,
+     0,
+     1,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m64_s1_n192_m",
+    "stage0": [
+     64,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     64,
+     192,
+     "m_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 192
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 192
+   },
+   "submit_count": 8,
+   "task_count": 24
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 26,
+   "group": "C",
+   "name": "C_m64_s1_n192_n",
+   "plan": "C_m64_s1_n192_n.rkplan.json",
+   "plan_hash": "bae4ed29b3fc2de9650279e9d64c9236f66f773685adaa5fce83fdc235928b94",
+   "plan_sha256": "b2aea02f72ff5dd88e5ebc240dd6d3fd376cab0c2189670c32b5efd1b16f7042",
+   "publish": [
+    [
+     0,
+     0,
+     64,
+     97
+    ],
+    [
+     64,
+     0,
+     1,
+     97
+    ]
+   ],
+   "requested": {
+    "group": "C",
+    "name": "C_m64_s1_n192_n",
+    "stage0": [
+     64,
+     256,
+     "m_major"
+    ],
+    "stage1": [
+     64,
+     192,
+     "n_major"
+    ]
+   },
+   "source_k_rounding": null,
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage0_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 192
+   },
+   "stage1_source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 192
+   },
+   "submit_count": 8,
+   "task_count": 24
+  }
+ ],
+ "geometry": {
+  "h": 576,
+  "k": 576,
+  "m": 65,
+  "n": 97
+ },
+ "independent": {
+  "note": "Host downloads Z, then uploads it as the second plan's A input.",
+  "stage0": {
+   "plan": "D_stage0.rkplan.json",
+   "plan_hash": "ef68fa365fa82b44deb329df3963827c4d14bf1b982003261eacab33cf27829c",
+   "plan_sha256": "8379628ee996ee4be0f1ac165248a4d5fea69440a6f15b584eb8b0a9963bb42b",
+   "task_count": 9
+  },
+  "stage1": {
+   "plan": "D_stage1.rkplan.json",
+   "plan_hash": "5cc06c7ecdbbef804ecd22506616510c483d4654c7df9d6b9b97e9b396c9d9eb",
+   "plan_sha256": "40a024399c4f9b99bda83d795c7dc1dc79c01d1b58e1cb5a2a17acda12703beb",
+   "task_count": 3
+  }
+ },
+ "inputs": "inputs.npz",
+ "inputs_sha256": "164705bd214d2f381c50f87ec8377950087f3a06e75e013fd8e34fc8b0c3d949",
+ "kind": "two-stage-schedule-manifest",
+ "schema_version": 1,
+ "valid_candidates": 26
+}

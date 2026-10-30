@@ -1,0 +1,1686 @@
+{
+ "kind": "two-stage-schedule-run",
+ "lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+ "manifest_sha256": "adce01a874a0f97672818e6acbccb17877ce34abcc737f1fe138fe7f68925808",
+ "pass": true,
+ "rows": [
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "A",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1414.2729924060404,
+   "min_us": 1385.3999989805743,
+   "name": "A_fixed_256_m",
+   "plan_hash": "df53efff07c5edcb07ee5bdbefbcd35dc0074ab354f7b145ee783d77be616972",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1414.2729924060404,
+    1417.1899965731427,
+    1385.3999989805743
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "B",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1366.1489938385785,
+   "min_us": 1363.817005767487,
+   "name": "B_manual_256_m_s1_256x128_n",
+   "plan_hash": "06ac737557e562924f37f7f158514db408eb2e026990b3f80acc76925a78d3b6",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1363.817005767487,
+    1366.1489938385785,
+    1441.6900085052475
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1368.775003356859,
+   "min_us": 1364.3990096170455,
+   "name": "C_m256_s1_n256_m",
+   "plan_hash": "df53efff07c5edcb07ee5bdbefbcd35dc0074ab354f7b145ee783d77be616972",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1379.2740064673126,
+    1368.775003356859,
+    1364.3990096170455
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1343.3999993139878,
+   "min_us": 1325.3169890958816,
+   "name": "C_m256_s1_n256_n",
+   "plan_hash": "8ca2a7d23586165861abe9af8fc8a6764400f52f918a6764e3576129935b769b",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1343.3999993139878,
+    1325.3169890958816,
+    1370.2330033993348
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1370.5240126000717,
+   "min_us": 1354.1910011554137,
+   "name": "C_m256_s1_n128_m",
+   "plan_hash": "1f8a40afb5b1e96ec2f7438f75d4badce84fd58de4129c38498b463e12ceaa7e",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1372.2739968216047,
+    1370.5240126000717,
+    1354.1910011554137
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1367.8989926120266,
+   "min_us": 1357.108005322516,
+   "name": "C_m256_s1_n128_n",
+   "plan_hash": "06ac737557e562924f37f7f158514db408eb2e026990b3f80acc76925a78d3b6",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1367.8989926120266,
+    1367.8990071639419,
+    1357.108005322516
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1554.5639907941222,
+   "min_us": 1494.4819995434955,
+   "name": "C_m256_s1_n64_m",
+   "plan_hash": "bf1d43d6463ec9ba947d7b7ac9be8a8eedd303c17c2010e17edb7cae65cff222",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 64
+   },
+   "submit_count": 5,
+   "task_count": 15,
+   "times_us": [
+    1578.4800052642822,
+    1554.5639907941222,
+    1494.4819995434955
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1493.8969979994,
+   "min_us": 1490.6900032656267,
+   "name": "C_m256_s1_n64_n",
+   "plan_hash": "9f0b729eb06f6972a2a8a2aacfab5b7da29bb80b0629157dfd7b4022e2371844",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 64
+   },
+   "submit_count": 5,
+   "task_count": 15,
+   "times_us": [
+    1493.8969979994,
+    1490.6900032656267,
+    1529.7720092348754
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1403.7740038475022,
+   "min_us": 1385.690993629396,
+   "name": "C_m256_s1_n192_m",
+   "plan_hash": "1cf2a32d84ccfb2e51fa576cd8784a5e0f8713eb9a42849eaec498e80e631466",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 192
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1385.690993629396,
+    1419.815991539508,
+    1403.7740038475022
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1379.8579893773422,
+   "min_us": 1358.27501071617,
+   "name": "C_m256_s1_n192_n",
+   "plan_hash": "b7d015583de8c5b1805a33eacc4c6b403c37fca5e183f7bd51cf14b88c44ce94",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 192
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1439.0650030691177,
+    1379.8579893773422,
+    1358.27501071617
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1403.7740038475022,
+   "min_us": 1372.8569902013987,
+   "name": "C_m128_s1_n256_m",
+   "plan_hash": "155fe401bd3f55c232b6ef62de1fea671f5d915a1db9aa935cd2b5a9678d3288",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1372.8569902013987,
+    1407.566000125371,
+    1403.7740038475022
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1381.0240052407607,
+   "min_us": 1369.0659980056807,
+   "name": "C_m128_s1_n256_n",
+   "plan_hash": "5d46622f6fa6e550bc6590a842df32353f46ea66c779003573737083e750869a",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1369.0659980056807,
+    1381.0240052407607,
+    1384.8160015186295
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1396.7739942017943,
+   "min_us": 1375.773994368501,
+   "name": "C_m128_s1_n128_m",
+   "plan_hash": "65fccbf77ecce1d866a732018b63e56c65564df62804536864818d5e08bcd4ef",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1408.4400027059019,
+    1375.773994368501,
+    1396.7739942017943
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1393.5660099377856,
+   "min_us": 1377.8159918729216,
+   "name": "C_m128_s1_n128_n",
+   "plan_hash": "1b8a380232b9ccfe6d63847b292a1219e93d79def0153f11b505646aa7bc60ed",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1427.1069958340377,
+    1377.8159918729216,
+    1393.5660099377856
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1509.6480055944994,
+   "min_us": 1484.273001551628,
+   "name": "C_m128_s1_n64_m",
+   "plan_hash": "70b73500fbbd25c87753f1894f0f24b3a8b6c3ced06e140b7e6c2b997d84facd",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 64
+   },
+   "submit_count": 5,
+   "task_count": 15,
+   "times_us": [
+    1484.273001551628,
+    1517.8140019997954,
+    1509.6480055944994
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1489.2309991410002,
+   "min_us": 1484.8559949314222,
+   "name": "C_m128_s1_n64_n",
+   "plan_hash": "0bf35b86162f180dfb0f7e15deee3ac053d77f3942806d140e158ad0171a912e",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 64
+   },
+   "submit_count": 5,
+   "task_count": 15,
+   "times_us": [
+    1489.2309991410002,
+    1484.8559949314222,
+    1508.4810002008453
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1392.9830020060763,
+   "min_us": 1217.109995195642,
+   "name": "C_m128_s1_n192_m",
+   "plan_hash": "50ceabb47d0c7e79af253f01122537c359b94100de701991d62ebabfb6367282",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 192
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1392.9830020060763,
+    1409.3160134507343,
+    1217.109995195642
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1378.1080051558092,
+   "min_us": 1362.9410095745698,
+   "name": "C_m128_s1_n192_n",
+   "plan_hash": "336c516144b66a5d0c33c473881d280f4243145655dd334eeb97119c5a064e69",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 192
+   },
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1379.2739919153973,
+    1378.1080051558092,
+    1362.9410095745698
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1949.767000041902,
+   "min_us": 1939.850000781007,
+   "name": "C_m64_s1_n256_m",
+   "plan_hash": "eddd230a28e4b515435d2e1a59d47c1b462bb2d06514d1c623acf30ce5064192",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "submit_count": 8,
+   "task_count": 24,
+   "times_us": [
+    1939.850000781007,
+    1949.767000041902,
+    1960.850990144536
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1964.6420114440843,
+   "min_us": 1951.2250000843778,
+   "name": "C_m64_s1_n256_n",
+   "plan_hash": "c9789929e8870b4b50c0f59c2cf7811eab108fddc16d7c6c65cb124d9351823c",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "submit_count": 8,
+   "task_count": 24,
+   "times_us": [
+    1980.6830096058547,
+    1964.6420114440843,
+    1951.2250000843778
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 2001.6839989693835,
+   "min_us": 1958.516993909143,
+   "name": "C_m64_s1_n128_m",
+   "plan_hash": "b6868f252e984bdf4e57763258c3a6ccea772bb5148bf9597778803c6aa5dbac",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 128
+   },
+   "submit_count": 8,
+   "task_count": 24,
+   "times_us": [
+    1958.516993909143,
+    2072.8489907924086,
+    2001.6839989693835
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1925.2670026617125,
+   "min_us": 1605.3130093496293,
+   "name": "C_m64_s1_n128_n",
+   "plan_hash": "55ffe161f3ae50a0bcc3bcb3800b328c548c96401a7db1c6d7e7f7be7301824a",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 128
+   },
+   "submit_count": 8,
+   "task_count": 24,
+   "times_us": [
+    1936.641987413168,
+    1925.2670026617125,
+    1605.3130093496293
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 2101.431993651204,
+   "min_us": 1676.1869919719175,
+   "name": "C_m64_s1_n64_m",
+   "plan_hash": "76a89d9ae3e3dc0335826c3ec6f9bf1cb30da475bc8b39ec3e34e92bc6966674",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 64
+   },
+   "submit_count": 10,
+   "task_count": 30,
+   "times_us": [
+    2218.6800051713362,
+    2101.431993651204,
+    1676.1869919719175
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 2216.056003817357,
+   "min_us": 2204.971999162808,
+   "name": "C_m64_s1_n64_n",
+   "plan_hash": "15940f1b4f03fadd16b026ae782a3152d7db143e53f726ef72e85a496e17282e",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 64
+   },
+   "submit_count": 10,
+   "task_count": 30,
+   "times_us": [
+    2216.056003817357,
+    2311.7209930205718,
+    2204.971999162808
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1949.4750013109297,
+   "min_us": 1940.1419995119795,
+   "name": "C_m64_s1_n192_m",
+   "plan_hash": "ac4c3bc09a4ba048ef56dac525a17896de7f6a11cc01e254ccf55eda42e7d1b2",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 192
+   },
+   "submit_count": 8,
+   "task_count": 24,
+   "times_us": [
+    1970.183991943486,
+    1940.1419995119795,
+    1949.4750013109297
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    },
+    {
+     "bitwise_equal": false,
+     "finite": true,
+     "max_abs": 0.0009765625,
+     "numeric_pass": true,
+     "shape_ok": true
+    }
+   ],
+   "group": "C",
+   "history_check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0009765625,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "history_input_changed_output": true,
+   "median_us": 1931.1009964440018,
+   "min_us": 1924.9760080128908,
+   "name": "C_m64_s1_n192_n",
+   "plan_hash": "bae4ed29b3fc2de9650279e9d64c9236f66f773685adaa5fce83fdc235928b94",
+   "stage0_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 64,
+    "tile_n": 256
+   },
+   "stage1_applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 64,
+    "tile_n": 192
+   },
+   "submit_count": 8,
+   "task_count": 24,
+   "times_us": [
+    1934.018000611104,
+    1924.9760080128908,
+    1931.1009964440018
+   ]
+  },
+  {
+   "candidate_valid": true,
+   "checks": [
+    {
+     "y": {
+      "bitwise_equal": false,
+      "finite": true,
+      "max_abs": 0.0009765625,
+      "numeric_pass": true,
+      "shape_ok": true
+     },
+     "z": {
+      "bitwise_equal": false,
+      "finite": true,
+      "max_abs": 0.00048828125,
+      "numeric_pass": true,
+      "shape_ok": true
+     }
+    },
+    {
+     "y": {
+      "bitwise_equal": false,
+      "finite": true,
+      "max_abs": 0.0009765625,
+      "numeric_pass": true,
+      "shape_ok": true
+     },
+     "z": {
+      "bitwise_equal": false,
+      "finite": true,
+      "max_abs": 0.00048828125,
+      "numeric_pass": true,
+      "shape_ok": true
+     }
+    },
+    {
+     "y": {
+      "bitwise_equal": false,
+      "finite": true,
+      "max_abs": 0.0009765625,
+      "numeric_pass": true,
+      "shape_ok": true
+     },
+     "z": {
+      "bitwise_equal": false,
+      "finite": true,
+      "max_abs": 0.00048828125,
+      "numeric_pass": true,
+      "shape_ok": true
+     }
+    }
+   ],
+   "group": "D",
+   "median_us": 1905.7260069530457,
+   "min_us": 1762.2279992792755,
+   "name": "D_two_independent_plans",
+   "note": "two ws.run calls; Z crosses the Host boundary between them",
+   "submit_count": 4,
+   "task_count": 12,
+   "times_us": [
+    1905.7260069530457,
+    1914.4760008202866,
+    1762.2279992792755
+   ]
+  }
+ ],
+ "schema_version": 1
+}

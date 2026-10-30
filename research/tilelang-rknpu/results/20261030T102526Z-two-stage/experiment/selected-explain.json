@@ -1,0 +1,1212 @@
+{
+ "accounting": {
+  "command_workspace_bytes": 49152,
+  "data_bo_count": 20,
+  "device_request_bytes": 1725696,
+  "host_bytes": 990816,
+  "peak_payload_bytes": 1019904,
+  "reserved_bytes": 1676544,
+  "submit_count": 4,
+  "task_count": 12,
+  "transfers": 16
+ },
+ "actions": [
+  {
+   "attrs": {
+    "cache": "input",
+    "source_binding": 0,
+    "src_col_offset": 0,
+    "src_row_offset": 0,
+    "src_row_stride": 576,
+    "transpose_source": false
+   },
+   "deps": [],
+   "id": 0,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:input",
+   "outputs": [
+    0
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 0,
+    "src_row_offset": 0,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 1,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    1
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "input",
+    "source_binding": 0,
+    "src_col_offset": 256,
+    "src_row_offset": 0,
+    "src_row_stride": 576,
+    "transpose_source": false
+   },
+   "deps": [],
+   "id": 2,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:input",
+   "outputs": [
+    2
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 0,
+    "src_row_offset": 256,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 3,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    3
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "input",
+    "source_binding": 0,
+    "src_col_offset": 512,
+    "src_row_offset": 0,
+    "src_row_stride": 576,
+    "transpose_source": false
+   },
+   "deps": [],
+   "id": 4,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:input",
+   "outputs": [
+    4
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 0,
+    "src_row_offset": 512,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 5,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    5
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 256,
+    "src_row_offset": 0,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 6,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    6
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 256,
+    "src_row_offset": 256,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 7,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    7
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 256,
+    "src_row_offset": 512,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 8,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    8
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 512,
+    "src_row_offset": 0,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 9,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    9
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 512,
+    "src_row_offset": 256,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 10,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    10
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 1,
+    "src_col_offset": 512,
+    "src_row_offset": 512,
+    "src_row_stride": 576,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 11,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    11
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 2,
+    "src_col_offset": 0,
+    "src_row_offset": 0,
+    "src_row_stride": 97,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 12,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    12
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 2,
+    "src_col_offset": 0,
+    "src_row_offset": 256,
+    "src_row_stride": 97,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 13,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    13
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "cache": "constant",
+    "source_binding": 2,
+    "src_col_offset": 0,
+    "src_row_offset": 512,
+    "src_row_stride": 97,
+    "transpose_source": true
+   },
+   "deps": [],
+   "id": 14,
+   "inputs": [],
+   "kind": "upload",
+   "origin": "host_pack:staged:weight",
+   "outputs": [
+    14
+   ],
+   "template_id": null
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 0,
+    "k_padding": 0,
+    "k_physical_extent": 256,
+    "kt": 256,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:0"
+   },
+   "deps": [
+    0,
+    1
+   ],
+   "id": 15,
+   "inputs": [
+    0,
+    1
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm:0",
+   "outputs": [
+    15
+   ],
+   "template_id": "co.mm.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 256,
+    "k_padding": 0,
+    "k_physical_extent": 256,
+    "kt": 256,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:0"
+   },
+   "deps": [
+    2,
+    3,
+    15
+   ],
+   "id": 16,
+   "inputs": [
+    2,
+    3,
+    15
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm_acc:256",
+   "outputs": [
+    16
+   ],
+   "template_id": "co.mm_acc.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 512,
+    "k_padding": 0,
+    "k_physical_extent": 64,
+    "kt": 64,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:0"
+   },
+   "deps": [
+    4,
+    5,
+    16
+   ],
+   "id": 17,
+   "inputs": [
+    4,
+    5,
+    16
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm_acc:512",
+   "outputs": [
+    15
+   ],
+   "template_id": "co.mm_acc.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 0,
+    "k_padding": 0,
+    "k_physical_extent": 256,
+    "kt": 256,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:256"
+   },
+   "deps": [
+    0,
+    6
+   ],
+   "id": 18,
+   "inputs": [
+    0,
+    6
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm:0",
+   "outputs": [
+    17
+   ],
+   "template_id": "co.mm.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 256,
+    "k_padding": 0,
+    "k_physical_extent": 256,
+    "kt": 256,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:256"
+   },
+   "deps": [
+    2,
+    7,
+    18
+   ],
+   "id": 19,
+   "inputs": [
+    2,
+    7,
+    17
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm_acc:256",
+   "outputs": [
+    18
+   ],
+   "template_id": "co.mm_acc.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 512,
+    "k_padding": 0,
+    "k_physical_extent": 64,
+    "kt": 64,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:256"
+   },
+   "deps": [
+    4,
+    8,
+    19
+   ],
+   "id": 20,
+   "inputs": [
+    4,
+    8,
+    18
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm_acc:512",
+   "outputs": [
+    17
+   ],
+   "template_id": "co.mm_acc.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 0,
+    "k_padding": 0,
+    "k_physical_extent": 256,
+    "kt": 256,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:512"
+   },
+   "deps": [
+    0,
+    9
+   ],
+   "id": 21,
+   "inputs": [
+    0,
+    9
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm:0",
+   "outputs": [
+    19
+   ],
+   "template_id": "co.mm.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 256,
+    "k_padding": 0,
+    "k_physical_extent": 256,
+    "kt": 256,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:512"
+   },
+   "deps": [
+    2,
+    10,
+    21
+   ],
+   "id": 22,
+   "inputs": [
+    2,
+    10,
+    19
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm_acc:256",
+   "outputs": [
+    20
+   ],
+   "template_id": "co.mm_acc.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 512,
+    "k_padding": 0,
+    "k_physical_extent": 64,
+    "kt": 64,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 0,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s0:0:0:512"
+   },
+   "deps": [
+    4,
+    11,
+    22
+   ],
+   "id": 23,
+   "inputs": [
+    4,
+    11,
+    20
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage0:mm_acc:512",
+   "outputs": [
+    19
+   ],
+   "template_id": "co.mm_acc.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 0,
+    "k_padding": 0,
+    "k_physical_extent": 256,
+    "kt": 256,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 1,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s1:1:0:0",
+    "z_source": {
+     "consumer_region": [
+      0,
+      0,
+      65,
+      256
+     ],
+     "logical_k": 256,
+     "padding": "consumer reads valid columns only; A/B zero padding is neutralised by the zero-padded weight tail",
+     "physical_cols": 256,
+     "producer_action": 17,
+     "producer_tile": [
+      0,
+      0,
+      65,
+      256
+     ],
+     "producer_view": 15,
+     "row_offset": 0,
+     "value": "Z"
+    }
+   },
+   "deps": [
+    17,
+    12
+   ],
+   "id": 24,
+   "inputs": [
+    23,
+    12
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage1:mm:0",
+   "outputs": [
+    21
+   ],
+   "template_id": "co.mm.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 256,
+    "k_padding": 0,
+    "k_physical_extent": 256,
+    "kt": 256,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 1,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s1:1:0:0",
+    "z_source": {
+     "consumer_region": [
+      0,
+      256,
+      65,
+      256
+     ],
+     "logical_k": 256,
+     "padding": "consumer reads valid columns only; A/B zero padding is neutralised by the zero-padded weight tail",
+     "physical_cols": 256,
+     "producer_action": 20,
+     "producer_tile": [
+      0,
+      256,
+      65,
+      256
+     ],
+     "producer_view": 17,
+     "row_offset": 0,
+     "value": "Z"
+    }
+   },
+   "deps": [
+    20,
+    13,
+    24
+   ],
+   "id": 25,
+   "inputs": [
+    24,
+    13,
+    21
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage1:mm_acc:256",
+   "outputs": [
+    22
+   ],
+   "template_id": "co.mm_acc.f16.v1"
+  },
+  {
+   "attrs": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "k0": 512,
+    "k_padding": 0,
+    "k_physical_extent": 64,
+    "kt": 64,
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 256
+    },
+    "source_stage_index": 1,
+    "stage_barrier": "all_previous_submits",
+    "submit_group": "mm:s1:1:0:0",
+    "z_source": {
+     "consumer_region": [
+      0,
+      512,
+      65,
+      64
+     ],
+     "logical_k": 64,
+     "padding": "consumer reads valid columns only; A/B zero padding is neutralised by the zero-padded weight tail",
+     "physical_cols": 64,
+     "producer_action": 23,
+     "producer_tile": [
+      0,
+      512,
+      65,
+      64
+     ],
+     "producer_view": 19,
+     "row_offset": 0,
+     "value": "Z"
+    }
+   },
+   "deps": [
+    23,
+    14,
+    25
+   ],
+   "id": 26,
+   "inputs": [
+    25,
+    14,
+    22
+   ],
+   "kind": "npu_task",
+   "origin": "lowering:staged:stage1:mm_acc:512",
+   "outputs": [
+    21
+   ],
+   "template_id": "co.mm_acc.f16.v1"
+  },
+  {
+   "attrs": {
+    "binding_id": 3,
+    "submit_group": null
+   },
+   "deps": [
+    26
+   ],
+   "id": 27,
+   "inputs": [
+    21
+   ],
+   "kind": "download",
+   "origin": "host:download:staged",
+   "outputs": [],
+   "template_id": null
+  }
+ ],
+ "bindings": [
+  {
+   "dtype": "float16",
+   "id": 0,
+   "name": "X",
+   "role": "input",
+   "shape": [
+    65,
+    576
+   ]
+  },
+  {
+   "dtype": "float16",
+   "id": 1,
+   "name": "W1",
+   "role": "constant",
+   "shape": [
+    576,
+    576
+   ]
+  },
+  {
+   "dtype": "float16",
+   "id": 2,
+   "name": "W2",
+   "role": "constant",
+   "shape": [
+    576,
+    97
+   ]
+  },
+  {
+   "dtype": "float16",
+   "id": 3,
+   "name": "Y",
+   "role": "output",
+   "shape": [
+    65,
+    97
+   ]
+  }
+ ],
+ "broadcast": {
+  "expanded_bytes": 0,
+  "kinds": []
+ },
+ "constants": [
+  {
+   "binding_id": 1,
+   "dtype": "float16",
+   "name": "W1",
+   "nbytes": 663552,
+   "pack_key": "f16:host-contract:576x576:v1",
+   "sha256": "6e87daccf47f5cbea9f8a201555fde50a99756a386504a4f82572fc14bcec4a7",
+   "shape": [
+    576,
+    576
+   ]
+  },
+  {
+   "binding_id": 2,
+   "dtype": "float16",
+   "name": "W2",
+   "nbytes": 111744,
+   "pack_key": "f16:host-contract:576x97:v1",
+   "sha256": "1aaa49814ccc4c7db897bc3f3c48f5837c0de3b385ed11673e386cac64d7541a",
+   "shape": [
+    576,
+    97
+   ]
+  }
+ ],
+ "counts": {
+  "actions": 28,
+  "bindings": 4,
+  "broadcast_expand_actions": 0,
+  "buffers": 23,
+  "data_bos": 20,
+  "submits": 4,
+  "tasks": 12,
+  "views": 26
+ },
+ "kind": "rkplan",
+ "name": "tilelang:kernel",
+ "plan_hash": "df53efff07c5edcb07ee5bdbefbcd35dc0074ab354f7b145ee783d77be616972",
+ "policy": {
+  "device_access": "none (compile/explain)",
+  "fallback": "error",
+  "numeric_mode": "rk_f16_tiled"
+ },
+ "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+ "publish": [
+  {
+   "binding_id": 3,
+   "cols": 97,
+   "dst_col": 0,
+   "dst_row": 0,
+   "name": "Y",
+   "rows": 65,
+   "view_id": 21
+  }
+ ],
+ "schedule": {
+  "accumulation": "ordered_ascending_f16_writeback",
+  "applied": [
+   "{\"accumulation\": \"ordered_ascending_f16_writeback\", \"k_tile\": 256, \"kind\": \"mn_tiles_v1\", \"order\": \"m_major\", \"tile_m\": 256, \"tile_n\": 256}"
+  ],
+  "k_tile": 256
+ },
+ "schema_version": 2,
+ "slots": [
+  {
+   "buffer_ids": [
+    0
+   ],
+   "payload_bytes": 34816,
+   "slot_id": 0
+  },
+  {
+   "buffer_ids": [
+    1
+   ],
+   "payload_bytes": 131072,
+   "slot_id": 1
+  },
+  {
+   "buffer_ids": [
+    2
+   ],
+   "payload_bytes": 34816,
+   "slot_id": 2
+  },
+  {
+   "buffer_ids": [
+    3
+   ],
+   "payload_bytes": 131072,
+   "slot_id": 3
+  },
+  {
+   "buffer_ids": [
+    4
+   ],
+   "payload_bytes": 8704,
+   "slot_id": 4
+  },
+  {
+   "buffer_ids": [
+    5
+   ],
+   "payload_bytes": 32768,
+   "slot_id": 5
+  },
+  {
+   "buffer_ids": [
+    6
+   ],
+   "payload_bytes": 131072,
+   "slot_id": 6
+  },
+  {
+   "buffer_ids": [
+    7
+   ],
+   "payload_bytes": 131072,
+   "slot_id": 7
+  },
+  {
+   "buffer_ids": [
+    8
+   ],
+   "payload_bytes": 32768,
+   "slot_id": 8
+  },
+  {
+   "buffer_ids": [
+    9
+   ],
+   "payload_bytes": 32768,
+   "slot_id": 9
+  },
+  {
+   "buffer_ids": [
+    10
+   ],
+   "payload_bytes": 32768,
+   "slot_id": 10
+  },
+  {
+   "buffer_ids": [
+    11
+   ],
+   "payload_bytes": 8192,
+   "slot_id": 11
+  },
+  {
+   "buffer_ids": [
+    12
+   ],
+   "payload_bytes": 65536,
+   "slot_id": 12
+  },
+  {
+   "buffer_ids": [
+    13
+   ],
+   "payload_bytes": 65536,
+   "slot_id": 13
+  },
+  {
+   "buffer_ids": [
+    14
+   ],
+   "payload_bytes": 16384,
+   "slot_id": 14
+  },
+  {
+   "buffer_ids": [
+    15,
+    22
+   ],
+   "payload_bytes": 34816,
+   "slot_id": 15
+  },
+  {
+   "buffer_ids": [
+    16,
+    17
+   ],
+   "payload_bytes": 34816,
+   "slot_id": 16
+  },
+  {
+   "buffer_ids": [
+    18,
+    19
+   ],
+   "payload_bytes": 34816,
+   "slot_id": 17
+  },
+  {
+   "buffer_ids": [
+    20
+   ],
+   "payload_bytes": 8704,
+   "slot_id": 18
+  },
+  {
+   "buffer_ids": [
+    21
+   ],
+   "payload_bytes": 17408,
+   "slot_id": 19
+  }
+ ],
+ "source_hash": "Span(SourceName(tests/fixtures/tilelang_two_stage.py#sha256:a59985a713517374, 0x0), 36, 36, 1, 1048576)",
+ "submits": [
+  {
+   "core_policy": "single_core_per_submit",
+   "deps": [],
+   "id": 0,
+   "mode": "chain",
+   "recipe_id": "linear_k_acc_v1",
+   "task_ids": [
+    15,
+    16,
+    17
+   ]
+  },
+  {
+   "core_policy": "single_core_per_submit",
+   "deps": [
+    0
+   ],
+   "id": 1,
+   "mode": "chain",
+   "recipe_id": "linear_k_acc_v1",
+   "task_ids": [
+    18,
+    19,
+    20
+   ]
+  },
+  {
+   "core_policy": "single_core_per_submit",
+   "deps": [
+    1
+   ],
+   "id": 2,
+   "mode": "chain",
+   "recipe_id": "linear_k_acc_v1",
+   "task_ids": [
+    21,
+    22,
+    23
+   ]
+  },
+  {
+   "core_policy": "single_core_per_submit",
+   "deps": [
+    2
+   ],
+   "id": 3,
+   "mode": "chain",
+   "recipe_id": "linear_k_acc_v1",
+   "task_ids": [
+    24,
+    25,
+    26
+   ]
+  }
+ ]
+}
