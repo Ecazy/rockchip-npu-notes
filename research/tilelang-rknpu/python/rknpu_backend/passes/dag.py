@@ -1359,8 +1359,16 @@ class _Builder:
                         origin=f"lowering:matmul:{kslice.k0}",
                         attrs={"submit_group": group,
                                "k0": kslice.k0, "kt": kslice.extent,
+                               "k_physical_extent":
+                                   ((kslice.extent + 31) // 32) * 32,
+                               "k_padding":
+                                   (((kslice.extent + 31) // 32) * 32
+                                    - kslice.extent),
                                "source_k_loop": source_k_loop,
                                "source_mn_tiling": source_mn_tiling,
+                               "source_k_rounding":
+                                   self.legalized.matmul_op.attrs.get(
+                                       "source_k_rounding"),
                                "source_schedule":
                                    self.legalized.matmul_op.attrs.get(
                                        "source_schedule"),
@@ -1374,8 +1382,16 @@ class _Builder:
                         origin=f"lowering:matmul_acc:{kslice.k0}",
                         attrs={"submit_group": group,
                                "k0": kslice.k0, "kt": kslice.extent,
+                               "k_physical_extent":
+                                   ((kslice.extent + 31) // 32) * 32,
+                               "k_padding":
+                                   (((kslice.extent + 31) // 32) * 32
+                                    - kslice.extent),
                                "source_k_loop": source_k_loop,
                                "source_mn_tiling": source_mn_tiling,
+                               "source_k_rounding":
+                                   self.legalized.matmul_op.attrs.get(
+                                       "source_k_rounding"),
                                "source_schedule":
                                    self.legalized.matmul_op.attrs.get(
                                        "source_schedule"),

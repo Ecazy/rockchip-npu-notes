@@ -214,8 +214,10 @@ cmd_schedule_tune() {
   "${SCP[@]}" "$bundle" "$TARGET:$remote/tune.tgz" >/dev/null
   "${SSH[@]}" "cd '$remote' && rm -rf '$remote_plans' && mkdir -p '$remote_plans' && tar -xzf tune.tgz -C '$remote_plans' --strip-components=1 && export PYTHONPATH='$remote/tilelang-rknpu/python' RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' LD_LIBRARY_PATH='$remote/build' RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 '$remote/tilelang-rknpu/tools/tune_schedule.py' run --plans '$remote/$remote_plans' --package '$remote/package' --out '$remote/tune-run.json'"
   "${SCP[@]}" "$TARGET:$remote/tune-run.json" "$out/tune-run.json" >/dev/null
-  # Separate interleaved baseline/winner confirmation process.
-  "${SSH[@]}" "cd '$remote' && export PYTHONPATH='$remote/tilelang-rknpu/python' RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' LD_LIBRARY_PATH='$remote/build' RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 '$remote/tilelang-rknpu/tools/tune_schedule.py' confirm --plans '$remote/$remote_plans' --package '$remote/package' --case attention_qk_prefill --rounds 5 --out '$remote/tune-confirm.json'"
+  # Separate interleaved baseline/winner confirmation process.  Every
+  # non-default winner is confirmed; a default-only policy is recorded as
+  # skipped without manufacturing an A/B measurement.
+  "${SSH[@]}" "cd '$remote' && export PYTHONPATH='$remote/tilelang-rknpu/python' RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' LD_LIBRARY_PATH='$remote/build' RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 '$remote/tilelang-rknpu/tools/tune_schedule.py' confirm-all --plans '$remote/$remote_plans' --package '$remote/package' --rounds 5 --out '$remote/tune-confirm.json'"
   "${SCP[@]}" "$TARGET:$remote/tune-confirm.json" "$out/tune-confirm.json" >/dev/null
   "${SCP[@]}" "$TARGET:$remote/$remote_plans/policy.json" "$out/policy.json" >/dev/null
   "${SCP[@]}" "$TARGET:$remote/$remote_plans/policy-summary.json" "$out/policy-summary.json" >/dev/null

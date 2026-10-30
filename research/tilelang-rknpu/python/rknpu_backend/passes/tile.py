@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..errors import RK_E_NUMERIC_CONTRACT, RK_E_SHAPE, RK_E_UNSUPPORTED, \
-    reject
+from ..errors import RK_E_NUMERIC_CONTRACT, RK_E_SCHEMA, RK_E_SHAPE, \
+    RK_E_UNSUPPORTED, reject
 
 TILE_LIMIT = 256
 K_TILE = 256
@@ -98,15 +98,19 @@ def mn_schedule_from_attrs(attrs: dict, *, where: str = "matmul") -> MNTileSched
                "unsupported M/N traversal order", stage="schedule",
                actual=raw["order"], required=sorted(MN_TILE_ORDERS))
     # A scheduled source must state rounding that is equivalent to the target
-    # per-K FP16 writeback.  A final-only FP32 narrowing is a different
-    # numerical program and must not silently inherit this schedule.
+    # per-K FP16 writeback.  Absence, a final-only FP32 narrowing, and an
+    # annotation that disagrees with the proven source all mean the schedule
+    # would describe a different numerical program.
     rounding = attrs.get("source_k_rounding")
-    if rounding not in {None, "explicit_per_k_fp16", "single_k_tile_fp16"}:
+    if rounding not in {"explicit_per_k_fp16", "single_k_tile_fp16"}:
         reject(RK_E_NUMERIC_CONTRACT,
                "scheduled source has a different K-rounding contract",
                stage="schedule", actual=rounding,
                required=["explicit_per_k_fp16", "single_k_tile_fp16"])
-    # A source K loop, if present, must agree with the fixed lowering contract.
+    # A source K loop, if present, must agree with the fixed lowering contract
+    # and expose a complete ordered K-block partition.  This is also where a
+    # final-only narrowing is rejected for any K that crosses the single-tile
+    # boundary, rather than being inferred later from the output shape.
     k_loop = attrs.get("source_k_loop")
     if k_loop is not None:
         if not isinstance(k_loop, dict):
@@ -123,6 +127,73 @@ def mn_schedule_from_attrs(attrs: dict, *, where: str = "matmul") -> MNTileSched
             reject(RK_E_UNSUPPORTED,
                    f"lowering K tile must be {K_TILE}", stage="schedule",
                    actual=lowering, required=K_TILE)
+        logical_k = k_loop.get("logical_k")
+        trips = k_loop.get("source_k_trips")
+        if logical_k is not None:
+            if not isinstance(logical_k, int) or isinstance(logical_k, bool) or \
+                    not 1 <= logical_k <= 4096:
+                reject(RK_E_SHAPE,
+                       "scheduled source logical K must be in 1..4096",
+                       stage="schedule", actual=logical_k)
+            expected_trips = (logical_k + K_TILE - 1) // K_TILE
+            if trips is not None and trips != expected_trips:
+                reject(RK_E_SHAPE,
+                       "scheduled source K trips do not cover logical K",
+                       stage="schedule", actual=trips,
+                       required=expected_trips)
+            if logical_k > K_TILE and rounding != "explicit_per_k_fp16":
+                reject(RK_E_NUMERIC_CONTRACT,
+                       "scheduled source with logical K > 256 must narrow "
+                       "every K block, not only the final output",
+                       stage="schedule", actual=rounding,
+                       required="explicit_per_k_fp16")
+        if rounding == "single_k_tile_fp16" and \
+                (trips is not None and trips != 1):
+            reject(RK_E_NUMERIC_CONTRACT,
+                   "single-K-tile rounding cannot describe more than one K "
+                   "block", stage="schedule", actual=trips)
+        k_blocks = k_loop.get("k_blocks")
+        if k_blocks is not None:
+            if not isinstance(k_blocks, list) or not k_blocks:
+                reject(RK_E_SHAPE,
+                       "scheduled source k_blocks must be a non-empty list",
+                       stage="schedule")
+            next_k0 = 0
+            for index, item in enumerate(k_blocks):
+                if not isinstance(item, dict) or \
+                        item.get("index") != index or \
+                        item.get("k0") != next_k0 or \
+                        not isinstance(item.get("extent"), int) or \
+                        not 1 <= item["extent"] <= K_TILE:
+                    reject(RK_E_SHAPE,
+                           "scheduled source k_blocks are not a contiguous "
+                           "ascending partition", stage="schedule",
+                           actual=item)
+                next_k0 += item["extent"]
+            if logical_k is not None and next_k0 != logical_k:
+                reject(RK_E_SHAPE,
+                       "scheduled source k_blocks do not cover logical K",
+                       stage="schedule", actual=next_k0,
+                       required=logical_k)
+            if len(k_blocks) > 1 and rounding != "explicit_per_k_fp16":
+                reject(RK_E_NUMERIC_CONTRACT,
+                       "a multi-block K partition requires explicit per-K "
+                       "FP16 rounding", stage="schedule", actual=rounding)
+        tail = attrs.get("source_tail_contract")
+        if isinstance(tail, dict):
+            if tail.get("k_trips") != trips:
+                reject(RK_E_SCHEMA,
+                       "source tail contract disagrees on K trips",
+                       stage="schedule", actual=tail.get("k_trips"),
+                       required=trips)
+            tails = tail.get("tails")
+            if logical_k is not None and isinstance(tails, dict):
+                expected_tail = logical_k - (trips - 1) * K_TILE
+                if tails.get("K") != expected_tail:
+                    reject(RK_E_SHAPE,
+                           "source tail contract disagrees on the K tail",
+                           stage="schedule", actual=tails.get("K"),
+                           required=expected_tail)
     return MNTileSchedule(raw["tile_m"], raw["tile_n"], raw["order"])
 
 

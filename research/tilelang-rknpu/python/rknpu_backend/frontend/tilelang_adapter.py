@@ -48,7 +48,13 @@ FORBIDDEN_TOKENS = ("atomic", "barrier", "shuffle", "sync", "reduce")
 # the resulting ``source_schedule`` explicitly.
 SCHEDULE_ATTRS = {
     "rknpu.schedule", "rknpu.tile_m", "rknpu.tile_n", "rknpu.mn_order",
+    "rknpu.source_k_rounding",
 }
+# A rounding declaration is source semantics, not a schedule choice: it does
+# not by itself request a non-default M/N plan.
+SCHEDULE_ROUNDING_ATTR = "rknpu.source_k_rounding"
+SOURCE_ROUNDINGS = {"explicit_per_k_fp16", "single_k_tile_fp16",
+                    "fp32_final_narrowing"}
 SCHEDULE_K_TILE = 256
 MN_ORDERS = {"m_major", "n_major"}
 
@@ -71,12 +77,13 @@ def _schedule_annotation(prim_func: Any, span: str) -> _ScheduleAnnotation:
     attrs = dict(getattr(prim_func, "attrs", {}) or {})
     for key in attrs:
         if key.startswith(("rknpu.schedule", "rknpu.tile_", "rknpu.mn_",
-                           "rknpu.k_")):
+                           "rknpu.k_", "rknpu.source_")):
             if key not in SCHEDULE_ATTRS:
                 reject(RK_E_UNSUPPORTED,
                        f"unsupported TileLang schedule annotation {key!r}",
                        stage="frontend", source=span)
-    present = any(key in attrs for key in SCHEDULE_ATTRS)
+    present = any(key in attrs for key in SCHEDULE_ATTRS
+                  if key != SCHEDULE_ROUNDING_ATTR)
     if not present:
         return _ScheduleAnnotation(False, None, None, None)
     marker = attrs.get("rknpu.schedule")
@@ -133,6 +140,36 @@ def _source_schedule(prim_func: Any, *, tile_m: int, tile_n: int,
         "order": use_order, "k_tile": SCHEDULE_K_TILE,
         "accumulation": "ordered_ascending_f16_writeback",
     }
+
+
+def _source_k_rounding_annotation(prim_func: Any, span: str) -> str | None:
+    """Read the optional source-rounding declaration, without trusting it.
+
+    The declaration is an assertion about what the TIR actually does.  Every
+    extractor compares it with the rounding point it proved from the copies.
+    """
+    attrs = dict(getattr(prim_func, "attrs", {}) or {})
+    value = attrs.get(SCHEDULE_ROUNDING_ATTR)
+    if value is None:
+        return None
+    if not isinstance(value, str) and hasattr(value, "value"):
+        value = value.value
+    if not isinstance(value, str) or value not in SOURCE_ROUNDINGS:
+        reject(RK_E_NUMERIC_CONTRACT,
+               "unsupported source K-rounding annotation", stage="frontend",
+               source=span, actual=repr(value),
+               required=sorted(SOURCE_ROUNDINGS))
+    return value
+
+
+def _check_source_rounding_annotation(prim_func: Any, actual: str,
+                                      span: str) -> None:
+    declared = _source_k_rounding_annotation(prim_func, span)
+    if declared is not None and declared != actual:
+        reject(RK_E_NUMERIC_CONTRACT,
+               "source K-rounding annotation does not match the proven "
+               "rounding points", stage="frontend", source=span,
+               actual={"declared": declared, "proven": actual})
 
 
 @dataclass(frozen=True)
@@ -3422,29 +3459,26 @@ def _tile_parallel_axes(item: _Item, rows: int, cols: int,
 def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                          prim_func: Any, span: str,
                          options: CompileOptions,
-                         profile_hash: str) -> Any:
-    """Extract the canonical explicit guarded rectangular-tail K loop.
+                         profile_hash: str,
+                         b_is_input: bool = False) -> Any:
+    """Extract a guarded rectangular-tail K loop.
 
-    Source shape (the only accepted form)::
+    Two source-rounding forms are distinguished by their actual copies, never
+    by an annotation:
 
-        with T.Kernel(ceildiv(N, BN), ceildiv(M, BM)) as (bx, by):
-            clear(acc)
-            for ko in Pipelined(ceildiv(K, BK)):
-                fill(A_tile, 0); fill(B_tile, 0)
-                for i,j in Parallel(BM,BK):
-                    if by*BM+i < M and ko*BK+j < K:
-                        A_tile[i,j] = A[by*BM+i, ko*BK+j]
-                for i,j in Parallel(BK,BN):
-                    if ko*BK+i < K and bx*BN+j < N:
-                        B_tile[i,j] = B[ko*BK+i, bx*BN+j]
-                gemm(A_tile, B_tile, acc)
-            for i,j in Parallel(BM,BN):
-                if by*BM+i < M and bx*BN+j < N:
-                    Y[by*BM+i, bx*BN+j] = acc[i,j]
+    * legacy final narrowing: acc32 is zeroed before the K loop, every K block
+      accumulates in FP32, and the single FP16 output copy is the final
+      narrowing;
+    * explicit per-K rounding: acc16 is zeroed before the K loop, each K
+      iteration copies acc16 -> acc32, runs the GEMM, then copies
+      acc32 -> acc16.
 
-    Every out-of-range read is covered by an in-loop zero fill; the output store
-    is guarded.  The planner consumes the logical M/N/K and emits its own exact
-    padded tail tiles, so the guards are not silently discarded.
+    In both forms the physical A/B tiles are zeroed on every K iteration before
+    guarded logical loads, and the output store is guarded.  The M/N block
+    roles are inferred from the actual A/B/C index expressions, so canonical
+    (x=N, y=M) and swapped (x=M, y=N) grids are both admitted.  The planner
+    consumes the logical M/N/K and emits its own padded tail tiles, so the
+    guards are not silently discarded.
     """
     calls = [item for item in items if item.kind == "call"]
     tile_calls = [item for item in calls
@@ -3456,11 +3490,16 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
              if _op_name(item.node) == "tl.tileop.gemm"]
     copies = [item for item in tile_calls
               if _op_name(item.node) == "tl.tileop.copy"]
-    if len(gemms) != 1 or copies:
+    if len(gemms) != 1:
         reject(RK_E_UNSUPPORTED,
-               "guarded tail extraction requires one GEMM and no tile copies",
-               stage="frontend", source=span,
-               actual={"gemms": len(gemms), "copies": len(copies)})
+               "guarded tail extraction requires exactly one GEMM",
+               stage="frontend", source=span, actual=len(gemms))
+    if len(copies) not in (0, 2):
+        reject(RK_E_UNSUPPORTED,
+               "guarded tail source may contain only the two explicit FP16 "
+               "round-trip copies", stage="frontend", source=span,
+               actual=len(copies))
+    explicit_rounding = bool(copies)
     gemm_item = gemms[0]
     if gemm_item.guards or len(gemm_item.loops) != 1 or gemm_item.blocks is None:
         reject(RK_E_UNSUPPORTED,
@@ -3576,6 +3615,63 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                    actual=_buffer_name(item.node.buffer))
 
     # A/B switches: the same K loop variable must advance both.
+    a_store = a_guarded.node
+    b_store = b_guarded.node
+    if type(a_store.value).__name__ != "BufferLoad" or \
+            type(b_store.value).__name__ != "BufferLoad":
+        reject(RK_E_UNSUPPORTED,
+               "guarded input store value must be a direct parameter load",
+               stage="frontend", source=span)
+    a_loaded = a_store.value
+    b_loaded = b_store.value
+
+    # Infer M/N block roles from the actual A/B/C index expressions.  The
+    # launch-axis spelling is not a proof: both (x=N, y=M) and the supported
+    # swapped (x=M, y=N) source grids must be admitted when the indices prove
+    # the same exact-once coverage.
+    a_i0, a_j0 = _tile_parallel_axes(a_guarded, gm, gk, "A guarded load", span)
+    b_i0, b_j0 = _tile_parallel_axes(b_guarded, gk, gn, "B guarded load", span)
+    y_i0, y_j0 = _tile_parallel_axes(y_guarded, gm, gn,
+                                    "output guarded store", span)
+    a_local = {"ai": a_i0, "aj": a_j0}
+    b_local = {"bi": b_i0, "bj": b_j0}
+    y_local = {"yi": y_i0, "yj": y_j0}
+
+    def block_coeff(expr: Any, index: int,
+                    local: dict[str, Any]) -> int:
+        parsed = _affine_expr(expr, tirx,
+                              {f"b{index}": block_loops[index].loop_var,
+                               **local})
+        return 0 if parsed is None else parsed[0].get(f"b{index}", 0)
+
+    m_candidates: list[Any] = []
+    n_candidates: list[Any] = []
+    y_indices = tuple(y_guarded.node.indices)
+    for index, block in enumerate(block_loops):
+        a_row = block_coeff(a_loaded.indices[0], index, a_local)
+        b_col = block_coeff(b_loaded.indices[1], index, b_local)
+        y_row = block_coeff(y_indices[0], index, y_local)
+        y_col = block_coeff(y_indices[1], index, y_local)
+        if a_row == gm and y_row == gm:
+            m_candidates.append(block)
+        if b_col == gn and y_col == gn:
+            n_candidates.append(block)
+    if len(m_candidates) != 1 or len(n_candidates) != 1 or \
+            m_candidates[0] is n_candidates[0]:
+        reject(RK_E_UNSUPPORTED,
+               "cannot prove the guarded-tail block-axis to M/N mapping from "
+               "the actual A/B/C index expressions", stage="frontend",
+               source=span,
+               actual={"M": len(m_candidates), "N": len(n_candidates)})
+    by_loop, bx_loop = m_candidates[0], n_candidates[0]
+    grid_y = _int_imm(by_loop.extent)
+    grid_x = _int_imm(bx_loop.extent)
+    if grid_x is None or grid_y is None or grid_x < 1 or grid_y < 1:
+        reject(RK_E_SHAPE,
+               "guarded tail block-grid extents must be static positive "
+               "integers", stage="frontend", source=span,
+               actual=[repr(bx_loop.extent), repr(by_loop.extent)])
+
     roles = {"bx": bx_loop.loop_var, "by": by_loop.loop_var,
              "ko": k_loop.loop_var}
     if a_guarded.loops[:1] != (k_loop,) or b_guarded.loops[:1] != (k_loop,):
@@ -3597,16 +3693,6 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
     b_terms = _guard_terms(b_guarded.guards, tirx, roles, "B tail", span)
     # The logical bounds are resolved from the parameter shapes below; the
     # affine source indices are checked after that discovery.
-
-    a_store = a_guarded.node
-    b_store = b_guarded.node
-    if type(a_store.value).__name__ != "BufferLoad" or \
-            type(b_store.value).__name__ != "BufferLoad":
-        reject(RK_E_UNSUPPORTED,
-               "guarded input store value must be a direct parameter load",
-               stage="frontend", source=span)
-    a_loaded = a_store.value
-    b_loaded = b_store.value
     a_param = _param_of(a_loaded.buffer, params)
     b_param = _param_of(b_loaded.buffer, params)
     if a_param is None or b_param is None:
@@ -3687,11 +3773,77 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                    f"guarded tail {label} tile must be zeroed before its "
                    "conditional load", stage="frontend", source=span)
 
-    # Accumulator is zeroed once, outside the K loop.
+    # Distinguish the two rounding forms by the copies that actually exist.
+    persistent_acc = c_reg.buffer
+    roundtrip_load = roundtrip_store = None
+    if explicit_rounding:
+        persistent_acc = None
+        for item in copies:
+            if k_loop not in item.loops:
+                reject(RK_E_UNSUPPORTED,
+                       "explicit K-rounding copies must be inside the K loop",
+                       stage="frontend", source=span)
+            src = _region(item.node.args[0], tirx, "roundtrip source",
+                          expect_mask=1)
+            dst = _region(item.node.args[1], tirx, "roundtrip destination",
+                          expect_mask=2)
+            if src.physical != (gm, gn) or dst.physical != (gm, gn) or \
+                    src.offset != (0, 0) or dst.offset != (0, 0):
+                reject(RK_E_NUMERIC_CONTRACT,
+                       "explicit K-rounding copies must move the full "
+                       "accumulator tile", stage="frontend", source=span)
+            if _same_buffer(src.buffer, c_reg.buffer) and \
+                    not _same_buffer(dst.buffer, c_reg.buffer):
+                candidate = dst.buffer
+                if roundtrip_store is not None:
+                    reject(RK_E_UNSUPPORTED,
+                           "explicit K-rounding has more than one store copy",
+                           stage="frontend", source=span)
+                roundtrip_store = item
+            elif _same_buffer(dst.buffer, c_reg.buffer) and \
+                    not _same_buffer(src.buffer, c_reg.buffer):
+                candidate = src.buffer
+                if roundtrip_load is not None:
+                    reject(RK_E_UNSUPPORTED,
+                           "explicit K-rounding has more than one load copy",
+                           stage="frontend", source=span)
+                roundtrip_load = item
+            else:
+                reject(RK_E_UNSUPPORTED,
+                       "guarded tail copy is neither A/B input nor a "
+                       "load-or-store round trip", stage="frontend",
+                       source=span)
+            if persistent_acc is not None and \
+                    not _same_buffer(persistent_acc, candidate):
+                reject(RK_E_UNSUPPORTED,
+                       "explicit K-rounding copies disagree on the running "
+                       "accumulator tile", stage="frontend", source=span)
+            persistent_acc = candidate
+        if roundtrip_load is None or roundtrip_store is None or \
+                persistent_acc is None:
+            reject(RK_E_UNSUPPORTED,
+                   "explicit K-rounding requires one FP16-to-FP32 load and one "
+                   "FP32-to-FP16 store inside every K iteration",
+                   stage="frontend", source=span)
+        if str(getattr(persistent_acc, "dtype", "")) != "float16" or \
+                str(getattr(c_reg.buffer, "dtype", "")) != "float32":
+            reject(RK_E_NUMERIC_CONTRACT,
+                   "explicit K-rounding requires an FP16 running accumulator "
+                   "and an FP32 GEMM accumulator", stage="frontend",
+                   source=span,
+                   actual={"running": str(getattr(persistent_acc, "dtype", "")),
+                           "gemm": str(getattr(c_reg.buffer, "dtype", ""))})
+        if not (roundtrip_load.order < gemm_item.order <
+                roundtrip_store.order):
+            reject(RK_E_NUMERIC_CONTRACT,
+                   "explicit K-rounding order must be load, GEMM, store",
+                   stage="frontend", source=span)
+
+    # The persistent accumulator is zeroed once, outside the K loop.
     acc_fills = [f for f in fills
                  if not f.loops and
                  _same_buffer(_region(f.node.args[0], tirx, "fill",
-                                      expect_mask=2).buffer, c_reg.buffer)]
+                                      expect_mask=2).buffer, persistent_acc)]
     if len(acc_fills) != 1 or len(fills) != 3:
         reject(RK_E_NUMERIC_CONTRACT,
                "guarded tail requires one accumulator fill outside the K loop "
@@ -3709,8 +3861,8 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                "guarded tail accumulator must be zeroed once before the K loop",
                stage="frontend", source=span)
 
-    # Output stays in the accumulator until after the reduction; only the
-    # logical rectangle is written.
+    # Output stays in the persistent accumulator until after the reduction; only
+    # the logical rectangle is written.
     y_store = y_guarded.node
     if k_loop in y_guarded.loops or y_guarded.blocks != gemm_item.blocks or \
             y_guarded.order <= gemm_item.order:
@@ -3727,15 +3879,25 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                        [({"by": gm, "yi": 1}, logical_m),
                         ({"bx": gn, "yj": 1}, logical_n)],
                        "output tail", span)
-    if type(y_store.value).__name__ != "Cast" or \
-            type(y_store.value.value).__name__ != "BufferLoad":
+    if type(y_store.value).__name__ == "Cast" and \
+            type(y_store.value.value).__name__ == "BufferLoad":
+        y_load = y_store.value.value
+    elif explicit_rounding and type(y_store.value).__name__ == "BufferLoad":
+        y_load = y_store.value
+    else:
         reject(RK_E_UNSUPPORTED,
-               "guarded output store must cast the accumulator fragment",
+               ("guarded output store must read the FP16 running accumulator"
+                if explicit_rounding else
+                "legacy guarded output store must cast the FP32 accumulator"),
                stage="frontend", source=span)
-    y_load = y_store.value.value
-    if not _same_buffer(y_load.buffer, c_reg.buffer):
+    if not _same_buffer(y_load.buffer, persistent_acc):
         reject(RK_E_UNSUPPORTED,
-               "guarded output store does not read the GEMM accumulator",
+               "guarded output store does not read the persistent accumulator",
+               stage="frontend", source=span)
+    if explicit_rounding and \
+            str(getattr(y_load.buffer, "dtype", "")) != "float16":
+        reject(RK_E_NUMERIC_CONTRACT,
+               "explicit per-K output must read the FP16 running accumulator",
                stage="frontend", source=span)
     if len(y_load.indices) != 2 or not _same_var(y_load.indices[0], y_i) or \
             not _same_var(y_load.indices[1], y_j):
@@ -3760,6 +3922,13 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
     k_tail = logical_k - (trips - 1) * gk
     m_tail = logical_m - (grid_y - 1) * gm
     n_tail = logical_n - (grid_x - 1) * gn
+    k_blocks = [{"index": index, "k0": index * gk,
+                 "extent": min(gk, logical_k - index * gk)}
+                for index in range(trips)]
+    source_rounding = ("explicit_per_k_fp16" if explicit_rounding else
+                       ("single_k_tile_fp16" if trips == 1 else
+                        "fp32_final_narrowing"))
+    _check_source_rounding_annotation(prim_func, source_rounding, span)
     contract = _numeric_contract(options)
     tail_contract = {
         "form": "guarded_rect_tail_v1",
@@ -3771,41 +3940,59 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
         "tails": {"M": m_tail, "N": n_tail, "K": k_tail},
         "grid": {"x": grid_x, "y": grid_y},
         "k_trips": trips,
+        "k_blocks": k_blocks,
+        "rounding_points": ("after_each_k_block" if explicit_rounding else
+                            "final_output_only"),
+        "physical_k_tile": gk,
+        "physical_padding": "zero",
+        "tail_physical_extent": ((k_tail + 31) // 32) * 32,
     }
     hints = {"source_k_block": gk, "source_k_trips": trips,
              "logical_k": logical_k, "k_tail": k_tail,
+             "k_blocks": k_blocks,
+             "source_rounding": source_rounding,
+             "rounding_points": ("after_each_k_block" if explicit_rounding
+                                 else "final_output_only"),
              "source_loop_annotations": {},
              "lowering_k_tile": 256,
              "pipeline_hint_dropped": False,
-             "narrowing_base": "every 256 K elements",
+             "narrowing_base": ("explicit FP16 after each K block"
+                                if explicit_rounding else
+                                "every 256 K elements"),
              "tail_contract": tail_contract}
     mn_tiling = {"block_m": gm, "block_n": gn,
                  "grid_x": grid_x, "grid_y": grid_y,
                  "coverage": "ragged_tail",
                  "m_tail": m_tail, "n_tail": n_tail}
-    source_schedule = _source_schedule(
-        prim_func, tile_m=gm, tile_n=gn, span=span)
+    ann = _schedule_annotation(prim_func, span)
+    source_schedule = (_source_schedule(
+        prim_func, tile_m=gm, tile_n=gn, span=span) if ann.present else None)
+    matmul_attrs = {
+        "b_layout": "kn", "numeric_contract": contract.to_dict(),
+        "source_accumulator_dtype": ("float16" if explicit_rounding
+                                     else "float32"),
+        "source_k_rounding": source_rounding,
+        "source_k_loop": hints,
+        "source_mn_tiling": mn_tiling,
+        "source_tail_contract": tail_contract,
+    }
+    if source_schedule is not None:
+        matmul_attrs["source_schedule"] = source_schedule
     values = (
         _value(0, _buffer_name(a_param), TensorType("float16",
                                                    (logical_m, logical_k)),
               None, "input"),
         _value(1, _buffer_name(b_param), TensorType("float16",
                                                    (logical_k, logical_n)),
-              None, "constant"),
+              None, "input" if b_is_input else "constant"),
         _value(2, _buffer_name(c_param), TensorType("float16",
                                                    (logical_m, logical_n)),
               0, "output"),
     )
-    ops = (_op(0, "matmul", (0, 1), (2,),
-              {"b_layout": "kn", "numeric_contract": contract.to_dict(),
-               "source_accumulator_dtype": "float32",
-               "source_k_loop": hints,
-               "source_mn_tiling": mn_tiling,
-               "source_schedule": source_schedule,
-               "source_tail_contract": tail_contract}, span),)
+    ops = (_op(0, "matmul", (0, 1), (2,), matmul_attrs, span),)
     return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
-                  ops=ops, inputs=(0,), outputs=(2,),
-                  profile_hash=profile_hash, source_hash=span,
+                  ops=ops, inputs=((0, 1) if b_is_input else (0,)),
+                  outputs=(2,), profile_hash=profile_hash, source_hash=span,
                   state_signature="")
 
 
@@ -4119,10 +4306,27 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
         roles["bx"] = block_var_x
     if block_var_y is not None:
         roles["by"] = block_var_y
-    # A[by*BM, ko*K] and B[ko*K, bx*BN]
+
+    def expected_mn(region: _Region, axis: int, role: str,
+                    factor: int) -> dict[str, int]:
+        parsed = _affine_expr(region.raw_indices[axis], tirx, roles)
+        if parsed is not None:
+            coeffs = {key: value for key, value in parsed[0].items() if value}
+            if coeffs == {role: factor}:
+                return {role: factor}
+            if not coeffs:
+                return {}
+        return {role: factor}
+
+    # A[by*BM, ko*K] and B[ko*K, bx*BN].  A one-block axis may be spelled with
+    # or without its loop variable; both are the same exact-once mapping.
     operand_indices = {
-        "A": (1, {"by": gm} if grid_y > 1 else {}),
-        "B": (0, {"bx": gn} if grid_x > 1 else {}),
+        "A": (1, expected_mn(_region(a_copy.node.args[0], tirx,
+                                    "A copy source", expect_mask=1),
+                             0, "by", gm)),
+        "B": (0, expected_mn(_region(b_copy.node.args[0], tirx,
+                                    "B copy source", expect_mask=1),
+                             1, "bx", gn)),
     }
     for role, item, axis, extent in (("A", a_copy, 1, (gm, gk)),
                                      ("B", b_copy, 0, (gk, gn))):
@@ -4170,10 +4374,10 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
                                               repr(c_dst.raw_indices[1])]})
     _require_constant(c_src, "accumulator copy source", span)
     _require_affine(c_dst, 0, tirx, roles,
-                    {"by": gm} if grid_y > 1 else {},
+                    expected_mn(c_dst, 0, "by", gm),
                     "output copy destination", span)
     _require_affine(c_dst, 1, tirx, roles,
-                    {"bx": gn} if grid_x > 1 else {},
+                    expected_mn(c_dst, 1, "bx", gn),
                     "output copy destination", span)
     persistent_acc = c_src.buffer
     if not _same_buffer(c_src.buffer, persistent_acc):
@@ -4249,7 +4453,9 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
                    explicit_fp16_rounding=explicit_fp16_rounding,
                    source_rounding=("explicit_per_k_fp16"
                                     if explicit_fp16_rounding
-                                    else "fp32_final_narrowing"))
+                                    else ("single_k_tile_fp16"
+                                          if trips == 1
+                                          else "fp32_final_narrowing")))
 
 
 def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
@@ -4263,17 +4469,26 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
     logical_n = block.grid_x * block.cols
     hints = {"source_k_block": block.block_k,
              "source_k_trips": block.trips,
+             "logical_k": logical_k,
+             "k_blocks": [{"index": i, "k0": i * block.block_k,
+                           "extent": min(block.block_k,
+                                         logical_k - i * block.block_k)}
+                          for i in range(block.trips)],
              "source_loop_annotations": block.annotations,
              "source_loop_span": str(getattr(block.loop_item.node, "span", "") or ""),
              "lowering_k_tile": 256,
              "pipeline_hint_dropped": bool(block.annotations),
              "source_rounding": block.source_rounding,
+             "rounding_points": ("after_each_k_block"
+                                 if block.explicit_fp16_rounding
+                                 else "final_output_only"),
              "narrowing_base": ("explicit FP16 after each K block"
                                 if block.explicit_fp16_rounding
                                 else "backend target policy: every 256 K elements")}
     mn_tiling = {"block_m": block.rows, "block_n": block.cols,
                  "grid_x": block.grid_x, "grid_y": block.grid_y,
                  "coverage": "exact_once"}
+    _check_source_rounding_annotation(prim_func, block.source_rounding, span)
     ann = _schedule_annotation(prim_func, span)
     source_schedule = (_source_schedule(
         prim_func, tile_m=block.rows, tile_n=block.cols, span=span)
@@ -4346,7 +4561,8 @@ def extract(prim_func: Any, *, options: CompileOptions,
     if any(item.guards for item in items):
         return _extract_ragged_tail(
             items, params, tirx=tirx, prim_func=prim_func, span=span,
-            options=options, profile_hash=profile_hash)
+            options=options, profile_hash=profile_hash,
+            b_is_input=b_is_input)
 
     # Several distinct T.Kernel block scopes are an explicit staged pipeline.
     # It is dispatched before the single-K-loop detector because each launch is
@@ -4648,11 +4864,13 @@ def extract(prim_func: Any, *, options: CompileOptions,
     ann = _schedule_annotation(prim_func, span)
     source_schedule = (_source_schedule(
         prim_func, tile_m=gm, tile_n=gn, span=span) if ann.present else None)
+    source_rounding = ("single_k_tile_fp16" if gk <= 256
+                       else "fp32_final_narrowing")
+    _check_source_rounding_annotation(prim_func, source_rounding, span)
     matmul_attrs = {
         "b_layout": "kn", "numeric_contract": contract.to_dict(),
         "source_accumulator_dtype": "float32",
-        "source_k_rounding": ("single_k_tile_fp16" if gk <= 256
-                              else "fp32_final_narrowing"),
+        "source_k_rounding": source_rounding,
         "tile_m": gm, "tile_n": gn, "tile_k": gk,
     }
     if source_schedule is not None:

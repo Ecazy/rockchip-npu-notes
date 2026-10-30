@@ -26,6 +26,21 @@ FP32 K reduction is rejected with RK_E_NUMERIC_CONTRACT; legacy sources without
 an explicit schedule remain on the historical default path and report their
 rounding as fp32_final_narrowing/single_k_tile_fp16.
 
+The guarded rectangular-tail extractor supports two distinct source forms and
+identifies them by their actual copies, never by an annotation:
+
+- `explicit_per_k_fp16`: `Acc16` is cleared once, each K iteration copies
+  `Acc16 -> Acc32`, runs the GEMM, and copies `Acc32 -> Acc16`;
+- `fp32_final_narrowing`: one FP32 accumulator is cleared once and narrowed only
+  by the final output store.  This remains a legacy, unscheduled default form.
+
+Every accepted tail source zero-fills the full A/B physical tiles on every K
+iteration, guards only the logical reads, and guards the output rectangle.  The
+frontend records logical K, the ordered `k_blocks` partition, each block's
+effective extent, the tail extent, the physical K padding and the source
+rounding points.  The planner records `k0`, `kt`, `k_physical_extent` and
+`k_padding` on every emitted task.
+
 ## Supported contract
 
 TileLang PrimFuncs may declare:
@@ -61,11 +76,14 @@ the plan.
 ## Fixed in this milestone
 
 - K is always sliced in ascending order by `256`; a final K tail, if present,
-  remains the last ordered slice.
-- Accumulation is always ordered FP16 writeback at each K tile.
+  remains the last ordered slice with its exact effective extent.
+- Accumulation is always ordered FP16 writeback at each K tile.  A scheduled
+  source must prove explicit per-K FP16 rounding; an absent rounding field is
+  rejected rather than treated as compatible.
 - Tile extents are `1..256`.
-- Unknown schedule keys, unknown traversal orders, non-256 K blocks and
-  explicit schedules on multi-node dataflow are rejected with a diagnostic.
+- Unknown schedule keys, unknown traversal orders, non-256 K blocks,
+  non-contiguous K partitions and explicit schedules on multi-node dataflow are
+  rejected with a diagnostic.
 - No schedule annotation is silently treated as a performance hint and then
   dropped.
 
@@ -113,7 +131,10 @@ as a model gain.
   rejected.
 - Sources with K>256 that narrow only at the final store are rejected when a
   schedule is requested; the legacy default path remains available without a
-  schedule.  K=576/1536 exact-tail explicit sources are not implemented yet.
+  schedule.
+- K=1/255/256/257/511/512/576/1536 are covered.  An arbitrary source K block,
+  split-K, swizzle, async pipeline, multi-core and multi-node schedule
+  propagation are not included.
 - A general search/autotuner, core mask selection, and multi-request scheduling
   are not included.
 

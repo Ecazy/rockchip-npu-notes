@@ -73,6 +73,87 @@ def make_matmul_tiled_prim(m: int, k: int, n: int, *, bm: int, bn: int,
     return matmul_tiled
 
 
+def make_matmul_tiled_tail_prim(m: int, k: int, n: int, *, bm: int,
+                                bn: int, bk: int = 256,
+                                order: str = "m_major",
+                                swapped: bool = False):
+    """Real guarded M/N/K-tail GEMM with explicit per-K FP16 rounding.
+
+    This is the scheduled source used when a projection crosses a 256-wide K
+    boundary or when M/N is not divisible by the requested logical tile.  The
+    physical A/B tiles are cleared on every K iteration, guarded loads touch
+    only logical elements, and the running FP16 accumulator is round-tripped
+    through the FP32 GEMM accumulator at every K block.
+    """
+    if bk != 256:
+        raise ValueError("the supported source K block is exactly 256")
+    attrs = {"rknpu.schedule": "mn_tiles_v1",
+             "rknpu.mn_order": order,
+             "rknpu.source_k_rounding": "explicit_per_k_fp16"}
+    if swapped:
+        @T.prim_func
+        def matmul_tiled_tail(
+            A: T.Tensor((m, k), "float16"),
+            B: T.Tensor((k, n), "float16"),
+            Y: T.Tensor((m, n), "float16"),
+        ):
+            T.func_attr(attrs)
+            with T.Kernel(T.ceildiv(m, bm), T.ceildiv(n, bn),
+                          threads=128) as (bm_i, bn_i):
+                As = T.alloc_shared((bm, bk), "float16")
+                Bs = T.alloc_shared((bk, bn), "float16")
+                Cl = T.alloc_fragment((bm, bn), "float32")
+                Acc16 = T.alloc_fragment((bm, bn), "float16")
+                T.clear(Acc16)
+                for ko in T.Pipelined(T.ceildiv(k, bk), num_stages=2):
+                    T.fill(As, 0)
+                    T.fill(Bs, 0)
+                    for i, j in T.Parallel(bm, bk):
+                        if bm_i * bm + i < m and ko * bk + j < k:
+                            As[i, j] = A[bm_i * bm + i, ko * bk + j]
+                    for i, j in T.Parallel(bk, bn):
+                        if ko * bk + i < k and bn_i * bn + j < n:
+                            Bs[i, j] = B[ko * bk + i, bn_i * bn + j]
+                    T.copy(Acc16, Cl)
+                    T.gemm(As, Bs, Cl)
+                    T.copy(Cl, Acc16)
+                for i, j in T.Parallel(bm, bn):
+                    if bm_i * bm + i < m and bn_i * bn + j < n:
+                        Y[bm_i * bm + i, bn_i * bn + j] = Acc16[i, j]
+        return matmul_tiled_tail
+
+    @T.prim_func
+    def matmul_tiled_tail(
+        A: T.Tensor((m, k), "float16"),
+        B: T.Tensor((k, n), "float16"),
+        Y: T.Tensor((m, n), "float16"),
+    ):
+        T.func_attr(attrs)
+        with T.Kernel(T.ceildiv(n, bn), T.ceildiv(m, bm),
+                      threads=128) as (bn_i, bm_i):
+            As = T.alloc_shared((bm, bk), "float16")
+            Bs = T.alloc_shared((bk, bn), "float16")
+            Cl = T.alloc_fragment((bm, bn), "float32")
+            Acc16 = T.alloc_fragment((bm, bn), "float16")
+            T.clear(Acc16)
+            for ko in T.Pipelined(T.ceildiv(k, bk), num_stages=2):
+                T.fill(As, 0)
+                T.fill(Bs, 0)
+                for i, j in T.Parallel(bm, bk):
+                    if bm_i * bm + i < m and ko * bk + j < k:
+                        As[i, j] = A[bm_i * bm + i, ko * bk + j]
+                for i, j in T.Parallel(bk, bn):
+                    if ko * bk + i < k and bn_i * bn + j < n:
+                        Bs[i, j] = B[ko * bk + i, bn_i * bn + j]
+                T.copy(Acc16, Cl)
+                T.gemm(As, Bs, Cl)
+                T.copy(Cl, Acc16)
+            for i, j in T.Parallel(bm, bn):
+                if bm_i * bm + i < m and bn_i * bn + j < n:
+                    Y[bm_i * bm + i, bn_i * bn + j] = Acc16[i, j]
+    return matmul_tiled_tail
+
+
 def make_matmul_prim_scheduled(m: int, k: int, n: int, *,
                                tile_m: int, tile_n: int,
                                order: str = "m_major"):

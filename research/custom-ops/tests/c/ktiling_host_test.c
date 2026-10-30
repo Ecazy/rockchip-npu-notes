@@ -69,8 +69,8 @@ int main(void) {
     EXPECT(co_tensor_weight(&t,64,257)!=0);        /* weight tile stays <=256 */
 
     /* Canonical ragged K splits at the acceptance dimensions. */
-    const unsigned ks[]={257,513,769,1024,2049,4096};
-    const unsigned ms[]={13,1,29,13,29,1};
+    const unsigned ks[]={257,513,576,769,1024,1536,2049,4096};
+    const unsigned ms[]={13,1,16,29,13,16,29,1};
     for (unsigned i=0; i<sizeof(ks)/sizeof(ks[0]); i++) slice_case(ms[i],ks[i]);
     slice_case(16,255);
     slice_case(16,256);

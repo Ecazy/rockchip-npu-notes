@@ -103,8 +103,17 @@ def base_candidates(m: int, kind: str) -> list[dict]:
     ]
 
 
-def case_specs(capture: Path) -> list[dict]:
-    """Cases use captured backend activations and fixed model weight keys."""
+def case_specs(capture: Path, *, prefill_rows: int = 256) -> list[dict]:
+    """Cases use captured backend activations and fixed model weight keys.
+
+    The model's prefill plans bind a 256-row A buffer even when the captured
+    prompt has fewer real tokens.  Tuning the raw 45-row activation would
+    produce plans that cannot replace those bindings, so prefill cases are
+    padded with zeros to the model's actual bucket geometry.  Decode remains
+    the model's real M=1 binding.
+    """
+    if prefill_rows < 1:
+        raise SystemExit("prefill rows must be positive")
     return [
         {"id": "prefill_qkv", "kind": "prefill",
          "activation_key": "layer.0.input_norm",
@@ -138,15 +147,15 @@ def prepare(args) -> int:
     from rknpu_backend import (CompileOptions, compile_tilelang, default_profile,
                                save_plan)
     from models.tilelang_matmul import (make_matmul_prim,
-                                         make_matmul_prim_scheduled,
-                                         make_matmul_tiled_prim)
+                                         make_matmul_tiled_prim,
+                                         make_matmul_tiled_tail_prim)
     out = Path(args.out).resolve()
     plans_root = out / "plans"
     plans_root.mkdir(parents=True, exist_ok=True)
     capture_path = Path(args.capture).resolve()
     with np.load(capture_path, allow_pickle=False) as cap:
         available = set(cap.files)
-        cases = case_specs(capture_path)
+        cases = case_specs(capture_path, prefill_rows=args.prefill_rows)
         activations = {}
         for case in cases:
             if case.get("qk_construction") is not None:
@@ -183,7 +192,19 @@ def prepare(args) -> int:
             if a.ndim != 2 or a.shape[1] != case["k"]:
                 raise SystemExit(
                     f"{case['id']}: activation shape {a.shape} is not [M,{case['k']}]")
+            captured_rows = int(a.shape[0])
+            if case["kind"] == "prefill":
+                if a.shape[0] > args.prefill_rows:
+                    raise SystemExit(
+                        f"{case['id']}: activation has {a.shape[0]} rows, "
+                        f"more than the model prefill bucket {args.prefill_rows}")
+                if a.shape[0] < args.prefill_rows:
+                    padded = np.zeros((args.prefill_rows, case["k"]),
+                                      dtype=np.float16)
+                    padded[:a.shape[0]] = a
+                    a = padded
             case["m"] = int(a.shape[0])
+            case["captured_rows"] = captured_rows
             activations[f"{case['id']}.A"] = a
     np.savez(plans_root / "activations.npz", **activations)
     profile = default_profile()
@@ -246,11 +267,15 @@ def prepare(args) -> int:
                         order=spec["order"])
                     source_kind = "tiled_explicit_rounding"
                 else:
-                    prim = make_matmul_prim_scheduled(
+                    # Real guarded source for every non-default candidate.
+                    # This covers K tails (K=576), full-block K (K=1536) and
+                    # non-divisible M/N, and keeps explicit per-K FP16 rounding
+                    # visible instead of falling back to a legacy final cast.
+                    prim = make_matmul_tiled_tail_prim(
                         case["m"], case["k"], case["n"],
-                        tile_m=spec["tile_m"], tile_n=spec["tile_n"],
+                        bm=spec["tile_m"], bn=spec["tile_n"],
                         order=spec["order"])
-                    source_kind = "single_tile_annotation"
+                    source_kind = "tiled_guarded_explicit_rounding"
                 result = compile_tilelang(
                     prim, profile=profile, options=options,
                     b_is_input=bool(case.get("b_is_input", False)))
@@ -269,6 +294,14 @@ def prepare(args) -> int:
                     "plan_hash": plan.plan_hash,
                     "source_schedule": first.attrs.get("source_schedule"),
                     "applied_schedule": first.attrs.get("applied_schedule"),
+                    "source_k_rounding": first.attrs.get(
+                        "source_k_rounding"),
+                    "source_k_loop": first.attrs.get("source_k_loop"),
+                    "k_task_extents": [
+                        [a.attrs.get("k0"), a.attrs.get("kt"),
+                         a.attrs.get("k_physical_extent"),
+                         a.attrs.get("k_padding")]
+                        for a in plan.actions if a.kind == "npu_task"],
                     "task_count": plan.accounting.task_count,
                     "submit_count": plan.accounting.submit_count,
                     "buffer_count": len(plan.buffers),
@@ -802,6 +835,37 @@ def confirm(args) -> int:
     return 0 if all_valid else 1
 
 
+def confirm_all(args) -> int:
+    """Confirm every non-default policy winner, in one artifact."""
+    from types import SimpleNamespace
+    plans_root = Path(args.plans).resolve()
+    policy = json.loads((plans_root / 'policy.json').read_text())
+    rows = []
+    for pcase in policy['cases']:
+        case_id = pcase['id']
+        if pcase['selected_candidate'] == 'default':
+            rows.append({'case': case_id, 'pass': True,
+                         'skipped': 'default_wins'})
+            continue
+        out = plans_root / f'confirm-{case_id}.json'
+        confirm(SimpleNamespace(
+            plans=str(plans_root), package=str(Path(args.package).resolve()),
+            case=case_id, candidate='', rounds=args.rounds,
+            mock=bool(getattr(args, 'mock', False)), out=str(out)))
+        row = json.loads(out.read_text())
+        rows.append(row)
+    result = {
+        'schema_version': 1,
+        'kind': 'smollm2-schedule-confirmation-all',
+        'pass': all(bool(r.get('all_valid', r.get('pass', False)))
+                    for r in rows),
+        'cases': rows,
+    }
+    write_json(Path(args.out), result)
+    print(json.dumps({'pass': result['pass'], 'cases': len(rows)}, indent=1))
+    return 0 if result['pass'] else 1
+
+
 def replay(args) -> int:
     from rknpu_backend import load_plan
     from rknpu_backend.runtime.ffi import (LibRKPlan, configure_rocket_abi,
@@ -870,15 +934,21 @@ def replay(args) -> int:
                     in_specs = [x for x in plan.bindings if x.role == "input"]
                     out_spec = next(x for x in plan.bindings if x.role == "output")
                     out = np.zeros(tuple(out_spec.shape), dtype=np.float16)
-                    input_binds = []
-                    for spec in in_specs:
-                        if spec.name == "A":
-                            input_binds.append(make_binding(spec.id, a))
-                        elif spec.name == "B" and case.get("b_is_input"):
-                            input_binds.append(make_binding(spec.id, b))
-                        else:
-                            raise SystemExit(
-                                f"{pc['id']}: unexpected input {spec.name!r}")
+
+                    def binds_for(x):
+                        binds = []
+                        for spec in in_specs:
+                            if spec.name == "A":
+                                binds.append(make_binding(spec.id, x))
+                            elif spec.name == "B" and case.get("b_is_input"):
+                                binds.append(make_binding(spec.id, b))
+                            else:
+                                raise SystemExit(
+                                    f"{pc['id']}: unexpected input "
+                                    f"{spec.name!r}")
+                        return binds
+
+                    input_binds = binds_for(a)
                     ref = np.asarray(expected, dtype=np.float16)
                     times = []
                     checks = []
@@ -889,7 +959,26 @@ def replay(args) -> int:
                                         [make_binding(out_spec.id, out)])
                         times.append((time.perf_counter() - t0) * 1e6)
                         checks.append(check_output(out, ref))
-                    valid = all(c["numeric_pass"] for c in checks)
+                    first_output = out.copy()
+                    # Alternate a deterministically different input in the same
+                    # workspace.  This catches stale scratch/tail padding from
+                    # the previous run rather than only re-testing one tensor.
+                    a_history = np.ascontiguousarray(
+                        a.astype(np.float32) * 0.75 + 0.125,
+                        dtype=np.float16)
+                    ref_history = np.asarray(reference_mm_tiled(a_history, b),
+                                             dtype=np.float16)
+                    out.fill(0)
+                    ws.run(binds_for(a_history),
+                           [make_binding(out_spec.id, out)])
+                    history_check = check_output(out, ref_history)
+                    expected_changed = not np.array_equal(ref, ref_history)
+                    observed_changed = not np.array_equal(first_output, out)
+                    history_valid = bool(
+                        history_check["numeric_pass"] and
+                        (observed_changed or not expected_changed))
+                    valid = (all(c["numeric_pass"] for c in checks) and
+                             history_valid)
                     rows.append({
                         "id": pc["id"], "candidate": pc["selected_candidate"],
                         "cache_key": pc["cache_key"],
@@ -897,6 +986,10 @@ def replay(args) -> int:
                         "times_us": times,
                         "median_us": float(statistics.median(times)),
                         "checks": checks,
+                        "history_check": history_check,
+                        "history_input_changed_output": observed_changed,
+                        "history_expected_output_changed": expected_changed,
+                        "history_valid": history_valid,
                         "bitwise_equal": bool(checks[-1]["bitwise_equal"]),
                         "numeric_pass": bool(checks[-1]["numeric_pass"]),
                         "candidate_valid": valid,
@@ -933,6 +1026,7 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("prepare")
     p.add_argument("--capture", required=True)
+    p.add_argument("--prefill-rows", type=int, default=256)
     p.add_argument("--out", required=True)
     p.set_defaults(func=prepare)
     p = sub.add_parser("run")
@@ -943,6 +1037,13 @@ def main(argv=None) -> int:
     p.add_argument("--mock", action="store_true")
     p.add_argument("--out", required=True)
     p.set_defaults(func=run)
+    p = sub.add_parser("confirm-all")
+    p.add_argument("--plans", required=True)
+    p.add_argument("--package", required=True)
+    p.add_argument("--rounds", type=int, default=5)
+    p.add_argument("--mock", action="store_true")
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=confirm_all)
     p = sub.add_parser("replay")
     p.add_argument("--plans", required=True)
     p.add_argument("--package", required=True)

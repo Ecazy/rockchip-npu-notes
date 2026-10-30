@@ -159,6 +159,15 @@ def unguarded_output_store(prim_func, *, bounds):
     return _replace_body(prim_func, mutate)
 
 
+def with_rounding_annotation(prim_func, value):
+    from tvm import ir
+    attrs = dict(prim_func.attrs)
+    attrs["rknpu.source_k_rounding"] = value
+    return tirx.PrimFunc(prim_func.params, prim_func.body,
+                         prim_func.ret_type, prim_func.buffer_map,
+                         ir.DictAttrs(attrs), prim_func.span)
+
+
 @unittest.skipUnless(tilelang_available(), "pinned TileLang optional dependency absent")
 class RaggedTailFrontendTests(unittest.TestCase):
     def setUp(self):
@@ -200,11 +209,12 @@ class RaggedTailFrontendTests(unittest.TestCase):
         result = compile_tilelang(
             self.fixture.ragged_tail(m=257, n=257, k=300, bm=128, bn=128),
             profile=self.profile, options=self.options)
-        self.assertEqual(result.plan.accounting.task_count, 18)
-        self.assertEqual(len(result.plan.publish), 9)
+        # The legacy final-narrowing source has no explicit schedule and is
+        # therefore lowered by the historical default 256x256 path.
+        self.assertEqual(result.plan.accounting.task_count, 8)
+        self.assertEqual(len(result.plan.publish), 4)
         self.assertEqual(sorted((p.rows, p.cols) for p in result.plan.publish),
-                         [(1, 1), (1, 128), (1, 128), (128, 1), (128, 1),
-                          (128, 128), (128, 128), (128, 128), (128, 128)])
+                         [(1, 1), (1, 256), (256, 1), (256, 256)])
 
     def test_missing_tail_zero_fill_is_rejected(self):
         base = self.fixture.ragged_tail(m=13, n=33, k=257, bm=16, bn=64)
@@ -225,6 +235,141 @@ class RaggedTailFrontendTests(unittest.TestCase):
         base = self.fixture.ragged_tail(m=13, n=33, k=257, bm=16, bn=64)
         broken = unguarded_output_store(base, bounds=(13, 33))
         self.assert_rejected(broken, RK_E_UNSUPPORTED, "output stores")
+
+    # ---- explicit per-K FP16 tail source --------------------------------
+    def test_explicit_k576_tail_extracts_three_ordered_blocks(self):
+        kernel = self.fixture.ragged_tail_f16(m=13, n=33, k=576,
+                                              bm=16, bn=64)
+        module = extract(kernel, options=self.options,
+                         profile_hash=self.profile.profile_hash)
+        attrs = module.ops[0].attrs
+        self.assertEqual(attrs["source_k_rounding"], "explicit_per_k_fp16")
+        self.assertEqual(attrs["source_accumulator_dtype"], "float16")
+        loop = attrs["source_k_loop"]
+        self.assertEqual(loop["logical_k"], 576)
+        self.assertEqual(loop["k_blocks"], [
+            {"index": 0, "k0": 0, "extent": 256},
+            {"index": 1, "k0": 256, "extent": 256},
+            {"index": 2, "k0": 512, "extent": 64},
+        ])
+        self.assertEqual(loop["tail_contract"]["tails"],
+                         {"M": 13, "N": 33, "K": 64})
+        self.assertEqual(loop["rounding_points"], "after_each_k_block")
+        self.assertEqual(attrs["source_schedule"]["tile_m"], 16)
+        self.assertEqual(attrs["source_schedule"]["tile_n"], 64)
+
+        result = compile_tilelang(kernel, profile=self.profile,
+                                  options=self.options)
+        tasks = [a for a in result.plan.actions if a.kind == "npu_task"]
+        self.assertEqual([(a.attrs["k0"], a.attrs["kt"]) for a in tasks],
+                         [(0, 256), (256, 256), (512, 64)])
+        self.assertEqual([a.template_id for a in tasks],
+                         ["co.mm.f16.v1", "co.mm_acc.f16.v1",
+                          "co.mm_acc.f16.v1"])
+
+    def test_explicit_k_partition_covers_representative_extents(self):
+        expected = {
+            1: [1], 255: [255], 256: [256], 257: [256, 1],
+            511: [256, 255], 512: [256, 256], 576: [256, 256, 64],
+            1536: [256] * 6,
+        }
+        for k, extents in expected.items():
+            with self.subTest(k=k):
+                kernel = self.fixture.ragged_tail_f16(
+                    m=13, n=33, k=k, bm=16, bn=64)
+                module = extract(kernel, options=self.options,
+                                 profile_hash=self.profile.profile_hash)
+                blocks = module.ops[0].attrs["source_k_loop"]["k_blocks"]
+                self.assertEqual([b["extent"] for b in blocks], extents)
+                self.assertEqual(sum(extents), k)
+
+    def test_explicit_k257_tail_layout_has_zeroed_physical_padding(self):
+        kernel = self.fixture.ragged_tail_f16(m=13, n=33, k=257,
+                                              bm=16, bn=64)
+        result = compile_tilelang(kernel, profile=self.profile,
+                                  options=self.options)
+        tasks = [a for a in result.plan.actions if a.kind == "npu_task"]
+        self.assertEqual((tasks[1].attrs["k0"], tasks[1].attrs["kt"],
+                          tasks[1].attrs["k_physical_extent"],
+                          tasks[1].attrs["k_padding"]),
+                         (256, 1, 32, 31))
+        tail_views = [v for v in result.plan.views if v.tensor.cols == 1]
+        self.assertEqual(len(tail_views), 2)
+        for view in tail_views:
+            self.assertEqual(view.tensor.physical_cols, 32)
+            self.assertEqual(
+                result.plan.buffers[view.buffer_id].padding_state, "zero")
+
+    def test_explicit_tail_can_treat_b_as_input(self):
+        kernel = self.fixture.ragged_tail_f16(m=3, n=256, k=64,
+                                              bm=256, bn=64)
+        result = compile_tilelang(kernel, profile=self.profile,
+                                  options=self.options, b_is_input=True)
+        roles = [(b.name, b.role) for b in result.plan.bindings]
+        self.assertIn(("B", "input"), roles)
+        self.assertEqual(result.plan.constants, ())
+
+    def test_explicit_k1536_has_six_full_blocks(self):
+        kernel = self.fixture.ragged_tail_f16(m=13, n=33, k=1536,
+                                              bm=16, bn=64)
+        result = compile_tilelang(kernel, profile=self.profile,
+                                  options=self.options)
+        tasks = [a for a in result.plan.actions if a.kind == "npu_task"]
+        self.assertEqual([(a.attrs["k0"], a.attrs["kt"]) for a in tasks],
+                         [(i * 256, 256) for i in range(6)])
+        first = tasks[0]
+        self.assertEqual(first.attrs["source_k_rounding"],
+                         "explicit_per_k_fp16")
+        self.assertEqual(first.attrs["source_k_loop"]["logical_k"], 1536)
+
+    def test_explicit_tail_swapped_grid_is_role_inferred(self):
+        kernel = self.fixture.ragged_tail_f16(m=13, n=33, k=576,
+                                              bm=16, bn=64, swapped=True)
+        module = extract(kernel, options=self.options,
+                         profile_hash=self.profile.profile_hash)
+        attrs = module.ops[0].attrs
+        self.assertEqual(attrs["source_k_loop"]["logical_k"], 576)
+        self.assertEqual(attrs["source_mn_tiling"]["coverage"], "ragged_tail")
+        result = compile_tilelang(kernel, profile=self.profile,
+                                  options=self.options)
+        self.assertEqual(result.plan.accounting.task_count, 3)
+        self.assertEqual(len(result.plan.publish), 1)
+
+    def test_explicit_missing_tail_zero_fill_is_rejected(self):
+        base = self.fixture.ragged_tail_f16(m=13, n=33, k=576,
+                                            bm=16, bn=64)
+        broken = missing_tile_zero_fill(base, bm=16, bk=256)
+        self.assert_rejected(broken, RK_E_NUMERIC_CONTRACT, "zero fill")
+
+    def test_explicit_bad_tail_index_is_rejected(self):
+        broken = self.fixture.ragged_tail_f16(m=13, n=33, k=576,
+                                              bm=16, bn=64, bad_index=True)
+        self.assert_rejected(broken, RK_E_SHAPE,
+                             "canonical guarded tail indexing")
+
+    def test_explicit_unprotected_output_is_rejected(self):
+        base = self.fixture.ragged_tail_f16(m=13, n=33, k=576,
+                                            bm=16, bn=64)
+        broken = unguarded_output_store(base, bounds=(13, 33))
+        self.assert_rejected(broken, RK_E_UNSUPPORTED, "output stores")
+
+    def test_scheduled_final_narrowing_is_rejected(self):
+        broken = self.fixture.ragged_tail_legacy_scheduled(m=13, n=33, k=576,
+                                                           bm=16, bn=64)
+        self.assert_rejected(broken, RK_E_NUMERIC_CONTRACT,
+                             "different K-rounding contract")
+
+    def test_rounding_annotation_mismatch_is_rejected(self):
+        base = self.fixture.ragged_tail_f16(m=13, n=33, k=576,
+                                            bm=16, bn=64)
+        broken = with_rounding_annotation(base, "fp32_final_narrowing")
+        self.assert_rejected(broken, RK_E_NUMERIC_CONTRACT,
+                             "annotation does not match")
+
+    def test_explicit_source_block_k_other_than_256_is_rejected(self):
+        broken = self.fixture.ragged_tail_f16(m=13, n=33, k=576,
+                                              bm=16, bn=64, bk=128)
+        self.assert_rejected(broken, RK_E_UNSUPPORTED, "BK == 256")
 
 
 if __name__ == "__main__":

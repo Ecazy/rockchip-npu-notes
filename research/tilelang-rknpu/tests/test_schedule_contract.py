@@ -5,8 +5,9 @@ import unittest
 from dataclasses import replace
 
 from rknpu_backend import (CompileOptions, Module, Op, RK_E_NUMERIC_CONTRACT,
-                           RK_E_UNSUPPORTED, TensorType, Value, compile_rkir,
-                           compile_tilelang, default_profile, matmul_module)
+                           RK_E_SHAPE, RK_E_UNSUPPORTED, TensorType, Value,
+                           compile_rkir, compile_tilelang, default_profile,
+                           matmul_module)
 from rknpu_backend.errors import BackendError
 
 PROFILE = default_profile()
@@ -21,9 +22,11 @@ def schedule(tile_m=256, tile_n=128, order="m_major"):
     }
 
 
-def with_schedule(module, value):
+def with_schedule(module, value, rounding="explicit_per_k_fp16"):
     attrs = dict(module.ops[0].attrs)
     attrs["source_schedule"] = value
+    if rounding is not None:
+        attrs["source_k_rounding"] = rounding
     return replace(module, ops=(replace(module.ops[0], attrs=attrs),))
 
 
@@ -68,6 +71,7 @@ class ScheduleContractTests(unittest.TestCase):
         module = matmul_module(m=64, k=512, n=64)
         attrs = dict(module.ops[0].attrs)
         attrs["source_schedule"] = schedule(64, 64)
+        attrs["source_k_rounding"] = "explicit_per_k_fp16"
         attrs["source_k_loop"] = {"source_k_block": 128,
                                   "lowering_k_tile": 256}
         module = replace(module, ops=(replace(module.ops[0], attrs=attrs),))
@@ -122,6 +126,94 @@ class ScheduleContractTests(unittest.TestCase):
         self.assertEqual(first.attrs["source_k_loop"]["source_rounding"],
                          "explicit_per_k_fp16")
         self.assertEqual(first.attrs["source_schedule"]["tile_m"], 64)
+
+    def test_schedule_without_a_rounding_contract_is_rejected(self):
+        module = matmul_module(m=64, k=512, n=64)
+        with self.assertRaises(BackendError) as ctx:
+            compile_rkir(with_schedule(module, schedule(64, 64),
+                                       rounding=None), profile=PROFILE,
+                         options=OPTIONS)
+        self.assertEqual(ctx.exception.diagnostics[0].code,
+                         RK_E_NUMERIC_CONTRACT)
+        self.assertIn("K-rounding", ctx.exception.diagnostics[0].message)
+
+    def test_multi_block_schedule_needs_explicit_per_k_rounding(self):
+        module = matmul_module(m=64, k=576, n=64)
+        attrs = dict(module.ops[0].attrs)
+        attrs["source_schedule"] = schedule(64, 64)
+        attrs["source_k_rounding"] = "single_k_tile_fp16"
+        attrs["source_k_loop"] = {
+            "source_k_block": 256,
+            "source_k_trips": 3,
+            "logical_k": 576,
+            "lowering_k_tile": 256,
+            "k_blocks": [
+                {"index": 0, "k0": 0, "extent": 256},
+                {"index": 1, "k0": 256, "extent": 256},
+                {"index": 2, "k0": 512, "extent": 64},
+            ],
+        }
+        module = replace(module, ops=(replace(module.ops[0], attrs=attrs),))
+        with self.assertRaises(BackendError) as ctx:
+            compile_rkir(module, profile=PROFILE, options=OPTIONS)
+        self.assertEqual(ctx.exception.diagnostics[0].code,
+                         RK_E_NUMERIC_CONTRACT)
+        self.assertIn("logical K > 256", ctx.exception.diagnostics[0].message)
+
+    def test_schedule_k_blocks_must_be_contiguous(self):
+        module = matmul_module(m=64, k=576, n=64)
+        attrs = dict(module.ops[0].attrs)
+        attrs["source_schedule"] = schedule(64, 64)
+        attrs["source_k_rounding"] = "explicit_per_k_fp16"
+        attrs["source_k_loop"] = {
+            "source_k_block": 256,
+            "source_k_trips": 3,
+            "logical_k": 576,
+            "lowering_k_tile": 256,
+            "k_blocks": [
+                {"index": 0, "k0": 0, "extent": 256},
+                {"index": 1, "k0": 256, "extent": 256},
+                {"index": 2, "k0": 511, "extent": 65},
+            ],
+        }
+        module = replace(module, ops=(replace(module.ops[0], attrs=attrs),))
+        with self.assertRaises(BackendError) as ctx:
+            compile_rkir(module, profile=PROFILE, options=OPTIONS)
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_SHAPE)
+        self.assertIn("contiguous ascending",
+                      ctx.exception.diagnostics[0].message)
+
+    def test_scheduled_tail_default_matches_legacy_geometry(self):
+        from models.tilelang_matmul import (make_matmul_prim,
+                                             make_matmul_tiled_tail_prim)
+        legacy = compile_tilelang(
+            make_matmul_prim(256, 576, 960), profile=PROFILE,
+            options=OPTIONS).plan
+        scheduled = compile_tilelang(
+            make_matmul_tiled_tail_prim(256, 576, 960, bm=256, bn=256),
+            profile=PROFILE, options=OPTIONS).plan
+        self.assertEqual([(b.name, b.role, tuple(b.shape))
+                          for b in legacy.bindings],
+                         [(b.name, b.role, tuple(b.shape))
+                          for b in scheduled.bindings])
+        self.assertEqual([(p.dst_row, p.dst_col, p.rows, p.cols)
+                          for p in legacy.publish],
+                         [(p.dst_row, p.dst_col, p.rows, p.cols)
+                          for p in scheduled.publish])
+        self.assertEqual(
+            [(a.template_id, a.attrs["k0"], a.attrs["kt"])
+             for a in legacy.actions if a.kind == "npu_task"],
+            [(a.template_id, a.attrs["k0"], a.attrs["kt"])
+             for a in scheduled.actions if a.kind == "npu_task"])
+        first = next(a for a in scheduled.actions
+                     if a.template_id == "co.mm.f16.v1")
+        self.assertEqual(first.attrs["source_k_rounding"],
+                         "explicit_per_k_fp16")
+        self.assertEqual(first.attrs["source_k_loop"]["k_blocks"], [
+            {"index": 0, "k0": 0, "extent": 256},
+            {"index": 1, "k0": 256, "extent": 256},
+            {"index": 2, "k0": 512, "extent": 64},
+        ])
 
     def test_unsupported_order_is_rejected(self):
         module = matmul_module(m=64, k=256, n=64)
