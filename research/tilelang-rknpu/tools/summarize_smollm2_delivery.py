@@ -77,14 +77,22 @@ def main(argv=None) -> int:
     ]
     board_env = read(r / "board-profile-candidate/run.json")["environment"]
     out_path = Path(args.out) if args.out else r / "DELIVERY-MANIFEST.json"
+    dirty_paths = subprocess.check_output(
+        ["git", "status", "--porcelain"]).decode().splitlines()
+    # The manifest cannot contain its own final hash/commit identity.  The
+    # manifest file itself is committed immediately after generation, so do
+    # not list that one transient staged path as a dirty code path.
+    out_abs = out_path.resolve()
+    dirty_paths = [
+        line for line in dirty_paths
+        if Path(line[3:].strip()).resolve() != out_abs]
     manifest = {
         "schema_version": 1,
         "kind": "smollm2-v5-delivery-manifest",
         "git": {
             "head": subprocess.check_output(
                 ["git", "rev-parse", "HEAD"]).decode().strip(),
-            "dirty_paths": subprocess.check_output(
-                ["git", "status", "--porcelain"]).decode().splitlines(),
+            "dirty_paths": dirty_paths,
         },
         "code_sha256": {p: sha(Path(p)) for p in code_paths},
         "model": {

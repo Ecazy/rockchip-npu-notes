@@ -123,7 +123,7 @@ lists 相等；PPL NLL 5/5 arrays 相等。
 
 身份：
 
-- Git HEAD：`722b11ab1ebf774b5ff858d94596118381f228a8`；本任务代码在独立本地提交中；
+- Git HEAD：`4c0112233dd5671caef49a87eceda3917b0195da`（本任务本地提交，未推送）；无关 graph-fusion/int16-probe 工作树改动未进入该提交；
 - model：`HuggingFaceTB/SmolLM2-135M-Instruct`，revision
   `12fd25f77366fa6b3b4b768ec3050bf629380bac`；
 - package manifest SHA-256：`b923fc5b427cc2ee6f0f88e7d096444a7ab44babdfbd79cc64fe07f5771548be`；
