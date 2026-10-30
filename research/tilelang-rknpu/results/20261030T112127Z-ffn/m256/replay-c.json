@@ -1,0 +1,40 @@
+{
+ "candidate": "C_ewn_n192",
+ "kind": "ffn-replay",
+ "pass": true,
+ "plan_hash": "0d39d80a3c33f740fb2cea2871042283ccb8ecba4005dd8f7da7f06647e27dba",
+ "plan_sha256": "31925b8bec4370d02d3ed3e53ad19beeb7f10b3d0c84b09031bf12753e97b56b",
+ "rows": [
+  {
+   "check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.03125,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "layer": 0
+  },
+  {
+   "check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0078125,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "layer": 15
+  },
+  {
+   "check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.5,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "layer": 29
+  }
+ ],
+ "schema_version": 1
+}

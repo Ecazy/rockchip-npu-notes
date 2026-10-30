@@ -1,0 +1,40 @@
+{
+ "candidate": "B_fixed_192",
+ "kind": "ffn-replay",
+ "pass": true,
+ "plan_hash": "c5d4d63f6d4dd0f97ff1b8983ac5319d9e3d3c6a0bda36e36e0b09836dc3455d",
+ "plan_sha256": "3fefaff7acd52512ee4b08782eaba7dea1b638d03499fabfc272167534cf50dd",
+ "rows": [
+  {
+   "check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0078125,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "layer": 0
+  },
+  {
+   "check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.0001220703125,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "layer": 15
+  },
+  {
+   "check": {
+    "bitwise_equal": false,
+    "finite": true,
+    "max_abs": 0.5,
+    "numeric_pass": true,
+    "shape_ok": true
+   },
+   "layer": 29
+  }
+ ],
+ "schema_version": 1
+}

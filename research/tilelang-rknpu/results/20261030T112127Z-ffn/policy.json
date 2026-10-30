@@ -1,0 +1,22 @@
+{
+ "analysis": "analysis.json",
+ "analysis_sha256": "7a7eb37559c08c55dfedc4e9bc6ad4baf1da04556a94a3aed329bc9e28a81a60",
+ "experimental_numeric_policy": {
+  "atol": 0.5,
+  "name": "ffn-experimental-v1",
+  "rtol": 0.001,
+  "sigmoid": "device LUT declared as piecewise-linear interpolation of q=round(sigmoid(v)*32768)/32768 on v=i*32/2596",
+  "v5_changed": false
+ },
+ "groups": {
+  "A": "Host SwiGLU + two NPU plans + Host residual",
+  "B": "fixed device FFN 192 down tile, all stages applied M same",
+  "C": "schedule-aware device FFN candidates"
+ },
+ "kind": "smollm-ffn-policy",
+ "model_default_changed": false,
+ "schema_version": 1,
+ "selected": "B_fixed_192",
+ "selection_reason": "B_fixed_192_lowest_aggregate_median; C_ewn_n192_paired_confirmation_mixed",
+ "v5_opt_in": "not_attempted: existing single-matmul override cannot replace gate_up+host-SwiGLU+down pair"
+}

@@ -1,0 +1,82 @@
+{
+ "board": {
+  "core_mask": "1",
+  "device": "RK3588 OPi 5 Plus",
+  "lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419"
+ },
+ "code_commit": "2d7e04bf6296d06a030164cd2b1563feee682a84",
+ "code_tree": "600ed197da75191b3462b1eecd5f3710062522ab",
+ "files": {
+  "FFN-REPORT.md": "d7a0e050e54f1cf1591ee48da119051419ef0b639a3a018be93733b7999d832e",
+  "analysis.json": "7a7eb37559c08c55dfedc4e9bc6ad4baf1da04556a94a3aed329bc9e28a81a60",
+  "m1/board-run.json": "b1be562c39083492401c58e9c73e20491c32fcd8da1948fc2ed4d926dd91ffde",
+  "m1/confirm.json": "441ca540abf33ba28020bbe902823bfd8b9f9ec00e51ca993b8afa9dd45be6c5",
+  "m1/manifest.json": "2af71b2836d8c2ba4e44e0817164475d2c01ecfab4eebfb7f1608aa9a4890812",
+  "m1/plans/A_down.rkplan.json": "46b9e0a392de14a2981741359f886cb8c9043762ed5fee8283a1364222a48858",
+  "m1/plans/A_gate_up.rkplan.json": "4c325d0201f44a1cb2dd62c8a06586a35383ea16b96e0bfabc3a178b83b337fd",
+  "m1/plans/B_fixed_192.rkplan.json": "3fefaff7acd52512ee4b08782eaba7dea1b638d03499fabfc272167534cf50dd",
+  "m1/plans/C_ewn_n192.rkplan.json": "e9ef162dc9e57e8e925d17d81b19904f15a084eeaeddce7feeb148b0b7a904fb",
+  "m1/plans/C_s0n_ewn_n192.rkplan.json": "aa85c48cb41bc0d6e2793e1fbf136facaf135dafdf36809733786eee0748c8de",
+  "m1/plans/C_s0n_n192.rkplan.json": "5a5e53d6c19c58650261ec53251d7a0523e6490208e0ae8e4c7c40afa233d78d",
+  "m1/plans/C_s0n_tn64_n.rkplan.json": "930bb732a51053820dc47a3ca3643d3209955ec537284d75daaa8bdc6e611a69",
+  "m1/plans/C_tn64_m.rkplan.json": "eb6e677f9cb87e4df60fc3171140e7cad152b246916c86bc9b0d01769e1a2172",
+  "m1/plans/C_tn64_n.rkplan.json": "09a72a91484f6f12ade193146e8370aae05bc3e771ee655a8b5fd8e12abeb010",
+  "m1/plans/inputs.npz": "1a26eb5cb387a83ca7292ac9dfbf8a275aa8b7d6f4fad9ec0f978bcf1b511d03",
+  "m1/replay-c.json": "977e8d4deea9b267e7711bfa274933ea42a8e8a58ca43725065e7e6dd77a2fdf",
+  "m1/replay.json": "730cb6088005f0023aab3b7db0fdd37993f6639776b53c619bdd5ef7267ee9ad",
+  "m256/A_down.rkplan.json": "b08f33025a32c90ddf830fa1905c7f27ecc71197149ca3ca1333db9b13beec35",
+  "m256/A_gate_up.rkplan.json": "0ebfdd2c043939b0a61cd2a9beb672dd9871a08de3583e245f6857796a8b0e3c",
+  "m256/B_fixed_192.rkplan.json": "04fb4cbc2eb4cac75031446689dd181babec2947be79659f4c9c22fbd3de66b4",
+  "m256/C_ewn_n192.rkplan.json": "31925b8bec4370d02d3ed3e53ad19beeb7f10b3d0c84b09031bf12753e97b56b",
+  "m256/C_s0n_ewn_n192.rkplan.json": "a894d0c4788e1bdd7a6100599a39227353d3f6d26cfc66e0b44d82ce3c1c8ed7",
+  "m256/C_s0n_n192.rkplan.json": "08ea7076a56ae7dd4d2ea2bf627b9e7a43c3a81a9653324b9e3b85a7601534d0",
+  "m256/C_s0n_tn64_n.rkplan.json": "7dd44a7653c10b27f8fef71b5068eb08635547c55d0f3843df15990a310f52bf",
+  "m256/C_tn64_m.rkplan.json": "c93f110e3377529b269b92012a704c0d18c2fa08530dad11de0cb818301b2133",
+  "m256/C_tn64_n.rkplan.json": "69fcef376e85625fb932476428143390b010a8ce1ce2ae6f236ed1a75f264bb6",
+  "m256/board-run.json": "5513d329a424f59b9b18e15292c65488152a6ffa0dd06c5ae3afa54e171f9dd9",
+  "m256/confirm.json": "569dfa21040e5b3083c1dbc94f0b5562a37446bc8d43493415f739dd0a67930c",
+  "m256/inputs.npz": "21a437186895ee8543a95aa001d8439335f5dfd51588e7cd2c9092b844701c3d",
+  "m256/manifest.json": "20967a950547076bb2679e5900c3d1e6ed0608dfd90a9387dbc8893226df28f4",
+  "m256/plans/A_down.rkplan.json": "b08f33025a32c90ddf830fa1905c7f27ecc71197149ca3ca1333db9b13beec35",
+  "m256/plans/A_gate_up.rkplan.json": "0ebfdd2c043939b0a61cd2a9beb672dd9871a08de3583e245f6857796a8b0e3c",
+  "m256/plans/B_fixed_192.rkplan.json": "04fb4cbc2eb4cac75031446689dd181babec2947be79659f4c9c22fbd3de66b4",
+  "m256/plans/C_ewn_n192.rkplan.json": "31925b8bec4370d02d3ed3e53ad19beeb7f10b3d0c84b09031bf12753e97b56b",
+  "m256/plans/C_s0n_ewn_n192.rkplan.json": "a894d0c4788e1bdd7a6100599a39227353d3f6d26cfc66e0b44d82ce3c1c8ed7",
+  "m256/plans/C_s0n_n192.rkplan.json": "08ea7076a56ae7dd4d2ea2bf627b9e7a43c3a81a9653324b9e3b85a7601534d0",
+  "m256/plans/C_s0n_tn64_n.rkplan.json": "7dd44a7653c10b27f8fef71b5068eb08635547c55d0f3843df15990a310f52bf",
+  "m256/plans/C_tn64_m.rkplan.json": "c93f110e3377529b269b92012a704c0d18c2fa08530dad11de0cb818301b2133",
+  "m256/plans/C_tn64_n.rkplan.json": "69fcef376e85625fb932476428143390b010a8ce1ce2ae6f236ed1a75f264bb6",
+  "m256/plans/inputs.npz": "b998da7b24f6242ddf776f2e639e1d2036a33feb8a42edf08f95b05f60baf10b",
+  "m256/replay-c.json": "949dc2dc522a4ec9dac57e14ae0b25c7a028aa2d55187408162110b1926030c3",
+  "m256/replay.json": "f5dd9ffc34d850cd1649709b694601b23a46271c5aec51e4fade7333c14efef2",
+  "policy.json": "74a071df63d6a4db047ff2e1b615cda3bc2ca95e47ebf9605983e3d2de53af0c"
+ },
+ "files_checked": 43,
+ "kind": "smollm-ffn-delivery-manifest",
+ "mismatches": 0,
+ "model": {
+  "layers": [
+   0,
+   15,
+   29
+  ],
+  "m": [
+   1,
+   256
+  ],
+  "package_manifest_sha256": "b923fc5b427cc2ee6f0f88e7d096444a7ab44babdfbd79cc64fe07f5771548be",
+  "weights_sha256": "ff04cb6f25633772987ff8cfc66e65046004034e526cf1d6d6bb615333b945bf"
+ },
+ "policy": {
+  "analysis_sha256": "7a7eb37559c08c55dfedc4e9bc6ad4baf1da04556a94a3aed329bc9e28a81a60",
+  "name": "ffn-experimental-v1",
+  "policy_sha256": "74a071df63d6a4db047ff2e1b615cda3bc2ca95e47ebf9605983e3d2de53af0c",
+  "report_sha256": "d7a0e050e54f1cf1591ee48da119051419ef0b639a3a018be93733b7999d832e",
+  "selected": "B_fixed_192"
+ },
+ "schema_version": 1,
+ "v5": {
+  "attempted": false,
+  "reason": "no FFN pair/multi-op model override path; default Host FFN unchanged"
+ }
+}

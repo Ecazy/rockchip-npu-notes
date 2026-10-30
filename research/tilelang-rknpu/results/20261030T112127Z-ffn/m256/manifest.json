@@ -1,0 +1,407 @@
+{
+ "A": {
+  "down": {
+   "plan": "A_down.rkplan.json",
+   "plan_hash": "e712b60fbe49f25dc66a92cc5ced319033f37ab790c4b39a32fbe53f30d7e4cd",
+   "plan_sha256": "b08f33025a32c90ddf830fa1905c7f27ecc71197149ca3ca1333db9b13beec35"
+  },
+  "gate_up": {
+   "plan": "A_gate_up.rkplan.json",
+   "plan_hash": "4b15d67406e112014b4a2aa61af8264bc3125d82dc664056dde216e64c756f01",
+   "plan_sha256": "0ebfdd2c043939b0a61cd2a9beb672dd9871a08de3583e245f6857796a8b0e3c"
+  },
+  "note": "NPU gate/up -> Host SwiGLU -> NPU down -> Host residual"
+ },
+ "candidates": [
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 81,
+   "name": "B_fixed_192",
+   "plan": "B_fixed_192.rkplan.json",
+   "plan_hash": "3c19f2a165e24a3e9c73ea411aecf837294087f24a524f5a84031bb7ea8f39f4",
+   "plan_sha256": "04fb4cbc2eb4cac75031446689dd181babec2947be79659f4c9c22fbd3de66b4",
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     192
+    ],
+    [
+     0,
+     192,
+     256,
+     192
+    ],
+    [
+     0,
+     384,
+     256,
+     192
+    ]
+   ],
+   "requested": {
+    "down_order": "m_major",
+    "ew": "m_major",
+    "name": "B_fixed_192",
+    "stage0": "m_major",
+    "tn": 192
+   },
+   "submit_count": 36,
+   "task_count": 81
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 81,
+   "name": "C_s0n_n192",
+   "plan": "C_s0n_n192.rkplan.json",
+   "plan_hash": "09a07cfe3f5ffa9590779649793fc87506fbd6eee632f97593d75af694c640e0",
+   "plan_sha256": "08ea7076a56ae7dd4d2ea2bf627b9e7a43c3a81a9653324b9e3b85a7601534d0",
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     192
+    ],
+    [
+     0,
+     192,
+     256,
+     192
+    ],
+    [
+     0,
+     384,
+     256,
+     192
+    ]
+   ],
+   "requested": {
+    "down_order": "m_major",
+    "ew": "m_major",
+    "name": "C_s0n_n192",
+    "stage0": "n_major",
+    "tn": 192
+   },
+   "submit_count": 36,
+   "task_count": 81
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 81,
+   "name": "C_ewn_n192",
+   "plan": "C_ewn_n192.rkplan.json",
+   "plan_hash": "0d39d80a3c33f740fb2cea2871042283ccb8ecba4005dd8f7da7f06647e27dba",
+   "plan_sha256": "31925b8bec4370d02d3ed3e53ad19beeb7f10b3d0c84b09031bf12753e97b56b",
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     192
+    ],
+    [
+     0,
+     192,
+     256,
+     192
+    ],
+    [
+     0,
+     384,
+     256,
+     192
+    ]
+   ],
+   "requested": {
+    "down_order": "n_major",
+    "ew": "n_major",
+    "name": "C_ewn_n192",
+    "stage0": "m_major",
+    "tn": 192
+   },
+   "submit_count": 36,
+   "task_count": 81
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 81,
+   "name": "C_s0n_ewn_n192",
+   "plan": "C_s0n_ewn_n192.rkplan.json",
+   "plan_hash": "669d750dc6e077aeb5332d4138a9c55c19121a35a9e63c0902fd226f6b388dac",
+   "plan_sha256": "a894d0c4788e1bdd7a6100599a39227353d3f6d26cfc66e0b44d82ce3c1c8ed7",
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     192
+    ],
+    [
+     0,
+     192,
+     256,
+     192
+    ],
+    [
+     0,
+     384,
+     256,
+     192
+    ]
+   ],
+   "requested": {
+    "down_order": "n_major",
+    "ew": "n_major",
+    "name": "C_s0n_ewn_n192",
+    "stage0": "n_major",
+    "tn": 192
+   },
+   "submit_count": 36,
+   "task_count": 81
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 122,
+   "name": "C_tn64_m",
+   "plan": "C_tn64_m.rkplan.json",
+   "plan_hash": "2e5b17db830ad66aa0dfc2784841473ccb67c64ca9cc3a1a7033dae4bca93912",
+   "plan_sha256": "c93f110e3377529b269b92012a704c0d18c2fa08530dad11de0cb818301b2133",
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     64
+    ],
+    [
+     0,
+     64,
+     256,
+     64
+    ],
+    [
+     0,
+     128,
+     256,
+     64
+    ],
+    [
+     0,
+     192,
+     256,
+     64
+    ],
+    [
+     0,
+     256,
+     256,
+     64
+    ],
+    [
+     0,
+     320,
+     256,
+     64
+    ],
+    [
+     0,
+     384,
+     256,
+     64
+    ],
+    [
+     0,
+     448,
+     256,
+     64
+    ],
+    [
+     0,
+     512,
+     256,
+     64
+    ]
+   ],
+   "requested": {
+    "down_order": "m_major",
+    "ew": "m_major",
+    "name": "C_tn64_m",
+    "stage0": "m_major",
+    "tn": 64
+   },
+   "submit_count": 48,
+   "task_count": 123
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 122,
+   "name": "C_tn64_n",
+   "plan": "C_tn64_n.rkplan.json",
+   "plan_hash": "945e3d60b62f127f4ab96e85fd1d0aa795355c8926e0d49b7aa783369c1433cc",
+   "plan_sha256": "69fcef376e85625fb932476428143390b010a8ce1ce2ae6f236ed1a75f264bb6",
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     64
+    ],
+    [
+     0,
+     64,
+     256,
+     64
+    ],
+    [
+     0,
+     128,
+     256,
+     64
+    ],
+    [
+     0,
+     192,
+     256,
+     64
+    ],
+    [
+     0,
+     256,
+     256,
+     64
+    ],
+    [
+     0,
+     320,
+     256,
+     64
+    ],
+    [
+     0,
+     384,
+     256,
+     64
+    ],
+    [
+     0,
+     448,
+     256,
+     64
+    ],
+    [
+     0,
+     512,
+     256,
+     64
+    ]
+   ],
+   "requested": {
+    "down_order": "n_major",
+    "ew": "m_major",
+    "name": "C_tn64_n",
+    "stage0": "m_major",
+    "tn": 64
+   },
+   "submit_count": 48,
+   "task_count": 123
+  },
+  {
+   "c_verifier_error": null,
+   "c_verifier_pass": true,
+   "data_bo_count": 122,
+   "name": "C_s0n_tn64_n",
+   "plan": "C_s0n_tn64_n.rkplan.json",
+   "plan_hash": "5786d16c4d577669016cbca3627553c1aaedebe94bc20158fa01edc1d3e0cf38",
+   "plan_sha256": "7dd44a7653c10b27f8fef71b5068eb08635547c55d0f3843df15990a310f52bf",
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     64
+    ],
+    [
+     0,
+     64,
+     256,
+     64
+    ],
+    [
+     0,
+     128,
+     256,
+     64
+    ],
+    [
+     0,
+     192,
+     256,
+     64
+    ],
+    [
+     0,
+     256,
+     256,
+     64
+    ],
+    [
+     0,
+     320,
+     256,
+     64
+    ],
+    [
+     0,
+     384,
+     256,
+     64
+    ],
+    [
+     0,
+     448,
+     256,
+     64
+    ],
+    [
+     0,
+     512,
+     256,
+     64
+    ]
+   ],
+   "requested": {
+    "down_order": "n_major",
+    "ew": "m_major",
+    "name": "C_s0n_tn64_n",
+    "stage0": "n_major",
+    "tn": 64
+   },
+   "submit_count": 48,
+   "task_count": 123
+  }
+ ],
+ "capture": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.data/evidence/smollm2-20261029T120416Z/calibration/board/run-00/captured-00.npz",
+ "capture_sha256": "37debf1064a43af485600b2d13b6981393e173060849a453224deef97a00f836",
+ "d": 576,
+ "h": 1536,
+ "inputs": "inputs.npz",
+ "inputs_sha256": "b998da7b24f6242ddf776f2e639e1d2036a33feb8a42edf08f95b05f60baf10b",
+ "kind": "smollm-ffn-experiment",
+ "layers": [
+  0,
+  15,
+  29
+ ],
+ "m": 256,
+ "package_manifest_sha256": "b923fc5b427cc2ee6f0f88e7d096444a7ab44babdfbd79cc64fe07f5771548be",
+ "package_weights_sha256": "ff04cb6f25633772987ff8cfc66e65046004034e526cf1d6d6bb615333b945bf",
+ "schema_version": 1
+}
