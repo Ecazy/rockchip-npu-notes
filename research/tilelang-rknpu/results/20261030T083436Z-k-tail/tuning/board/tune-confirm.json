@@ -1,0 +1,42 @@
+{
+ "cases": [
+  {
+   "case": "prefill_qkv",
+   "pass": true,
+   "skipped": "default_wins"
+  },
+  {
+   "case": "prefill_gate_up",
+   "pass": true,
+   "skipped": "default_wins"
+  },
+  {
+   "case": "prefill_down",
+   "pass": true,
+   "skipped": "default_wins"
+  },
+  {
+   "case": "decode_qkv",
+   "pass": true,
+   "skipped": "default_wins"
+  },
+  {
+   "case": "lm_head_shard0",
+   "pass": true,
+   "skipped": "default_wins"
+  },
+  {
+   "case": "attention_qk_prefill",
+   "pass": true,
+   "skipped": "default_wins"
+  },
+  {
+   "case": "attention_qk_decode",
+   "pass": true,
+   "skipped": "default_wins"
+  }
+ ],
+ "kind": "smollm2-schedule-confirmation-all",
+ "pass": true,
+ "schema_version": 1
+}

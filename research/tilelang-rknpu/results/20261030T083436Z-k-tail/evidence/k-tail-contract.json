@@ -1,0 +1,2214 @@
+{
+ "cases": [
+  {
+   "k": 1,
+   "publish": [
+    [
+     0,
+     0,
+     13,
+     33
+    ]
+   ],
+   "source_accumulator_dtype": "float16",
+   "source_k_loop": {
+    "k_blocks": [
+     {
+      "extent": 1,
+      "index": 0,
+      "k0": 0
+     }
+    ],
+    "k_tail": 1,
+    "logical_k": 1,
+    "lowering_k_tile": 256,
+    "narrowing_base": "explicit FP16 after each K block",
+    "pipeline_hint_dropped": false,
+    "rounding_points": "after_each_k_block",
+    "source_k_block": 256,
+    "source_k_trips": 1,
+    "source_loop_annotations": {},
+    "source_rounding": "explicit_per_k_fp16",
+    "tail_contract": {
+     "form": "guarded_rect_tail_v1",
+     "grid": {
+      "x": 1,
+      "y": 1
+     },
+     "guarded_reads": {
+      "A": [
+       13,
+       1
+      ],
+      "B": [
+       1,
+       33
+      ]
+     },
+     "guarded_write": [
+      13,
+      33
+     ],
+     "k_blocks": [
+      {
+       "extent": 1,
+       "index": 0,
+       "k0": 0
+      }
+     ],
+     "k_trips": 1,
+     "physical_k_tile": 256,
+     "physical_padding": "zero",
+     "rounding_points": "after_each_k_block",
+     "tail_physical_extent": 32,
+     "tails": {
+      "K": 1,
+      "M": 13,
+      "N": 33
+     },
+     "tiles": {
+      "K": 256,
+      "M": 16,
+      "N": 64
+     },
+     "zero_fill": [
+      "A_tile_each_k_iteration",
+      "B_tile_each_k_iteration"
+     ]
+    }
+   },
+   "source_mn_tiling": {
+    "block_m": 16,
+    "block_n": 64,
+    "coverage": "ragged_tail",
+    "grid_x": 1,
+    "grid_y": 1,
+    "m_tail": 13,
+    "n_tail": 33
+   },
+   "source_rounding": "explicit_per_k_fp16",
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 16,
+    "tile_n": 64
+   },
+   "source_tail_contract": {
+    "form": "guarded_rect_tail_v1",
+    "grid": {
+     "x": 1,
+     "y": 1
+    },
+    "guarded_reads": {
+     "A": [
+      13,
+      1
+     ],
+     "B": [
+      1,
+      33
+     ]
+    },
+    "guarded_write": [
+     13,
+     33
+    ],
+    "k_blocks": [
+     {
+      "extent": 1,
+      "index": 0,
+      "k0": 0
+     }
+    ],
+    "k_trips": 1,
+    "physical_k_tile": 256,
+    "physical_padding": "zero",
+    "rounding_points": "after_each_k_block",
+    "tail_physical_extent": 32,
+    "tails": {
+     "K": 1,
+     "M": 13,
+     "N": 33
+    },
+    "tiles": {
+     "K": 256,
+     "M": 16,
+     "N": 64
+    },
+    "zero_fill": [
+     "A_tile_each_k_iteration",
+     "B_tile_each_k_iteration"
+    ]
+   },
+   "task_count": 1,
+   "tasks": [
+    {
+     "k0": 0,
+     "k_padding": 31,
+     "k_physical_extent": 32,
+     "kt": 1,
+     "template_id": "co.mm.f16.v1"
+    }
+   ],
+   "views": [
+    {
+     "buffer_id": 0,
+     "bytes": 1024,
+     "cols": 1,
+     "padding_state": "zero",
+     "physical_cols": 32,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 1,
+     "bytes": 4096,
+     "cols": 1,
+     "padding_state": "zero",
+     "physical_cols": 32,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 2,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "output",
+     "rows": 13
+    }
+   ]
+  },
+  {
+   "k": 255,
+   "publish": [
+    [
+     0,
+     0,
+     13,
+     33
+    ]
+   ],
+   "source_accumulator_dtype": "float16",
+   "source_k_loop": {
+    "k_blocks": [
+     {
+      "extent": 255,
+      "index": 0,
+      "k0": 0
+     }
+    ],
+    "k_tail": 255,
+    "logical_k": 255,
+    "lowering_k_tile": 256,
+    "narrowing_base": "explicit FP16 after each K block",
+    "pipeline_hint_dropped": false,
+    "rounding_points": "after_each_k_block",
+    "source_k_block": 256,
+    "source_k_trips": 1,
+    "source_loop_annotations": {},
+    "source_rounding": "explicit_per_k_fp16",
+    "tail_contract": {
+     "form": "guarded_rect_tail_v1",
+     "grid": {
+      "x": 1,
+      "y": 1
+     },
+     "guarded_reads": {
+      "A": [
+       13,
+       255
+      ],
+      "B": [
+       255,
+       33
+      ]
+     },
+     "guarded_write": [
+      13,
+      33
+     ],
+     "k_blocks": [
+      {
+       "extent": 255,
+       "index": 0,
+       "k0": 0
+      }
+     ],
+     "k_trips": 1,
+     "physical_k_tile": 256,
+     "physical_padding": "zero",
+     "rounding_points": "after_each_k_block",
+     "tail_physical_extent": 256,
+     "tails": {
+      "K": 255,
+      "M": 13,
+      "N": 33
+     },
+     "tiles": {
+      "K": 256,
+      "M": 16,
+      "N": 64
+     },
+     "zero_fill": [
+      "A_tile_each_k_iteration",
+      "B_tile_each_k_iteration"
+     ]
+    }
+   },
+   "source_mn_tiling": {
+    "block_m": 16,
+    "block_n": 64,
+    "coverage": "ragged_tail",
+    "grid_x": 1,
+    "grid_y": 1,
+    "m_tail": 13,
+    "n_tail": 33
+   },
+   "source_rounding": "explicit_per_k_fp16",
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 16,
+    "tile_n": 64
+   },
+   "source_tail_contract": {
+    "form": "guarded_rect_tail_v1",
+    "grid": {
+     "x": 1,
+     "y": 1
+    },
+    "guarded_reads": {
+     "A": [
+      13,
+      255
+     ],
+     "B": [
+      255,
+      33
+     ]
+    },
+    "guarded_write": [
+     13,
+     33
+    ],
+    "k_blocks": [
+     {
+      "extent": 255,
+      "index": 0,
+      "k0": 0
+     }
+    ],
+    "k_trips": 1,
+    "physical_k_tile": 256,
+    "physical_padding": "zero",
+    "rounding_points": "after_each_k_block",
+    "tail_physical_extent": 256,
+    "tails": {
+     "K": 255,
+     "M": 13,
+     "N": 33
+    },
+    "tiles": {
+     "K": 256,
+     "M": 16,
+     "N": 64
+    },
+    "zero_fill": [
+     "A_tile_each_k_iteration",
+     "B_tile_each_k_iteration"
+    ]
+   },
+   "task_count": 1,
+   "tasks": [
+    {
+     "k0": 0,
+     "k_padding": 1,
+     "k_physical_extent": 256,
+     "kt": 255,
+     "template_id": "co.mm.f16.v1"
+    }
+   ],
+   "views": [
+    {
+     "buffer_id": 0,
+     "bytes": 8192,
+     "cols": 255,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 1,
+     "bytes": 32768,
+     "cols": 255,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 2,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "output",
+     "rows": 13
+    }
+   ]
+  },
+  {
+   "k": 256,
+   "publish": [
+    [
+     0,
+     0,
+     13,
+     33
+    ]
+   ],
+   "source_accumulator_dtype": "float16",
+   "source_k_loop": {
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     }
+    ],
+    "k_tail": 256,
+    "logical_k": 256,
+    "lowering_k_tile": 256,
+    "narrowing_base": "explicit FP16 after each K block",
+    "pipeline_hint_dropped": false,
+    "rounding_points": "after_each_k_block",
+    "source_k_block": 256,
+    "source_k_trips": 1,
+    "source_loop_annotations": {},
+    "source_rounding": "explicit_per_k_fp16",
+    "tail_contract": {
+     "form": "guarded_rect_tail_v1",
+     "grid": {
+      "x": 1,
+      "y": 1
+     },
+     "guarded_reads": {
+      "A": [
+       13,
+       256
+      ],
+      "B": [
+       256,
+       33
+      ]
+     },
+     "guarded_write": [
+      13,
+      33
+     ],
+     "k_blocks": [
+      {
+       "extent": 256,
+       "index": 0,
+       "k0": 0
+      }
+     ],
+     "k_trips": 1,
+     "physical_k_tile": 256,
+     "physical_padding": "zero",
+     "rounding_points": "after_each_k_block",
+     "tail_physical_extent": 256,
+     "tails": {
+      "K": 256,
+      "M": 13,
+      "N": 33
+     },
+     "tiles": {
+      "K": 256,
+      "M": 16,
+      "N": 64
+     },
+     "zero_fill": [
+      "A_tile_each_k_iteration",
+      "B_tile_each_k_iteration"
+     ]
+    }
+   },
+   "source_mn_tiling": {
+    "block_m": 16,
+    "block_n": 64,
+    "coverage": "ragged_tail",
+    "grid_x": 1,
+    "grid_y": 1,
+    "m_tail": 13,
+    "n_tail": 33
+   },
+   "source_rounding": "explicit_per_k_fp16",
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 16,
+    "tile_n": 64
+   },
+   "source_tail_contract": {
+    "form": "guarded_rect_tail_v1",
+    "grid": {
+     "x": 1,
+     "y": 1
+    },
+    "guarded_reads": {
+     "A": [
+      13,
+      256
+     ],
+     "B": [
+      256,
+      33
+     ]
+    },
+    "guarded_write": [
+     13,
+     33
+    ],
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     }
+    ],
+    "k_trips": 1,
+    "physical_k_tile": 256,
+    "physical_padding": "zero",
+    "rounding_points": "after_each_k_block",
+    "tail_physical_extent": 256,
+    "tails": {
+     "K": 256,
+     "M": 13,
+     "N": 33
+    },
+    "tiles": {
+     "K": 256,
+     "M": 16,
+     "N": 64
+    },
+    "zero_fill": [
+     "A_tile_each_k_iteration",
+     "B_tile_each_k_iteration"
+    ]
+   },
+   "task_count": 1,
+   "tasks": [
+    {
+     "k0": 0,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm.f16.v1"
+    }
+   ],
+   "views": [
+    {
+     "buffer_id": 0,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 1,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 2,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "output",
+     "rows": 13
+    }
+   ]
+  },
+  {
+   "k": 257,
+   "publish": [
+    [
+     0,
+     0,
+     13,
+     33
+    ]
+   ],
+   "source_accumulator_dtype": "float16",
+   "source_k_loop": {
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 1,
+      "index": 1,
+      "k0": 256
+     }
+    ],
+    "k_tail": 1,
+    "logical_k": 257,
+    "lowering_k_tile": 256,
+    "narrowing_base": "explicit FP16 after each K block",
+    "pipeline_hint_dropped": false,
+    "rounding_points": "after_each_k_block",
+    "source_k_block": 256,
+    "source_k_trips": 2,
+    "source_loop_annotations": {},
+    "source_rounding": "explicit_per_k_fp16",
+    "tail_contract": {
+     "form": "guarded_rect_tail_v1",
+     "grid": {
+      "x": 1,
+      "y": 1
+     },
+     "guarded_reads": {
+      "A": [
+       13,
+       257
+      ],
+      "B": [
+       257,
+       33
+      ]
+     },
+     "guarded_write": [
+      13,
+      33
+     ],
+     "k_blocks": [
+      {
+       "extent": 256,
+       "index": 0,
+       "k0": 0
+      },
+      {
+       "extent": 1,
+       "index": 1,
+       "k0": 256
+      }
+     ],
+     "k_trips": 2,
+     "physical_k_tile": 256,
+     "physical_padding": "zero",
+     "rounding_points": "after_each_k_block",
+     "tail_physical_extent": 32,
+     "tails": {
+      "K": 1,
+      "M": 13,
+      "N": 33
+     },
+     "tiles": {
+      "K": 256,
+      "M": 16,
+      "N": 64
+     },
+     "zero_fill": [
+      "A_tile_each_k_iteration",
+      "B_tile_each_k_iteration"
+     ]
+    }
+   },
+   "source_mn_tiling": {
+    "block_m": 16,
+    "block_n": 64,
+    "coverage": "ragged_tail",
+    "grid_x": 1,
+    "grid_y": 1,
+    "m_tail": 13,
+    "n_tail": 33
+   },
+   "source_rounding": "explicit_per_k_fp16",
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 16,
+    "tile_n": 64
+   },
+   "source_tail_contract": {
+    "form": "guarded_rect_tail_v1",
+    "grid": {
+     "x": 1,
+     "y": 1
+    },
+    "guarded_reads": {
+     "A": [
+      13,
+      257
+     ],
+     "B": [
+      257,
+      33
+     ]
+    },
+    "guarded_write": [
+     13,
+     33
+    ],
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 1,
+      "index": 1,
+      "k0": 256
+     }
+    ],
+    "k_trips": 2,
+    "physical_k_tile": 256,
+    "physical_padding": "zero",
+    "rounding_points": "after_each_k_block",
+    "tail_physical_extent": 32,
+    "tails": {
+     "K": 1,
+     "M": 13,
+     "N": 33
+    },
+    "tiles": {
+     "K": 256,
+     "M": 16,
+     "N": 64
+    },
+    "zero_fill": [
+     "A_tile_each_k_iteration",
+     "B_tile_each_k_iteration"
+    ]
+   },
+   "task_count": 2,
+   "tasks": [
+    {
+     "k0": 0,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm.f16.v1"
+    },
+    {
+     "k0": 256,
+     "k_padding": 31,
+     "k_physical_extent": 32,
+     "kt": 1,
+     "template_id": "co.mm_acc.f16.v1"
+    }
+   ],
+   "views": [
+    {
+     "buffer_id": 0,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 1,
+     "bytes": 1024,
+     "cols": 1,
+     "padding_state": "zero",
+     "physical_cols": 32,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 2,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 3,
+     "bytes": 4096,
+     "cols": 1,
+     "padding_state": "zero",
+     "physical_cols": 32,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 4,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "accumulator",
+     "rows": 13
+    },
+    {
+     "buffer_id": 5,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "output",
+     "rows": 13
+    }
+   ]
+  },
+  {
+   "k": 511,
+   "publish": [
+    [
+     0,
+     0,
+     13,
+     33
+    ]
+   ],
+   "source_accumulator_dtype": "float16",
+   "source_k_loop": {
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 255,
+      "index": 1,
+      "k0": 256
+     }
+    ],
+    "k_tail": 255,
+    "logical_k": 511,
+    "lowering_k_tile": 256,
+    "narrowing_base": "explicit FP16 after each K block",
+    "pipeline_hint_dropped": false,
+    "rounding_points": "after_each_k_block",
+    "source_k_block": 256,
+    "source_k_trips": 2,
+    "source_loop_annotations": {},
+    "source_rounding": "explicit_per_k_fp16",
+    "tail_contract": {
+     "form": "guarded_rect_tail_v1",
+     "grid": {
+      "x": 1,
+      "y": 1
+     },
+     "guarded_reads": {
+      "A": [
+       13,
+       511
+      ],
+      "B": [
+       511,
+       33
+      ]
+     },
+     "guarded_write": [
+      13,
+      33
+     ],
+     "k_blocks": [
+      {
+       "extent": 256,
+       "index": 0,
+       "k0": 0
+      },
+      {
+       "extent": 255,
+       "index": 1,
+       "k0": 256
+      }
+     ],
+     "k_trips": 2,
+     "physical_k_tile": 256,
+     "physical_padding": "zero",
+     "rounding_points": "after_each_k_block",
+     "tail_physical_extent": 256,
+     "tails": {
+      "K": 255,
+      "M": 13,
+      "N": 33
+     },
+     "tiles": {
+      "K": 256,
+      "M": 16,
+      "N": 64
+     },
+     "zero_fill": [
+      "A_tile_each_k_iteration",
+      "B_tile_each_k_iteration"
+     ]
+    }
+   },
+   "source_mn_tiling": {
+    "block_m": 16,
+    "block_n": 64,
+    "coverage": "ragged_tail",
+    "grid_x": 1,
+    "grid_y": 1,
+    "m_tail": 13,
+    "n_tail": 33
+   },
+   "source_rounding": "explicit_per_k_fp16",
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 16,
+    "tile_n": 64
+   },
+   "source_tail_contract": {
+    "form": "guarded_rect_tail_v1",
+    "grid": {
+     "x": 1,
+     "y": 1
+    },
+    "guarded_reads": {
+     "A": [
+      13,
+      511
+     ],
+     "B": [
+      511,
+      33
+     ]
+    },
+    "guarded_write": [
+     13,
+     33
+    ],
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 255,
+      "index": 1,
+      "k0": 256
+     }
+    ],
+    "k_trips": 2,
+    "physical_k_tile": 256,
+    "physical_padding": "zero",
+    "rounding_points": "after_each_k_block",
+    "tail_physical_extent": 256,
+    "tails": {
+     "K": 255,
+     "M": 13,
+     "N": 33
+    },
+    "tiles": {
+     "K": 256,
+     "M": 16,
+     "N": 64
+    },
+    "zero_fill": [
+     "A_tile_each_k_iteration",
+     "B_tile_each_k_iteration"
+    ]
+   },
+   "task_count": 2,
+   "tasks": [
+    {
+     "k0": 0,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm.f16.v1"
+    },
+    {
+     "k0": 256,
+     "k_padding": 1,
+     "k_physical_extent": 256,
+     "kt": 255,
+     "template_id": "co.mm_acc.f16.v1"
+    }
+   ],
+   "views": [
+    {
+     "buffer_id": 0,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 1,
+     "bytes": 8192,
+     "cols": 255,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 2,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 3,
+     "bytes": 32768,
+     "cols": 255,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 4,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "accumulator",
+     "rows": 13
+    },
+    {
+     "buffer_id": 5,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "output",
+     "rows": 13
+    }
+   ]
+  },
+  {
+   "k": 512,
+   "publish": [
+    [
+     0,
+     0,
+     13,
+     33
+    ]
+   ],
+   "source_accumulator_dtype": "float16",
+   "source_k_loop": {
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 256,
+      "index": 1,
+      "k0": 256
+     }
+    ],
+    "k_tail": 256,
+    "logical_k": 512,
+    "lowering_k_tile": 256,
+    "narrowing_base": "explicit FP16 after each K block",
+    "pipeline_hint_dropped": false,
+    "rounding_points": "after_each_k_block",
+    "source_k_block": 256,
+    "source_k_trips": 2,
+    "source_loop_annotations": {},
+    "source_rounding": "explicit_per_k_fp16",
+    "tail_contract": {
+     "form": "guarded_rect_tail_v1",
+     "grid": {
+      "x": 1,
+      "y": 1
+     },
+     "guarded_reads": {
+      "A": [
+       13,
+       512
+      ],
+      "B": [
+       512,
+       33
+      ]
+     },
+     "guarded_write": [
+      13,
+      33
+     ],
+     "k_blocks": [
+      {
+       "extent": 256,
+       "index": 0,
+       "k0": 0
+      },
+      {
+       "extent": 256,
+       "index": 1,
+       "k0": 256
+      }
+     ],
+     "k_trips": 2,
+     "physical_k_tile": 256,
+     "physical_padding": "zero",
+     "rounding_points": "after_each_k_block",
+     "tail_physical_extent": 256,
+     "tails": {
+      "K": 256,
+      "M": 13,
+      "N": 33
+     },
+     "tiles": {
+      "K": 256,
+      "M": 16,
+      "N": 64
+     },
+     "zero_fill": [
+      "A_tile_each_k_iteration",
+      "B_tile_each_k_iteration"
+     ]
+    }
+   },
+   "source_mn_tiling": {
+    "block_m": 16,
+    "block_n": 64,
+    "coverage": "ragged_tail",
+    "grid_x": 1,
+    "grid_y": 1,
+    "m_tail": 13,
+    "n_tail": 33
+   },
+   "source_rounding": "explicit_per_k_fp16",
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 16,
+    "tile_n": 64
+   },
+   "source_tail_contract": {
+    "form": "guarded_rect_tail_v1",
+    "grid": {
+     "x": 1,
+     "y": 1
+    },
+    "guarded_reads": {
+     "A": [
+      13,
+      512
+     ],
+     "B": [
+      512,
+      33
+     ]
+    },
+    "guarded_write": [
+     13,
+     33
+    ],
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 256,
+      "index": 1,
+      "k0": 256
+     }
+    ],
+    "k_trips": 2,
+    "physical_k_tile": 256,
+    "physical_padding": "zero",
+    "rounding_points": "after_each_k_block",
+    "tail_physical_extent": 256,
+    "tails": {
+     "K": 256,
+     "M": 13,
+     "N": 33
+    },
+    "tiles": {
+     "K": 256,
+     "M": 16,
+     "N": 64
+    },
+    "zero_fill": [
+     "A_tile_each_k_iteration",
+     "B_tile_each_k_iteration"
+    ]
+   },
+   "task_count": 2,
+   "tasks": [
+    {
+     "k0": 0,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm.f16.v1"
+    },
+    {
+     "k0": 256,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm_acc.f16.v1"
+    }
+   ],
+   "views": [
+    {
+     "buffer_id": 0,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 1,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 2,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 3,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 4,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "accumulator",
+     "rows": 13
+    },
+    {
+     "buffer_id": 5,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "output",
+     "rows": 13
+    }
+   ]
+  },
+  {
+   "k": 576,
+   "publish": [
+    [
+     0,
+     0,
+     13,
+     33
+    ]
+   ],
+   "source_accumulator_dtype": "float16",
+   "source_k_loop": {
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 256,
+      "index": 1,
+      "k0": 256
+     },
+     {
+      "extent": 64,
+      "index": 2,
+      "k0": 512
+     }
+    ],
+    "k_tail": 64,
+    "logical_k": 576,
+    "lowering_k_tile": 256,
+    "narrowing_base": "explicit FP16 after each K block",
+    "pipeline_hint_dropped": false,
+    "rounding_points": "after_each_k_block",
+    "source_k_block": 256,
+    "source_k_trips": 3,
+    "source_loop_annotations": {},
+    "source_rounding": "explicit_per_k_fp16",
+    "tail_contract": {
+     "form": "guarded_rect_tail_v1",
+     "grid": {
+      "x": 1,
+      "y": 1
+     },
+     "guarded_reads": {
+      "A": [
+       13,
+       576
+      ],
+      "B": [
+       576,
+       33
+      ]
+     },
+     "guarded_write": [
+      13,
+      33
+     ],
+     "k_blocks": [
+      {
+       "extent": 256,
+       "index": 0,
+       "k0": 0
+      },
+      {
+       "extent": 256,
+       "index": 1,
+       "k0": 256
+      },
+      {
+       "extent": 64,
+       "index": 2,
+       "k0": 512
+      }
+     ],
+     "k_trips": 3,
+     "physical_k_tile": 256,
+     "physical_padding": "zero",
+     "rounding_points": "after_each_k_block",
+     "tail_physical_extent": 64,
+     "tails": {
+      "K": 64,
+      "M": 13,
+      "N": 33
+     },
+     "tiles": {
+      "K": 256,
+      "M": 16,
+      "N": 64
+     },
+     "zero_fill": [
+      "A_tile_each_k_iteration",
+      "B_tile_each_k_iteration"
+     ]
+    }
+   },
+   "source_mn_tiling": {
+    "block_m": 16,
+    "block_n": 64,
+    "coverage": "ragged_tail",
+    "grid_x": 1,
+    "grid_y": 1,
+    "m_tail": 13,
+    "n_tail": 33
+   },
+   "source_rounding": "explicit_per_k_fp16",
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 16,
+    "tile_n": 64
+   },
+   "source_tail_contract": {
+    "form": "guarded_rect_tail_v1",
+    "grid": {
+     "x": 1,
+     "y": 1
+    },
+    "guarded_reads": {
+     "A": [
+      13,
+      576
+     ],
+     "B": [
+      576,
+      33
+     ]
+    },
+    "guarded_write": [
+     13,
+     33
+    ],
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 256,
+      "index": 1,
+      "k0": 256
+     },
+     {
+      "extent": 64,
+      "index": 2,
+      "k0": 512
+     }
+    ],
+    "k_trips": 3,
+    "physical_k_tile": 256,
+    "physical_padding": "zero",
+    "rounding_points": "after_each_k_block",
+    "tail_physical_extent": 64,
+    "tails": {
+     "K": 64,
+     "M": 13,
+     "N": 33
+    },
+    "tiles": {
+     "K": 256,
+     "M": 16,
+     "N": 64
+    },
+    "zero_fill": [
+     "A_tile_each_k_iteration",
+     "B_tile_each_k_iteration"
+    ]
+   },
+   "task_count": 3,
+   "tasks": [
+    {
+     "k0": 0,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm.f16.v1"
+    },
+    {
+     "k0": 256,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm_acc.f16.v1"
+    },
+    {
+     "k0": 512,
+     "k_padding": 0,
+     "k_physical_extent": 64,
+     "kt": 64,
+     "template_id": "co.mm_acc.f16.v1"
+    }
+   ],
+   "views": [
+    {
+     "buffer_id": 0,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 1,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 2,
+     "bytes": 2048,
+     "cols": 64,
+     "padding_state": "zero",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 3,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 4,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 5,
+     "bytes": 8192,
+     "cols": 64,
+     "padding_state": "zero",
+     "physical_cols": 64,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 6,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "output",
+     "rows": 13
+    },
+    {
+     "buffer_id": 7,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "accumulator",
+     "rows": 13
+    }
+   ]
+  },
+  {
+   "k": 1536,
+   "publish": [
+    [
+     0,
+     0,
+     13,
+     33
+    ]
+   ],
+   "source_accumulator_dtype": "float16",
+   "source_k_loop": {
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 256,
+      "index": 1,
+      "k0": 256
+     },
+     {
+      "extent": 256,
+      "index": 2,
+      "k0": 512
+     },
+     {
+      "extent": 256,
+      "index": 3,
+      "k0": 768
+     },
+     {
+      "extent": 256,
+      "index": 4,
+      "k0": 1024
+     },
+     {
+      "extent": 256,
+      "index": 5,
+      "k0": 1280
+     }
+    ],
+    "k_tail": 256,
+    "logical_k": 1536,
+    "lowering_k_tile": 256,
+    "narrowing_base": "explicit FP16 after each K block",
+    "pipeline_hint_dropped": false,
+    "rounding_points": "after_each_k_block",
+    "source_k_block": 256,
+    "source_k_trips": 6,
+    "source_loop_annotations": {},
+    "source_rounding": "explicit_per_k_fp16",
+    "tail_contract": {
+     "form": "guarded_rect_tail_v1",
+     "grid": {
+      "x": 1,
+      "y": 1
+     },
+     "guarded_reads": {
+      "A": [
+       13,
+       1536
+      ],
+      "B": [
+       1536,
+       33
+      ]
+     },
+     "guarded_write": [
+      13,
+      33
+     ],
+     "k_blocks": [
+      {
+       "extent": 256,
+       "index": 0,
+       "k0": 0
+      },
+      {
+       "extent": 256,
+       "index": 1,
+       "k0": 256
+      },
+      {
+       "extent": 256,
+       "index": 2,
+       "k0": 512
+      },
+      {
+       "extent": 256,
+       "index": 3,
+       "k0": 768
+      },
+      {
+       "extent": 256,
+       "index": 4,
+       "k0": 1024
+      },
+      {
+       "extent": 256,
+       "index": 5,
+       "k0": 1280
+      }
+     ],
+     "k_trips": 6,
+     "physical_k_tile": 256,
+     "physical_padding": "zero",
+     "rounding_points": "after_each_k_block",
+     "tail_physical_extent": 256,
+     "tails": {
+      "K": 256,
+      "M": 13,
+      "N": 33
+     },
+     "tiles": {
+      "K": 256,
+      "M": 16,
+      "N": 64
+     },
+     "zero_fill": [
+      "A_tile_each_k_iteration",
+      "B_tile_each_k_iteration"
+     ]
+    }
+   },
+   "source_mn_tiling": {
+    "block_m": 16,
+    "block_n": 64,
+    "coverage": "ragged_tail",
+    "grid_x": 1,
+    "grid_y": 1,
+    "m_tail": 13,
+    "n_tail": 33
+   },
+   "source_rounding": "explicit_per_k_fp16",
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 16,
+    "tile_n": 64
+   },
+   "source_tail_contract": {
+    "form": "guarded_rect_tail_v1",
+    "grid": {
+     "x": 1,
+     "y": 1
+    },
+    "guarded_reads": {
+     "A": [
+      13,
+      1536
+     ],
+     "B": [
+      1536,
+      33
+     ]
+    },
+    "guarded_write": [
+     13,
+     33
+    ],
+    "k_blocks": [
+     {
+      "extent": 256,
+      "index": 0,
+      "k0": 0
+     },
+     {
+      "extent": 256,
+      "index": 1,
+      "k0": 256
+     },
+     {
+      "extent": 256,
+      "index": 2,
+      "k0": 512
+     },
+     {
+      "extent": 256,
+      "index": 3,
+      "k0": 768
+     },
+     {
+      "extent": 256,
+      "index": 4,
+      "k0": 1024
+     },
+     {
+      "extent": 256,
+      "index": 5,
+      "k0": 1280
+     }
+    ],
+    "k_trips": 6,
+    "physical_k_tile": 256,
+    "physical_padding": "zero",
+    "rounding_points": "after_each_k_block",
+    "tail_physical_extent": 256,
+    "tails": {
+     "K": 256,
+     "M": 13,
+     "N": 33
+    },
+    "tiles": {
+     "K": 256,
+     "M": 16,
+     "N": 64
+    },
+    "zero_fill": [
+     "A_tile_each_k_iteration",
+     "B_tile_each_k_iteration"
+    ]
+   },
+   "task_count": 6,
+   "tasks": [
+    {
+     "k0": 0,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm.f16.v1"
+    },
+    {
+     "k0": 256,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm_acc.f16.v1"
+    },
+    {
+     "k0": 512,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm_acc.f16.v1"
+    },
+    {
+     "k0": 768,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm_acc.f16.v1"
+    },
+    {
+     "k0": 1024,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm_acc.f16.v1"
+    },
+    {
+     "k0": 1280,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "template_id": "co.mm_acc.f16.v1"
+    }
+   ],
+   "views": [
+    {
+     "buffer_id": 0,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 1,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 2,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 3,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 4,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 5,
+     "bytes": 8192,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "role": "input_slice",
+     "rows": 13
+    },
+    {
+     "buffer_id": 6,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 7,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 8,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 9,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 10,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 11,
+     "bytes": 32768,
+     "cols": 256,
+     "padding_state": "zero",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "role": "weight",
+     "rows": 33
+    },
+    {
+     "buffer_id": 12,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "accumulator",
+     "rows": 13
+    },
+    {
+     "buffer_id": 13,
+     "bytes": 2048,
+     "cols": 33,
+     "padding_state": "finite",
+     "physical_cols": 64,
+     "physical_rows": 16,
+     "role": "output",
+     "rows": 13
+    }
+   ]
+  }
+ ],
+ "fixture": {
+  "bm": 16,
+  "bn": 64,
+  "k_values": [
+   1,
+   255,
+   256,
+   257,
+   511,
+   512,
+   576,
+   1536
+  ],
+  "m": 13,
+  "n": 33
+ },
+ "kind": "tilelang-k-tail-contract-evidence",
+ "model_shape_default_equivalence": {
+  "geometry_equal": true,
+  "legacy": {
+   "bindings": [
+    [
+     "A",
+     "input",
+     [
+      256,
+      576
+     ]
+    ],
+    [
+     "B",
+     "constant",
+     [
+      576,
+      960
+     ]
+    ],
+    [
+     "Y",
+     "output",
+     [
+      256,
+      960
+     ]
+    ]
+   ],
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     256
+    ],
+    [
+     0,
+     256,
+     256,
+     256
+    ],
+    [
+     0,
+     512,
+     256,
+     256
+    ],
+    [
+     0,
+     768,
+     256,
+     192
+    ]
+   ],
+   "tasks": [
+    [
+     "co.mm.f16.v1",
+     0,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     256,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     512,
+     64
+    ],
+    [
+     "co.mm.f16.v1",
+     0,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     256,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     512,
+     64
+    ],
+    [
+     "co.mm.f16.v1",
+     0,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     256,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     512,
+     64
+    ],
+    [
+     "co.mm.f16.v1",
+     0,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     256,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     512,
+     64
+    ]
+   ]
+  },
+  "legacy_rounding": "fp32_final_narrowing",
+  "scheduled": {
+   "bindings": [
+    [
+     "A",
+     "input",
+     [
+      256,
+      576
+     ]
+    ],
+    [
+     "B",
+     "constant",
+     [
+      576,
+      960
+     ]
+    ],
+    [
+     "Y",
+     "output",
+     [
+      256,
+      960
+     ]
+    ]
+   ],
+   "publish": [
+    [
+     0,
+     0,
+     256,
+     256
+    ],
+    [
+     0,
+     256,
+     256,
+     256
+    ],
+    [
+     0,
+     512,
+     256,
+     256
+    ],
+    [
+     0,
+     768,
+     256,
+     192
+    ]
+   ],
+   "tasks": [
+    [
+     "co.mm.f16.v1",
+     0,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     256,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     512,
+     64
+    ],
+    [
+     "co.mm.f16.v1",
+     0,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     256,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     512,
+     64
+    ],
+    [
+     "co.mm.f16.v1",
+     0,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     256,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     512,
+     64
+    ],
+    [
+     "co.mm.f16.v1",
+     0,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     256,
+     256
+    ],
+    [
+     "co.mm_acc.f16.v1",
+     512,
+     64
+    ]
+   ]
+  },
+  "scheduled_rounding": "explicit_per_k_fp16",
+  "shape": {
+   "k": 576,
+   "m": 256,
+   "n": 960
+  }
+ },
+ "schema_version": 1
+}

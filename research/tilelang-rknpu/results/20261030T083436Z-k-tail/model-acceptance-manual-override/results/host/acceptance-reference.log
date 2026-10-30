@@ -1,0 +1,61 @@
++ /usr/bin/python3 /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tools/smollm2_reference.py --package /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.data/models/smollm2_135m_instruct_package --ids-json /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/results/20261030T083436Z-k-tail/model-acceptance-manual-override/evidence/acceptance/reference/_ids/capture-0.json --out /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/results/20261030T083436Z-k-tail/model-acceptance-manual-override/evidence/acceptance/reference/capture-0 --capture-layers 0,15,29
+{
+ "tokens": 44,
+ "logits": [
+  44,
+  49152
+ ],
+ "top1_last": 4590,
+ "captures": [
+  "final_norm",
+  "layer.0.attn_context",
+  "layer.0.down_proj",
+  "layer.0.gate_up",
+  "layer.0.input_norm",
+  "layer.0.k_rope",
+  "layer.0.o_proj",
+  "layer.0.post_norm",
+  "layer.0.q_rope",
+  "layer.0.qkv",
+  "layer.0.resid_attn",
+  "layer.0.resid_ffn",
+  "layer.0.swiglu",
+  "layer.0.v",
+  "layer.15.attn_context",
+  "layer.15.down_proj",
+  "layer.15.gate_up",
+  "layer.15.input_norm",
+  "layer.15.k_rope",
+  "layer.15.o_proj",
+  "layer.15.post_norm",
+  "layer.15.q_rope",
+  "layer.15.qkv",
+  "layer.15.resid_attn",
+  "layer.15.resid_ffn",
+  "layer.15.swiglu",
+  "layer.15.v",
+  "layer.29.attn_context",
+  "layer.29.down_proj",
+  "layer.29.gate_up",
+  "layer.29.input_norm",
+  "layer.29.k_rope",
+  "layer.29.o_proj",
+  "layer.29.post_norm",
+  "layer.29.q_rope",
+  "layer.29.qkv",
+  "layer.29.resid_attn",
+  "layer.29.resid_ffn",
+  "layer.29.swiglu",
+  "layer.29.v"
+ ]
+}
++ /usr/bin/python3 /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tools/smollm2_reference.py --package /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.data/models/smollm2_135m_instruct_package --ids-json /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/results/20261030T083436Z-k-tail/model-acceptance-manual-override/evidence/acceptance/reference/_ids/tf-0.json --out /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/results/20261030T083436Z-k-tail/model-acceptance-manual-override/evidence/acceptance/reference/tf-0 --capture-layers 
+{
+ "tokens": 76,
+ "logits": [
+  76,
+  49152
+ ],
+ "top1_last": 5905,
+ "captures": []
+}

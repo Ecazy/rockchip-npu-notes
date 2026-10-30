@@ -1,0 +1,1361 @@
+{
+ "cases": [
+  {
+   "best_nondefault": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 256,
+     "tile_n": 128
+    },
+    "median_us": 7526.3559992890805,
+    "name": "m256_n128_n",
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 256,
+     "tile_n": 128
+    }
+   },
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "default_us": 6477.538001490757,
+   "distinct_plan_hashes": 11,
+   "distinct_publish_orders": 11,
+   "id": "prefill_qkv",
+   "k": 576,
+   "k_task_extents": [
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ]
+   ],
+   "kind": "prefill",
+   "m": 256,
+   "n": 960,
+   "prepared": 16,
+   "rejected": [
+    {
+     "name": "m16_n128_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m16_n128_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m11_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    }
+   ],
+   "selected": "default",
+   "selected_plan": "prefill_qkv/default.rkplan.json",
+   "selected_plan_sha256": "83f2ee83e55de4fc4be9de53454c3d65458cae70a23c46583c7c19571eae73f5",
+   "selected_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "selection_reason": "autotuner_measured_best",
+   "valid": 11,
+   "valid_sources": {
+    "default": 1,
+    "tiled_guarded_explicit_rounding": 10
+   }
+  },
+  {
+   "best_nondefault": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 256,
+     "tile_n": 128
+    },
+    "median_us": 26640.7659946708,
+    "name": "m256_n128_n",
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 256,
+     "tile_n": 128
+    }
+   },
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "default_us": 18435.417994624004,
+   "distinct_plan_hashes": 5,
+   "distinct_publish_orders": 5,
+   "id": "prefill_gate_up",
+   "k": 576,
+   "k_task_extents": [
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ]
+   ],
+   "kind": "prefill",
+   "m": 256,
+   "n": 3072,
+   "prepared": 16,
+   "rejected": [
+    {
+     "name": "m16_n128_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m16_n128_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m32_n256_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m32_n128_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m64_n128_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m44_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m44_n192_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m44_n96_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m11_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    }
+   ],
+   "selected": "default",
+   "selected_plan": "prefill_gate_up/default.rkplan.json",
+   "selected_plan_sha256": "c00886862d68ec2c38a1de07120014337b147fd2021cc15c38e37e7d02622209",
+   "selected_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "selection_reason": "autotuner_measured_best",
+   "valid": 5,
+   "valid_sources": {
+    "default": 1,
+    "tiled_guarded_explicit_rounding": 4
+   }
+  },
+  {
+   "best_nondefault": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 44,
+     "tile_n": 192
+    },
+    "median_us": 10460.858989972621,
+    "name": "m44_n192_n",
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 44,
+     "tile_n": 192
+    }
+   },
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "default_us": 9816.49300956633,
+   "distinct_plan_hashes": 11,
+   "distinct_publish_orders": 11,
+   "id": "prefill_down",
+   "k": 1536,
+   "k_task_extents": [
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     256,
+     256,
+     0
+    ],
+    [
+     768,
+     256,
+     256,
+     0
+    ],
+    [
+     1024,
+     256,
+     256,
+     0
+    ],
+    [
+     1280,
+     256,
+     256,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     256,
+     256,
+     0
+    ],
+    [
+     768,
+     256,
+     256,
+     0
+    ],
+    [
+     1024,
+     256,
+     256,
+     0
+    ],
+    [
+     1280,
+     256,
+     256,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     256,
+     256,
+     0
+    ],
+    [
+     768,
+     256,
+     256,
+     0
+    ],
+    [
+     1024,
+     256,
+     256,
+     0
+    ],
+    [
+     1280,
+     256,
+     256,
+     0
+    ]
+   ],
+   "kind": "prefill",
+   "m": 256,
+   "n": 576,
+   "prepared": 16,
+   "rejected": [
+    {
+     "name": "m16_n128_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m16_n128_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m11_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    }
+   ],
+   "selected": "default",
+   "selected_plan": "prefill_down/default.rkplan.json",
+   "selected_plan_sha256": "bd5358368666af6a6b089c057defa8859690a78361c1e2b99473334d7c68a9ec",
+   "selected_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "selection_reason": "autotuner_measured_best",
+   "valid": 11,
+   "valid_sources": {
+    "default": 1,
+    "tiled_explicit_rounding": 1,
+    "tiled_guarded_explicit_rounding": 9
+   }
+  },
+  {
+   "best_nondefault": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 1,
+     "tile_n": 256
+    },
+    "median_us": 811.1140050459653,
+    "name": "m1_n256_m",
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 1,
+     "tile_n": 256
+    }
+   },
+   "cache_key": "48887edebadf88ba80fbc8d8bf4fb06cbaad96be85ff64628a7d776c53f02714",
+   "default_us": 800.3230032045394,
+   "distinct_plan_hashes": 6,
+   "distinct_publish_orders": 3,
+   "id": "decode_qkv",
+   "k": 576,
+   "k_task_extents": [
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ]
+   ],
+   "kind": "decode",
+   "m": 1,
+   "n": 960,
+   "prepared": 6,
+   "rejected": [],
+   "selected": "default",
+   "selected_plan": "decode_qkv/default.rkplan.json",
+   "selected_plan_sha256": "b56652ee16920be89c6c4445667febcced5a4976a12cbd854708677c4a0af5de",
+   "selected_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "selection_reason": "autotuner_measured_best",
+   "valid": 6,
+   "valid_sources": {
+    "default": 1,
+    "tiled_guarded_explicit_rounding": 5
+   }
+  },
+  {
+   "best_nondefault": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 256,
+     "tile_n": 128
+    },
+    "median_us": 31464.575993595645,
+    "name": "m256_n128_n",
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 256,
+     "tile_n": 128
+    }
+   },
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "default_us": 30253.884004196152,
+   "distinct_plan_hashes": 5,
+   "distinct_publish_orders": 5,
+   "id": "lm_head_shard0",
+   "k": 576,
+   "k_task_extents": [
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     256,
+     256,
+     0
+    ],
+    [
+     256,
+     256,
+     256,
+     0
+    ],
+    [
+     512,
+     64,
+     64,
+     0
+    ]
+   ],
+   "kind": "prefill",
+   "m": 256,
+   "n": 4096,
+   "prepared": 16,
+   "rejected": [
+    {
+     "name": "m16_n128_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m16_n128_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m32_n256_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m32_n128_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m64_n128_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m44_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m44_n192_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m44_n96_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m11_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    }
+   ],
+   "selected": "default",
+   "selected_plan": "lm_head_shard0/default.rkplan.json",
+   "selected_plan_sha256": "10fd61367102bd917e77b600a86868d2bd59edd0c3bdd4721a39073166a263e4",
+   "selected_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "selection_reason": "autotuner_measured_best",
+   "valid": 5,
+   "valid_sources": {
+    "default": 1,
+    "tiled_guarded_explicit_rounding": 4
+   }
+  },
+  {
+   "best_nondefault": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 256,
+     "tile_n": 128
+    },
+    "median_us": 2367.717999732122,
+    "name": "m256_n128_n",
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "n_major",
+     "tile_m": 256,
+     "tile_n": 128
+    }
+   },
+   "cache_key": "e3010bd33e4ccae3791fe6dbcbca40dcde42f372a3382921e4eabef3695e6004",
+   "default_us": 2194.4699983578175,
+   "distinct_plan_hashes": 11,
+   "distinct_publish_orders": 11,
+   "id": "attention_qk_prefill",
+   "k": 64,
+   "k_task_extents": [
+    [
+     0,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     64,
+     64,
+     0
+    ],
+    [
+     0,
+     64,
+     64,
+     0
+    ]
+   ],
+   "kind": "prefill",
+   "m": 768,
+   "n": 256,
+   "prepared": 16,
+   "rejected": [
+    {
+     "name": "m16_n128_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m16_n128_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m4_n192_n",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    },
+    {
+     "name": "m11_n192_m",
+     "reason": "BackendError: RK_E_SCHEMA: too many buffers share one slot"
+    }
+   ],
+   "selected": "default",
+   "selected_plan": "attention_qk_prefill/default.rkplan.json",
+   "selected_plan_sha256": "eed5e80aede7b705f6e886cf640acbd59dae1f8af3eeb451399e6cec6b573c27",
+   "selected_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "selection_reason": "autotuner_measured_best",
+   "valid": 11,
+   "valid_sources": {
+    "default": 1,
+    "tiled_guarded_explicit_rounding": 10
+   }
+  },
+  {
+   "best_nondefault": {
+    "applied_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 128
+    },
+    "median_us": 303.6209964193404,
+    "name": "m256_n128_m",
+    "source_schedule": {
+     "accumulation": "ordered_ascending_f16_writeback",
+     "k_tile": 256,
+     "kind": "mn_tiles_v1",
+     "order": "m_major",
+     "tile_m": 256,
+     "tile_n": 128
+    }
+   },
+   "cache_key": "70d6f5bc4613696f8d405d495ddaeed9972bea1390d259ab9d814b1387e248a1",
+   "default_us": 229.83000962994993,
+   "distinct_plan_hashes": 6,
+   "distinct_publish_orders": 5,
+   "id": "attention_qk_decode",
+   "k": 64,
+   "k_task_extents": [
+    [
+     0,
+     64,
+     64,
+     0
+    ]
+   ],
+   "kind": "decode",
+   "m": 3,
+   "n": 256,
+   "prepared": 6,
+   "rejected": [],
+   "selected": "default",
+   "selected_plan": "attention_qk_decode/default.rkplan.json",
+   "selected_plan_sha256": "394a8d3dad9712cc96d6286b0896ec776b5c71bf1fd434b35221e8b91286de96",
+   "selected_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "selection_reason": "autotuner_measured_best",
+   "valid": 6,
+   "valid_sources": {
+    "default": 1,
+    "tiled_guarded_explicit_rounding": 5
+   }
+  }
+ ],
+ "confirmation": {
+  "cases": [
+   {
+    "case": "prefill_qkv",
+    "pass": true,
+    "skipped": "default_wins"
+   },
+   {
+    "case": "prefill_gate_up",
+    "pass": true,
+    "skipped": "default_wins"
+   },
+   {
+    "case": "prefill_down",
+    "pass": true,
+    "skipped": "default_wins"
+   },
+   {
+    "case": "decode_qkv",
+    "pass": true,
+    "skipped": "default_wins"
+   },
+   {
+    "case": "lm_head_shard0",
+    "pass": true,
+    "skipped": "default_wins"
+   },
+   {
+    "case": "attention_qk_prefill",
+    "pass": true,
+    "skipped": "default_wins"
+   },
+   {
+    "case": "attention_qk_decode",
+    "pass": true,
+    "skipped": "default_wins"
+   }
+  ],
+  "kind": "smollm2-schedule-confirmation-all",
+  "pass": true,
+  "schema_version": 1
+ },
+ "kind": "smollm2-k-tail-tuning-summary",
+ "replay_history_valid": {
+  "attention_qk_decode": true,
+  "attention_qk_prefill": true,
+  "decode_qkv": true,
+  "lm_head_shard0": true,
+  "prefill_down": true,
+  "prefill_gate_up": true,
+  "prefill_qkv": true
+ },
+ "replay_pass": true,
+ "schema_version": 1,
+ "totals": {
+  "default_winners": 7,
+  "prepared": 92,
+  "valid": 55
+ }
+}

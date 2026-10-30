@@ -1,0 +1,830 @@
+{
+ "base_package": {
+  "manifest_sha256": "b923fc5b427cc2ee6f0f88e7d096444a7ab44babdfbd79cc64fe07f5771548be",
+  "weights_sha256": "ff04cb6f25633772987ff8cfc66e65046004034e526cf1d6d6bb615333b945bf"
+ },
+ "kind": "smollm2-effective-execution-identity",
+ "numeric_mode": "rk_f16_tiled",
+ "overrides": {
+  "layer.0.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.0.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.0.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.1.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.1.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.1.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.10.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.10.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.10.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.11.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.11.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.11.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.12.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.12.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.12.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.13.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.13.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.13.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.14.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.14.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.14.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.15.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.15.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.15.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.16.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.16.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.16.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.17.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.17.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.17.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.18.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.18.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.18.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.19.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.19.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.19.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.2.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.2.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.2.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.20.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.20.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.20.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.21.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.21.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.21.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.22.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.22.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.22.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.23.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.23.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.23.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.24.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.24.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.24.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.25.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.25.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.25.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.26.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.26.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.26.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.27.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.27.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.27.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.28.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.28.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.28.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.29.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.29.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.29.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.3.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.3.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.3.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.4.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.4.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.4.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.5.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.5.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.5.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.6.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.6.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.6.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.7.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.7.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.7.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.8.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.8.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.8.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "layer.9.down.prefill": {
+   "base_plan_hash": "774026f7c309f8547cd9fae56a14bc2078df2202ec819dd48787908795c5d495",
+   "cache_key": "2c6dd588f4e2058130042d6a8c35843f084cda06feb8a3dd264089f64058bbcf",
+   "plan_hash": "144025f2de95686ff39944b886bf8f4171947ab3dc2eb9b7d3245f73019cb6c7",
+   "plan_sha256": "5d6d580fed3cc5ccd746643b67f872ee2350e97ab608030f27ca3fd7e9a220be",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 30
+  },
+  "layer.9.gate_up.prefill": {
+   "base_plan_hash": "49733f6dabc2c09708d6066240f014435b9f80de9c7a17ddf9f4930de13963e0",
+   "cache_key": "35bd5ac0f710403c9554b1bb2bc8821d96a8e719d730f87ae542b4b06a1d7271",
+   "plan_hash": "286b930c536980ecf7e1c818cfdd0d28384ddcece5f51f39cf9c85bf886517d6",
+   "plan_sha256": "e34e9e1f888e3f732f38cf0f3be13ec7ccccf5362233b8a735891dcb16f97d5b",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 72
+  },
+  "layer.9.qkv.prefill": {
+   "base_plan_hash": "4810f4cfe5a915895132e3a1c161a9ce26cc02d50425677c8a926a1508b9f348",
+   "cache_key": "8b0edcecf2061506cceac6cc31d268b9b6bd0509592211c7e471889fddc86f7f",
+   "plan_hash": "85faf5b956b98a2fd6d9e381c19dd01725e3e875e42d303e885532fa975ff425",
+   "plan_sha256": "f4a9c4b3ea858e6ee7f2edfdc5746b66f4bc2d7b33586d4bd4ef57ce1a16a9c1",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 24
+  },
+  "lm_head.prefill.00": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.01": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.02": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.03": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.04": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.05": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.06": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.07": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.08": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.09": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.10": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  },
+  "lm_head.prefill.11": {
+   "base_plan_hash": "f49e2db5cabd3e75e6a447fc378038c6af3f1f3c39e6911258309a56ce18bfc4",
+   "cache_key": "9baf37543e60169d883a602afb99b109f2358a0fc7ac7b135243651341fe35ab",
+   "plan_hash": "0eb9306fdfc8efc8778150eaea52217f24cdf4d7066e998fcf2d7320df93c808",
+   "plan_sha256": "d64f78d26ba553353839760388cd1a0d8063a63ee5cfaa87cf51d68c1e346d56",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 96
+  }
+ },
+ "plan_library_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+ "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+ "schedule_policy_sha256": "0afcbb1472ce4f80089ff4c16b614f2f8064d1509df19d2eac70c2f4c17ea502",
+ "schema_version": 1
+}

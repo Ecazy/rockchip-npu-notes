@@ -1,0 +1,18 @@
+{
+ "capture": "research/tilelang-rknpu/.data/evidence/smollm2-20261029T120416Z/calibration/board/run-00/captured-00.npz",
+ "capture_sha256": "37debf1064a43af485600b2d13b6981393e173060849a453224deef97a00f836",
+ "captured_prefill_rows": 45,
+ "decode_cases": {
+  "decode_qkv": 1
+ },
+ "kind": "smollm2-tuning-activation-padding",
+ "note": "Prefill rows [0:45] are real captured activations; rows [45:256] are zero padding matching the model prefill plan binding. Decode keeps the real M=1 binding.",
+ "prefill_bucket_rows": 256,
+ "prefill_cases": [
+  "prefill_qkv",
+  "prefill_gate_up",
+  "prefill_down",
+  "lm_head_shard0"
+ ],
+ "schema_version": 1
+}
