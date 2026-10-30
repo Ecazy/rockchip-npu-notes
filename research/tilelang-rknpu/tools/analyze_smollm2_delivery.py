@@ -236,7 +236,7 @@ def markdown(profile: dict, ab: dict) -> str:
         elif label == "logits concat":
             lines.append(f"| {label} | {b['top_level_ms_per_forward']['concat']:.3f} | {c['top_level_ms_per_forward']['concat']:.3f} |")
         elif label == "PlanCall wrapper total":
-            lines.append(f"| {label} | {b['plan_call_ms_per_forward']['c_runtime']:.3f} | {c['plan_call_ms_per_forward']['c_runtime']:.3f} |")
+            lines.append(f"| {label} | {b['plan_node_ms_per_forward']['call']:.3f} | {c['plan_node_ms_per_forward']['call']:.3f} |")
     lines += [
         "",
         "## Layer subdivision (candidate, ms/forward)",

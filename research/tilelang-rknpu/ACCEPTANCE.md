@@ -841,7 +841,7 @@ mask 1、FP16，交错运行 3 组 baseline/candidate，profiler 关闭。
 | runner embed | 125.407 ms/fwd | 0.172 ms/fwd |
 | 30 layers total | 436.013 ms/fwd | 411.954 ms/fwd |
 | lm_head plans | 55.701 ms/fwd | 55.877 ms/fwd |
-| PlanCall wrapper total | 327.085 ms/fwd | 332.750 ms/fwd |
+| PlanCall wrapper total | 378.103 ms/fwd | 387.364 ms/fwd |
 | C runtime reported total | 316.254 ms/fwd | 321.635 ms/fwd |
 | host actions（cross-cut） | 88.427 ms/fwd | 89.159 ms/fwd |
 | top-level measured residual | 0.137 ms/fwd | 0.121 ms/fwd |

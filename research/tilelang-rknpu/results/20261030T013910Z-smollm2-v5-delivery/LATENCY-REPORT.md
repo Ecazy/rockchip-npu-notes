@@ -13,7 +13,7 @@ All values are medians across independent 32-token generations. Per-forward valu
 | lm_head plans total | 55.701 | 55.877 |
 | logits concat | 0.272 | 0.305 |
 | top-level measured residual | 0.137 | 0.121 |
-| PlanCall wrapper total | 327.085 | 332.750 |
+| PlanCall wrapper total | 378.103 | 387.364 |
 | C runtime reported total | 316.254 | 321.635 |
 | Host actions (cross-cut) | 88.427 | 89.159 |
 

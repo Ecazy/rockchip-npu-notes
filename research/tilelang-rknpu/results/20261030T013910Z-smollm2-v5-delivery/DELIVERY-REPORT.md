@@ -68,7 +68,7 @@ median ms/forward。
 | lm_head plans total | 55.701 | 55.877 |
 | logits concat | 0.272 | 0.305 |
 | top-level measured residual | 0.137 | 0.121 |
-| PlanCall wrapper total | 327.085 | 332.750 |
+| PlanCall wrapper total | 378.103 | 387.364 |
 | C runtime reported total | 316.254 | 321.635 |
 | Host actions (cross-cut) | 88.427 | 89.159 |
 
@@ -78,7 +78,7 @@ swiglu `4.567`，layer residual `2.427` ms/fwd。
 
 PlanCall seam（candidate）：input preparation `32.779`，binding `6.127`，
 lock `1.349`，output preparation `2.317`，inner unattributed `5.906`，
-wrapper unattributed `9.381`，C runtime wrapper `332.750` ms/fwd。C runtime 内部
+wrapper unattributed `9.381`，PlanCall wrapper 总计 `387.364`，C runtime wrapper `332.750` ms/fwd。C runtime 内部
 命名区间中 submit wait `197.416`、guard `74.226`、pack `17.805`、download
 `13.619`、output sync `10.196`、validate `2.674` ms/fwd；C children 合计
 `317.968`，相对 C reported total 的残差为 `3.660` ms/fwd，Python/ctypes seam
