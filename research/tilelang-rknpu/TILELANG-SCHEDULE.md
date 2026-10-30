@@ -149,5 +149,12 @@ python3 tools/run_schedule_experiment.py compile \
 ./scripts/run-smollm2.sh schedule-bench /tmp/small-plans /tmp/small-board.json
 ```
 
-The delivered experiment and measurements are in
+The first milestone experiment and measurements are in
 `results/20261030T030803Z-tilelang-schedule/SCHEDULE-REPORT.md`.
+
+The K-tail round is in
+`results/20261030T083436Z-k-tail/K-TAIL-REPORT.md`: it adds explicit per-K
+FP16 rounding for K=576 tails, exact K=1536 blocks, strict rounding/schedule
+validation, and model-binding-compatible M/N candidates for QKV, gate/up,
+down and lm_head.  The board autotuner retained the default in all seven cases;
+the scheduled-source coverage is reported separately from performance.

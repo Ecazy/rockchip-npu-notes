@@ -22,6 +22,7 @@
 - M/N block 角色继续从 A/B/C 实际索引表达式推断，canonical 和 swapped grid 都通过；一维 extent-1 block 轴也允许带或不带 block 变量。
 - schedule 契约现在要求显式舍入字段；缺失、`fp32_final_narrowing`、单 K tile 标记配多 K 块都会拒绝。
 - 记录 logical K、`k_blocks` 起止/有效长度、tail 有效长度、物理 K padding、舍入点，以及 planner 每个任务的 `k0/kt/k_physical_extent/k_padding`。
+- 现有 sealed package 的 default plan 与当前代码生成的 default candidate 在 bindings、publish 矩形和 K task 几何上完全一致；plan hash 不同只因当前 planner 增加了 `k_physical_extent/k_padding/source_k_rounding` 元数据。证据：`evidence/default-relationship.json`。
 
 ## 2. K=576、K=1536 的真实 TileLang 源与识别结果
 
@@ -128,7 +129,7 @@ B tail: rows=33 cols=1 physical_rows=64 physical_cols=32 padding_state=zero
 - `tests/test_schedule_contract.py`：严格 schedule K 分区、scheduled default 与 legacy geometry 等价。
 - `tests/test_rounding_semantics.py`：per-K FP16 与最终一次 FP16 可区分。
 - host Python：474 collected，无失败，1 个 slow-test skip。
-- C：相关 32/32 ctest 通过（增加 K=576/1536 K-slice 覆盖）；`provider_context_test` 的编译目标因未修改的 NDEBUG/assert 配置不被本轮计入。
+- C：33/33 ctest 通过（Debug host build；增加 K=576/1536 K-slice 覆盖）。
 
 ## 5. 真实 projection 搜索覆盖与 winner
 
