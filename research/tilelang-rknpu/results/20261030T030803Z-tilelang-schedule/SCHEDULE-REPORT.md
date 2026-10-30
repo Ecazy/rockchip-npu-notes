@@ -1,3 +1,7 @@
+> IMPORTANT: Sections 1-7 below are historical exploration.  They predate the
+> explicit per-K rounding source and the confirmation gate.  The former 14.3%
+> QK claim is not a current result; see the authoritative section 8.
+
 # TileLang schedule experiment report
 
 Scope: verify that a user-visible TileLang M/N schedule changes the RKPlan, then
@@ -225,3 +229,126 @@ is `model-admission/verify.log` (source campaign:
 This regression exercises precompiled existing plans and therefore checks that
 the new schedule metadata/planner path did not disturb the legacy plan/runtime
 contract.
+
+
+## 8. Authoritative correction after source-semantics and confirmation audit
+
+### Source mapping
+
+The frontend now proves the M/N block-variable roles from the actual A/B/C index
+expressions.  Both the canonical 2-D grid (x=N, y=M) and the equivalent swapped
+grid (x=M, y=N) are accepted when the index map covers the output exactly once.
+A 2-D mapping that cannot be proven is rejected.  The launch-grid order is not
+presented as a hardware time order; planner order is an explicit policy.
+
+Tests:
+
+- canonical and swapped source mapping produce the same task/publish geometry;
+- source M/N tile extraction remains in source_mn_tiling;
+- explicit backend retile is reported through source_schedule/applied_schedule;
+- tests/test_frontend_mntile.py covers swapped axes, traversal order, and
+  unprovable mappings.
+
+### K rounding semantics
+
+The tiled fixture now performs an explicit FP16 accumulator round-trip inside
+every K block:
+
+    FP16 accumulator -> FP32 GEMM accumulator -> FP16 accumulator
+
+The frontend records source_k_rounding=explicit_per_k_fp16.  A source that keeps
+FP32 across K and narrows only at the final store is recorded as
+fp32_final_narrowing.  If such a legacy source also carries a schedule,
+planner rejects it with RK_E_NUMERIC_CONTRACT rather than silently applying the
+backend 256-wide FP16 contract.  Legacy sources without a schedule remain on
+the historical default path.
+
+The explicit source was recompiled and board-run:
+
+- M=512, K=512, N=384;
+- base 256x128: 12 tasks, 6 submits, 22 buffers, 12 BOs, 6 publishes, median 6.372 ms;
+- tile 128x128 m_major: 24/12/38/16/12, median 7.806 ms;
+- tile 128x128 n_major: same counts, different publish order/hash, median 8.180 ms;
+- all schedules bit-identical to one another, all pass the independent FP16
+  K-tiled reference (max abs 4.88e-4).
+
+The old rows in sections 1-2 that used full-source FP32-final narrowing for
+K>256 are historical target-policy experiments, not evidence of source
+rounding equivalence.
+
+### Tuning result and confirmation gate
+
+Current final tuner state (see tuning/board):
+
+- 7 real-activation cases: QKV, gate/up, down, decode QKV, lm-head shard,
+  attention QK prefill/decode;
+- 92 candidates, with 4 C-verifier per-slot rejections and scheduled
+  K=576/1536 legacy-source rejections recorded rather than executed;
+- every candidate record has bitwise_equal, numeric_pass and candidate_valid;
+  warmup and every timed execution are checked outside the timer;
+- final winner is the fixed default for every case;
+- attention QK prefill default median 2.217 ms; the closest candidate
+  m256_n128_n was 2.218 ms, effectively a tie;
+- because the autotuner retained default, independent A/B was explicitly
+  skipped (tune-confirm.json: skipped=default_wins), not falsely reported as a
+  gain;
+- the prior 14.3% observation is therefore not upgraded.
+
+Cache/replay:
+
+- policy.json contains shape, dtype, K contract, schedule, plan SHA, package
+  manifest/weights SHA, plan-library SHA, profile and cache key;
+- tune-replay.json is a fresh SSH process; all 7 default cases pass and
+  candidate_valid/numeric_pass are true; bitwise equality is reported
+  separately (false for most projection cases, true for decode QK);
+- negative tests reject empty/duplicate policy, changed plan/loaded hashes,
+  changed package/library/numeric identity, and unexpected overrides.
+
+### Override effective identity
+
+A manual legal schedule plan was used to exercise the override path (not as an
+autotuner winner): attn.qk.prefill m256_n128_n.
+
+The override policy includes:
+
+- base package manifest and weights identity;
+- logical plan key attn.qk.prefill;
+- base plan hash and selected plan hash/plan SHA;
+- replacement_kind=single_matmul_schedule_v1;
+- policy content SHA and selected-plan cache key.
+
+Runner compatibility checks binding roles/shapes/dtypes, constants, target
+profile, and single-matmul task family before loading.  The verifier accepts an
+expected execution identity and checks the board-recorded policy SHA, plan keys,
+plan hashes, loaded plan hashes, package/weights/library/profile/numeric mode.
+
+Manual override V5 result:
+
+- 56/56 gates, complete_acceptance=true, numeric_pass=true, quality_pass=true;
+- verify summary SHA-256 eec1e9f029bf0188674859919a2bffc1e743b06f44bdbc1023bdf8c0ed7eb766;
+- acceptance bundle SHA-256 c9888f668b4459642f95a4f90d7772c0308179a974ddfc8cbd505e81a4ec65cf;
+- manual override policy SHA-256 6ac67f80556467f83afe62d21d1328c6f5644a37ac7498cfc2f6bd4a6ef5ef10;
+- expected execution identity SHA-256 b9279b57caddb17970bc3964179a453904c2fdbb713c9c68ddc45d7d845e75ec.
+
+Final default V5 rerun:
+
+- 56/56 gates, complete_acceptance=true, numeric_pass=true, quality_pass=true;
+- verify summary SHA-256 33bbb85662578f20647016a3c8b8a468e9e29f559ce716d4e05c2e24a6b2e0fa;
+- acceptance bundle SHA-256 7587ca14e408d4711520d7aaefd4313450916ada72928cf3a293baf3ec15c812.
+
+### Regression and remaining boundary
+
+- full host: 454 collected, 453 passed, 1 skipped, 71 subtests;
+- C: 33/33 ctest passed;
+- MLP/TinyViT admission: PASS (model-admission/summary.json and verify.log);
+- no re-calibration and no V5 threshold changes were made.
+
+Still not supported:
+
+- K=576/1536 sources using only final FP32 narrowing cannot enter the scheduled
+  path; they remain legacy default-only until a tail-aware explicit-rounding
+  source is implemented;
+- multi-node/staged explicit scheduling, split-K, swizzle, async pipeline,
+  multi-core, device KV and RKNN comparison remain out of scope;
+- no end-to-end model speedup is claimed; the only current winner is the fixed
+  default.

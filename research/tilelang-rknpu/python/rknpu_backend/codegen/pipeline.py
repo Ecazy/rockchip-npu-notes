@@ -126,6 +126,7 @@ def source_identity(graph: Any, *, options: CompileOptions) -> dict[str, Any]:
         "source_k_loop": attrs.get("source_k_loop"),
         "source_mn_tiling": attrs.get("source_mn_tiling"),
         "source_schedule": attrs.get("source_schedule"),
+        "source_k_rounding": attrs.get("source_k_rounding"),
         "source_tail_contract": attrs.get("source_tail_contract"),
     }
 

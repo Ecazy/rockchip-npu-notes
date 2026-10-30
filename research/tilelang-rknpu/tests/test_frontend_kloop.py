@@ -168,7 +168,7 @@ class KLoopTests(unittest.TestCase):
 
     def test_tile_to_tile_copy_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_copy_from_shared(),
-                             RK_E_UNSUPPORTED, "parameter buffer")
+                             RK_E_UNSUPPORTED, "slice copies")
 
     def test_output_written_inside_loop_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_output_copy_inside_loop(),

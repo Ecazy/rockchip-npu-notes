@@ -1,0 +1,22 @@
+{
+ "base_package": {
+  "manifest_sha256": "b923fc5b427cc2ee6f0f88e7d096444a7ab44babdfbd79cc64fe07f5771548be",
+  "weights_sha256": "ff04cb6f25633772987ff8cfc66e65046004034e526cf1d6d6bb615333b945bf"
+ },
+ "kind": "smollm2-effective-execution-identity",
+ "numeric_mode": "rk_f16_tiled",
+ "overrides": {
+  "attn.qk.prefill": {
+   "base_plan_hash": "ddfb75b48302e5cd5dddb2e17b3df8337a93d2c07dd82886bf5029cfd1af9fd8",
+   "cache_key": "20d5d370685b935087e4d01ae79186cdd3483bea0645b9121bdd666b814e9524",
+   "plan_hash": "5dbe3447e5003d1b47fade90083e3518f2ad7d10bf4c0f9f35909612c165f826",
+   "plan_sha256": "21373a1a9ea210f6c236034f649de87026db1dda4dd8ec0afe88b79e19d11e39",
+   "replacement_kind": "single_matmul_schedule_v1",
+   "task_count": 6
+  }
+ },
+ "plan_library_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+ "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+ "schedule_policy_sha256": "6ac67f80556467f83afe62d21d1328c6f5644a37ac7498cfc2f6bd4a6ef5ef10",
+ "schema_version": 1
+}

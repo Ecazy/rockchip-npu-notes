@@ -4,9 +4,9 @@ from __future__ import annotations
 import unittest
 from dataclasses import replace
 
-from rknpu_backend import (CompileOptions, Module, Op, RK_E_UNSUPPORTED,
-                           TensorType, Value, compile_rkir, default_profile,
-                           matmul_module)
+from rknpu_backend import (CompileOptions, Module, Op, RK_E_NUMERIC_CONTRACT,
+                           RK_E_UNSUPPORTED, TensorType, Value, compile_rkir,
+                           compile_tilelang, default_profile, matmul_module)
 from rknpu_backend.errors import BackendError
 
 PROFILE = default_profile()
@@ -101,6 +101,27 @@ class ScheduleContractTests(unittest.TestCase):
         self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_UNSUPPORTED)
         self.assertIn("multi-node dataflow",
                       ctx.exception.diagnostics[0].message)
+
+    def test_scheduled_legacy_final_narrowing_source_is_rejected(self):
+        from models.tilelang_matmul import make_matmul_prim_scheduled
+        with self.assertRaises(BackendError) as ctx:
+            compile_tilelang(
+                make_matmul_prim_scheduled(64, 512, 64, tile_m=64, tile_n=64),
+                profile=PROFILE, options=OPTIONS)
+        self.assertEqual(ctx.exception.diagnostics[0].code,
+                         RK_E_NUMERIC_CONTRACT)
+        self.assertIn("K-rounding", ctx.exception.diagnostics[0].message)
+
+    def test_scheduled_explicit_k_rounding_source_is_accepted(self):
+        from models.tilelang_matmul import make_matmul_tiled_prim
+        result = compile_tilelang(
+            make_matmul_tiled_prim(128, 512, 128, bm=64, bn=64),
+            profile=PROFILE, options=OPTIONS)
+        first = next(a for a in result.plan.actions
+                     if a.template_id == "co.mm.f16.v1")
+        self.assertEqual(first.attrs["source_k_loop"]["source_rounding"],
+                         "explicit_per_k_fp16")
+        self.assertEqual(first.attrs["source_schedule"]["tile_m"], 64)
 
     def test_unsupported_order_is_rejected(self):
         module = matmul_module(m=64, k=256, n=64)

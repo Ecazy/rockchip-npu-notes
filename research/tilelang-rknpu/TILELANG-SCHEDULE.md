@@ -4,6 +4,28 @@ This milestone makes a **small, explicit scheduling surface** control the RK
 execution plan.  It is not a general autotuner and does not change the numeric
 contract.
 
+## Source mapping and rounding boundary
+
+TileLang's block grid is a launch structure; it does not by itself define a
+unique hardware time order.  The frontend proves the M/N block-variable roles
+from the actual A/B/C index expressions.  Both the canonical 2-D grid
+(x=N, y=M) and the equivalent swapped grid (x=M, y=N) are admitted when their
+index maps cover each output element exactly once.  A block-axis mapping that
+cannot be proved from the expressions is rejected.
+
+The backend schedule (rknpu.tile_m, rknpu.tile_n, rknpu.mn_order) is a separate
+policy layer.  If it differs from the source tile extents, the planner performs
+an explicit retile and records both source_mn_tiling and applied_schedule; this
+is not a silent overwrite.  The launch-grid order is never presented as a
+hardware execution order.
+
+K rounding is part of numerical semantics, not a tunable hint.  The admitted
+explicit source form performs FP16 accumulator -> FP32 GEMM -> FP16 accumulator
+inside every K block.  A scheduled source that only narrows once after a full
+FP32 K reduction is rejected with RK_E_NUMERIC_CONTRACT; legacy sources without
+an explicit schedule remain on the historical default path and report their
+rounding as fp32_final_narrowing/single_k_tile_fp16.
+
 ## Supported contract
 
 TileLang PrimFuncs may declare:
@@ -89,6 +111,9 @@ as a model gain.
   lowerer has a schedule-aware tiling proof.
 - K tile sizes or K accumulation order other than the fixed contract are
   rejected.
+- Sources with K>256 that narrow only at the final store are rejected when a
+  schedule is requested; the legacy default path remains available without a
+  schedule.  K=576/1536 exact-tail explicit sources are not implemented yet.
 - A general search/autotuner, core mask selection, and multi-request scheduling
   are not included.
 

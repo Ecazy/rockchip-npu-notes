@@ -2,7 +2,8 @@
  "kind": "smollm2-plan-overrides-v1",
  "overrides": {
   "attn.qk.prefill": {
-   "cache_key": "b2dd91169ef99a051bed38f5732bda1ed37b7d05adea45be90e8763da5e544e5",
+   "base_plan_hash": "ddfb75b48302e5cd5dddb2e17b3df8337a93d2c07dd82886bf5029cfd1af9fd8",
+   "cache_key": "20d5d370685b935087e4d01ae79186cdd3483bea0645b9121bdd666b814e9524",
    "plan": {
     "accounting": {
      "command_workspace_bytes": 16384,
@@ -666,7 +667,7 @@
     "constants": [],
     "kind": "rkplan",
     "name": "tilelang:matmul_tile",
-    "plan_hash": "f7e6197050d5edac300799cb620853a15a81abefc2bc8179490f31b254af72e3",
+    "plan_hash": "5dbe3447e5003d1b47fade90083e3518f2ad7d10bf4c0f9f35909612c165f826",
     "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
     "publish": [
      {
@@ -725,7 +726,7 @@
      }
     ],
     "schema_version": 2,
-    "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:ce4fd32db95c3c47, 0x0), 74, 74, 1, 1048576)",
+    "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:8e28056277864d55, 0x0), 86, 86, 1, 1048576)",
     "submits": [
      {
       "core_policy": "single_core_per_submit",
@@ -1032,12 +1033,12 @@
      }
     ]
    },
-   "plan_hash": "f7e6197050d5edac300799cb620853a15a81abefc2bc8179490f31b254af72e3",
-   "plan_sha256": "c3e1ec84a3e01da00cd51e3fefde0595898c6681eab3d7a03603497c3a6a406c",
+   "plan_hash": "5dbe3447e5003d1b47fade90083e3518f2ad7d10bf4c0f9f35909612c165f826",
+   "plan_sha256": "21373a1a9ea210f6c236034f649de87026db1dda4dd8ec0afe88b79e19d11e39",
+   "replacement_kind": "single_matmul_schedule_v1",
    "task_count": 6
   }
  },
- "policy_cache_key": "b2dd91169ef99a051bed38f5732bda1ed37b7d05adea45be90e8763da5e544e5",
  "schema_version": 1,
- "source": "autotuner:attention_qk_prefill:m256_n128_n"
+ "source": "manual:attention_qk_prefill:m256_n128_n"
 }

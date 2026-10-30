@@ -55,6 +55,8 @@ def process_info() -> dict:
 def environment(package: Path, lib) -> dict:
     compat = _read("/proc/device-tree/compatible")
     lib_path = os.environ.get("RKNPU_PLAN_LIB", "")
+    package_manifest = json.loads((package / "manifest.json").read_text())
+    compiler = package_manifest.get("compiler", {})
     return {
         "collected_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "board_model": _read("/proc/device-tree/model").replace("\x00", ""),
@@ -73,6 +75,8 @@ def environment(package: Path, lib) -> dict:
                            Path(lib_path).is_file() else "",
         "package_manifest_sha256": sha256(package / "manifest.json"),
         "package_weights_sha256": sha256(package / "weights.npz"),
+        "profile_hash": compiler.get("profile_hash"),
+        "numeric_mode": compiler.get("numeric_mode"),
     }
 
 
@@ -128,6 +132,12 @@ def main(argv=None) -> int:
             "kind": policy["kind"],
             "source": policy.get("source", ""),
             "override_keys": sorted(overrides),
+            "overrides": {
+                key: {k: value.get(k) for k in (
+                    "replacement_kind", "base_plan_hash", "plan_hash",
+                    "plan_sha256", "task_count", "cache_key")}
+                for key, value in overrides.items()
+            },
         }
     overall = {"kind": "smollm2-board-run", "fd_owned_by_runner": True,
                "request_sha256": request_sha256,
@@ -151,6 +161,10 @@ def main(argv=None) -> int:
         load_elapsed = (time.perf_counter() - load_t0) * 1e6
         overall["load_us"] = load_elapsed
         overall["loaded_plan_count"] = len(runner._calls)
+        if policy_identity is not None:
+            policy_identity["loaded_plan_hashes"] = dict(
+                runner.loaded_plan_override_hashes)
+            overall["schedule_policy"] = policy_identity
         overall["backend_options"] = {
             "share_constants": bool(runner.share_constants),
             "persistent_kv": bool(runner.persistent_kv),

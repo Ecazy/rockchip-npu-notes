@@ -583,6 +583,46 @@ def validate_generic_bundle(path: Path, role: str, root: Path, spec: dict,
     return result
 
 
+def check_execution_identity(expected: dict, env: dict, board_meta: dict) -> list[str]:
+    """Compare the expected effective execution identity with the board record."""
+    failures: list[str] = []
+    if expected.get("kind") != "smollm2-effective-execution-identity":
+        return ["execution_identity_kind"]
+    base = expected.get("base_package", {})
+    if base.get("manifest_sha256") != env.get("package_manifest_sha256"):
+        failures.append("execution_identity_package_manifest")
+    if base.get("weights_sha256") != env.get("package_weights_sha256"):
+        failures.append("execution_identity_package_weights")
+    if expected.get("profile_hash") != env.get("profile_hash"):
+        failures.append("execution_identity_profile")
+    if expected.get("numeric_mode") != env.get("numeric_mode"):
+        failures.append("execution_identity_numeric_mode")
+    if expected.get("plan_library_sha256") != env.get("plan_lib_sha256"):
+        failures.append("execution_identity_plan_library")
+    actual_policy = board_meta.get("schedule_policy") or {}
+    expected_overrides = expected.get("overrides") or {}
+    actual_overrides = actual_policy.get("overrides") or {}
+    if expected.get("schedule_policy_sha256") != actual_policy.get("sha256"):
+        failures.append("execution_identity_policy_hash")
+    if set(expected_overrides) != set(actual_overrides):
+        failures.append("execution_identity_override_keys")
+    for key in sorted(set(expected_overrides) & set(actual_overrides)):
+        want = expected_overrides[key]
+        have = actual_overrides[key]
+        for field in ("replacement_kind", "base_plan_hash", "plan_hash",
+                      "plan_sha256", "task_count", "cache_key"):
+            if want.get(field) != have.get(field):
+                failures.append(f"execution_identity_override_{key}_{field}")
+    expected_loaded = {key: value.get("plan_hash")
+                       for key, value in expected_overrides.items()}
+    actual_loaded = actual_policy.get("loaded_plan_hashes") or {}
+    if expected_loaded != actual_loaded:
+        failures.append("execution_identity_loaded_plan_hashes")
+    if not expected_overrides and actual_policy.get("override_keys"):
+        failures.append("execution_identity_unexpected_override")
+    return failures
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--spec", required=True)
@@ -609,6 +649,7 @@ def main(argv=None) -> int:
     ap.add_argument("--calibration-ppl-board", default="")
     ap.add_argument("--calibration-ppl-official", default="")
     ap.add_argument("--expected-spec-file-sha256", default="")
+    ap.add_argument("--expected-execution-identity", default="")
     ap.add_argument("--numeric-only", action="store_true")
     ap.add_argument("--out", required=True)
     args = ap.parse_args(argv)
@@ -653,6 +694,11 @@ def main(argv=None) -> int:
             failures.append("acceptance_request_vs_frozen_spec")
 
     env = board_meta.get("environment", {})
+    if args.expected_execution_identity:
+        expected_identity = json.loads(
+            Path(args.expected_execution_identity).read_text())
+        failures.extend(check_execution_identity(
+            expected_identity, env, board_meta))
     calib = spec.get("calibration", {})
     if env.get("package_manifest_sha256") != calib.get(
             "package_manifest_sha256"):

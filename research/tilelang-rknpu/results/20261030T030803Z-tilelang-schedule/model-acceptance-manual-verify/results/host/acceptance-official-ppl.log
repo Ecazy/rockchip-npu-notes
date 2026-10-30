@@ -1,0 +1,11 @@
++ /usr/bin/python3 /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/tools/smollm2_official.py --mode score --model-dir /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/.data/models/SmolLM2-135M-Instruct --windows-json /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/smollm2_v5_ppl_acceptance_windows.json --out /home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/results/20261030T030803Z-tilelang-schedule/model-acceptance-manual/evidence/acceptance/ppl/official
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793345099.683767  288374 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+I0000 00:00:1793345099.705469  288374 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1793345100.286403  288374 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+{
+ "kind": "smollm2-official-reference",
+ "dtype": "float32"
+}

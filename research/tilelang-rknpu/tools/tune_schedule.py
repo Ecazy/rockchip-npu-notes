@@ -88,6 +88,18 @@ def base_candidates(m: int, kind: str) -> list[dict]:
          "order": "n_major"},
         {"name": "m256_n64_m", "tile_m": 256, "tile_n": 64,
          "order": "m_major"},
+        {"name": "m44_n192_m", "tile_m": 44, "tile_n": 192,
+         "order": "m_major"},
+        {"name": "m44_n192_n", "tile_m": 44, "tile_n": 192,
+         "order": "n_major"},
+        {"name": "m44_n96_m", "tile_m": 44, "tile_n": 96,
+         "order": "m_major"},
+        {"name": "m4_n192_m", "tile_m": 4, "tile_n": 192,
+         "order": "m_major"},
+        {"name": "m4_n192_n", "tile_m": 4, "tile_n": 192,
+         "order": "n_major"},
+        {"name": "m11_n192_m", "tile_m": 11, "tile_n": 192,
+         "order": "m_major"},
     ]
 
 
@@ -126,7 +138,8 @@ def prepare(args) -> int:
     from rknpu_backend import (CompileOptions, compile_tilelang, default_profile,
                                save_plan)
     from models.tilelang_matmul import (make_matmul_prim,
-                                         make_matmul_prim_scheduled)
+                                         make_matmul_prim_scheduled,
+                                         make_matmul_tiled_prim)
     out = Path(args.out).resolve()
     plans_root = out / "plans"
     plans_root.mkdir(parents=True, exist_ok=True)
@@ -220,42 +233,63 @@ def prepare(args) -> int:
         prepared = []
         for spec in candidates:
             name = spec["name"]
-            if spec.get("default"):
-                prim = make_matmul_prim(case["m"], case["k"], case["n"])
-            else:
-                prim = make_matmul_prim_scheduled(
-                    case["m"], case["k"], case["n"],
-                    tile_m=spec["tile_m"], tile_n=spec["tile_n"],
-                    order=spec["order"])
-            result = compile_tilelang(prim, profile=profile, options=options,
-                                      b_is_input=bool(case.get("b_is_input", False)))
-            plan = result.plan
-            plan_path = case_dir / f"{name}.rkplan.json"
-            save_plan(plan, str(plan_path))
-            first = next(a for a in plan.actions
-                         if a.template_id == "co.mm.f16.v1")
-            c_ok, c_error = c_plan_preflight(plan)
-            prepared.append({
-                "name": name,
-                "requested": spec,
-                "source": "default" if spec.get("default") else "tilelang",
-                "plan": f"{case['id']}/{plan_path.name}",
-                "plan_sha256": sha(plan_path),
-                "plan_hash": plan.plan_hash,
-                "source_schedule": first.attrs.get("source_schedule"),
-                "applied_schedule": first.attrs.get("applied_schedule"),
-                "task_count": plan.accounting.task_count,
-                "submit_count": plan.accounting.submit_count,
-                "buffer_count": len(plan.buffers),
-                "data_bo_count": plan.accounting.data_bo_count,
-                "publish_count": len(plan.publish),
-                "publish_order": [[p.dst_row, p.dst_col, p.rows, p.cols]
-                                  for p in plan.publish],
-                "controller_us": float(plan.accounting.compile_us)
-                if hasattr(plan.accounting, "compile_us") else None,
-                "c_verifier_pass": c_ok,
-                "c_verifier_error": c_error,
-            })
+            source_kind = "default"
+            try:
+                if spec.get("default"):
+                    prim = make_matmul_prim(case["m"], case["k"], case["n"])
+                elif (case["k"] % 256 == 0 and
+                      case["m"] % spec["tile_m"] == 0 and
+                      case["n"] % spec["tile_n"] == 0):
+                    prim = make_matmul_tiled_prim(
+                        case["m"], case["k"], case["n"],
+                        bm=spec["tile_m"], bn=spec["tile_n"],
+                        order=spec["order"])
+                    source_kind = "tiled_explicit_rounding"
+                else:
+                    prim = make_matmul_prim_scheduled(
+                        case["m"], case["k"], case["n"],
+                        tile_m=spec["tile_m"], tile_n=spec["tile_n"],
+                        order=spec["order"])
+                    source_kind = "single_tile_annotation"
+                result = compile_tilelang(
+                    prim, profile=profile, options=options,
+                    b_is_input=bool(case.get("b_is_input", False)))
+                plan = result.plan
+                plan_path = case_dir / f"{name}.rkplan.json"
+                save_plan(plan, str(plan_path))
+                first = next(a for a in plan.actions
+                             if a.template_id == "co.mm.f16.v1")
+                c_ok, c_error = c_plan_preflight(plan)
+                prepared.append({
+                    "name": name,
+                    "requested": spec,
+                    "source": source_kind,
+                    "plan": f"{case['id']}/{plan_path.name}",
+                    "plan_sha256": sha(plan_path),
+                    "plan_hash": plan.plan_hash,
+                    "source_schedule": first.attrs.get("source_schedule"),
+                    "applied_schedule": first.attrs.get("applied_schedule"),
+                    "task_count": plan.accounting.task_count,
+                    "submit_count": plan.accounting.submit_count,
+                    "buffer_count": len(plan.buffers),
+                    "data_bo_count": plan.accounting.data_bo_count,
+                    "publish_count": len(plan.publish),
+                    "publish_order": [[p.dst_row, p.dst_col, p.rows, p.cols]
+                                      for p in plan.publish],
+                    "controller_us": float(plan.accounting.compile_us)
+                    if hasattr(plan.accounting, "compile_us") else None,
+                    "c_verifier_pass": c_ok,
+                    "c_verifier_error": c_error,
+                })
+            except Exception as exc:
+                prepared.append({
+                    "name": name,
+                    "requested": spec,
+                    "source": source_kind,
+                    "rejected_reason": f"{type(exc).__name__}: {exc}",
+                    "c_verifier_pass": False,
+                    "c_verifier_error": None,
+                })
         manifest["cases"].append({**case, "candidates": prepared})
         print(f"case {case['id']:20s} m={case['m']:3d} k={case['k']:4d} "
               f"n={case['n']:4d} candidates={len(prepared)}", flush=True)
@@ -331,6 +365,20 @@ def cache_identity(case: dict, schedule: dict, plan_sha: str,
 def cache_key(identity: dict) -> str:
     return hashlib.sha256(json.dumps(
         identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def check_output(out: np.ndarray, ref: np.ndarray) -> dict:
+    """Validate shape/finite/tolerance and keep bitwise as a separate fact."""
+    shape_ok = tuple(out.shape) == tuple(ref.shape)
+    finite = bool(np.isfinite(out).all()) if shape_ok else False
+    bitwise = bool(np.array_equal(out, ref)) if shape_ok else False
+    numeric = bool(np.allclose(out, ref, atol=8e-3, rtol=8e-3))         if shape_ok and finite else False
+    max_abs = (float(np.max(np.abs(out.astype(np.float32) -
+                            ref.astype(np.float32))))
+               if shape_ok else None)
+    return {"shape_ok": shape_ok, "finite": finite,
+            "bitwise_equal": bitwise, "numeric_pass": numeric,
+            "max_abs": max_abs}
 
 
 def run_case_candidates(args) -> tuple[dict, dict]:
@@ -424,23 +472,39 @@ def run_case_candidates(args) -> tuple[dict, dict]:
                                 raise RuntimeError(
                                     f"unexpected input binding {spec.name!r}")
                         o_bind = make_binding(out_spec.id, out)
+                        ref = np.asarray(expected, dtype=np.float16)
+                        warmup_checks = []
+                        warmup_valid = True
                         for _ in range(args.warmup):
                             out.fill(0)
                             ws.run(input_binds, [o_bind])
+                            check = check_output(out, ref)
+                            warmup_checks.append(check)
+                            warmup_valid = warmup_valid and check["numeric_pass"]
                         times = []
+                        timed_checks = []
+                        timed_valid = True
                         for _ in range(args.repeats):
                             out.fill(0)
                             t0 = time.perf_counter()
                             report = ws.run(input_binds, [o_bind])
                             times.append((time.perf_counter() - t0) * 1e6)
-                        ref = np.asarray(expected, dtype=np.float16)
+                            check = check_output(out, ref)
+                            timed_checks.append(check)
+                            timed_valid = timed_valid and check["numeric_pass"]
+                        candidate_valid = bool(warmup_valid and timed_valid)
                         rec.update({
-                            "correct": bool(np.array_equal(out, ref)),
-                            "correct_tolerance": bool(np.allclose(
-                                out, ref, atol=8e-3, rtol=8e-3)),
-                            "reference_max_abs": float(np.max(np.abs(
-                                out.astype(np.float32) -
-                                ref.astype(np.float32)))),
+                            "warmup_checks": warmup_checks,
+                            "timed_checks": timed_checks,
+                            "candidate_valid": candidate_valid,
+                            "bitwise_equal": bool(timed_checks[-1]["bitwise_equal"])
+                            if timed_checks else False,
+                            "numeric_pass": bool(timed_checks[-1]["numeric_pass"])
+                            if timed_checks else False,
+                            "finite": bool(timed_checks[-1]["finite"])
+                            if timed_checks else False,
+                            "reference_max_abs": (timed_checks[-1]["max_abs"]
+                                                  if timed_checks else None),
                             "output_sha256": sha_array(out),
                             "times_us": times,
                             "median_us": float(statistics.median(times)),
@@ -464,13 +528,15 @@ def run_case_candidates(args) -> tuple[dict, dict]:
                     rows.append(rec)
                     print(f"{case['id']} {candidate['name']} "
                           f"median={rec.get('median_us', 0)/1000:.3f}ms "
-                          f"correct={rec.get('correct')}", flush=True)
+                          f"numeric_pass={rec.get('numeric_pass')} "
+                          f"bitwise={rec.get('bitwise_equal')} "
+                          f"valid={rec.get('candidate_valid')}", flush=True)
                 candidate_rows.append({**{k: case[k] for k in
                                           ("id", "kind", "m", "k", "n")},
                                        "candidates": rows})
                 if fatal:
                     break
-                valid = [r for r in rows if r.get("correct_tolerance")
+                valid = [r for r in rows if r.get("candidate_valid")
                          and r.get("median_us") is not None]
                 if not valid:
                     raise RuntimeError(f"{case['id']}: no valid candidate")
@@ -555,6 +621,187 @@ def run(args) -> int:
     return 0
 
 
+def confirm(args) -> int:
+    """Independent interleaved baseline/winner confirmation."""
+    from rknpu_backend import load_plan
+    from rknpu_backend.runtime.ffi import (LibRKPlan, configure_rocket_abi,
+                                           make_binding)
+    plans_root = Path(args.plans).resolve()
+    package = Path(args.package).resolve()
+    manifest = json.loads((plans_root / 'manifest.json').read_text())
+    policy = json.loads((plans_root / 'policy.json').read_text())
+    case = next((c for c in manifest['cases'] if c['id'] == args.case), None)
+    if case is None:
+        raise SystemExit(f'unknown confirmation case {args.case!r}')
+    pcase = next((c for c in policy['cases'] if c['id'] == args.case), None)
+    if pcase is None:
+        raise SystemExit('policy lacks confirmation case')
+    default = next((c for c in case['candidates'] if c['name'] == 'default'),
+                   None)
+    if default is None or not default.get('c_verifier_pass'):
+        raise SystemExit('default candidate is unavailable')
+    if pcase['selected_candidate'] == 'default' and not args.candidate:
+        write_json(Path(args.out), {
+            'schema_version': 1,
+            'kind': 'smollm2-schedule-confirmation',
+            'case': args.case,
+            'pass': True,
+            'skipped': 'default_wins',
+            'reason': 'autotuner retained the fixed 256 default; no A/B',
+        })
+        print(json.dumps({'case': args.case, 'skipped': 'default_wins'},
+                         indent=1))
+        return 0
+    selected = pcase['selected_plan']
+    if args.candidate:
+        candidate = next((c for c in case['candidates']
+                          if c['name'] == args.candidate), None)
+        if candidate is None:
+            raise SystemExit(f'unknown candidate {args.candidate!r}')
+        selected = candidate['plan']
+    winner = next((c for c in case['candidates']
+                   if c['plan'] == selected), None)
+    if winner is None:
+        raise SystemExit('winner plan is missing from manifest')
+    package_manifest, weights = package_arrays(package)
+    package_manifest['_sha256'] = sha(package / 'manifest.json')
+    with np.load(plans_root / manifest['activation_file'],
+                 allow_pickle=False) as acts:
+        a, b = case_arrays(case, acts, weights)
+        expected = reference_mm_tiled(a, b)
+        expected = np.asarray(expected, dtype=np.float16)
+        if getattr(args, 'mock', False):
+            lib_path = os.environ.get('RKNPU_PLAN_MOCK_LIB', '')
+            if not lib_path:
+                raise SystemExit('RKNPU_PLAN_MOCK_LIB is required')
+            lib = LibRKPlan(lib_path)
+            fd = 0
+        else:
+            lib_path = os.environ.get('RKNPU_PLAN_LIB', '')
+            if not lib_path:
+                raise SystemExit('RKNPU_PLAN_LIB is required')
+            lib = LibRKPlan(lib_path)
+            configure_rocket_abi(lib.cdll)
+            fd = int(lib.cdll.rocket_open())
+            if fd < 0:
+                raise SystemExit(f'rocket_open failed: {fd}')
+        def execute(plan_info):
+            plan = load_plan(str(plans_root / plan_info['plan']))
+            cplan = lib.create_plan(plan)
+            try:
+                consts = list(plan.constants)
+                if case.get('b_is_input'):
+                    ws = lib.create_workspace(cplan, [], fd=fd)
+                else:
+                    ws = lib.create_workspace(
+                        cplan, [make_binding(consts[0].binding_id, b)], fd=fd)
+                try:
+                    in_specs = [x for x in plan.bindings if x.role == 'input']
+                    out_spec = next(x for x in plan.bindings if x.role == 'output')
+                    out = np.zeros(tuple(out_spec.shape), dtype=np.float16)
+                    binds = []
+                    for spec in in_specs:
+                        if spec.name == 'A':
+                            binds.append(make_binding(spec.id, a))
+                        elif spec.name == 'B' and case.get('b_is_input'):
+                            binds.append(make_binding(spec.id, b))
+                        else:
+                            raise SystemExit(f'unexpected input {spec.name!r}')
+                    t0 = time.perf_counter()
+                    report = ws.run(binds, [make_binding(out_spec.id, out)])
+                    elapsed = (time.perf_counter() - t0) * 1e6
+                    return elapsed, check_output(out, expected), report
+                finally:
+                    ws.destroy()
+            finally:
+                cplan.destroy()
+        rounds = []
+        default_times = []
+        winner_times = []
+        all_valid = True
+        try:
+            for index in range(args.rounds):
+                order = ((default, winner) if index % 2 == 0
+                         else (winner, default))
+                row = {'round': index, 'order': [x['name'] for x in order]}
+                for item in order:
+                    elapsed, check, report = execute(item)
+                    row[item['name']] = {'us': elapsed, 'check': check,
+                                         'task_count': report.task_count,
+                                         'submit_count': report.submit_count}
+                    if item is default:
+                        default_times.append(elapsed)
+                    else:
+                        winner_times.append(elapsed)
+                    all_valid = all_valid and check['numeric_pass']
+                rounds.append(row)
+        finally:
+            try:
+                lib.cdll.rocket_close(fd)
+            except Exception:
+                pass
+        def stats(values):
+            med = statistics.median(values)
+            return {'median_us': med, 'min_us': min(values),
+                    'max_us': max(values),
+                    'mean_us': statistics.mean(values),
+                    'mad_us': statistics.median([abs(x - med) for x in values])}
+        speedup = statistics.median(default_times) / statistics.median(winner_times)
+        confirmed = bool(all_valid and speedup > 1.0)
+        result = {
+            'schema_version': 1,
+            'kind': 'smollm2-schedule-confirmation',
+            'case': args.case,
+            'backend': 'mock' if getattr(args, 'mock', False) else 'board',
+            'rounds_requested': args.rounds,
+            'default': stats(default_times),
+            'winner': stats(winner_times),
+            'speedup': speedup,
+            'confirmed': confirmed,
+            'all_valid': all_valid,
+            'rounds': rounds,
+            'package_manifest_sha256': package_manifest['_sha256'],
+            'package_weights_sha256': package_manifest['weights']['file_sha256'],
+            'plan_lib_sha256': sha(Path(lib_path)),
+            'cache_key': pcase['cache_key'],
+        }
+        if not confirmed:
+            # The search winner did not survive the independent interleaved
+            # confirmation.  Retain the existing default policy rather than
+            # promoting a noisy candidate.
+            pcase['selected_plan'] = default['plan']
+            pcase['selected_plan_sha256'] = default['plan_sha256']
+            pcase['selected_plan_hash'] = default['plan_hash']
+            pcase['selected_candidate'] = 'default'
+            pcase['selected_source'] = 'default'
+            pcase['selected_schedule'] = default.get('applied_schedule')
+            pcase['selection_reason'] = 'independent_confirmation_rejected'
+            pcase['confirmed'] = False
+            pcase['confirmation_speedup'] = speedup
+            pcase['winner_median_us'] = default.get('median_us')
+            identity = cache_identity(
+                case, default.get('applied_schedule'), default['plan_sha256'],
+                package_manifest, sha(Path(lib_path)),
+                package_manifest['compiler']['profile_hash'])
+            pcase['identity'] = identity
+            pcase['cache_key'] = cache_key(identity)
+            write_json(plans_root / 'policy.json', policy)
+            summary = {
+                'kind': 'smollm2-schedule-policy-summary',
+                'cases': [{'id': c['id'], 'selected': c['selected_candidate'],
+                           'reason': c['selection_reason'],
+                           'winner_median_us': c.get('winner_median_us'),
+                           'cache_key': c['cache_key']}
+                          for c in policy['cases']],
+            }
+            write_json(plans_root / 'policy-summary.json', summary)
+            result['policy_updated_to_default'] = True
+    write_json(Path(args.out), result)
+    print(json.dumps({k: result[k] for k in ('case', 'speedup', 'all_valid')},
+                     indent=1))
+    return 0 if all_valid else 1
+
+
 def replay(args) -> int:
     from rknpu_backend import load_plan
     from rknpu_backend.runtime.ffi import (LibRKPlan, configure_rocket_abi,
@@ -562,6 +809,11 @@ def replay(args) -> int:
     plans_root = Path(args.plans).resolve()
     package = Path(args.package).resolve()
     policy = json.loads((plans_root / "policy.json").read_text())
+    if not isinstance(policy.get("cases"), list) or not policy["cases"]:
+        raise SystemExit("empty policy is not a valid replay identity")
+    case_ids = [c.get("id") for c in policy["cases"]]
+    if len(case_ids) != len(set(case_ids)):
+        raise SystemExit("duplicate case id in policy")
     package_manifest, weights = package_arrays(package)
     package_manifest["_sha256"] = sha(package / "manifest.json")
     if getattr(args, "mock", False):
@@ -588,6 +840,8 @@ def replay(args) -> int:
     rows = []
     try:
         for pc in policy["cases"]:
+            if pc["id"] not in by_id:
+                raise SystemExit(f"policy names unknown case {pc['id']!r}")
             case = by_id[pc["id"]]
             a, b = case_arrays(case, activations, weights)
             expected = reference_mm_tiled(a, b)
@@ -625,25 +879,28 @@ def replay(args) -> int:
                         else:
                             raise SystemExit(
                                 f"{pc['id']}: unexpected input {spec.name!r}")
+                    ref = np.asarray(expected, dtype=np.float16)
                     times = []
+                    checks = []
                     for _ in range(args.repeats):
                         out.fill(0)
                         t0 = time.perf_counter()
                         report = ws.run(input_binds,
                                         [make_binding(out_spec.id, out)])
                         times.append((time.perf_counter() - t0) * 1e6)
-                    ref = np.asarray(expected, dtype=np.float16)
+                        checks.append(check_output(out, ref))
+                    valid = all(c["numeric_pass"] for c in checks)
                     rows.append({
                         "id": pc["id"], "candidate": pc["selected_candidate"],
                         "cache_key": pc["cache_key"],
                         "plan_hash": plan.plan_hash,
                         "times_us": times,
                         "median_us": float(statistics.median(times)),
-                        "correct": bool(np.array_equal(out, ref)),
-                        "correct_tolerance": bool(np.allclose(
-                            out, ref, atol=8e-3, rtol=8e-3)),
-                        "reference_max_abs": float(np.max(np.abs(
-                            out.astype(np.float32) - ref.astype(np.float32)))),
+                        "checks": checks,
+                        "bitwise_equal": bool(checks[-1]["bitwise_equal"]),
+                        "numeric_pass": bool(checks[-1]["numeric_pass"]),
+                        "candidate_valid": valid,
+                        "reference_max_abs": checks[-1]["max_abs"],
                         "task_count": report.task_count,
                         "submit_count": report.submit_count,
                     })
@@ -660,7 +917,7 @@ def replay(args) -> int:
     result = {
         "schema_version": 1,
         "kind": "smollm2-schedule-replay",
-        "pass": all(r["correct_tolerance"] for r in rows),
+        "pass": bool(rows) and all(r["candidate_valid"] for r in rows),
         "package_manifest_sha256": package_manifest["_sha256"],
         "package_weights_sha256": package_manifest["weights"]["file_sha256"],
         "plan_lib_sha256": lib_sha,
@@ -693,6 +950,15 @@ def main(argv=None) -> int:
     p.add_argument("--mock", action="store_true")
     p.add_argument("--out", required=True)
     p.set_defaults(func=replay)
+    p = sub.add_parser("confirm")
+    p.add_argument("--plans", required=True)
+    p.add_argument("--package", required=True)
+    p.add_argument("--case", default="attention_qk_prefill")
+    p.add_argument("--candidate", default="")
+    p.add_argument("--rounds", type=int, default=5)
+    p.add_argument("--mock", action="store_true")
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=confirm)
     args = ap.parse_args(argv)
     return args.func(args)
 

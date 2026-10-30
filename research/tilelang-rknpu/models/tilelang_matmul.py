@@ -36,6 +36,11 @@ def make_matmul_tiled_prim(m: int, k: int, n: int, *, bm: int, bn: int,
     are real TileLang schedule choices.  The frontend proves exact coverage and
     carries the chosen M/N tile plus order into RKIR.
     """
+    if k % bk != 0:
+        raise ValueError("explicit K-rounding fixture requires K % BK == 0")
+    if m % bm != 0 or n % bn != 0:
+        raise ValueError("fixture requires exact M/N block coverage")
+
     @T.prim_func
     def matmul_tiled(
         A: T.Tensor((m, k), "float16"),
@@ -45,18 +50,25 @@ def make_matmul_tiled_prim(m: int, k: int, n: int, *, bm: int, bn: int,
         T.func_attr({
             "rknpu.schedule": "mn_tiles_v1",
             "rknpu.mn_order": order,
+            "rknpu.source_k_rounding": "explicit_per_k_fp16",
         })
         with T.Kernel(T.ceildiv(n, bn), T.ceildiv(m, bm),
                       threads=128) as (bx, by):
             As = T.alloc_shared((bm, bk), "float16")
             Bs = T.alloc_shared((bk, bn), "float16")
             Cl = T.alloc_fragment((bm, bn), "float32")
-            T.clear(Cl)
+            Acc16 = T.alloc_fragment((bm, bn), "float16")
+            T.clear(Acc16)
             for ko in T.Pipelined(T.ceildiv(k, bk), num_stages=2):
                 T.copy(A[by * bm, ko * bk], As)
                 T.copy(B[ko * bk, bx * bn], Bs)
+                # Explicit source-level rounding point: the running FP16
+                # accumulator is loaded into the FP32 GEMM accumulator, then
+                # narrowed back to FP16 at the end of every K block.
+                T.copy(Acc16, Cl)
                 T.gemm(As, Bs, Cl)
-            T.copy(Cl, Y[by * bm, bx * bn])
+                T.copy(Cl, Acc16)
+            T.copy(Acc16, Y[by * bm, bx * bn])
 
     return matmul_tiled
 

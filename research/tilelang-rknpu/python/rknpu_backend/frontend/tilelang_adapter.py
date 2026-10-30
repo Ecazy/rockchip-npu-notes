@@ -3269,6 +3269,8 @@ class _KBlock:
     grid_y: int = 1
     block_var_x: Any = None
     block_var_y: Any = None
+    explicit_fp16_rounding: bool = False
+    source_rounding: str = "fp32_final_narrowing"
 
 
 def _require_constant(region: _Region, label: str, span: str) -> tuple[int, int]:
@@ -3915,10 +3917,27 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
             reject(RK_E_UNSUPPORTED,
                    "accumulator must be copied to the output after the K loop, "
                    "not inside it", stage="frontend", source=span)
-    if len(copies_in) != 2:
+    slice_copies: list[_Item] = []
+    roundtrip_copies: list[_Item] = []
+    for item in copies_in:
+        src = _region(item.node.args[0], tirx, "copy source", expect_mask=1)
+        dst = _region(item.node.args[1], tirx, "copy dst", expect_mask=2)
+        if _param_of(src.buffer, params) is not None:
+            slice_copies.append(item)
+        elif _param_of(dst.buffer, params) is None:
+            roundtrip_copies.append(item)
+        else:
+            reject(RK_E_UNSUPPORTED,
+                   "unsupported K-loop copy involving a parameter destination",
+                   stage="frontend", source=span)
+    if len(slice_copies) != 2:
         reject(RK_E_UNSUPPORTED,
                "K loop must contain exactly two slice copies (A and B), found "
-               f"{len(copies_in)}", stage="frontend", source=span)
+               f"{len(slice_copies)}", stage="frontend", source=span)
+    if len(roundtrip_copies) not in (0, 2):
+        reject(RK_E_UNSUPPORTED,
+               "K loop may contain zero or two explicit FP16 round-trip copies, "
+               f"found {len(roundtrip_copies)}", stage="frontend", source=span)
     if len(fills) != 1:
         reject(RK_E_NUMERIC_CONTRACT,
                "K-loop GEMM needs exactly one zero fill outside the loop",
@@ -3979,11 +3998,11 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
                alternative="rewrite the kernel with a 256-wide K block")
 
     # A copy: A[0, ko*BK] -> A_tile
-    a_copy = next((i for i in copies_in
+    a_copy = next((i for i in slice_copies
                    if _same_buffer(_region(i.node.args[1], tirx, "copy dst",
                                            expect_mask=2).buffer, a_reg.buffer)),
                   None)
-    b_copy = next((i for i in copies_in
+    b_copy = next((i for i in slice_copies
                    if _same_buffer(_region(i.node.args[1], tirx, "copy dst",
                                            expect_mask=2).buffer, b_reg.buffer)),
                   None)
@@ -4007,12 +4026,77 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
     c_copy = copies_out[0]
     c_src = _region(c_copy.node.args[0], tirx, "copy source", expect_mask=1)
     c_dst = _region(c_copy.node.args[1], tirx, "copy dst", expect_mask=2)
-    # Assign the block variables to the output axes.  A 2-D grid is (x=N, y=M) by
-    # TileLang convention; a 1-D grid may cover either axis, so infer it from how
-    # the single block variable indexes the output tile.
+    roundtrip_load = None
+    roundtrip_store = None
+    explicit_fp16_rounding = bool(roundtrip_copies)
+    if explicit_fp16_rounding:
+        persistent = c_src.buffer
+        if str(getattr(persistent, "dtype", "")) != "float16":
+            reject(RK_E_NUMERIC_CONTRACT,
+                   "explicit K-rounding accumulator must be FP16",
+                   stage="frontend", source=span,
+                   actual=str(getattr(persistent, "dtype", "")))
+        for item in roundtrip_copies:
+            src = _region(item.node.args[0], tirx, "roundtrip source",
+                          expect_mask=1)
+            dst = _region(item.node.args[1], tirx, "roundtrip dst",
+                          expect_mask=2)
+            if _same_buffer(dst.buffer, c_reg.buffer) and \
+                    _same_buffer(src.buffer, persistent):
+                roundtrip_load = item
+            elif _same_buffer(src.buffer, c_reg.buffer) and \
+                    _same_buffer(dst.buffer, persistent):
+                roundtrip_store = item
+            else:
+                reject(RK_E_UNSUPPORTED,
+                       "explicit K-rounding copies must load FP16 accumulator "
+                       "into the GEMM accumulator and store it back",
+                       stage="frontend", source=span)
+        if roundtrip_load is None or roundtrip_store is None:
+            reject(RK_E_UNSUPPORTED,
+                   "explicit K-rounding requires one load and one store copy",
+                   stage="frontend", source=span)
+        if not (roundtrip_load.order < gemms[0].order <
+                roundtrip_store.order):
+            reject(RK_E_UNSUPPORTED,
+                   "explicit K-rounding load must precede the GEMM and the "
+                   "store must follow it", stage="frontend", source=span)
+    # Assign block variables from the proven A/B/C index expressions, not
+    # from TileLang's launch-axis spelling.  This admits both the canonical
+    # (x=N, y=M) grid and the equivalent swapped (x=M, y=N) source mapping.
+    def infer_two_axis_block_roles():
+        if len(block_loops) != 2:
+            return None
+        m_candidates = []
+        n_candidates = []
+        for index, block in enumerate(block_loops):
+            var = block.loop_var
+            local = {f"b{index}": var}
+            def coeff(expr):
+                parsed = _affine_expr(expr, tirx, local)
+                return 0 if parsed is None else parsed[0].get(f"b{index}", 0)
+            a_row = coeff(_region(a_copy.node.args[0], tirx,
+                                  "A copy source", expect_mask=1).raw_indices[0])
+            b_col = coeff(_region(b_copy.node.args[0], tirx,
+                                  "B copy source", expect_mask=1).raw_indices[1])
+            c_row = coeff(c_dst.raw_indices[0])
+            c_col = coeff(c_dst.raw_indices[1])
+            if a_row == gm and c_row == gm:
+                m_candidates.append((index, var))
+            if b_col == gn and c_col == gn:
+                n_candidates.append((index, var))
+        if len(m_candidates) != 1 or len(n_candidates) != 1 or \
+                m_candidates[0][0] == n_candidates[0][0]:
+            reject(RK_E_UNSUPPORTED,
+                   "cannot prove the 2-D block-axis to M/N mapping from the "
+                   "actual A/B/C index expressions", stage="frontend",
+                   source=span, actual={"M": [x[0] for x in m_candidates],
+                                        "N": [x[0] for x in n_candidates]})
+        mi, m_var = m_candidates[0]
+        ni, n_var = n_candidates[0]
+        return (grid_extents[ni], n_var, grid_extents[mi], m_var)
     if len(block_loops) == 2:
-        grid_x, block_var_x = grid_extents[0], block_loops[0].loop_var
-        grid_y, block_var_y = grid_extents[1], block_loops[1].loop_var
+        grid_x, block_var_x, grid_y, block_var_y = infer_two_axis_block_roles()
     elif len(block_loops) == 1 and grid_extents[0] > 1:
         single = block_loops[0]
         role = {"b0": single.loop_var}
@@ -4065,12 +4149,8 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
 
     c_src = _region(c_copy.node.args[0], tirx, "copy source", expect_mask=1)
     c_dst = _region(c_copy.node.args[1], tirx, "copy dst", expect_mask=2)
-    # Assign the block variables to the output axes.  A 2-D grid is (x=N, y=M) by
-    # TileLang convention; a 1-D grid may cover either axis, so infer it from how
-    # the single block variable indexes the output tile.
     if len(block_loops) == 2:
-        grid_x, block_var_x = grid_extents[0], block_loops[0].loop_var
-        grid_y, block_var_y = grid_extents[1], block_loops[1].loop_var
+        grid_x, block_var_x, grid_y, block_var_y = infer_two_axis_block_roles()
     elif len(block_loops) == 1 and grid_extents[0] > 1:
         single = block_loops[0]
         role = {"b0": single.loop_var}
@@ -4095,9 +4175,10 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
     _require_affine(c_dst, 1, tirx, roles,
                     {"bx": gn} if grid_x > 1 else {},
                     "output copy destination", span)
-    if not _same_buffer(c_src.buffer, c_reg.buffer):
+    persistent_acc = c_src.buffer
+    if not _same_buffer(c_src.buffer, persistent_acc):
         reject(RK_E_UNSUPPORTED,
-               "output copy must read the GEMM accumulator", stage="frontend",
+               "output copy must read the persistent accumulator", stage="frontend",
                source=span)
     if c_src.physical != (gm, gn) or c_dst.physical != (gm, gn) or \
             c_src.offset != (0, 0):
@@ -4113,10 +4194,10 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
     fill_item = fills[0]
     fill_reg = _region(fill_item.node.args[0], tirx, "fill", expect_mask=2)
     _require_constant(fill_reg, "accumulator fill", span)
-    if not _same_buffer(fill_reg.buffer, c_reg.buffer) or \
+    if not _same_buffer(fill_reg.buffer, persistent_acc) or \
             fill_reg.physical != (gm, gn) or fill_reg.offset != (0, 0):
         reject(RK_E_NUMERIC_CONTRACT,
-               "the fill must zero the whole accumulator outside the loop",
+               "the fill must zero the persistent accumulator outside the loop",
                stage="frontend", source=span)
     if _int_imm(fill_item.node.args[1]) != 0:
         reject(RK_E_NUMERIC_CONTRACT,
@@ -4164,7 +4245,11 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
                    a_copy=a_copy, b_copy=b_copy, gemm_item=gemms[0],
                    fill_item=fill_item, c_copy=c_copy, annotations=annotations,
                    grid_x=grid_x, grid_y=grid_y, block_var_x=block_var_x,
-                   block_var_y=block_var_y)
+                   block_var_y=block_var_y,
+                   explicit_fp16_rounding=explicit_fp16_rounding,
+                   source_rounding=("explicit_per_k_fp16"
+                                    if explicit_fp16_rounding
+                                    else "fp32_final_narrowing"))
 
 
 def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
@@ -4182,12 +4267,17 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
              "source_loop_span": str(getattr(block.loop_item.node, "span", "") or ""),
              "lowering_k_tile": 256,
              "pipeline_hint_dropped": bool(block.annotations),
-             "narrowing_base": "every 256 K elements"}
+             "source_rounding": block.source_rounding,
+             "narrowing_base": ("explicit FP16 after each K block"
+                                if block.explicit_fp16_rounding
+                                else "backend target policy: every 256 K elements")}
     mn_tiling = {"block_m": block.rows, "block_n": block.cols,
                  "grid_x": block.grid_x, "grid_y": block.grid_y,
                  "coverage": "exact_once"}
-    source_schedule = _source_schedule(
+    ann = _schedule_annotation(prim_func, span)
+    source_schedule = (_source_schedule(
         prim_func, tile_m=block.rows, tile_n=block.cols, span=span)
+        if (block.explicit_fp16_rounding or ann.present) else None)
     values = [
         _value(0, "A", TensorType("float16", (logical_m, logical_k)), None,
               "input"),
@@ -4197,10 +4287,14 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
     ]
     ops = [_op(0, "matmul", (0, 1), (2,),
               {"b_layout": "kn", "numeric_contract": contract.to_dict(),
-               "source_accumulator_dtype": "float32",
+               "source_accumulator_dtype": ("float16"
+                                            if block.explicit_fp16_rounding
+                                            else "float32"),
+               "source_k_rounding": block.source_rounding,
                "source_k_loop": hints,
                "source_mn_tiling": mn_tiling,
-               "source_schedule": source_schedule}, span)]
+               **({"source_schedule": source_schedule}
+                  if source_schedule is not None else {})}, span)]
     return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
                   ops=tuple(ops), inputs=(0,), outputs=(2,),
                   profile_hash=profile_hash, source_hash=span,
@@ -4557,6 +4651,8 @@ def extract(prim_func: Any, *, options: CompileOptions,
     matmul_attrs = {
         "b_layout": "kn", "numeric_contract": contract.to_dict(),
         "source_accumulator_dtype": "float32",
+        "source_k_rounding": ("single_k_tile_fp16" if gk <= 256
+                              else "fp32_final_narrowing"),
         "tile_m": gm, "tile_n": gn, "tile_k": gk,
     }
     if source_schedule is not None:

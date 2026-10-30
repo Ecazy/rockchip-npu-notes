@@ -24,8 +24,8 @@
    "data_bo_count": 12,
    "name": "base_256x128",
    "plan": "base_256x128.rkplan.json",
-   "plan_hash": "3662f2580758e8f830a129ea72ab2a028abc6c721be754d44cd5edcdb6a13ffc",
-   "plan_sha256": "c722be585a5579e7db1b7de081e8dbe04f8f2d6c31f719904232355ec584895e",
+   "plan_hash": "8ba77ecaab0435506c6d1d029a9a33bcbcd4f874cb43e7292d7fa8d11f4bb1ef",
+   "plan_sha256": "5a24ef58e50c77e048aac15e90dd35f2104650b6429c3f02578d64cba39ba5d7",
    "publish_count": 6,
    "publish_order": [
     [
@@ -73,14 +73,15 @@
    },
    "source_k_loop": {
     "lowering_k_tile": 256,
-    "narrowing_base": "every 256 K elements",
+    "narrowing_base": "explicit FP16 after each K block",
     "pipeline_hint_dropped": true,
     "source_k_block": 256,
     "source_k_trips": 2,
     "source_loop_annotations": {
      "num_stages": 2
     },
-    "source_loop_span": ""
+    "source_loop_span": "",
+    "source_rounding": "explicit_per_k_fp16"
    },
    "source_mn_tiling": {
     "block_m": 256,
@@ -113,8 +114,8 @@
    "data_bo_count": 16,
    "name": "tile_128x128",
    "plan": "tile_128x128.rkplan.json",
-   "plan_hash": "48a0e1f0c02afb8ba40f53d3ec1295971a1ce9345fe4ff631da6f07a92160a05",
-   "plan_sha256": "ac9596a4b324fb6d889a461f59e72e4997dbfcaa7c0fee64c7eb60562fc80dae",
+   "plan_hash": "8f5570b0984f2da2fb69d71d81bd85889136d390d4886cbd04522bb8c4a0f368",
+   "plan_sha256": "a96088154cc4eda8527f69d524b6aaf46c60e9498d087e7767a56f233f34f3ad",
    "publish_count": 12,
    "publish_order": [
     [
@@ -198,14 +199,15 @@
    },
    "source_k_loop": {
     "lowering_k_tile": 256,
-    "narrowing_base": "every 256 K elements",
+    "narrowing_base": "explicit FP16 after each K block",
     "pipeline_hint_dropped": true,
     "source_k_block": 256,
     "source_k_trips": 2,
     "source_loop_annotations": {
      "num_stages": 2
     },
-    "source_loop_span": ""
+    "source_loop_span": "",
+    "source_rounding": "explicit_per_k_fp16"
    },
    "source_mn_tiling": {
     "block_m": 128,
@@ -238,8 +240,8 @@
    "data_bo_count": 16,
    "name": "tile_128x128_nmajor",
    "plan": "tile_128x128_nmajor.rkplan.json",
-   "plan_hash": "f360bea8f36297bbd8fab0ad44457d6decb8c9a8735b67721380c0c056c732f5",
-   "plan_sha256": "8bbd3f6d47e9ab10cae60ffbedbb5691ed4137dd69fe5835e980746d2d7f1d5c",
+   "plan_hash": "b332f5269b84db91fb73397f9e063a0850b590490e6bef92facfe77a2ecba6d1",
+   "plan_sha256": "0dcbcbc3ee08cd0975e7364515ebddd28634ae7144aafd543fe96a2d34f76ea7",
    "publish_count": 12,
    "publish_order": [
     [
@@ -323,14 +325,15 @@
    },
    "source_k_loop": {
     "lowering_k_tile": 256,
-    "narrowing_base": "every 256 K elements",
+    "narrowing_base": "explicit FP16 after each K block",
     "pipeline_hint_dropped": true,
     "source_k_block": 256,
     "source_k_trips": 2,
     "source_loop_annotations": {
      "num_stages": 2
     },
-    "source_loop_span": ""
+    "source_loop_span": "",
+    "source_rounding": "explicit_per_k_fp16"
    },
    "source_mn_tiling": {
     "block_m": 128,

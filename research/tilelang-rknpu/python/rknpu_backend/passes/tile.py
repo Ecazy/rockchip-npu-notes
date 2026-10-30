@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..errors import RK_E_SHAPE, RK_E_UNSUPPORTED, reject
+from ..errors import RK_E_NUMERIC_CONTRACT, RK_E_SHAPE, RK_E_UNSUPPORTED, \
+    reject
 
 TILE_LIMIT = 256
 K_TILE = 256
@@ -96,6 +97,15 @@ def mn_schedule_from_attrs(attrs: dict, *, where: str = "matmul") -> MNTileSched
         reject(RK_E_UNSUPPORTED,
                "unsupported M/N traversal order", stage="schedule",
                actual=raw["order"], required=sorted(MN_TILE_ORDERS))
+    # A scheduled source must state rounding that is equivalent to the target
+    # per-K FP16 writeback.  A final-only FP32 narrowing is a different
+    # numerical program and must not silently inherit this schedule.
+    rounding = attrs.get("source_k_rounding")
+    if rounding not in {None, "explicit_per_k_fp16", "single_k_tile_fp16"}:
+        reject(RK_E_NUMERIC_CONTRACT,
+               "scheduled source has a different K-rounding contract",
+               stage="schedule", actual=rounding,
+               required=["explicit_per_k_fp16", "single_k_tile_fp16"])
     # A source K loop, if present, must agree with the fixed lowering contract.
     k_loop = attrs.get("source_k_loop")
     if k_loop is not None:

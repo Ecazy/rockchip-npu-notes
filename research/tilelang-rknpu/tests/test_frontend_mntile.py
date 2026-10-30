@@ -108,6 +108,26 @@ class MNTileTests(unittest.TestCase):
         self.assertEqual((large_sched["tile_m"], large_sched["tile_n"]),
                          (256, 128))
 
+    def test_swapped_block_axes_are_legalized_by_index_analysis(self):
+        canonical = self.compile(self.fixtures.mn_tiled(
+            bm=256, bn=128, order="m_major")).plan
+        swapped = self.compile(self.fixtures.mn_tiled_swapped(
+            bm=256, bn=128, order="m_major")).plan
+        self.assertEqual(canonical.accounting.task_count,
+                         swapped.accounting.task_count)
+        self.assertEqual(len(canonical.publish), len(swapped.publish))
+        self.assertEqual([(p.dst_row, p.dst_col, p.rows, p.cols)
+                          for p in canonical.publish],
+                         [(p.dst_row, p.dst_col, p.rows, p.cols)
+                          for p in swapped.publish])
+        cs = next(a for a in canonical.actions
+                  if a.template_id == "co.mm.f16.v1").attrs["source_mn_tiling"]
+        ss = next(a for a in swapped.actions
+                  if a.template_id == "co.mm.f16.v1").attrs["source_mn_tiling"]
+        self.assertEqual(cs, ss)
+        # Source identity may differ, but the physical task/publish geometry is
+        # identical after legalization.
+
     def test_traversal_order_changes_serialized_plan(self):
         row = self.compile(self.fixtures.mn_tiled(order="m_major")).plan
         col = self.compile(self.fixtures.mn_tiled(order="n_major")).plan
@@ -137,12 +157,12 @@ class MNTileTests(unittest.TestCase):
     def test_block_variable_must_match_the_operand_axis(self):
         self.assert_rejected(self.fixtures.bad_block_var_on_wrong_axis(),
                              RK_E_UNSUPPORTED,
-                             "does not match the supported tiling")
+                             "cannot prove")
 
     def test_output_tile_must_be_placed_by_the_grid_indices(self):
         self.assert_rejected(self.fixtures.bad_output_tile_swapped(),
                              RK_E_UNSUPPORTED,
-                             "does not match the supported tiling")
+                             "cannot prove")
 
     def test_three_dimensional_grid_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_three_dim_grid(),

@@ -23,17 +23,47 @@ def mn_tiled(m=512, n=384, k=512, bm=256, bn=128, bk=256, grid_y=None,
     def kernel(A: T.Tensor((m, k), "float16"), B: T.Tensor((k, n), "float16"),
                C: T.Tensor((m, n), "float16")):
         T.func_attr({"rknpu.schedule": "mn_tiles_v1",
-                     "rknpu.mn_order": order})
+                     "rknpu.mn_order": order,
+                     "rknpu.source_k_rounding": "explicit_per_k_fp16"})
         with T.Kernel(T.ceildiv(n, bn), gy, threads=128) as (bx, by):
             A_shared = T.alloc_shared((bm, bk), "float16")
             B_shared = T.alloc_shared((bk, bn), "float16")
             C_local = T.alloc_fragment((bm, bn), "float32")
-            T.clear(C_local)
+            C16 = T.alloc_fragment((bm, bn), "float16")
+            T.clear(C16)
             for ko in T.Pipelined(T.ceildiv(k, bk), num_stages=2):
                 T.copy(A[by * bm, ko * bk], A_shared)
                 T.copy(B[ko * bk, bx * bn], B_shared)
+                T.copy(C16, C_local)
                 T.gemm(A_shared, B_shared, C_local)
-            T.copy(C_local, C[by * bm, bx * bn])
+                T.copy(C_local, C16)
+            T.copy(C16, C[by * bm, bx * bn])
+    return kernel
+
+
+def mn_tiled_swapped(m=512, n=384, k=512, bm=256, bn=128, bk=256,
+                     order="m_major"):
+    """Equivalent GEMM with the two block-grid axes exchanged."""
+    @T.prim_func
+    def kernel(A: T.Tensor((m, k), "float16"), B: T.Tensor((k, n), "float16"),
+               C: T.Tensor((m, n), "float16")):
+        T.func_attr({"rknpu.schedule": "mn_tiles_v1",
+                     "rknpu.mn_order": order,
+                     "rknpu.source_k_rounding": "explicit_per_k_fp16"})
+        with T.Kernel(T.ceildiv(m, bm), T.ceildiv(n, bn),
+                      threads=128) as (bm_i, bn_i):
+            As = T.alloc_shared((bm, bk), "float16")
+            Bs = T.alloc_shared((bk, bn), "float16")
+            Cl = T.alloc_fragment((bm, bn), "float32")
+            C16 = T.alloc_fragment((bm, bn), "float16")
+            T.clear(C16)
+            for ko in T.Pipelined(T.ceildiv(k, bk), num_stages=2):
+                T.copy(A[bm_i * bm, ko * bk], As)
+                T.copy(B[ko * bk, bn_i * bn], Bs)
+                T.copy(C16, Cl)
+                T.gemm(As, Bs, Cl)
+                T.copy(Cl, C16)
+            T.copy(C16, C[bm_i * bm, bn_i * bn])
     return kernel
 
 

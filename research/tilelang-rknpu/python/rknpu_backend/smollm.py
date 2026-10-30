@@ -183,6 +183,7 @@ class SmolLM2Runner:
         self.profile = bool(profile)
         self.cache_host_weights = bool(cache_host_weights)
         self.plan_overrides = dict(plan_overrides or {})
+        self.loaded_plan_override_hashes: dict[str, str] = {}
         self._profile_us: dict[str, float] = {}
         self._profile_count: dict[str, int] = {}
         self._cached_embed: np.ndarray | None = None
@@ -339,6 +340,11 @@ class SmolLM2Runner:
                     reject(RK_E_INVALID,
                            f"schedule override for {key!r} must contain a plan",
                            stage="smollm")
+                if override.get("replacement_kind") !=                         "single_matmul_schedule_v1":
+                    reject(RK_E_UNSUPPORTED,
+                           "schedule override must declare the supported "
+                           "single-matmul replacement kind", stage="smollm",
+                           actual=override.get("replacement_kind"))
                 plan = Plan.from_dict(override["plan"])
                 expected_hash = override.get("plan_hash")
                 if expected_hash is not None and plan.plan_hash != expected_hash:
@@ -351,6 +357,39 @@ class SmolLM2Runner:
                     reject(RK_E_SCHEMA,
                            f"schedule override task count mismatch for {key!r}",
                            stage="smollm")
+                base_path = self.package_dir / info["path"]
+                base = Plan.from_dict(json.loads(base_path.read_text()))
+                if base.plan_hash != info["plan_hash"]:
+                    reject(RK_E_SCHEMA,
+                           f"package plan hash mismatch for override base {key!r}",
+                           stage="smollm")
+                if override.get("base_plan_hash") != base.plan_hash:
+                    reject(RK_E_SCHEMA,
+                           f"override base plan hash mismatch for {key!r}",
+                           stage="smollm")
+                def bind_sig(value):
+                    return tuple(sorted(
+                        (b.name, b.role, b.dtype, tuple(b.shape))
+                        for b in value.bindings))
+                def const_sig(value):
+                    return tuple(sorted(
+                        (c.name, c.dtype, tuple(c.shape), c.pack_key)
+                        for c in value.constants))
+                if bind_sig(base) != bind_sig(plan) or                         const_sig(base) != const_sig(plan):
+                    reject(RK_E_SCHEMA,
+                           f"override for {key!r} changes binding/constant "
+                           "roles or shapes", stage="smollm")
+                if base.profile_hash != plan.profile_hash:
+                    reject(RK_E_SCHEMA,
+                           f"override for {key!r} changes target profile",
+                           stage="smollm")
+                if any(a.kind == "npu_task" and a.template_id not in
+                       {"co.mm.f16.v1", "co.mm_acc.f16.v1"}
+                       for a in plan.actions):
+                    reject(RK_E_UNSUPPORTED,
+                           f"override for {key!r} is not a single-matmul "
+                           "schedule replacement", stage="smollm")
+                self.loaded_plan_override_hashes[key] = plan.plan_hash
             else:
                 path = self.package_dir / info["path"]
                 plan = Plan.from_dict(json.loads(path.read_text()))

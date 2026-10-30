@@ -375,7 +375,7 @@ def verifier_command(*, spec: Path, expected_spec_file_sha: str,
                      calibration_bundle: Path, acceptance_bundle: Path,
                      requests: Path, inputs_manifest: Path,
                      ppl_windows: Path, acceptance_prompt: str,
-                     out: Path) -> list[str]:
+                     out: Path, execution_identity: str = "") -> list[str]:
     inp = read_json(inputs_manifest)
     numeric_id = inp["numeric_acceptance_prompt_id"]
     first_cal_id = inp["calibration_prompts"][0]["id"]
@@ -394,6 +394,8 @@ def verifier_command(*, spec: Path, expected_spec_file_sha: str,
         "--acceptance-prompt", acceptance_prompt,
         "--acceptance-request", str(requests / "acceptance.json"),
         "--ppl-acceptance-request", str(requests / "ppl-acceptance.json"),
+        *(["--expected-execution-identity", str(execution_identity)]
+          if execution_identity else []),
         "--calibration-bundle", str(calibration_bundle),
         "--acceptance-bundle", str(acceptance_bundle),
         "--calibration-root", str(calibration_root),
@@ -460,7 +462,7 @@ def _acceptance_stage(*, spec: Path, inputs_manifest: Path, requests: Path,
                       model: Path, spec_hash: str,
                       calibration_root: Path, calibration_bundle: Path,
                       ppl_windows: Path, acceptance_prompt: str,
-                      reuse_board: bool) -> dict:
+                      reuse_board: bool, execution_identity: str = "") -> dict:
     acc = root / "acceptance"
     acc.mkdir(parents=True, exist_ok=True)
     if not reuse_board:
@@ -497,7 +499,7 @@ def _acceptance_stage(*, spec: Path, inputs_manifest: Path, requests: Path,
         acceptance_bundle=root / "acceptance-bundle.json",
         requests=requests, inputs_manifest=inputs_manifest,
         ppl_windows=ppl_windows, acceptance_prompt=acceptance_prompt,
-        out=out)
+        out=out, execution_identity=execution_identity)
     run(cmd, log_path=results / "host/replay-verify.log")
     ver = read_json(out)
     if ver.get("pass") is not True or ver.get("complete_acceptance") is not True:
@@ -533,7 +535,8 @@ def run_rerun_fixed(args) -> int:
         calibration_bundle=Path(args.calibration_bundle).resolve(),
         ppl_windows=Path(args.ppl_windows).resolve(),
         acceptance_prompt=args.acceptance_prompt,
-        reuse_board=args.reuse_board)
+        reuse_board=args.reuse_board,
+        execution_identity=args.execution_identity)
     summary = {
         "schema_version": 1,
         "kind": "smollm2-v5-fixed-acceptance-rerun",
@@ -703,6 +706,7 @@ def main(argv=None) -> int:
     p.add_argument("--ppl-windows", default=str(DEFAULT_PPL_WINDOWS))
     p.add_argument("--acceptance-prompt", default=DEFAULT_ACCEPTANCE_PROMPT)
     p.add_argument("--reuse-board", action="store_true")
+    p.add_argument("--execution-identity", default="")
     p.set_defaults(func=run_rerun_fixed)
 
     p = sub.add_parser("campaign")

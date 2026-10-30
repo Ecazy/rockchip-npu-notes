@@ -1,53 +1,53 @@
 {
  "cases": [
   {
-   "cache_key": "03fd268b5f3539b5c2db61256972a6bb5679c275b1a5422f122e303942f3b63b",
+   "cache_key": "14e655891f8fac47a80d8c3b1de181ce07ddba0200f231990e30e968aa43a8e1",
    "id": "prefill_qkv",
    "reason": "autotuner_measured_best",
    "selected": "default",
-   "winner_median_us": 1238.6930029606447
+   "winner_median_us": 1276.6059953719378
   },
   {
-   "cache_key": "bae5d8c63857ba21a6938e83e6f2797a638ffa07c6f079574e0a3af362bdf8a7",
+   "cache_key": "4d59c1d1d59f5a0d53c635d5cadec8179ac27593a2c2d270b497971665c53940",
    "id": "prefill_gate_up",
    "reason": "autotuner_measured_best",
    "selected": "default",
-   "winner_median_us": 3620.121002313681
+   "winner_median_us": 3828.943008556962
   },
   {
-   "cache_key": "1db15271ba0ca9cbe3f3563386d1f420adf2db9aab9f85c2f5882bdc281cee92",
+   "cache_key": "aa49561a9abdfc24352f018df450dd252b4ec2e7f2640a4958d92cc0c792f2e2",
    "id": "prefill_down",
    "reason": "autotuner_measured_best",
    "selected": "default",
-   "winner_median_us": 1721.6859996551648
+   "winner_median_us": 1729.558003717102
   },
   {
-   "cache_key": "9c145aa3268c5e5b3045fa1b3ed9fa104c1d90551b0f4b982de8f08ec021baea",
+   "cache_key": "215d6fdf103c211abcd8bde3b0112afd96b4e3e635fd0c1e290b7b6ad098ba3c",
    "id": "decode_qkv",
    "reason": "autotuner_measured_best",
    "selected": "default",
-   "winner_median_us": 811.9899866869673
+   "winner_median_us": 806.4470021054149
   },
   {
-   "cache_key": "89cd12812eddc498e1b27ce7762950a8dcd7701a84b71544cc84c4b32623ea4d",
+   "cache_key": "8505ff4cf2ce91863a822867774ecc4e091cccae491a15496aaae6d18a39265e",
    "id": "lm_head_shard0",
    "reason": "autotuner_measured_best",
    "selected": "default",
-   "winner_median_us": 5191.01700047031
+   "winner_median_us": 5047.800004831515
   },
   {
-   "cache_key": "b2dd91169ef99a051bed38f5732bda1ed37b7d05adea45be90e8763da5e544e5",
+   "cache_key": "b3f6efa9655901d3943f210e80d4b4ff90d358bb8882b384ed61e16560e615a6",
    "id": "attention_qk_prefill",
    "reason": "autotuner_measured_best",
-   "selected": "m256_n128_n",
-   "winner_median_us": 2079.848010907881
+   "selected": "default",
+   "winner_median_us": 2217.216999270022
   },
   {
-   "cache_key": "65dfa13e68ba103c6931a84f5f31ec3bf6e051a8f9c0257f4c99cd3fdf281577",
+   "cache_key": "678772581b3cc035a157c124fd3073bffbe8151129d952912975fb037220acfc",
    "id": "attention_qk_decode",
    "reason": "autotuner_measured_best",
    "selected": "default",
-   "winner_median_us": 215.8310089726001
+   "winner_median_us": 239.45501015987247
   }
  ],
  "kind": "smollm2-schedule-policy-summary"
