@@ -67,10 +67,25 @@ Execution boundary:
 
 Host-only tokenizer/reference versions are fixed in
 `requirements-smollm2.lock`. Fetch, compile and replay commands are in
-[REPLAY.md](../REPLAY.md).  The frozen
-numeric acceptance policy is `models/smollm2_numeric_acceptance.json`; its
-calibration and disjoint acceptance evidence is under
-`results/20261028T094650Z-smollm2/`.
+[REPLAY.md](../REPLAY.md).  The current frozen complete-acceptance policy is
+`models/smollm2_numeric_acceptance_v5.json` with canonical content SHA-256
+`1a8c68d2da51eb9bc6885a4d540950f74011e8bcbf150a5d975d75a7575f368b` and file
+SHA-256 `04c4011c7eb7daec4f4f607d65d234f8ec94ddba112a931fc2fd24056f70e38f`.
+Its 6-prompt calibration, sealed observation bundles and 8-prompt/1275-token
+disjoint acceptance are under `results/20261029T120416Z-smollm2-v5/`.
+Historical V1/V2 and demoted V3/V4 policies are archived under `models/specs/`
+and indexed by `models/specs/smollm2_policy_history.json`; no historical
+manifest should point at the mutable `models/smollm2_numeric_acceptance.json`
+path.
+
+Use `scripts/replay-smollm2-v5.sh reuse` for the sealed V5 observation,
+`rerun-fixed-acceptance` for a board acceptance rerun against the frozen V5
+spec/inputs, and `campaign` for the full prepare-inputs -> calibration ->
+seal -> freeze -> acceptance -> seal -> verify order.  The V5 spec's
+`policy_notes[0]` historical “three calibration prompts” text is a known
+metadata typo; the actual input and bundle contain 6 prompts, and the erratum
+is recorded without changing the frozen spec identity.  The corrected official
+generation tool now always passes an explicit all-ones attention mask.
 
 ## Graph-fusion variants (2026-10-28)
 

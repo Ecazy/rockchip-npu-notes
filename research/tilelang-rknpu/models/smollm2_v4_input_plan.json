@@ -1,0 +1,98 @@
+{
+ "schema_version": 1,
+ "kind": "smollm2-v4-acceptance-input-plan",
+ "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+ "revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+ "calibration_prompts": [
+  {
+   "id": "cal-1",
+   "text": "Explain in two sentences why water boils at a lower temperature at high altitude."
+  },
+  {
+   "id": "cal-2",
+   "text": "List three primary colors and give one object for each color."
+  },
+  {
+   "id": "cal-3",
+   "text": "Translate the phrase 'good morning' into French and use it in a short sentence."
+  },
+  {
+   "id": "cal-4",
+   "text": "What is the capital of Japan? Answer in one sentence."
+  },
+  {
+   "id": "cal-5",
+   "text": "Write a short Python function that returns the factorial of a non-negative integer."
+  },
+  {
+   "id": "cal-6",
+   "text": "Summarize the difference between evaporation and condensation in two sentences."
+  }
+ ],
+ "acceptance_prompts": [
+  {
+   "id": "acc-1",
+   "text": "Explain how a refrigerator keeps food cold in two sentences."
+  },
+  {
+   "id": "acc-2",
+   "text": "Write a short Python function that returns the sum of a list of integers."
+  },
+  {
+   "id": "acc-3",
+   "text": "Describe one difference between renewable and non-renewable energy."
+  },
+  {
+   "id": "acc-4",
+   "text": "Give one safety rule for cooking with hot oil."
+  },
+  {
+   "id": "acc-5",
+   "text": "Name two oceans and one animal that lives in each."
+  },
+  {
+   "id": "acc-6",
+   "text": "Rewrite the sentence 'The train arrives at six' in the future tense."
+  },
+  {
+   "id": "acc-7",
+   "text": "Explain why sleep is important in one sentence."
+  },
+  {
+   "id": "acc-8",
+   "text": "Provide a YAML document with keys city and country for a fictional place."
+  }
+ ],
+ "numeric_acceptance_prompt_id": "acc-2",
+ "calibration_text": {
+  "source": "RUNTIME-LIFECYCLE.md",
+  "window_size": 256,
+  "windows": 5
+ },
+ "acceptance_text": {
+  "source": "GRAPH-FUSION-REPORT.md",
+  "window_size": 256,
+  "windows": 5
+ },
+ "teacher_forcing_max_tokens": 32,
+ "incremental_continuation_tokens": 16,
+ "boundary_cases": {
+  "short_1": [
+   1
+  ],
+  "short_2": [
+   1,
+   4093
+  ],
+  "non_aligned_prompt": "Explain briefly why leaves change color in autumn.",
+  "capacity_prompt_tokens": 255,
+  "capacity_token_id": 9690
+ },
+ "policy": {
+  "numeric_formula": "ceil_2^-12(max(2*calibration_max_abs, 2*spacing_f16(ref_absmax))) for atol; analogous RMSE formula with 0.25*atol floor",
+  "quality_limits": "scored_tokens_min=1024; mean_nll_delta_max=max(0.02,2*|calibration delta|); ppl_ratio_max=max(1.02,1+2*|calibration ratio-1|); top1_accuracy_delta_min=min(-0.01, calibration delta-0.01)",
+  "free_generation": "reported per prompt; exact match is not a gate",
+  "shard_rank": "per-shard rank diagnostic only; full-vocab rank gated",
+  "independence": "No v4 calibration/acceptance prompt sequence or 256-token text window may reuse any v3 development input."
+ }
+}

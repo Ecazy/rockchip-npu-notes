@@ -484,6 +484,11 @@ and timed rather than hidden; it is not claimed to be pure NPU.
 <a id="smollm2-135m-instruct"></a>
 ## SmolLM2-135M-Instruct 完整推理验收（2026-10-28）
 
+> 历史 V2 记录：本节数字和 spec 指针属于 2026-10-28 的 V2 campaign。V2 spec
+> 已归档为 `models/specs/smollm2_v2_20261028T094650Z.json`，旧 manifest 的
+> spec 指针已加 correction 字段。当前可审计验收以
+> [2026-10-29 v5 验收](#smollm2-v5-acceptance) 为准。
+
 ### 结论与设备
 
 在 RK3588（Orange Pi 5 Plus，kernel
@@ -577,8 +582,10 @@ rank gate 不变，只把这两项改为诊断，原始 V1 观测保留在 evide
 - prompt 3 “In one sentence, explain why the sky appears blue.”：32/32 一致，
   首个分叉 None。
 Prompt 0 的实际文本为
-`Two and two is equal to four.<|im_end|>`；teacher forcing 对官方 continuation
-的 top1 为 31/32（首个分叉 index 6），作为质量差异报告而不作为后端数值 gate。
+`Two and two is equal to four.<|im_end|>`；这一历史 4-prompt 批次中，teacher
+forcing 对当时官方 continuation 的 top1 为 31/32（首个分叉 index 6），仅作为
+当时的质量差异报告，不作为后端数值 gate；V5 的对应记录是另一组 8-prompt
+批次，见下文。
 
 ### 性能与资源
 
@@ -625,3 +632,280 @@ chat template/tokenization、SSH、结果下载。未与 RKNN/RKLLM/CPU 做同�
 本验收只覆盖上述单板、单核、batch=1、FP16、固定 256-token profile 的
 SmolLM2 几何；不声明任意 LLM importer、动态 shape、设备驻 KV cache、量化、
 并发请求、多板、故障后恢复、RK1228 或性能优势。
+
+<a id="smollm2-v5-acceptance"></a>
+## SmolLM2-135M-Instruct 验收闭环修订与 v5 重新验收（2026-10-29）
+
+### 结论
+
+本轮不以新增功能为目标，完成的是验收闭环修复：修复 verifier 漏判、完整 gate
+集合/shape/有限性/输入身份/质量输入校验，新增负例测试，冻结 v5 政策与独立输入，
+重新执行当前实现的完整板端验收。最终结果：
+
+- **complete acceptance PASS**；
+- 56/56 gate 通过，`gate_failures=[]`、`failures=[]`、进程退出码 0；
+- 数值：44-token 全词表 logits vs declared reference top1 44/44；vs official FP32
+  top1 44/44；teacher-forcing **vs declared reference** 76/76。对归档官方
+  continuation 的质量诊断是 31/32、first divergence 0；该归档的 official
+  generation 口径问题见下方“生成分叉诊断”，不改写 V5 输入或门限；
+- incremental KV decode 与完整前缀重算 17/17 个 logits 位置逐元素完全相等；
+  其中 1 个位置来自初始 prefill 的最后一个 logits，另外 16 个来自 16 次
+  decode，不是“17 次 decode”；
+- 质量：验收文本 1275 scored tokens，backend mean NLL 4.78984792，official
+  4.78982925，PPL 120.2831 vs 120.2808；
+- 当前执行路径仍满足：batch=1、容量 256、真实全 30 层与完整 49152 词表、
+  所有目标矩阵经 TileLang→RKNPU、Host actions 显式且计量。
+
+### Verifier 修复
+
+`tools/verify_smollm2.py` 原先只把失败 gate 写入 `first_failed`，总 `pass` 未计入
+`gate_failures`。本轮修复后：
+
+- 任意 numeric/rank gate 失败都会使 `pass=false` 且 CLI 返回非零；
+- 预期 gate 集合与执行 gate 集合必须完全一致；缺失/额外 capture tensor 均失败；
+- observation/reference shape 必须完全相等，禁止 NumPy broadcast；
+- observation/reference/threshold/quality 全部要求有限值，NaN threshold 失败；
+- 正式 complete 模式强制要求 numeric + quality + sealed calibration/acceptance
+  observation bundles；`--numeric-only` 明确标记为不完整验收；
+- 核对 board/ref/official 的 token IDs、continuation、词表和窗口身份；
+- 质量对比逐窗口核对相同 token IDs、labels、scored token 数，而非只比汇总值；
+- summarizer 拒绝失败、缺项或非 complete 的 verifier JSON，并禁止用总计数除以
+  硬编码 96 推算 per-decode 指标。
+
+负例测试位于 `tests/test_verify_smollm2.py`，机器可读矩阵在
+`results/20261029T120416Z-smollm2-v5/verify/negative-matrix.json`，覆盖：
+
+| 负例 | 预期 | 实际 |
+|---|---|---|
+| `logits.full` atol/rmse=0 但 max_abs>0，top1 不变 | gate fail / exit≠0 | `gate_failures=["logits.full"]`, exit 1 |
+| top1 rank gate 失败但数值误差小 | gate fail / exit≠0 | exit 1 |
+| 缺失 capture gate | gate fail / exit≠0 | `capture_tensor_set` + gate fail |
+| shape 可广播但不相等 | shape_mismatch / exit≠0 | exit 1 |
+| observation 非有限 / reference 非有限 | nonfinite / exit≠0 | exit 1 |
+| NaN threshold | invalid spec / exit≠0 | exit 1 |
+| quality 缺失 | command rejected | exit 2 |
+| quality NLL 非有限 | quality fail / exit≠0 | exit 1 |
+| quality 窗口 token 不一致 | quality fail / exit≠0 | exit 1 |
+| quality scored-token 数不一致 | quality fail / exit≠0 | exit 1 |
+| input token / continuation 不一致 | identity fail / exit≠0 | exit 1 |
+| package manifest/weights 不一致 | identity fail / exit≠0 | exit 1 |
+| summarizer 收到失败 verifier | 拒绝汇总 | exit 1 |
+
+### 政策与输入身份
+
+| 项 | 值 |
+|---|---|
+| 当前 spec | `models/smollm2_numeric_acceptance_v5.json` |
+| canonical content SHA-256 | `1a8c68d2da51eb9bc6885a4d540950f74011e8bcbf150a5d975d75a7575f368b` |
+| file SHA-256 | `04c4011c7eb7daec4f4f607d65d234f8ec94ddba112a931fc2fd24056f70e38f` |
+| 输入 manifest | `models/smollm2_v5_inputs.json` |
+| 输入 manifest frozen SHA-256 | `8a7928796f49648db4bea24403bc8e348393da772f5c1a072ac533d59c5a9ed7` |
+| calibration prompts | 6 条独立 instruction prompts |
+| calibration text | `RUNTIME-LIFECYCLE.md`，5×256 tokens，1275 scored tokens |
+| acceptance prompts | 8 条 v5 新 instruction prompts |
+| acceptance text | `SUPPORT-DOMAIN.md`，5×256 tokens，1275 scored tokens |
+| numeric acceptance prompt | “Write a short Python function that returns the largest number in a list.” |
+| teacher forcing | 该 prompt + 32-token 归档 official greedy continuation，共 76 tokens；数值 gate 只对照 declared reference |
+| incremental continuation | 前 16 token；与 full-prefix teacher forcing 对照 1 个 prefill logits + 16 个 decode logits = 17 rows |
+| rank policy | 预声明固定 `top1>=0.95`、`top5 mean>=4.0` |
+| numeric threshold | calibration 6 prompts / 3 layers / 39 tensors / full+12 shard logits / 6 TF sequences |
+
+**V5 spec 元数据勘误（不改门槛、不改 spec 身份）**：冻结的 V5 spec
+`policy_notes[0]` 仍写有 “three calibration prompts”，这是冻结前遗留的文本，
+不是实际校准输入。实际校准为 6 条 prompt；`models/smollm2_v4_calibration_bundle.json`
+和 `models/smollm2_v5_inputs.json` 均记录 6 条，且 `calibration_metrics.*.calibration_sources`
+为 6。为保持 V5 spec canonical/file SHA-256 和全部已封存观测不变，本轮不编辑
+该历史 spec，只在 `results/20261030T013910Z-smollm2-v5-delivery/POLICY-NOTE-ERRATUM.json`
+记录勘误；`tools/freeze_smollm2_v3.py` 已改为从 `len(cal_prompts)` 生成该文本，
+避免未来新 spec 重复该错误。
+
+V1–V4 的处理：
+
+- V1 为历史政策重建：固定 verifier 下仍失败于 `logits.shard08` 内部近 tie；原始
+  V1 spec 文件未归档，故明确标为 reconstructed；
+- V2 为历史 V2 政策重放：固定 verifier + 归档 V2 spec + 原始观测下 PASS；
+- V3 与本轮当前实现的新输入的首次验收失败于 `layer.15.input_norm` 校准阈值，
+  已降级为 development；
+- V4 失败于 full-vocab/official top1 rate 0.9778 < 校准派生 0.99，已降级为
+  development；随后 v5 在输入观测前预声明固定 rank floor，而不是事后放宽旧阈值。
+
+历史/开发结果均保留在
+`results/20261029T120416Z-smollm2-v5/history/`；政策身份总表在
+`models/specs/smollm2_policy_history.json`。
+
+### v5 验收数值
+
+| 检查 | 观测 | 冻结门限 | 结果 |
+|---|---|---|---|
+| full logits vs declared reference | max_abs 0.1328125, RMSE 0.0243632, top1 44/44, top5 4.9773 | atol 0.359375, RMSE 0.08984375, top1≥0.95 | PASS |
+| full logits vs official FP32 | max_abs 0.0977511, RMSE 0.0206828, top1 44/44, top5 4.9773 | atol 0.2268066, RMSE 0.0625, top1≥0.95 | PASS |
+| teacher forcing vs declared reference | max_abs 0.1328125, RMSE 0.0234402, top1 76/76 | atol 0.3203125, RMSE 0.0800781 | PASS |
+| incremental vs full prefix | 17/17 个 logits 位置逐元素完全相等（1 个 prefill + 16 个 decode），max_abs=0, RMSE=0 | atol/RMSE 2^-12 | PASS |
+| layer 0/15/29 captures | 40 capture gates（39 layer tensors + final_norm）+ 12 shard gates | 6-prompt calibration frozen | PASS |
+| full vocabulary | 12×4096=49152 | exact shard positions + concat | PASS |
+| teacher forcing vs 归档 official continuation | top1 31/32，first divergence 0 | 仅历史质量诊断，不参与数值 gate；已定位到 official generation 的 mask/position bug | 报告 |
+| EOS / max_new / capacity | EOS 停止、max_new 停止、255 容量边界、257/255+2/empty 拒绝 | 见 board/acceptance | PASS |
+| reset 重放 | persistent-KV reset 再次请求稳定 | 见 tests + board | PASS |
+
+### 当前计划与资源
+
+| 项 | 当前实测/声明 |
+|---|---:|
+| 编译 RKPlan 数 | 268 |
+| 运行时加载 workspace 数 | 446 |
+| NPU tasks / submits | 5660 / 1712 |
+| plan-declared data BO | 7168 |
+| plan artifact 文本 | 7,821,599 B |
+| 部署 plan constants | 537,919,488 B |
+| Host 权重文件 | 269,077,440 B |
+| Host KV cache | 5,898,240 B |
+| 峰值 RSS | 1,233,324 kB |
+
+### 修正后的性能口径
+
+固定请求：v5 numeric acceptance prompt（44 token），3 次独立 `generate()`，
+每次 32 new tokens，core mask 1。
+
+| 指标 | 实测 |
+|---|---:|
+| Host 权重转换 + 268 plan 编译（外部 wall） | 4.900 s |
+| 进程内 package/446 workspaces 初始化 | 10.064 s |
+| 冷启动到首 token（init+reset+prefill+first sample） | 14.026 s |
+| TTFT（不含加载；reset+prefill+first sample） | 3.963–4.094 s，中位 4.013 s |
+| prefill 中位 | 4.006 s |
+| decode forward 中位 | 18.771 s / 31 forwards = 606 ms/forward |
+| decode forward rate 中位 | 1.651 forward/s |
+| 全 generate wall 中位 | 22.765 s |
+| 全 generate output rate 中位 | 1.406 token/s |
+| 输出 token / decode forward | 32 / 31（最后一次采样后无多余 forward） |
+| decode 每 forward upload / download | 3,207,168 B / 5,603,328 B |
+| decode 每 forward pack / submit wait | 7.67 ms / 163.90 ms |
+| 稳态 KV append | 180 次 stripe / token，23,040 B/token，7.66 ms/token |
+| NV init | 5,898,240 B / run，首次 decode 约 35.75 ms |
+| 峰值 RSS | 1,233,324 kB |
+
+说明：`decode_forwards=output_tokens-1` 是生成停止逻辑的显式断言；不再有最后
+一次采样后额外的 `decode_one()`。`decode_ms`、`prefill_ms`、`sampling_ms` 和
+`generate_wall_ms` 分别报告；per-forward 传输/pack/submit 由实际 stage delta
+除以实际 forward 数得到。总 aggregate 计数不再被硬编码 token 数除。
+
+### 质量
+
+| 项 | Backend | Official FP32 |
+|---|---:|---:|
+| v5 acceptance text, 1275 tokens, mean NLL | 4.78984792 | 4.78982925 |
+| v5 acceptance text PPL | 120.283075 | 120.280838 |
+| v5 acceptance text top1 | 0.27686275 | 0.27764706 |
+| calibration text, 1275 tokens, mean NLL | 4.31941969 | 4.31948853 |
+| calibration text PPL | 75.145008 | 75.150177 |
+
+8 条 v5 instruction prompts，greedy 32 token：**归档** official generation 的
+一致数分别为 32/32、3/32、1/32、0/32、12/32、32/32、21/32、1/32；首个分叉
+分别为 None、0、0、0、7、None、20、0。该结果保留为历史质量诊断，不作为
+后端数值 gate。
+
+### 生成分叉诊断（交付收口，不改变 V5 门槛）
+
+对 8 条 prompt 在首次分叉的相同前缀上重放 backend、declared reference 和
+official FP32 logits，8/8 的 top1 三者一致；记录 top1/top2 间隔和 top5
+candidate，未把任何差异自动称为 near-tie。
+
+进一步定位到归档 official generation 的参考工具缺陷：`model.generate()`
+未显式传入 attention mask，而 token id 2 同时是 chat 模板分隔符和 tokenizer
+pad id，transformers 把真实 prompt token 2 当成 padding，并据
+`cumsum(mask)-1` 重置 RoPE position。使用显式全 1 attention mask 修正后，
+8 条 prompt 的 corrected official generation 与 backend **256/256 token**
+一致（每条 32/32），同一前缀 top1 也一致。结论是：归档的 102/256 一致率是
+official generation 工具口径错误，不是 backend 矩阵实现偏差。修正后的
+official generation 仅保存在独立交付目录，不覆盖 V5 输入、门槛或封存观测。
+
+证据：
+
+- `results/20261030T013910Z-smollm2-v5-delivery/divergence/diagnostic.json`
+- `results/20261030T013910Z-smollm2-v5-delivery/divergence/DIVERGENCE-REPORT.md`
+- `results/20261030T013910Z-smollm2-v5-delivery/divergence-probe-request.json`
+- `tools/diagnose_smollm2_divergence.py`
+
+### Host 权重缓存优化与同口径 A/B（V5 后交付）
+
+候选优化只缓存不可变 package 的 FP16 embedding 表和 norm gamma，数值/布局/
+检查不变；逻辑新增常驻 `56,693,376 B`（embedding `56,623,104 B` + 61 个
+gamma `70,272 B`）。A/B 使用同一 request、同一 package、同一 board、core
+mask 1、FP16，交错运行 3 组 baseline/candidate，profiler 关闭。
+
+分层 profiler（31 个实际 decode forwards）：
+
+| 指标 | baseline | candidate |
+|---|---:|---:|
+| decode wall | 619.099 ms/fwd | 468.947 ms/fwd |
+| runner embed | 125.407 ms/fwd | 0.172 ms/fwd |
+| 30 layers total | 436.013 ms/fwd | 411.954 ms/fwd |
+| lm_head plans | 55.701 ms/fwd | 55.877 ms/fwd |
+| PlanCall wrapper total | 327.085 ms/fwd | 332.750 ms/fwd |
+| C runtime reported total | 316.254 ms/fwd | 321.635 ms/fwd |
+| host actions（cross-cut） | 88.427 ms/fwd | 89.159 ms/fwd |
+| top-level measured residual | 0.137 ms/fwd | 0.121 ms/fwd |
+
+最终无 profiler A/B：
+
+| 指标 | baseline | candidate |
+|---|---:|---:|
+| TTFT median | 3,870.855 ms | 3,865.049 ms |
+| generate wall median | 22,711.064 ms | 17,854.156 ms |
+| decode forward | 608.435 ms/fwd | 455.652 ms/fwd |
+| decode forward/s | 1.644 | 2.195 |
+| full-generate token/s | 1.409 | 1.792 |
+| peak RSS median | 1,237,348 kB | 1,243,836 kB |
+| final vmRSS median | 1,182,176 kB | 1,233,236 kB |
+
+generate-wall speedup `1.272x`，decode speedup `1.335x`。profiler 只用于解释
+开销；C runtime 子区间只作为 `PlanCall` 父区间的细分，不能重复相加。逐元素
+等价检查覆盖 44 个 arrays（capture 39 tensors + all-logits、TF logits、
+incremental logits 等）且 44/44 相等，同时 capture/TF/incremental 请求的
+token identity 一致。
+
+证据：
+
+- `results/20261030T013910Z-smollm2-v5-delivery/LATENCY-REPORT.md`
+- `results/20261030T013910Z-smollm2-v5-delivery/latency.json`
+- `results/20261030T013910Z-smollm2-v5-delivery/equivalence.json`
+- `results/20261030T013910Z-smollm2-v5-delivery/board-profile-baseline/`
+- `results/20261030T013910Z-smollm2-v5-delivery/board-profile-candidate/`
+- `results/20261030T013910Z-smollm2-v5-delivery/ab/pair{1,2,3}-{baseline,candidate}/`
+
+### 复验与回归
+
+- verifier 负例：`tests/test_verify_smollm2.py` 14/14 PASS；附加 `verify/negative-matrix.json` 15/15，基线 exit=0/pass=true，数值/rank/shape/identity/quality 负例 exit=1/pass=false，complete 缺 quality exit=2，summarizer 拒绝失败结果 exit=1；
+- 自动重放 `reuse`：从独立 spec hash 记录读取 V5 身份，complete PASS，gate 56/56，退出 0；
+- 固定 V5 验收重跑：candidate 默认 Host 缓存路径上板，`complete_acceptance=true`、56/56 gate、exit 0；`verify-summary.json` SHA-256 `2c4165d8c48f339bb2a715670eec34eedad745fba38967a2cb1ec8d8f2f0672e`，acceptance bundle SHA-256 `37160a1920c35e841b863370b84f3319c3d3ae1688dfef85a760a168ece22111`；
+- 重跑与归档 V5 board 数组逐元素比较：44/44 arrays 相等、19/19 generation request token lists 相等；PPL NLL 5/5 arrays 相等；
+- generation stop/count/timing：`tests/test_smollm2_generate_timing.py` 3/3 PASS；
+- host：432 tests collected，431 passed、1 skipped、71 subtests passed，退出 0；
+- 本轮新增针对性测试：Host 权重缓存/分层计时 4/4、首次分叉诊断 2/2、自动重放身份/请求顺序 3/3；
+- C：33/33 ctest PASS；
+- board 回归：既有 MLP b1/b8/b32 与 TinyViT b1/b8 各 8 图 smoke，
+  accuracy 1.0、top1 agreement 1.0。
+
+### 证据与重放
+
+- 汇总：`results/20261029T120416Z-smollm2-v5/manifest.json`
+- verifier：`results/20261029T120416Z-smollm2-v5/verify/verify-summary.json`
+- spec/policy/input/bundles：`results/20261029T120416Z-smollm2-v5/specs/`、
+  `models/smollm2_numeric_acceptance_v5.json`、`models/smollm2_v5_inputs.json`
+- 原始观测：`.data/evidence/smollm2-20261029T120416Z/`（149 MB 级大数组、
+  calibration/acceptance board、references、official logits、PPL）
+- 历史 V1/V2/V3/V4：`results/20261029T120416Z-smollm2-v5/history/`
+- 旧 V2 manifest 的 spec 指针已修正为归档 spec，并保存 original pointer、
+  original manifest SHA 和 correction 说明
+- 完整 replay：`REPLAY.md#smollm2-135m-instruct`；可执行入口
+  `scripts/replay-smollm2-v5.sh {reuse|rerun-fixed-acceptance|campaign}`
+- 交付收口与优化证据：`results/20261030T013910Z-smollm2-v5-delivery/`
+  （`DELIVERY-REPORT.md`、`DELIVERY-MANIFEST.json`、`LATENCY-REPORT.md`、
+  `divergence/`、`equivalence.json`、`acceptance-equivalence.json`）
+- 策略元数据勘误：`results/20261030T013910Z-smollm2-v5-delivery/POLICY-NOTE-ERRATUM.json`
+
+### 非声明
+
+只声明上述单板、单核、batch=1、FP16、容量 256 的固定 SmolLM2 几何。不声明
+任意 LLM importer、动态 shape、device-resident KV、量化、并发、多板、故障后恢复、
+RK1228 或性能优势。

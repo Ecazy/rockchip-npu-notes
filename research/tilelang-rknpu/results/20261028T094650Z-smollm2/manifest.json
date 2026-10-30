@@ -339,6 +339,7 @@
    ],
    "top1_equal_to_full_prefix": true
   },
+  "original_spec_pointer": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/smollm2_numeric_acceptance.json",
   "pass": true,
   "policy_notes": [
    "Full-vocabulary top-1/top-5 rank is gated; per-lm_head-shard rank is diagnostic only because a near-tie within one slice is not a vocabulary indexing or concatenation failure.",
@@ -358,7 +359,14 @@
    "ppl_ratio": 1.0000487688495678,
    "top1_accuracy_delta": 0.0
   },
-  "spec": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/smollm2_numeric_acceptance.json",
+  "spec": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/specs/smollm2_v2_20261028T094650Z.json",
+  "spec_canonical_content_sha256": "4692aab50f4de8e6a96b509c0e36d78d31cf472d7159dfa91e1864f5fb06df38",
+  "spec_file_sha256": "a27ca2d1649d45ff39f9d476114e05ce918ec409cddbde6e05e92ae7cfffa663",
+  "spec_pointer_correction": {
+   "original_manifest_sha256": "54a7408d02d24efea839bdd0104f1bed8930c4b3f5d17b94887b61b25ecf969f",
+   "original_spec_pointer": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/smollm2_numeric_acceptance.json",
+   "reason": "the original pointer named models/smollm2_numeric_acceptance.json, which was later revised; this manifest now names the archived V2 spec with the same canonical content hash recorded in its verifier output."
+  },
   "spec_sha256": "4692aab50f4de8e6a96b509c0e36d78d31cf472d7159dfa91e1864f5fb06df38",
   "teacher_forcing": {
    "first_divergence_index": 6,

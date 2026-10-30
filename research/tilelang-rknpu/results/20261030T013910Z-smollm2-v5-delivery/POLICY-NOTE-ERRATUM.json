@@ -1,0 +1,22 @@
+{
+ "action": "Documentation erratum only; no V5 threshold or evidence mutation.",
+ "actual_calibration_prompt_count": 6,
+ "actual_calibration_prompt_ids": [
+  "cal-1",
+  "cal-2",
+  "cal-3",
+  "cal-4",
+  "cal-5",
+  "cal-6"
+ ],
+ "calibration_bundle_sha256": "bebf9639bd8f11938e7ad066811465d5198b48d7e612681a1fe5dfafb06a0db3",
+ "frozen_policy_note": "Thresholds are frozen from three calibration prompts, ...",
+ "frozen_policy_note_field": "policy_notes[0]",
+ "incremental_note": "V5 incremental comparison has 17 logits positions: one initial-prefill final logits plus 16 decode steps; it is not 17 decode calls.",
+ "kind": "smollm2-policy-note-erratum",
+ "reason": "The policy_notes text was a pre-freeze metadata string. Editing it would change the frozen V5 spec identity and invalidate the sealed observation. The executable policy, thresholds and inputs are unchanged.",
+ "schema_version": 1,
+ "spec_canonical_content_sha256": "1a8c68d2da51eb9bc6885a4d540950f74011e8bcbf150a5d975d75a7575f368b",
+ "spec_file_sha256": "04c4011c7eb7daec4f4f607d65d234f8ec94ddba112a931fc2fd24056f70e38f",
+ "spec_path": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/models/smollm2_numeric_acceptance_v5.json"
+}

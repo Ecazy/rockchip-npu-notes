@@ -106,17 +106,20 @@ cmd_board_run() {
   [[ -f "$request" ]] || { echo "request JSON missing: $request" >&2; exit 2; }
   board_env
   trap board_cleanup EXIT
-  local remote stamp_request
+  local remote stamp_request remote_out
   remote=$(<"$REMOTE_STATE")
-  stamp_request="request-$(date -u +%Y%m%dT%H%M%SZ).json"
+  stamp_request="request-$(date -u +%Y%m%dT%H%M%SZ)-$$.json"
+  # A fresh remote output name is mandatory: reusing "out-board" would mix a
+  # later 5-window PPL run with the earlier 19-run acceptance board directory.
+  remote_out="out-${stamp_request%.json}-$(basename "$out")"
   # Trusted local A/B control only; values are expanded into the remote command.
   local runner_args=${RK_SMOLLM_RUNNER_ARGS:-}
   local remote_package=${RK_SMOLLM_REMOTE_PACKAGE:-package}
   "${SCP[@]}" "$request" "$TARGET:$remote/$stamp_request" >/dev/null
-  "${SSH[@]}" "cd '$remote' && export PYTHONPATH='$remote/tilelang-rknpu/python' && export RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' && export LD_LIBRARY_PATH='$remote/build' && export RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 tilelang-rknpu/tools/run_smollm2.py --package '$remote_package' --request '$stamp_request' --out out-$(basename "$out") $runner_args"
+  "${SSH[@]}" "cd '$remote' && export PYTHONPATH='$remote/tilelang-rknpu/python' && export RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' && export LD_LIBRARY_PATH='$remote/build' && export RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 tilelang-rknpu/tools/run_smollm2.py --package '$remote_package' --request '$stamp_request' --out '$remote_out' $runner_args"
   rm -rf "$out"
   mkdir -p "$out"
-  "${SCP[@]}" -r "$TARGET:$remote/out-$(basename "$out")/." "$out/" >/dev/null
+  "${SCP[@]}" -r "$TARGET:$remote/$remote_out/." "$out/" >/dev/null
 }
 
 cmd_chat() {

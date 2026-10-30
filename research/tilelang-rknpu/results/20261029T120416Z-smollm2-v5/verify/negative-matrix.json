@@ -1,0 +1,198 @@
+{
+ "all_ok": true,
+ "cases": [
+  {
+   "case": "baseline_numeric_only",
+   "complete_acceptance": false,
+   "exit_code": 0,
+   "expected_failure": false,
+   "failures": [],
+   "gate_failures": [],
+   "ok": true,
+   "overall_pass": true
+  },
+  {
+   "case": "numeric_error_top1_unchanged",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "numeric_gate_failures"
+   ],
+   "gate_failures": [
+    "logits.full",
+    "logits.shard00"
+   ],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "rank_gate_failure",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "numeric_gate_failures"
+   ],
+   "gate_failures": [
+    "logits.full",
+    "logits.shard00"
+   ],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "missing_capture_gate",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "capture_tensor_set",
+    "reference_capture_tensor_set",
+    "numeric_gate_failures"
+   ],
+   "gate_failures": [
+    "missing.tensor"
+   ],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "broadcastable_shape_mismatch",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "numeric_gate_failures"
+   ],
+   "gate_failures": [
+    "x"
+   ],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "nonfinite_observation",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "numeric_gate_failures"
+   ],
+   "gate_failures": [
+    "x"
+   ],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "nonfinite_reference",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "numeric_gate_failures"
+   ],
+   "gate_failures": [
+    "x"
+   ],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "nan_threshold",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "numeric_gate_failures"
+   ],
+   "gate_failures": [
+    "x"
+   ],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "package_identity_mismatch",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "package_manifest_identity"
+   ],
+   "gate_failures": [],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "input_token_mismatch",
+   "complete_acceptance": false,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "capture_token_ids_vs_reference"
+   ],
+   "gate_failures": [],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "complete_missing_quality",
+   "complete_acceptance": false,
+   "exit_code": 2,
+   "expected_failure": true,
+   "failures": [
+    "command_rejected"
+   ],
+   "gate_failures": [],
+   "ok": true,
+   "overall_pass": null
+  },
+  {
+   "case": "quality_nonfinite",
+   "complete_acceptance": true,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "quality_gate_failures"
+   ],
+   "gate_failures": [],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "quality_window_token_mismatch",
+   "complete_acceptance": true,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "quality_gate_failures"
+   ],
+   "gate_failures": [],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "quality_scored_token_count_mismatch",
+   "complete_acceptance": true,
+   "exit_code": 1,
+   "expected_failure": true,
+   "failures": [
+    "quality_gate_failures"
+   ],
+   "gate_failures": [],
+   "ok": true,
+   "overall_pass": false
+  },
+  {
+   "case": "summarizer_rejects_failed_verifier",
+   "exit_code": 1,
+   "failures": [
+    "verifier overall pass is false"
+   ],
+   "ok": true,
+   "overall_pass": null
+  }
+ ]
+}

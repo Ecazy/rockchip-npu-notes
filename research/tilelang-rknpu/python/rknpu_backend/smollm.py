@@ -122,6 +122,18 @@ class SmolLM2Config:
         }
 
 
+_STAGE_STAT_FIELDS = (
+    "upload_calls", "upload_bytes", "download_calls", "download_bytes",
+    "task_count", "submit_count", "plan_call_us", "plan_workspace_us",
+    "plan_pack_us", "plan_submit_wait_us", "plan_output_sync_us",
+    "plan_download_us", "plan_guard_us", "plan_publish_us",
+    "host_action_us", "host_action_bytes",
+    "kv_state_init_calls", "kv_state_init_bytes", "kv_state_init_us",
+    "kv_state_append_calls", "kv_state_append_bytes", "kv_state_append_us",
+    "kv_state_clear_calls", "kv_state_clear_bytes", "kv_state_clear_us",
+)
+
+
 @dataclass
 class GenerationResult:
     prompt_ids: list[int]
@@ -131,6 +143,15 @@ class GenerationResult:
     prefill_us: float
     decode_us: float
     steps: list[dict[str, Any]] = field(default_factory=list)
+    reset_us: float = 0.0
+    sampling_us: float = 0.0
+    first_sample_us: float = 0.0
+    ttft_us: float = 0.0
+    generate_wall_us: float = 0.0
+    decode_forwards: int = 0
+    output_tokens: int = 0
+    stages: dict[str, Any] = field(default_factory=dict)
+    profile: dict[str, Any] = field(default_factory=dict)
 
     @property
     def all_ids(self) -> list[int]:
@@ -144,17 +165,26 @@ class SmolLM2Runner:
                  stats: RunStats | None = None,
                  layer_indices: tuple[int, ...] | None = None,
                  share_constants: bool = True,
-                 persistent_kv: bool = True):
+                 persistent_kv: bool = True,
+                 profile: bool = False,
+                 cache_host_weights: bool = True):
         if not isinstance(fd, int) or fd < 0:
             reject(RK_E_INVALID, "SmolLM2Runner requires a caller-owned fd>=0",
                    stage="smollm")
         if not isinstance(share_constants, bool) or not isinstance(
-                persistent_kv, bool):
+                persistent_kv, bool) or not isinstance(profile, bool) or                 not isinstance(cache_host_weights, bool):
             reject(RK_E_INVALID,
-                   "share_constants and persistent_kv must be boolean",
+                   "share_constants, persistent_kv, profile and "
+                   "cache_host_weights must be boolean",
                    stage="smollm")
         self.share_constants = share_constants
         self.persistent_kv = persistent_kv
+        self.profile = bool(profile)
+        self.cache_host_weights = bool(cache_host_weights)
+        self._profile_us: dict[str, float] = {}
+        self._profile_count: dict[str, int] = {}
+        self._cached_embed: np.ndarray | None = None
+        self._cached_norm_gamma: dict[str, np.ndarray] = {}
         self.lib = lib
         self.package_dir = Path(package_dir).resolve()
         self.fd = fd
@@ -197,6 +227,12 @@ class SmolLM2Runner:
             reject(RK_E_SCHEMA, "SmolLM2 weight package hash mismatch",
                    stage="smollm")
         self.weights = np.load(weights_path, allow_pickle=False)
+        # The weights are immutable after the package-hash validation above.
+        # The legacy access path indexed a compressed NPZ member and narrowed
+        # it on every decode step; the candidate caches the identical FP16
+        # arrays for the runner lifetime.  Identity/values are unchanged.
+        if self.cache_host_weights:
+            self._cached_embed = _f16(np.asarray(self.weights["embed"]))
         self._arrays: dict[str, np.ndarray] = {}
         self._plans: dict[str, Plan] = {}
         self._calls: dict[str, PlanCall] = {}
@@ -321,7 +357,8 @@ class SmolLM2Runner:
                 self._calls[key] = PlanCall(
                     self.lib, plan, constants, fd=self.fd,
                     entry="attributed", reuse_bindings=True,
-                    share_constants=self.share_constants)
+                    share_constants=self.share_constants,
+                    profile=self.profile)
                 self._load_plan_call_us += (
                     time.perf_counter() - t_call) * 1e6
             except BaseException as exc:
@@ -342,7 +379,8 @@ class SmolLM2Runner:
                             call = PlanCall(
                                 self.lib, template_plan, {}, fd=self.fd,
                                 entry="attributed", reuse_bindings=True,
-                                share_constants=False)
+                                share_constants=False,
+                                profile=self.profile)
                             b_binding = next(
                                 b for b in template_plan.bindings
                                 if b.name == "B")
@@ -406,7 +444,119 @@ class SmolLM2Runner:
         self.stats.add_host_action(
             action_id, "execution", elapsed,
             tuple(inputs.values()), tuple(outputs.values()), nbytes=nbytes)
+        self._profile_add("host_action.us", elapsed)
+        self._profile_add("host_action", 0.0)
         return outputs
+
+    def _profile_add(self, name: str, elapsed_us: float,
+                     *, count: int = 1) -> None:
+        if not self.profile:
+            return
+        self._profile_us[name] = self._profile_us.get(name, 0.0) + float(
+            elapsed_us)
+        self._profile_count[name] = self._profile_count.get(name, 0) +             int(count)
+
+    def _profile_reset(self) -> None:
+        self._profile_us = {}
+        self._profile_count = {}
+
+    def _profile_report(self, *, decode_wall_us: float,
+                        decode_forwards: int) -> dict[str, Any]:
+        """Return a layered decode profile with explicit non-overlap rules.
+
+        ``top_level`` sums to the runner's decode wall minus a residual.
+        ``layer_ops`` is a subdivision of ``top_level.layer_total_us``.
+        ``plan_node`` is a cross-cut over all PlanCall nodes and is not added
+        to the top level.  ``c_runtime`` is a child of ``plan_node.call_us``.
+        """
+        if not getattr(self, "profile", False):
+            return {}
+        us = dict(getattr(self, "_profile_us", {}))
+        counts = dict(getattr(self, "_profile_count", {}))
+        top_names = ("embed", "layer_total", "final_norm", "lm_head_total",
+                     "concat")
+        top = {name: float(us.get("top." + name, 0.0))
+               for name in top_names}
+        top_sum = sum(top.values())
+        layer_ops = {
+            name: float(us.get("layer." + name, 0.0))
+            for name in ("norm_input", "qkv_plan", "qkv_split", "rope",
+                         "kv_append", "attention_total", "o_plan",
+                         "residual_attn", "norm_post", "gate_up_plan",
+                         "swiglu", "down_plan", "residual_ffn")
+        }
+        layer_ops_sum = sum(layer_ops.values())
+        attention_ops = {
+            name: float(us.get("attn." + name, 0.0))
+            for name in ("qk_layout", "qk_plan", "softmax", "pv_plan",
+                         "merge")
+        }
+        attention_ops_sum = sum(attention_ops.values())
+        plan_node = {
+            name: float(us.get("plan." + name, 0.0))
+            for name in ("alloc", "call", "finite", "stats", "residual")
+        }
+        plan_call = {
+            name: float(us.get("plan_call." + name, 0.0))
+            for name in ("lock_wait", "input_prepare", "output_prepare",
+                         "binding", "c_runtime", "inner_unattributed",
+                         "wrapper_unattributed")
+        }
+        c_runtime = {
+            name: float(us.get("c_runtime." + name, 0.0))
+            for name in ("validate", "pack", "emit", "command",
+                         "submit_alloc", "submit_wait", "output_sync",
+                         "download", "guard", "publish", "alloc")
+        }
+        c_runtime_total = float(us.get("c_runtime.total", 0.0))
+        c_runtime_children_sum = sum(c_runtime.values())
+        counters = {
+            "decode_forwards": int(decode_forwards),
+            "plan_nodes": int(counts.get("plan.node", 0)),
+            "host_actions": int(counts.get("host_action", 0)),
+        }
+        return {
+            "enabled": True,
+            "decode_wall_us": float(decode_wall_us),
+            "decode_forwards": int(decode_forwards),
+            "top_level": top,
+            "top_level_sum_us": top_sum,
+            "top_level_residual_us": max(
+                0.0, float(decode_wall_us) - top_sum),
+            "top_level_residual_fraction": (
+                max(0.0, float(decode_wall_us) - top_sum) /
+                float(decode_wall_us) if decode_wall_us else 0.0),
+            "layer_total_us": top["layer_total"],
+            "layer_ops": layer_ops,
+            "layer_ops_sum_us": layer_ops_sum,
+            "layer_residual_us": max(
+                0.0, top["layer_total"] - layer_ops_sum),
+            "attention_total_us": float(
+                us.get("layer.attention_total", 0.0)),
+            "attention_ops": attention_ops,
+            "attention_ops_sum_us": attention_ops_sum,
+            "attention_residual_us": max(
+                0.0, float(us.get("layer.attention_total", 0.0)) -
+                attention_ops_sum),
+            "plan_node_subdivision": plan_node,
+            "plan_node_sum_us": sum(plan_node.values()),
+            "plan_node_residual_us": max(
+                0.0, plan_node["call"] - sum(plan_call.values())),
+            "plan_call_subdivision": plan_call,
+            "plan_call_sum_us": sum(plan_call.values()),
+            "c_runtime_total_us": c_runtime_total,
+            "c_runtime_subdivision": c_runtime,
+            "c_runtime_children_sum_us": c_runtime_children_sum,
+            "c_runtime_residual_us": max(
+                0.0, c_runtime_total - c_runtime_children_sum),
+            "counters": counters,
+            "host_action_us": float(us.get("host_action.us", 0.0)),
+            "measurement_note": (
+                "top_level=runner decode wall components; layer_ops is a "
+                "subdivision of layer_total; plan_node is a cross-cut over "
+                "all plans; c_runtime is a subdivision of plan_node.call; "
+                "residuals are measured, not reassigned."),
+        }
 
     def _run_plan(self, key: str, inputs: list[np.ndarray],
                   *, phase: str = "execution") -> list[np.ndarray]:
@@ -414,20 +564,59 @@ class SmolLM2Runner:
         if call is None:
             reject(RK_E_SCHEMA, f"runner has no compiled plan {key!r}",
                    stage="smollm")
+        t_node = time.perf_counter() if self.profile else 0.0
+        t_alloc = t_node
         outputs = [np.empty(tuple(b.shape), dtype=np.float16)
                    for b in call.outputs]
+        t_call = time.perf_counter() if self.profile else 0.0
         report, elapsed = call.run_into(inputs, outputs)
+        t_finite = time.perf_counter() if self.profile else 0.0
         workspace_us = float(getattr(report, "total_us", 0.0)) or None
         self.stats.add_report(key, report, elapsed, phase=phase,
                               workspace_us=workspace_us)
+        t_stats = time.perf_counter() if self.profile else 0.0
         if not all(np.isfinite(o).all() for o in outputs):
             reject(RK_E_NUMERIC_CONTRACT,
                    f"RKPlan {key!r} produced non-finite output",
                    stage="smollm")
+        if self.profile:
+            done = time.perf_counter()
+            known = ((t_call - t_alloc) + (t_finite - t_call) +
+                     (t_stats - t_finite) + (done - t_stats))
+            self._profile_add("plan.node", (done - t_node) * 1e6)
+            self._profile_add("plan.alloc", (t_call - t_alloc) * 1e6)
+            self._profile_add("plan.call", (t_finite - t_call) * 1e6)
+            self._profile_add("plan.finite", (t_stats - t_finite) * 1e6)
+            self._profile_add("plan.stats", (done - t_stats) * 1e6)
+            self._profile_add(
+                "plan.residual",
+                max(0.0, (done - t_node) * 1e6 - known * 1e6))
+            if call.last_profile:
+                for sub, value in call.last_profile.items():
+                    self._profile_add(
+                        "plan_call." + sub.removesuffix("_us"), value)
+                if hasattr(report, "total_us"):
+                    self._profile_add(
+                        "c_runtime.total", float(report.total_us))
+                for field in ("validate_us", "pack_us", "emit_us",
+                              "command_us", "submit_alloc_us",
+                              "submit_wait_us", "output_sync_us",
+                              "download_us", "guard_us", "publish_us",
+                              "alloc_us"):
+                    if hasattr(report, field):
+                        self._profile_add(
+                            "c_runtime." + field.removesuffix("_us"),
+                            float(getattr(report, field)))
         return outputs
 
     def _norm(self, x: np.ndarray, gamma_key: str) -> np.ndarray:
-        gamma = _f16(self.weights[gamma_key])
+        if self.cache_host_weights:
+            gamma = self._cached_norm_gamma.get(gamma_key)
+            if gamma is None:
+                gamma = _f16(np.asarray(self.weights[gamma_key]))
+                self._cached_norm_gamma[gamma_key] = gamma
+        else:
+            gamma = _f16(self.weights[gamma_key])
         return self._act("rmsnorm.last_axis.v1",
                          {"x": _f16(x), "gamma": gamma},
                          {"eps": float(self.config.rms_norm_eps)})["y"]
@@ -436,7 +625,8 @@ class SmolLM2Runner:
         return self._act("tensor.add.v1", {"a": _f16(a), "b": _f16(b)}, {})["y"]
 
     def _embed(self, ids: np.ndarray, *, bucket: int) -> np.ndarray:
-        table = _f16(self.weights["embed"])
+        table = self._cached_embed if self.cache_host_weights else _f16(
+            self.weights["embed"])
         return self._act(
             "smollm.embed_padded.v1",
             {"token_ids": np.ascontiguousarray(ids, dtype=np.int32),
@@ -616,7 +806,12 @@ class SmolLM2Runner:
         c = self.config
         kh = c.num_key_value_heads
         if profile == DECODE:
+            t_attn = time.perf_counter() if self.profile else 0.0
+            t0 = t_attn
             a = self._qk_layout(q)
+            if self.profile:
+                self._profile_add(
+                    "attn.qk_layout", (time.perf_counter() - t0) * 1e6)
             contexts = []
             for g in range(kh):
                 if self.persistent_kv:
@@ -632,14 +827,33 @@ class SmolLM2Runner:
                     # cache and upload both dynamic operands every step.
                     qk_b = _f16(self.k_cache[layer, g].T)
                     pv_b = self.v_cache[layer, g]
+                t0 = time.perf_counter() if self.profile else 0.0
                 scores = self._run_plan(qk_key, [a[g], qk_b])[0]
+                if self.profile:
+                    self._profile_add(
+                        "attn.qk_plan", (time.perf_counter() - t0) * 1e6)
                 # Every query head in each KV group has the same causal
                 # prefix length during decode, so the same per-row vector is
                 # valid for each of the three independent group plans.
+                t0 = time.perf_counter() if self.profile else 0.0
                 probs = self._causal_softmax(scores, valid_lengths)
+                if self.profile:
+                    self._profile_add(
+                        "attn.softmax", (time.perf_counter() - t0) * 1e6)
+                t0 = time.perf_counter() if self.profile else 0.0
                 contexts.append(self._run_plan(
                     pv_key, [probs, pv_b])[0])
-            return self._merge_heads(np.stack(contexts, axis=0), tokens)
+                if self.profile:
+                    self._profile_add(
+                        "attn.pv_plan", (time.perf_counter() - t0) * 1e6)
+            t0 = time.perf_counter() if self.profile else 0.0
+            merged = self._merge_heads(np.stack(contexts, axis=0), tokens)
+            if self.profile:
+                self._profile_add(
+                    "attn.merge", (time.perf_counter() - t0) * 1e6)
+                self._profile_add(
+                    "layer.attention_total", (time.perf_counter() - t_attn) * 1e6)
+            return merged
         if profile != PREFILL:
             reject(RK_E_INVALID, f"unknown attention profile {profile!r}",
                    stage="smollm")
@@ -704,12 +918,32 @@ class SmolLM2Runner:
     def _layer_decode(self, layer: int, x: np.ndarray,
                       position: int) -> np.ndarray:
         c = self.config
+        t0 = time.perf_counter() if self.profile else 0.0
         h = self._norm(x, f"layer.{layer}.input_norm")
+        if self.profile:
+            self._profile_add(
+                "layer.norm_input", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
         qkv = self._run_plan(f"layer.{layer}.qkv.{DECODE}", [h])[0]
+        if self.profile:
+            self._profile_add(
+                "layer.qkv_plan", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
         q, k, v = self._split_qkv(qkv)
+        if self.profile:
+            self._profile_add(
+                "layer.qkv_split", (time.perf_counter() - t0) * 1e6)
         pos = np.asarray([position], dtype=np.int32)
+        t0 = time.perf_counter() if self.profile else 0.0
         q, k = self._rope(q, pos), self._rope(k, pos)
+        if self.profile:
+            self._profile_add(
+                "layer.rope", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
         self._append_kv(layer, k, v, position)
+        if self.profile:
+            self._profile_add(
+                "layer.kv_append", (time.perf_counter() - t0) * 1e6)
         per = c.num_attention_heads // c.num_key_value_heads
         # Decode calls one QK/PV plan per KV group.  The plan has three rows
         # (the query heads sharing that KV head); softmax sees one valid length
@@ -718,14 +952,43 @@ class SmolLM2Runner:
         attn = self._attention(layer, q, k, v, tokens=1,
                                profile=DECODE, start=position,
                                valid_lengths=valid_lengths)
+        t0 = time.perf_counter() if self.profile else 0.0
         o = self._run_plan(f"layer.{layer}.o.{DECODE}", [attn])[0]
+        if self.profile:
+            self._profile_add(
+                "layer.o_plan", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
         x = self._add(x, o)
+        if self.profile:
+            self._profile_add(
+                "layer.residual_attn", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
         h2 = self._norm(x, f"layer.{layer}.post_norm")
+        if self.profile:
+            self._profile_add(
+                "layer.norm_post", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
         gate_up = self._run_plan(
             f"layer.{layer}.gate_up.{DECODE}", [h2])[0]
+        if self.profile:
+            self._profile_add(
+                "layer.gate_up_plan", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
         act = self._swiglu(gate_up)
+        if self.profile:
+            self._profile_add(
+                "layer.swiglu", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
         down = self._run_plan(f"layer.{layer}.down.{DECODE}", [act])[0]
-        return self._add(x, down)
+        if self.profile:
+            self._profile_add(
+                "layer.down_plan", (time.perf_counter() - t0) * 1e6)
+        t0 = time.perf_counter() if self.profile else 0.0
+        result = self._add(x, down)
+        if self.profile:
+            self._profile_add(
+                "layer.residual_ffn", (time.perf_counter() - t0) * 1e6)
+        return result
 
     # ------------------------------------------------------------------
     # Public request API
@@ -822,14 +1085,34 @@ class SmolLM2Runner:
                    stage="smollm", actual=self.valid_len + 1,
                    required=f"<= {self.capacity}")
         t0 = time.perf_counter()
+        t_embed = time.perf_counter() if self.profile else 0.0
         x = self._embed(np.asarray([int(token_id)], dtype=np.int32), bucket=1)
+        if self.profile:
+            self._profile_add(
+                "top.embed", (time.perf_counter() - t_embed) * 1e6)
         for layer in self.layer_indices:
+            t_layer = time.perf_counter() if self.profile else 0.0
             x = self._layer_decode(layer, x, position=self.valid_len)
+            if self.profile:
+                self._profile_add(
+                    "top.layer_total", (time.perf_counter() - t_layer) * 1e6)
         self.valid_len += 1
+        t_norm = time.perf_counter() if self.profile else 0.0
         normed = self._norm(x, "norm")
+        if self.profile:
+            self._profile_add(
+                "top.final_norm", (time.perf_counter() - t_norm) * 1e6)
+        t_lm = time.perf_counter() if self.profile else 0.0
         shards = [self._run_plan(f"lm_head.decode.{j:02d}", [normed])[0]
                   for j in range(int(self.manifest["lm_head_shards"]))]
+        if self.profile:
+            self._profile_add(
+                "top.lm_head_total", (time.perf_counter() - t_lm) * 1e6)
+        t_concat = time.perf_counter() if self.profile else 0.0
         logits = self._concat_logits(shards, rows=1)
+        if self.profile:
+            self._profile_add(
+                "top.concat", (time.perf_counter() - t_concat) * 1e6)
         elapsed_us = (time.perf_counter() - t0) * 1e6
         return {"logits": logits, "valid_len": self.valid_len,
                 "elapsed_us": elapsed_us}
@@ -868,6 +1151,23 @@ class SmolLM2Runner:
                 "valid_len": self.valid_len,
                 "elapsed_us": result["elapsed_us"]}
 
+    def _stats_snapshot(self) -> dict[str, float | int]:
+        return {name: getattr(self.stats, name) for name in _STAGE_STAT_FIELDS}
+
+    @staticmethod
+    def _stats_delta(before: dict[str, float | int],
+                     after: dict[str, float | int]) -> dict[str, float | int]:
+        return {name: after[name] - before[name] for name in _STAGE_STAT_FIELDS}
+
+    @staticmethod
+    def _stats_sum(rows: list[dict[str, float | int]]
+                   ) -> dict[str, float | int]:
+        out: dict[str, float | int] = {}
+        for name in _STAGE_STAT_FIELDS:
+            values = [row[name] for row in rows]
+            out[name] = sum(values) if values else 0
+        return out
+
     def generate(self, token_ids: list[int] | np.ndarray, *,
                  max_new_tokens: int, return_all_logits: bool = False,
                  stop_on_eos: bool = True) -> GenerationResult:
@@ -875,36 +1175,107 @@ class SmolLM2Runner:
             reject(RK_E_INVALID, "max_new_tokens must be >= 1", stage="smollm")
         ids = [int(v) for v in np.asarray(token_ids).reshape(-1)]
         self._ensure_capacity(len(ids) + max_new_tokens)
+        self._profile_reset()
+        wall_t0 = time.perf_counter()
+
+        reset_before = self._stats_snapshot()
+        reset_t0 = time.perf_counter()
         self.reset()
+        reset_us = (time.perf_counter() - reset_t0) * 1e6
+        reset_stats = self._stats_delta(reset_before, self._stats_snapshot())
+
+        prefill_before = self._stats_snapshot()
         prompt = self.prefill(ids, return_all_logits=return_all_logits)
+        prefill_stats = self._stats_delta(prefill_before,
+                                          self._stats_snapshot())
+
         generated: list[int] = []
         steps: list[dict[str, Any]] = []
+        decode_rows: list[dict[str, float | int]] = []
+        sample_rows: list[dict[str, float | int]] = []
         t_decode = 0.0
+        sampling_us = 0.0
+        first_sample_us = 0.0
         current_logits = prompt["logits"]
         stopped_by_eos = False
-        for _ in range(max_new_tokens):
+        stop_reason = "max_new_tokens"
+        for step_index in range(max_new_tokens):
+            sample_before = self._stats_snapshot()
+            sample_t0 = time.perf_counter()
             token = int(self._act(
                 "smollm.greedy_sample.v1", {"logits": current_logits},
                 {"vocab_size": self.config.vocab_size})["token_ids"][0])
+            sample_us = (time.perf_counter() - sample_t0) * 1e6
+            sampling_us += sample_us
+            if step_index == 0:
+                first_sample_us = sample_us
+            sample_rows.append(self._stats_delta(
+                sample_before, self._stats_snapshot()))
             generated.append(token)
             if stop_on_eos and token == self.config.eos_token_id:
                 stopped_by_eos = True
+                stop_reason = "eos"
                 break
             if len(ids) + len(generated) >= self.capacity:
+                stop_reason = "capacity"
                 break
+            # The final sampled token has no consumer.  Do not execute an
+            # extra decode forward merely to produce an unused logits row.
+            if step_index + 1 >= max_new_tokens:
+                stop_reason = "max_new_tokens"
+                break
+            decode_before = self._stats_snapshot()
+            decode_t0 = time.perf_counter()
             step = self.decode_one(token)
-            t_decode += float(step["elapsed_us"])
-            steps.append({"token_id": token, "valid_len": step["valid_len"],
-                          "elapsed_us": float(step["elapsed_us"])})
+            step_us = (time.perf_counter() - decode_t0) * 1e6
+            decode_rows.append(self._stats_delta(
+                decode_before, self._stats_snapshot()))
+            t_decode += step_us
+            steps.append({"token_id": token,
+                          "step_index": step_index,
+                          "valid_len": step["valid_len"],
+                          "wall_us": float(step_us),
+                          "elapsed_us": float(step_us),
+                          "stats_delta": decode_rows[-1]})
             current_logits = step["logits"]
+        output_tokens = len(generated)
+        decode_forwards = len(decode_rows)
+        if decode_forwards != max(0, output_tokens - 1):
+            reject(RK_E_INVALID,
+                   "generation forward count does not match output tokens",
+                   stage="smollm",
+                   actual={"output_tokens": output_tokens,
+                           "decode_forwards": decode_forwards})
+        wall_us = (time.perf_counter() - wall_t0) * 1e6
+        decode_stats = self._stats_sum(decode_rows)
+        sampling_stats = self._stats_sum(sample_rows)
+        accounted = reset_us + float(prompt["elapsed_us"]) + sampling_us + \
+            t_decode
+        stages = {
+            "reset": {"wall_us": reset_us, "stats_delta": reset_stats},
+            "prefill": {"wall_us": float(prompt["elapsed_us"]),
+                        "stats_delta": prefill_stats},
+            "sampling": {"wall_us": sampling_us,
+                         "calls": len(sample_rows),
+                         "stats_delta": sampling_stats},
+            "decode": {"wall_us": t_decode,
+                       "forward_count": decode_forwards,
+                       "stats_delta": decode_stats},
+            "generate_overhead_us": max(0.0, wall_us - accounted),
+            "generate_wall_us": wall_us,
+        }
         return GenerationResult(
             prompt_ids=ids, generated_ids=generated,
-            stopped_by_eos=stopped_by_eos,
-            stop_reason=("eos" if stopped_by_eos else
-                         "max_new_tokens" if len(generated) >= max_new_tokens
-                         else "capacity"),
+            stopped_by_eos=stopped_by_eos, stop_reason=stop_reason,
             prefill_us=float(prompt["elapsed_us"]), decode_us=t_decode,
-            steps=steps)
+            steps=steps, reset_us=reset_us, sampling_us=sampling_us,
+            first_sample_us=first_sample_us,
+            ttft_us=reset_us + float(prompt["elapsed_us"]) + first_sample_us,
+            generate_wall_us=wall_us,
+            decode_forwards=decode_forwards, output_tokens=output_tokens,
+            stages=stages,
+            profile=self._profile_report(
+                decode_wall_us=t_decode, decode_forwards=decode_forwards))
 
     def close(self, *, ignore_errors: bool = False) -> None:
         if self._closed:

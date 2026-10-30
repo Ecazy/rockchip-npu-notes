@@ -8,6 +8,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import numpy as np
+
 
 def sha_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
@@ -31,6 +33,19 @@ def main(argv=None) -> int:
         raise SystemExit(f"source has {len(ids)} tokens, need {need}")
     windows = [ids[i:i + args.window_size]
                for i in range(0, need, args.window_size)]
+    window_meta = []
+    for i, window in enumerate(windows):
+        labels = window[1:]
+        window_meta.append({
+            "window": i,
+            "token_ids": window,
+            "token_seq_sha256": hashlib.sha256(
+                np.asarray(window, dtype="<i8").tobytes()).hexdigest(),
+            "scored_label_ids": labels,
+            "scored_label_sha256": hashlib.sha256(
+                np.asarray(labels, dtype="<i8").tobytes()).hexdigest(),
+            "scored_tokens": len(labels),
+        })
     result = {
         "kind": "smollm2-nll-windows",
         "model_dir": args.model_dir,
@@ -42,6 +57,7 @@ def main(argv=None) -> int:
         "tokenization": "AutoTokenizer(text).input_ids",
         "window_size": args.window_size,
         "windows": windows,
+        "window_meta": window_meta,
     }
     Path(args.out).write_text(json.dumps(result, indent=1) + "\n")
     print(json.dumps({"source": args.source,

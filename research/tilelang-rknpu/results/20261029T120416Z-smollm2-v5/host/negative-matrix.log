@@ -1,0 +1,276 @@
+usage: run_verifier_negative_matrix.py [-h] --spec SPEC --board BOARD
+                                       --reference REFERENCE --reference-tf
+                                       REFERENCE_TF --official-logits
+                                       OFFICIAL_LOGITS [--ppl-board PPL_BOARD]
+                                       [--ppl-official PPL_OFFICIAL]
+                                       [--ppl-windows PPL_WINDOWS]
+                                       [--acceptance-prompt ACCEPTANCE_PROMPT]
+                                       [--acceptance-request ACCEPTANCE_REQUEST]
+                                       [--ppl-acceptance-request PPL_ACCEPTANCE_REQUEST]
+                                       [--calibration-manifest CALIBRATION_MANIFEST]
+                                       [--acceptance-manifest ACCEPTANCE_MANIFEST]
+                                       [--calibration-bundle CALIBRATION_BUNDLE]
+                                       [--acceptance-bundle ACCEPTANCE_BUNDLE]
+                                       [--calibration-root CALIBRATION_ROOT]
+                                       [--acceptance-root ACCEPTANCE_ROOT]
+                                       [--calibration-board CALIBRATION_BOARD]
+                                       [--calibration-reference CALIBRATION_REFERENCE]
+                                       [--calibration-reference-tf CALIBRATION_REFERENCE_TF]
+                                       [--calibration-official-logits CALIBRATION_OFFICIAL_LOGITS]
+                                       [--calibration-ppl-board CALIBRATION_PPL_BOARD]
+                                       [--calibration-ppl-official CALIBRATION_PPL_OFFICIAL]
+                                       [--expected-spec-file-sha256 EXPECTED_SPEC_FILE_SHA256]
+                                       [--numeric-only] --out OUT
+run_verifier_negative_matrix.py: error: complete acceptance requires --ppl-board, --ppl-official and --ppl-windows; use --numeric-only for an explicitly incomplete numeric check
+{
+ "pass": true,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": true,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [],
+ "failures": [],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [
+  "logits.full",
+  "logits.shard00"
+ ],
+ "failures": [
+  "numeric_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [
+  "logits.full",
+  "logits.shard00"
+ ],
+ "failures": [
+  "numeric_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 6,
+ "gate_count_executed": 6,
+ "gate_failures": [
+  "missing.tensor"
+ ],
+ "failures": [
+  "capture_tensor_set",
+  "reference_capture_tensor_set",
+  "numeric_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [
+  "x"
+ ],
+ "failures": [
+  "numeric_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [
+  "x"
+ ],
+ "failures": [
+  "numeric_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [
+  "x"
+ ],
+ "failures": [
+  "numeric_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [
+  "x"
+ ],
+ "failures": [
+  "numeric_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [],
+ "failures": [
+  "package_manifest_identity"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "pass": false,
+ "mode": "numeric-only",
+ "complete_acceptance": false,
+ "numeric_pass": false,
+ "quality_pass": null,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [],
+ "failures": [
+  "capture_token_ids_vs_reference"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "role": "calibration",
+ "files": 22,
+ "out": "/tmp/tmpv1m1g1tc/calibration.json",
+ "file_sha256": "a619585c0348b7098fd22d32691285069be67d2e150929cc81ab2f2ae042bddf"
+}
+{
+ "role": "acceptance",
+ "files": 22,
+ "out": "/tmp/tmpv1m1g1tc/acceptance.json",
+ "file_sha256": "3de8b1efce4cae7ae3653b87a4c4f45f39cdcd00b74bfdc02ed810a70281164c"
+}
+{
+ "pass": false,
+ "mode": "complete",
+ "complete_acceptance": true,
+ "numeric_pass": true,
+ "quality_pass": false,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [],
+ "failures": [
+  "quality_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "role": "calibration",
+ "files": 22,
+ "out": "/tmp/tmpz41env83/calibration.json",
+ "file_sha256": "2b93f0cb873a2aa8ed30bd34fa9ac81d5287d7131c3965909feb251c95acbbef"
+}
+{
+ "role": "acceptance",
+ "files": 22,
+ "out": "/tmp/tmpz41env83/acceptance.json",
+ "file_sha256": "71b65dfb5afd006e7ddcccec508e125d8dc7f235c75aa301adb1eceba36dea01"
+}
+{
+ "pass": false,
+ "mode": "complete",
+ "complete_acceptance": true,
+ "numeric_pass": true,
+ "quality_pass": false,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [],
+ "failures": [
+  "quality_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "role": "calibration",
+ "files": 22,
+ "out": "/tmp/tmpgfjm1r3n/calibration.json",
+ "file_sha256": "3105cd17d76bac9a6815355789c0e2856ed86fb43ec04cb71fad979dbb8c54d6"
+}
+{
+ "role": "acceptance",
+ "files": 22,
+ "out": "/tmp/tmpgfjm1r3n/acceptance.json",
+ "file_sha256": "dadc1a84850fdabffb6a106bff9f5e620db1c263725b8ce60549ddce10ed342e"
+}
+{
+ "pass": false,
+ "mode": "complete",
+ "complete_acceptance": true,
+ "numeric_pass": true,
+ "quality_pass": false,
+ "gate_count_expected": 5,
+ "gate_count_executed": 5,
+ "gate_failures": [],
+ "failures": [
+  "quality_gate_failures"
+ ],
+ "incremental_top1_equal": true,
+ "teacher_forcing_first_divergence": 0
+}
+{
+ "all_ok": true,
+ "out": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/results/20261029T120416Z-smollm2-v5/verify/negative-matrix.json",
+ "cases": 15
+}

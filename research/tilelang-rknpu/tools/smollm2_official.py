@@ -80,8 +80,14 @@ def main(argv=None) -> int:
             raw = json.loads(Path(args.ids_json).read_text())
             ids = raw["token_ids"] if isinstance(raw, dict) else raw
             t = torch.tensor([ids], dtype=torch.long)
+            # The tokenizer's pad token is also an in-vocabulary chat
+            # sentinel (id 2).  Never let generate() derive an attention mask
+            # from ``input_ids != pad_token_id``: that would mark real prompt
+            # tokens as padding.  The prompt is a single unpadded sequence.
+            attention_mask = torch.ones_like(t)
             generated = model.generate(
-                t, max_new_tokens=args.max_new_tokens, do_sample=False,
+                t, attention_mask=attention_mask,
+                max_new_tokens=args.max_new_tokens, do_sample=False,
                 use_cache=True,
                 eos_token_id=None if args.ignore_eos else
                 tokenizer.eos_token_id,
@@ -90,7 +96,9 @@ def main(argv=None) -> int:
             meta.update({"prompt_ids": ids, "generated_ids": gen,
                          "text": tokenizer.decode(gen),
                          "max_new_tokens": args.max_new_tokens,
-                         "ignore_eos": bool(args.ignore_eos)})
+                         "ignore_eos": bool(args.ignore_eos),
+                         "attention_mask": "explicit_all_ones",
+                         "pad_token_id": tokenizer.pad_token_id})
         else:
             if not args.windows_json:
                 raise SystemExit("--windows-json is required for score")
@@ -110,11 +118,22 @@ def main(argv=None) -> int:
                 top1 = int((logits.argmax(-1) == labels).sum())
                 correct += top1
                 total += int(labels.numel())
-                rows.append({"window": i, "scored_tokens": int(labels.numel()),
-                             "sum_nll": float(nll.sum()),
-                             "mean_nll": float(nll.mean()),
-                             "ppl": float(torch.exp(nll.mean())),
-                             "top1_accuracy": top1 / int(labels.numel())})
+                label_ids = labels.cpu().tolist()
+                rows.append({
+                    "window": i,
+                    "token_ids": [int(v) for v in ids],
+                    "token_seq_sha256": hashlib.sha256(
+                        np.asarray(ids, dtype="<i8").tobytes()).hexdigest(),
+                    "scored_label_ids": [int(v) for v in label_ids],
+                    "scored_label_sha256": hashlib.sha256(
+                        np.asarray(label_ids, dtype="<i8").tobytes()
+                    ).hexdigest(),
+                    "scored_tokens": int(labels.numel()),
+                    "sum_nll": float(nll.sum()),
+                    "mean_nll": float(nll.mean()),
+                    "ppl": float(torch.exp(nll.mean())),
+                    "top1_accuracy": top1 / int(labels.numel()),
+                })
             nll = np.concatenate(nlls)
             np.save(out / "nll.npy", nll)
             meta.update({

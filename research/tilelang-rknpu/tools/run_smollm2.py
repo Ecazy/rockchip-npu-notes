@@ -85,10 +85,18 @@ def main(argv=None) -> int:
                     help="A/B control: repack/upload immutable weights per plan")
     ap.add_argument("--no-persistent-kv", action="store_true",
                     help="A/B control: re-pack/upload the full KV cache per step")
+    ap.add_argument("--no-cache-host-weights", action="store_true",
+                    help="A/B control: re-read embedding/norm weights from the "
+                         "NPZ on every use instead of the immutable cached views")
+    ap.add_argument("--profile", action="store_true",
+                    help="collect layered decode timing; keep this off for "
+                         "final performance measurements")
     args = ap.parse_args(argv)
 
     package = Path(args.package).resolve()
-    request = json.loads(Path(args.request).read_text())
+    request_path = Path(args.request).resolve()
+    request = json.loads(request_path.read_text())
+    request_sha256 = sha256(request_path)
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
 
@@ -103,6 +111,7 @@ def main(argv=None) -> int:
         print(f"rocket_open failed: {fd}", file=sys.stderr)
         return 3
     overall = {"kind": "smollm2-board-run", "fd_owned_by_runner": True,
+               "request_sha256": request_sha256,
                "environment": environment(package, lib), "requests": []}
     status = 0
     runner = None
@@ -115,13 +124,17 @@ def main(argv=None) -> int:
             layer_indices=(tuple(int(v) for v in layer_indices)
                            if layer_indices is not None else None),
             share_constants=not bool(args.no_share_constants),
-            persistent_kv=not bool(args.no_persistent_kv))
+            persistent_kv=not bool(args.no_persistent_kv),
+            profile=bool(args.profile),
+            cache_host_weights=not bool(args.no_cache_host_weights))
         load_elapsed = (time.perf_counter() - load_t0) * 1e6
         overall["load_us"] = load_elapsed
         overall["loaded_plan_count"] = len(runner._calls)
         overall["backend_options"] = {
             "share_constants": bool(runner.share_constants),
             "persistent_kv": bool(runner.persistent_kv),
+            "profile": bool(runner.profile),
+            "cache_host_weights": bool(runner.cache_host_weights),
         }
         for index, item in enumerate(request["runs"]):
             mode = item.get("mode", "generate")
@@ -144,10 +157,20 @@ def main(argv=None) -> int:
                         "all_ids": res.all_ids,
                         "stopped_by_eos": res.stopped_by_eos,
                         "stop_reason": res.stop_reason,
+                        "output_tokens": res.output_tokens,
+                        "decode_forwards": res.decode_forwards,
                         "prefill_us": res.prefill_us,
                         "decode_us": res.decode_us,
+                        "reset_us": res.reset_us,
+                        "sampling_us": res.sampling_us,
+                        "first_sample_us": res.first_sample_us,
+                        "ttft_us": res.ttft_us,
+                        "generate_wall_us": res.generate_wall_us,
+                        "stages": res.stages,
                         "steps": res.steps,
                     }
+                    if args.profile:
+                        payload["profile"] = res.profile
                 elif mode == "teacher_forcing":
                     res = runner.teacher_forcing_logits(ids)
                     np.save(run_dir / f"logits-{rep:02d}.npy", res["logits"])
@@ -204,11 +227,18 @@ def main(argv=None) -> int:
                     np.save(run_dir / f"nll-{rep:02d}.npy", nll)
                     payload = {
                         "valid_len": res["valid_len"],
+                        "token_ids": [int(v) for v in ids],
+                        "token_seq_sha256": hashlib.sha256(
+                            ids_arr.astype("<i8").tobytes()).hexdigest(),
+                        "scored_label_ids": [int(v) for v in labels],
+                        "scored_label_sha256": hashlib.sha256(
+                            labels.astype("<i8").tobytes()).hexdigest(),
                         "scored_tokens": int(labels.size),
                         "sum_nll": float(nll.sum()),
                         "mean_nll": float(nll.mean()),
                         "ppl": float(np.exp(nll.mean())),
                         "top1_accuracy": float(np.mean(top1 == labels)),
+                        "nll_sha256": hashlib.sha256(nll.tobytes()).hexdigest(),
                         "logits_shape": list(logits.shape),
                         "logits_sha256": hashlib.sha256(
                             logits.tobytes()).hexdigest(),
@@ -237,28 +267,52 @@ def main(argv=None) -> int:
                 elif mode == "incremental":
                     continuation = [int(v) for v in item.get(
                         "continuation_ids", [])]
+                    reset_before = runner._stats_snapshot()
+                    reset_t0 = time.perf_counter()
                     runner.reset()
+                    reset_us = (time.perf_counter() - reset_t0) * 1e6
+                    reset_stats = runner._stats_delta(
+                        reset_before, runner._stats_snapshot())
+                    prefill_before = runner._stats_snapshot()
                     first = runner.prefill(ids, return_all_logits=False)
+                    prefill_stats = runner._stats_delta(
+                        prefill_before, runner._stats_snapshot())
                     logits_rows = [first["logits"]]
                     step_logs = [{"kind": "prefill_after_prompt",
                                   "valid_len": runner.valid_len,
-                                  "elapsed_us": first["elapsed_us"]}]
+                                  "elapsed_us": first["elapsed_us"],
+                                  "stats_delta": prefill_stats}]
+                    decode_rows = []
                     for pos, token in enumerate(continuation):
+                        before = runner._stats_snapshot()
+                        decode_t0 = time.perf_counter()
                         step = runner.decode_one(token)
+                        step_us = (time.perf_counter() - decode_t0) * 1e6
+                        delta = runner._stats_delta(
+                            before, runner._stats_snapshot())
+                        decode_rows.append(delta)
                         logits_rows.append(step["logits"])
                         step_logs.append({"kind": "decode_after_token",
                                           "token_id": token,
                                           "valid_len": step["valid_len"],
-                                          "elapsed_us": step["elapsed_us"]})
-                    # One array with shape [n, 1, vocab]; the first row is
-                    # the prediction before the first continuation token.
+                                          "elapsed_us": step_us,
+                                          "stats_delta": delta})
+                    # Shape [prompt+continuation, vocab]; each row is the
+                    # prediction that selects the next supplied token.
                     np.save(run_dir / f"incremental-logits-{rep:02d}.npy",
                             np.concatenate(logits_rows, axis=0))
                     payload = {"prompt_len": len(ids),
+                               "prompt_ids": [int(v) for v in ids],
                                "continuation_ids": continuation,
                                "valid_len": runner.valid_len,
+                               "reset_us": reset_us,
+                               "reset_stats_delta": reset_stats,
+                               "prefill_stats_delta": prefill_stats,
+                               "decode_stats_delta": runner._stats_sum(
+                                   decode_rows),
+                               "decode_forwards": len(decode_rows),
                                "steps": step_logs,
-                               "logits_shape": [len(logits_rows), 1,
+                               "logits_shape": [len(logits_rows),
                                                 runner.config.vocab_size]}
                 else:
                     raise SystemExit(f"unknown request mode {mode!r}")

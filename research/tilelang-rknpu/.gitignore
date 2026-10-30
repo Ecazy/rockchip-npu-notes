@@ -456,3 +456,18 @@ results/20261027T025648Z-execution-candidates/campaign/vendor/
 # official/model arrays and regenerable 269 MB weights stay under .data/.
 !results/20261028T094650Z-smollm2/
 !results/20261028T094650Z-smollm2/**
+
+# SmolLM2 v5 complete-acceptance closure (2026-10-29): commit the frozen
+# verifier/spec/input identities and small selected observations; raw model,
+# all-logits, reference and official arrays remain under .data/evidence/.
+!results/20261029T120416Z-smollm2-v5/
+!results/20261029T120416Z-smollm2-v5/**
+
+# SmolLM2 V5 delivery closure (2026-10-30): commit replay/profiler/diagnostic
+# text and JSON identities; large board/reference/official arrays stay local.
+!results/20261030T013910Z-smollm2-v5-delivery/
+!results/20261030T013910Z-smollm2-v5-delivery/**
+results/20261030T013910Z-smollm2-v5-delivery/**/*.npy
+results/20261030T013910Z-smollm2-v5-delivery/**/*.npz
+results/20261030T013910Z-smollm2-v5-delivery/**/*.pid
+results/20261030T013910Z-smollm2-v5-delivery/**/pid

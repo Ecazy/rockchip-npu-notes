@@ -206,6 +206,12 @@ task-BO non-rewrite, faulted-close retention and healthy-close compatibility.
 
 ## SmolLM2-135M-Instruct
 
+> The commands in this section that name `models/smollm2_numeric_acceptance.json`
+> are historical V2 replay. The archived V2 spec is
+> `models/specs/smollm2_v2_20261028T094650Z.json`; do not treat the mutable
+> `models/smollm2_numeric_acceptance.json` path as current. The current v5
+> complete-acceptance replay is below.
+
 One model driver handles fixed-revision fetch, Host compile, isolated board
 setup, chat generation and generic board requests.  Credentials continue to come
 from the repository's ignored `.env`; the script never prints them.
@@ -297,6 +303,97 @@ python3 tools/verify_smollm2.py \
   --acceptance-source-json .data/evidence/smollm2-20261028T094650Z/official/ppl-acceptance-windows.json \
   --out /tmp/verify-smollm2.json
 ```
+
+### Current v5 acceptance closure and executable replay (2026-10-29)
+
+The current implementation's complete acceptance is
+`models/smollm2_numeric_acceptance_v5.json` with canonical-content hash
+`1a8c68d2da51eb9bc6885a4d540950f74011e8bcbf150a5d975d75a7575f368b` and file SHA-256
+`04c4011c7eb7daec4f4f607d65d234f8ec94ddba112a931fc2fd24056f70e38f`.
+The frozen inputs are `models/smollm2_v5_inputs.json`; the six-prompt
+calibration bundle is `models/specs/smollm2_v4_calibration_bundle.json` and the
+sealed acceptance bundle is `models/specs/smollm2_v5_acceptance_bundle.json`.
+The V5 inputs, requests, gates and historical failures are immutable in this
+delivery.
+
+All replay paths now use one executable entry, with fail-fast stage ordering:
+
+```bash
+cd research/tilelang-rknpu
+
+# 1. Re-verify the sealed V5 observation without touching the board.
+#    The expected file/canonical spec hashes come from the independent record
+#    models/specs/smollm2_spec_hashes.json, not from hashing the spec on the
+#    spot and then treating that result as an external identity.
+./scripts/replay-smollm2-v5.sh reuse \
+  --raw .data/evidence/smollm2-20261029T120416Z \
+  --results results/20261029T120416Z-smollm2-v5
+
+# 2. Re-run only the acceptance half against the frozen V5 spec/inputs/requests.
+#    Calibration is reused by design; this is for implementation or timing
+#    changes, not for establishing a new policy.  The script runs the board
+#    acceptance and PPL, rebuilds declared and official references, seals the
+#    acceptance tree and invokes the fail-closed verifier.
+./scripts/replay-smollm2-v5.sh rerun-fixed-acceptance \
+  --evidence-root /tmp/v5-fixed-rerun/evidence \
+  --results /tmp/v5-fixed-rerun/results \
+  --calibration-root .data/evidence/smollm2-20261029T120416Z/calibration \
+  --calibration-bundle models/specs/smollm2_v4_calibration_bundle.json
+
+# 3. Full new campaign from an input plan.  The order is enforced:
+#      prepare/freeze inputs -> official preliminary continuations ->
+#      calibration board/reference/PPL -> seal calibration -> freeze spec ->
+#      acceptance board/reference/PPL -> seal acceptance -> verify.
+#    Each subprocess is checked; any failure exits non-zero immediately.
+./scripts/replay-smollm2-v5.sh campaign \
+  --evidence-root /tmp/v5-new/evidence \
+  --results /tmp/v5-new/results \
+  --input-plan models/smollm2_v5_input_plan.json
+```
+
+`reuse` and `rerun-fixed-acceptance` keep V5 calibration/observation identities
+fixed.  `campaign` is the only path that writes a new spec; it never overwrites
+the V5 result tree.  The virtual environment/package prerequisites are the same
+as `./scripts/run-smollm2.sh`; add `--fetch` and/or `--compile` to `campaign`
+when those artefacts are not present.
+
+The underlying `verify_smollm2.py` invocation is still available for audit and
+unit tests, but is not the replay entry: the replay entry supplies the expected
+spec file hash from the independent record, constructs every path, seals the
+observation with that same frozen spec, and turns any non-zero verifier exit
+into a non-zero replay exit.
+
+Instruction-prompt divergence diagnosis is a separate, finite diagnostic and
+does not alter the V5 gates:
+
+```bash
+# Select one same-prefix position per prompt and write a board probe request.
+python3 tools/diagnose_smollm2_divergence.py prepare \
+  --board-run .data/evidence/smollm2-20261029T120416Z/acceptance/board/run.json \
+  --official-root .data/evidence/smollm2-20261029T120416Z/acceptance/official-generations \
+  --inputs models/smollm2_v5_inputs.json \
+  --out-request /tmp/v5-divergence-request.json \
+  --out-manifest /tmp/v5-divergence-manifest.json
+./scripts/run-smollm2.sh board-run /tmp/v5-divergence-request.json \
+  /tmp/v5-divergence-board
+
+# Recompute backend, declared-reference and official same-prefix top candidates,
+# including the corrected all-ones official attention-mask path.
+python3 tools/diagnose_smollm2_divergence.py analyze \
+  --probe-board /tmp/v5-divergence-board \
+  --manifest /tmp/v5-divergence-manifest.json \
+  --package .data/models/smollm2_135m_instruct_package \
+  --model-dir .data/models/SmolLM2-135M-Instruct \
+  --out /tmp/v5-divergence
+```
+
+The checked-in delivery result is under
+`results/20261030T013910Z-smollm2-v5-delivery/divergence/`; its table separates
+the archived official generation from the corrected explicit-mask generation
+and reports top1/top2 margins rather than calling every difference a near-tie.
+The delivery overview, latency decomposition, A/B and exact identities are in
+`results/20261030T013910Z-smollm2-v5-delivery/DELIVERY-REPORT.md` and
+`DELIVERY-MANIFEST.json`; large board/reference arrays remain local/ignored.
 
 ## Layout reuse / A-B campaign (2026-10-28)
 
@@ -500,4 +597,13 @@ RK_SMOLLM_DECODE_INDEXED=1 ./scripts/run-smollm2.sh device-rope-probe \
   .data/evidence/smollm2-20261028T094650Z/official/prompt-1-ids.json \
   results/20261028T113459Z-graph-fusion/smollm-device-rope-indexed-cont-p1-policy.json \
   models/smollm2_device_rope_policy_cont32_indexed.json
+```
+
+QKV→QK candidate-A device probe (int16 TP writer; expected to be falsified by
+the current command/geometry):
+
+```bash
+RK_GF_PLANS_NAME=compiled_graph_fusion ./scripts/run-graph-fusion-eval.sh setup
+./scripts/run-graph-fusion-eval.sh int16-probe \
+  results/20261028T113459Z-graph-fusion/int16-tp-layout-board.json
 ```

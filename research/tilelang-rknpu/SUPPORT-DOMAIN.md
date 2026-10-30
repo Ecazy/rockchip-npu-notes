@@ -1,6 +1,6 @@
 # Supported domain and explicit boundaries
 
-Updated 2026-10-28 for the MVP, complete-model and SmolLM2-135M-Instruct
+Updated 2026-10-29 for the MVP, complete-model, SmolLM2 v5 and graph-fusion
 checkpoints.
 
 ## Accepted source forms
@@ -163,6 +163,15 @@ single-model LLM domain, not a generic LLM importer:
 - the fixed package has 268 immutable RKPlans, 5660 NPU tasks and 1712 submits,
   with about 537.9 MB of deployed plan constants (decode and prefill copies) and
   a 269.1 MB canonical weight file.
+
+The current audited complete acceptance is policy v5
+(`models/smollm2_numeric_acceptance_v5.json`): 6 calibration prompts, 8 disjoint
+acceptance prompts, 5x256-token disjoint text windows, sealed calibration and
+acceptance observation bundles, 56 numeric gates and a complete quality gate.
+The current persistent KV path is native-layout Host orchestration plus per-layer
+device QK/PV workspaces; it is not a generic device-resident KV API. The verifier
+is fail-closed and rejects missing gates, shape broadcasting, non-finite
+observations/thresholds, identity mismatches and incomplete quality evidence.
 
 This closes only the named SmolLM2 geometry. It does not establish arbitrary
 GQA/MQA/MLA geometry, dynamic prefill lengths, beam search, sampling policies,

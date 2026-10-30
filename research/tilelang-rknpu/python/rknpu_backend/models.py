@@ -484,16 +484,21 @@ class PlanCall:
     def __init__(self, lib: LibRKPlan, plan: Plan, constants: dict[str, np.ndarray],
                  *, fd: int = 0, entry: str = "attributed",
                  reuse_bindings: bool = True,
-                 share_constants: bool = False):
+                 share_constants: bool = False,
+                 profile: bool = False):
         if entry not in ("attributed", "legacy"):
             reject(RK_E_INVALID, f"unknown plan entry {entry!r}", stage="model")
         if not isinstance(reuse_bindings, bool):
             reject(RK_E_INVALID, "reuse_bindings must be boolean", stage="model")
         if not isinstance(share_constants, bool):
             reject(RK_E_INVALID, "share_constants must be boolean", stage="model")
+        if not isinstance(profile, bool):
+            reject(RK_E_INVALID, "profile must be boolean", stage="model")
         self.entry = entry
         self.reuse_bindings = reuse_bindings
         self.share_constants = bool(share_constants)
+        self.profile = bool(profile)
+        self.last_profile: dict[str, float] | None = None
         self.shared_constant_actions = 0
         self.shared_constant_created = 0
         self.shared_constant_reused = 0
@@ -718,19 +723,39 @@ class PlanCall:
         if self.workspace is None:
             reject(RK_E_INVALID, "model plan workspace is already closed",
                    stage="model")
+        t_wrapper = time.perf_counter() if self.profile else 0.0
+        t_lock = time.perf_counter() if self.profile else 0.0
         self._lock_descriptors()
+        t_locked = time.perf_counter() if self.profile else 0.0
         try:
-            return self._run_into_locked(inputs, outputs)
+            report, elapsed = self._run_into_locked(inputs, outputs)
         finally:
             self._descriptor_lock.release()
+        if self.profile:
+            done = time.perf_counter()
+            profile = dict(self.last_profile or {})
+            profile["lock_wait_us"] = max(0.0, (t_locked - t_lock) * 1e6)
+            profile["wrapper_total_us"] = max(0.0, (done - t_wrapper) * 1e6)
+            profile["wrapper_unattributed_us"] = max(
+                0.0, profile["wrapper_total_us"] -
+                profile.get("input_prepare_us", 0.0) -
+                profile.get("output_prepare_us", 0.0) -
+                profile.get("binding_us", 0.0) -
+                profile.get("c_runtime_us", 0.0) -
+                profile["lock_wait_us"])
+            self.last_profile = profile
+        return report, elapsed
 
     def _run_into_locked(self, inputs: list[np.ndarray],
                          outputs: list[np.ndarray],
                          *, check_finite: bool = True
                          ) -> tuple[Any, float]:
+        t_in0 = time.perf_counter() if self.profile else 0.0
         in_arrays = self._prepare_inputs(inputs, finite_cache=set(),
                                          check_finite=check_finite)
+        t_in1 = time.perf_counter() if self.profile else 0.0
         out_arrays = self._prepare_outputs(outputs)
+        t_out1 = time.perf_counter() if self.profile else 0.0
         if self.reuse_bindings:
             in_bind = self._input_bind_cache
             out_bind = self._output_bind_cache
@@ -745,6 +770,7 @@ class PlanCall:
                        for spec, arr in zip(self.inputs, in_arrays)]
             out_bind = [make_binding(spec.id, arr)
                         for spec, arr in zip(self.outputs, out_arrays)]
+        t_bind = time.perf_counter() if self.profile else 0.0
         # The mock harness snapshots each emitted co_program.  Clear that
         # test-only cache between calls; production builds have no such symbol.
         if hasattr(self.lib.cdll, "rk_mock_reset_tags"):
@@ -755,6 +781,16 @@ class PlanCall:
         else:
             report = self.workspace.run_attributed(in_bind, out_bind)
         elapsed_us = (time.perf_counter() - t0) * 1e6
+        t_done = time.perf_counter() if self.profile else 0.0
+        if self.profile:
+            self.last_profile = {
+                "input_prepare_us": max(0.0, (t_in1 - t_in0) * 1e6),
+                "output_prepare_us": max(0.0, (t_out1 - t_in1) * 1e6),
+                "binding_us": max(0.0, (t_bind - t_out1) * 1e6),
+                "c_runtime_us": max(0.0, elapsed_us),
+                "inner_unattributed_us": max(
+                    0.0, (t_done - t_bind) * 1e6 - elapsed_us),
+            }
         return report, elapsed_us
 
     def bind_prepared_into(self, inputs: list[np.ndarray],
