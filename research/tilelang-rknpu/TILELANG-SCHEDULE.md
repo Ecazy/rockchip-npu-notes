@@ -123,10 +123,42 @@ passed 56/56 gates with bit-identical observation arrays; the end-to-end
 benchmark did not show a stable speedup, so the operator gain is not misreported
 as a model gain.
 
+## Restricted two-stage schedule
+
+Two real `T.Kernel` launches may express `Z = X @ W1`, `Y = Z @ W2` with Z kept
+on device.  The versioned annotation is:
+
+```python
+T.func_attr({
+    "rknpu.staged_schedule": "staged_mn_tiles_v1",
+    "rknpu.stage0.tile_m": 256, "rknpu.stage0.tile_n": 256,
+    "rknpu.stage0.mn_order": "m_major",
+    "rknpu.stage0.source_k_rounding": "explicit_per_k_fp16",
+    "rknpu.stage1.tile_m": 256, "rknpu.stage1.tile_n": 128,
+    "rknpu.stage1.mn_order": "n_major",
+    "rknpu.stage1.source_k_rounding": "explicit_per_k_fp16",
+})
+```
+
+A global schedule attribute is rejected instead of being copied to every stage.
+The safe support domain is deliberately narrow: stage 0 `tile_n` is 256 so each
+consumer K slice maps to one producer Z tile; the applied stage-0 and stage-1 M
+tiles must match; the intermediate H tail must be 32-element aligned.  Different
+source M tiles are allowed only through an explicit backend retile to the same
+consumer-safe applied M tile.  Arbitrary producer/consumer tile recombination,
+row subviews with different CUBE physical-row geometry, and a device repack are
+rejected.
+
+Z is a temporary value with per-tile device buffers, no host upload or download.
+Every consumer task records the producer view/action, producer tile, consumer
+region, row offset and logical K; submit groups remain serial, with all stage-0
+submits before stage-1.  A missing producer dependency is rejected by the C
+verifier; out-of-buffer or mismatched views are rejected by the plan/view layer.
+
 ## Unsupported in this milestone
 
-- Explicit schedules on staged/multi-node dataflow are rejected until that
-  lowerer has a schedule-aware tiling proof.
+- General staged/multi-node schedule propagation is rejected.  Only the
+  restricted two-stage contract above is admitted.
 - K tile sizes or K accumulation order other than the fixed contract are
   rejected.
 - Sources with K>256 that narrow only at the final store are rejected when a
@@ -151,6 +183,9 @@ python3 tools/run_schedule_experiment.py compile \
 
 The first milestone experiment and measurements are in
 `results/20261030T030803Z-tilelang-schedule/SCHEDULE-REPORT.md`.
+
+The restricted two-stage experiment is in
+`results/20261030T102526Z-two-stage/TWO-STAGE-REPORT.md`.
 
 The K-tail round is in
 `results/20261030T083436Z-k-tail/K-TAIL-REPORT.md`: it adds explicit per-K

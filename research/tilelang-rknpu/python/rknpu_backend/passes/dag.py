@@ -1072,6 +1072,330 @@ class _Builder:
             constants=self.constants, buffers=self.buffers, views=self.views,
             actions=self.actions, publish=self.publish)
 
+    def build_scheduled_two_stage(self) -> DraftPlan:
+        """Lower X->W1->Z->W2->Y with a schedule-aware intermediate map.
+
+        Only the restricted two-stage contract is admitted.  Stage 0 must use a
+        256-column logical tile so every consumer K slice maps to one producer
+        tile.  Stage 1 may use a smaller M tile when it divides stage 0's M tile
+        and never crosses a producer row tile.  Z never leaves the device.
+        """
+        if len(self.module.ops) != 2 or \
+                any(op.opcode != "matmul" for op in self.module.ops):
+            reject(RK_E_UNSUPPORTED,
+                   "scheduled staged lowering requires exactly two matmuls",
+                   stage="schedule", actual=[op.opcode for op in self.module.ops])
+        op0, op1 = self.module.ops
+        x = self.module.value(op0.inputs[0])
+        w1 = self.module.value(op0.inputs[1])
+        z = self.module.value(op0.outputs[0])
+        w2 = self.module.value(op1.inputs[1])
+        y = self.module.value(op1.outputs[0])
+        if op1.inputs[0] != z.id or z.role != "temporary" or \
+                w2.id in {x.id, w1.id, z.id} or y.id in {x.id, w1.id, z.id}:
+            reject(RK_E_UNSUPPORTED,
+                   "scheduled staged dataflow must be X->W1->Z->W2->Y",
+                   stage="schedule")
+        m, k = x.type.shape
+        h = z.type.shape[1]
+        n = y.type.shape[1]
+        if z.type.shape != (m, h) or w1.type.shape != (k, h) or \
+                w2.type.shape != (h, n) or y.type.shape != (m, n):
+            reject(RK_E_SHAPE,
+                   "scheduled staged operand shapes do not compose",
+                   stage="schedule",
+                   actual={"X": list(x.type.shape), "W1": list(w1.type.shape),
+                           "Z": list(z.type.shape), "W2": list(w2.type.shape),
+                           "Y": list(y.type.shape)})
+        s0 = mn_schedule_from_attrs(op0.attrs, where="stage0")
+        s1 = mn_schedule_from_attrs(op1.attrs, where="stage1")
+        if s0.tile_n != 256:
+            reject(RK_E_UNSUPPORTED,
+                   "stage0 tile_n must be 256 so each consumer K slice has one "
+                   "producer tile", stage="schedule", actual=s0.tile_n,
+                   required=256)
+        if s1.tile_m != s0.tile_m:
+            reject(RK_E_UNSUPPORTED,
+                   "the applied stage0/stage1 M tile must match in this "
+                   "milestone; a different source M tile can be retiled to "
+                   "the consumer-safe applied tile, but the current CUBE view "
+                   "cannot expose a row subview with a different physical "
+                   "row geometry without an explicit repack",
+                   stage="schedule",
+                   actual={"stage0_tile_m": s0.tile_m,
+                           "stage1_tile_m": s1.tile_m})
+        k_tail = h - ((h + 255) // 256 - 1) * 256
+        if k_tail % 32:
+            reject(RK_E_UNSUPPORTED,
+                   "the intermediate H tail must be 32-element aligned; the "
+                   "current CUBE view cannot expose a narrower physical tail",
+                   stage="schedule", actual={"H": h, "tail": k_tail})
+
+        x_upload_cache: dict[tuple, tuple[int, int]] = {}
+        w_upload_cache: dict[tuple, tuple[int, int]] = {}
+
+        def add_input_upload(value_id: int, binding_id: int, m0: int,
+                             k0: int, rows: int, kt: int,
+                             stride: int) -> tuple[int, int]:
+            pr, pc, pbytes = input_layout(rows, kt)
+            key = (value_id, m0, k0, rows, kt)
+            cached = x_upload_cache.get(key)
+            if cached is not None:
+                return cached
+            layout = TensorLayout("float16", CUBE_LAYOUT, rows, kt,
+                                  pr, pc, 8, pbytes)
+            buffer_id = self.add_buffer(role="input_slice", capacity=pbytes,
+                                        layout_id=CUBE_LAYOUT, reuse=False,
+                                        padding_state="zero")
+            view = self.add_view(buffer_id, 0, layout)
+            action = self.add_action(
+                "upload", outputs=(view,), origin="host_pack:staged:input",
+                attrs={"source_binding": binding_id,
+                       "src_row_offset": m0, "src_col_offset": k0,
+                       "src_row_stride": stride,
+                       "transpose_source": False, "cache": "input"})
+            cached = (view, action)
+            x_upload_cache[key] = cached
+            return cached
+
+        def add_weight_upload(value_id: int, binding_id: int, n0: int,
+                              k0: int, cols: int, kt: int,
+                              stride: int) -> tuple[int, int]:
+            key = (value_id, n0, k0, cols, kt)
+            cached = w_upload_cache.get(key)
+            if cached is not None:
+                return cached
+            wr, wc, wbytes = weight_layout(cols, kt)
+            layout = TensorLayout("float16", WEIGHT_LAYOUT, cols, kt,
+                                  wr, wc, 32, wbytes)
+            buffer_id = self.add_buffer(role="weight", capacity=wbytes,
+                                        layout_id=WEIGHT_LAYOUT, reuse=False,
+                                        padding_state="zero")
+            view = self.add_view(buffer_id, 0, layout)
+            action = self.add_action(
+                "upload", outputs=(view,), origin="host_pack:staged:weight",
+                attrs={"source_binding": binding_id,
+                       "src_row_offset": k0, "src_col_offset": n0,
+                       "src_row_stride": stride,
+                       "transpose_source": True, "cache": "constant"})
+            cached = (view, action)
+            w_upload_cache[key] = cached
+            return cached
+
+        def emit_chain(*, op_id: int, out_value: Any, tile: Any,
+                       tile_m: int, tile_n: int, order: str,
+                       a_source: str, b_value: Any, b_binding: int,
+                       b_stride: int, a_binding: int | None,
+                       a_stride: int | None, z_map: dict | None,
+                       z_stage: dict | None) -> tuple[int, int]:
+            ktiles = k_slices(a_source == "X" and k or h)
+            cr, cc, cbytes = cube_layout(tile.rows, tile.cols)
+            acc_views: list[int] = []
+            for _ in range(1 if len(ktiles) == 1 else 2):
+                layout = TensorLayout("float16", CUBE_LAYOUT,
+                                      tile.rows, tile.cols,
+                                      cr, cc, 8, cbytes)
+                buffer_id = self.add_buffer(
+                    role="accumulator", capacity=cbytes,
+                    layout_id=CUBE_LAYOUT, padding_state="finite")
+                acc_views.append(self.add_view(buffer_id, 0, layout))
+            group = f"mm:s{op_id}:{op_id}:{tile.m0}:{tile.n0}"
+            current = acc_views[0]
+            prior_view: int | None = None
+            tasks: list[int] = []
+            z_source_meta: dict[str, Any] | None = None
+            for index, kslice in enumerate(ktiles):
+                if a_source == "X":
+                    assert a_binding is not None and a_stride is not None
+                    a_view, a_action = add_input_upload(
+                        x.id, a_binding, tile.m0, kslice.k0,
+                        tile.rows, kslice.extent, a_stride)
+                else:
+                    assert z_map is not None and z_stage is not None
+                    pm0 = (tile.m0 // z_stage["tile_m"]) * z_stage["tile_m"]
+                    pn0 = kslice.k0
+                    z_view = z_map.get((pm0, pn0))
+                    if z_view is None:
+                        reject(RK_E_SHAPE,
+                               "consumer input region has no producer tile",
+                               stage="schedule",
+                               actual={"stage1_m0": tile.m0,
+                                       "k0": kslice.k0,
+                                       "producer_m0": pm0})
+                    parent = self.views[z_view]
+                    parent_t = parent.tensor
+                    row_off = tile.m0 - pm0
+                    if row_off < 0 or row_off + tile.rows > parent_t.rows or \
+                            kslice.extent != parent_t.cols:
+                        reject(RK_E_UNSUPPORTED,
+                               "consumer region crosses or misaligns a producer "
+                               "Z tile", stage="schedule",
+                               actual={"producer": [pm0, pn0,
+                                                    parent_t.rows,
+                                                    parent_t.cols],
+                                       "consumer": [tile.m0, kslice.k0,
+                                                    tile.rows,
+                                                    kslice.extent]})
+                    pr = round_up(max(tile.rows, 12), 4)
+                    if row_off + pr > parent_t.physical_rows:
+                        reject(RK_E_UNSUPPORTED,
+                               "consumer physical rows exceed the producer Z "
+                               "tile; a narrower consumer M tile would need an "
+                               "unsupported view", stage="schedule",
+                               actual={"row_off": row_off,
+                                       "consumer_physical_rows": pr,
+                                       "producer_physical_rows":
+                                           parent_t.physical_rows})
+                    sub_layout = TensorLayout(
+                        "float16", CUBE_LAYOUT, tile.rows, kslice.extent,
+                        pr, parent_t.physical_cols, 8,
+                        pr * parent_t.physical_cols * 2)
+                    offset = parent.offset_bytes + \
+                        row_off * parent_t.physical_cols * 2
+                    a_view = self.add_view(parent.buffer_id, offset, sub_layout)
+                    a_action = z_map_action[(pm0, pn0)]
+                    z_source_meta = {
+                        "value": z.name,
+                        "producer_view": z_view,
+                        "producer_action": a_action,
+                        "producer_tile": [pm0, pn0, parent_t.rows,
+                                          parent_t.cols],
+                        "consumer_region": [tile.m0, kslice.k0,
+                                            tile.rows, kslice.extent],
+                        "row_offset": row_off,
+                        "logical_k": kslice.extent,
+                        "physical_cols": parent_t.physical_cols,
+                        "padding": "consumer reads valid columns only; "
+                                   "A/B zero padding is neutralised by the "
+                                   "zero-padded weight tail",
+                    }
+                w_view, w_action = add_weight_upload(
+                    b_value.id, b_binding, tile.n0, kslice.k0,
+                    tile.cols, kslice.extent, b_stride)
+                deps = tuple(dict.fromkeys(
+                    (a_action, w_action,
+                     tasks[-1] if tasks else None)))
+                deps = tuple(dep for dep in deps if dep is not None)
+                if index == 0:
+                    action = self.add_action(
+                        "npu_task", template_id="co.mm.f16.v1",
+                        inputs=(a_view, w_view), outputs=(current,),
+                        deps=deps,
+                        origin=f"lowering:staged:stage{op_id}:mm:{kslice.k0}",
+                        attrs={"submit_group": group,
+                               "k0": kslice.k0, "kt": kslice.extent,
+                               "k_physical_extent":
+                                   ((kslice.extent + 31) // 32) * 32,
+                               "k_padding":
+                                   (((kslice.extent + 31) // 32) * 32
+                                    - kslice.extent),
+                               "source_schedule": op0.attrs.get(
+                                   "source_schedule") if op_id == 0 else
+                                   op1.attrs.get("source_schedule"),
+                               "applied_schedule": (s0.to_dict()
+                                                    if op_id == 0
+                                                    else s1.to_dict()),
+                               "source_stage_index": op_id,
+                               "stage_barrier": "all_previous_submits",
+                               **({"z_source": z_source_meta}
+                                  if z_source_meta is not None else {})})
+                else:
+                    other = acc_views[index & 1]
+                    action = self.add_action(
+                        "npu_task", template_id="co.mm_acc.f16.v1",
+                        inputs=(a_view, w_view, prior_view),
+                        outputs=(other,), deps=deps,
+                        origin=f"lowering:staged:stage{op_id}:mm_acc:"
+                               f"{kslice.k0}",
+                        attrs={"submit_group": group,
+                               "k0": kslice.k0, "kt": kslice.extent,
+                               "k_physical_extent":
+                                   ((kslice.extent + 31) // 32) * 32,
+                               "k_padding":
+                                   (((kslice.extent + 31) // 32) * 32
+                                    - kslice.extent),
+                               "source_schedule": op0.attrs.get(
+                                   "source_schedule") if op_id == 0 else
+                                   op1.attrs.get("source_schedule"),
+                               "applied_schedule": (s0.to_dict()
+                                                    if op_id == 0
+                                                    else s1.to_dict()),
+                               "source_stage_index": op_id,
+                               "stage_barrier": "all_previous_submits",
+                               **({"z_source": z_source_meta}
+                                  if z_source_meta is not None else {})})
+                    current = other
+                tasks.append(action)
+                prior_view = current
+            return current, tasks[-1]
+
+        z_map: dict[tuple[int, int], int] = {}
+        z_map_action: dict[tuple[int, int], int] = {}
+        w1_binding = self.binding_by_value[w1.id]
+        w2_binding = self.binding_by_value[w2.id]
+        x_binding = self.binding_by_value[x.id]
+
+        # Every Host upload must precede the first NPU task.  The pass below
+        # creates the exact same cache keys that emit_chain will consume.
+        for tile in output_tiles(m, h, tile_m=s0.tile_m,
+                                 tile_n=s0.tile_n, order=s0.order):
+            for kslice in k_slices(k):
+                add_input_upload(x.id, x_binding, tile.m0, kslice.k0,
+                                 tile.rows, kslice.extent, k)
+                add_weight_upload(w1.id, w1_binding, tile.n0, kslice.k0,
+                                  tile.cols, kslice.extent, h)
+        for tile in output_tiles(m, n, tile_m=s1.tile_m,
+                                 tile_n=s1.tile_n, order=s1.order):
+            for kslice in k_slices(h):
+                add_weight_upload(w2.id, w2_binding, tile.n0, kslice.k0,
+                                  tile.cols, kslice.extent, n)
+
+        for tile in output_tiles(m, h, tile_m=s0.tile_m,
+                                 tile_n=s0.tile_n, order=s0.order):
+            final_view, final_action = emit_chain(
+                op_id=0, out_value=z, tile=tile, tile_m=s0.tile_m,
+                tile_n=s0.tile_n, order=s0.order, a_source="X",
+                b_value=w1, b_binding=w1_binding, b_stride=h,
+                a_binding=x_binding, a_stride=k, z_map=None, z_stage=None)
+            z_map[(tile.m0, tile.n0)] = final_view
+            z_map_action[(tile.m0, tile.n0)] = final_action
+            self.buffers[self.views[final_view].buffer_id].role = "workspace"
+
+        y_tiles: dict[tuple[int, int], int] = {}
+        y_actions: dict[tuple[int, int], int] = {}
+        for tile in output_tiles(m, n, tile_m=s1.tile_m,
+                                 tile_n=s1.tile_n, order=s1.order):
+            final_view, final_action = emit_chain(
+                op_id=1, out_value=y, tile=tile, tile_m=s1.tile_m,
+                tile_n=s1.tile_n, order=s1.order, a_source="Z",
+                b_value=w2, b_binding=w2_binding, b_stride=n,
+                a_binding=None, a_stride=None, z_map=z_map,
+                z_stage={"tile_m": s0.tile_m})
+            y_tiles[(tile.m0, tile.n0)] = final_view
+            y_actions[(tile.m0, tile.n0)] = final_action
+            self.buffers[self.views[final_view].buffer_id].role = "output"
+
+        for tile in output_tiles(m, n, tile_m=s1.tile_m,
+                                 tile_n=s1.tile_n, order=s1.order):
+            view = y_tiles[(tile.m0, tile.n0)]
+            producer = y_actions[(tile.m0, tile.n0)]
+            binding_id = self.binding_by_value[y.id]
+            download = self.add_action(
+                "download", inputs=(view,), deps=(producer,),
+                origin="host:download:staged", attrs={
+                    "binding_id": binding_id, "submit_group": None})
+            self.buffers[self.views[view].buffer_id].last = max(
+                self.buffers[self.views[view].buffer_id].last, download)
+            self.publish.append(Publish(
+                self.bindings[binding_id].name, binding_id, view,
+                dst_row=tile.m0, dst_col=tile.n0,
+                rows=tile.rows, cols=tile.cols))
+        return DraftPlan(
+            name=self.module.name, profile_hash=self.profile.profile_hash,
+            source_hash=self.module.source_hash, bindings=self.bindings,
+            constants=self.constants, buffers=self.buffers, views=self.views,
+            actions=self.actions, publish=self.publish)
+
     def build_swiglu(self) -> DraftPlan:
         """Lower the matched SwiGLU FFN, one primitive tile per stage.
 
@@ -1702,14 +2026,26 @@ def build_draft(module: Module, legalized: LegalizedGraph, *,
                required=options.max_ir_nodes)
     builder = _Builder(module, legalized, profile=profile, options=options)
     if legalized.graph_ops is not None:
-        for op in module.ops:
-            if op.opcode == "matmul" and "source_schedule" in op.attrs:
-                reject(RK_E_UNSUPPORTED,
-                       "explicit M/N scheduling is not implemented for "
-                       "multi-node dataflow plans yet; refusing instead of "
-                       "silently ignoring source_schedule", stage="schedule",
-                       op=op.opcode, source=op.source)
-    if legalized.swiglu is not None:
+        scheduled = [op for op in module.ops
+                     if op.opcode == "matmul" and
+                     "source_schedule" in op.attrs]
+        two_stage = (
+            len(module.ops) == 2 and
+            all(op.opcode == "matmul" for op in module.ops) and
+            module.ops[1].inputs[0] == module.ops[0].outputs[0] and
+            module.value(module.ops[0].outputs[0]).role == "temporary"
+        )
+        if scheduled and not (two_stage and len(scheduled) == 2):
+            reject(RK_E_UNSUPPORTED,
+                   "explicit M/N scheduling is admitted only for the "
+                   "restricted two-stage X->W1->Z->W2->Y contract",
+                   stage="schedule", op=scheduled[0].opcode,
+                   source=scheduled[0].source)
+    else:
+        two_stage = False
+    if two_stage and len(scheduled) == 2:
+        draft = builder.build_scheduled_two_stage()
+    elif legalized.swiglu is not None:
         draft = builder.build_swiglu()
     elif legalized.graph_ops is not None:
         tiled = any(v.type.rank == 2 and

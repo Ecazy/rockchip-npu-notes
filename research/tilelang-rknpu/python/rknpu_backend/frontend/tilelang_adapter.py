@@ -3996,6 +3996,676 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                   state_signature="")
 
 
+@dataclass(frozen=True)
+class _StagedSchedule:
+    tile_m: int | None
+    tile_n: int | None
+    order: str
+    source_k_rounding: str | None
+
+
+def _staged_schedule_annotations(prim_func: Any, stage_count: int,
+                                 span: str) -> tuple[_StagedSchedule, ...] | None:
+    """Parse the versioned per-stage schedule contract.
+
+    The marker is deliberately separate from the single-GEMM rknpu.schedule
+    attributes.  A stage never inherits another stage's tile or order.
+    """
+    attrs = dict(getattr(prim_func, "attrs", {}) or {})
+    marker = attrs.get("rknpu.staged_schedule")
+    if marker is not None:
+        marker = str(marker)
+    stage_keys = [key for key in attrs if key.startswith("rknpu.stage")]
+    if marker is None:
+        if stage_keys:
+            reject(RK_E_UNSUPPORTED,
+                   "per-stage schedule attributes require "
+                   "rknpu.staged_schedule", stage="frontend", source=span,
+                   actual=stage_keys)
+        return None
+    if marker != "staged_mn_tiles_v1":
+        reject(RK_E_UNSUPPORTED,
+               "unsupported staged schedule contract", stage="frontend",
+               source=span, actual=marker, required="staged_mn_tiles_v1")
+    global_schedule = sorted(
+        key for key in attrs if key in {
+            "rknpu.schedule", "rknpu.tile_m", "rknpu.tile_n",
+            "rknpu.mn_order", "rknpu.source_k_rounding"})
+    if global_schedule:
+        reject(RK_E_UNSUPPORTED,
+               "a single global schedule attribute cannot be copied to every "
+               "staged node; use rknpu.stageN.* instead", stage="frontend",
+               source=span, actual=global_schedule)
+    allowed_suffix = {"tile_m", "tile_n", "mn_order", "source_k_rounding"}
+    parsed: dict[int, dict[str, Any]] = {}
+    for key in attrs:
+        if key == "rknpu.staged_schedule":
+            continue
+        if not key.startswith("rknpu.stage"):
+            continue
+        parts = key.split(".")
+        if len(parts) != 3 or not parts[1].startswith("stage") or \
+                parts[2] not in allowed_suffix:
+            reject(RK_E_UNSUPPORTED,
+                   "unsupported per-stage schedule attribute", stage="frontend",
+                   source=span, actual=key)
+        try:
+            index = int(parts[1][5:])
+        except ValueError:
+            reject(RK_E_UNSUPPORTED,
+                   "per-stage schedule index is not an integer",
+                   stage="frontend", source=span, actual=key)
+        if index < 0 or index >= stage_count:
+            reject(RK_E_UNSUPPORTED,
+                   "per-stage schedule names a stage outside the source",
+                   stage="frontend", source=span,
+                   actual={"key": key, "stage_count": stage_count})
+        parsed.setdefault(index, {})[parts[2]] = attrs[key]
+    schedules: list[_StagedSchedule] = []
+    for index in range(stage_count):
+        values = parsed.get(index, {})
+        raw_m, raw_n = values.get("tile_m"), values.get("tile_n")
+        if (raw_m is None) != (raw_n is None):
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {index} tile_m and tile_n must be supplied together",
+                   stage="frontend", source=span)
+
+        def stage_int(value: Any) -> int | None:
+            if isinstance(value, int) and not isinstance(value, bool):
+                return value
+            return _int_imm(value)
+
+        tile_m = stage_int(raw_m) if raw_m is not None else None
+        tile_n = stage_int(raw_n) if raw_n is not None else None
+        if raw_m is not None and (tile_m is None or tile_n is None):
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {index} tile sizes must be static integers",
+                   stage="frontend", source=span)
+        if tile_m is not None and (not 1 <= tile_m <= 256 or
+                                   not 1 <= tile_n <= 256):
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {index} tile sizes must be within 1..256",
+                   stage="frontend", source=span, actual=[tile_m, tile_n])
+        order = values.get("mn_order", "m_major")
+        if not isinstance(order, str):
+            order = str(order)
+        if order not in MN_ORDERS:
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {index} has an unsupported M/N traversal order",
+                   stage="frontend", source=span, actual=order,
+                   required=sorted(MN_ORDERS))
+        rounding = values.get("source_k_rounding")
+        if rounding is not None:
+            rounding = str(rounding)
+        if rounding is not None and rounding not in SOURCE_ROUNDINGS:
+            reject(RK_E_NUMERIC_CONTRACT,
+                   f"stage {index} has an unsupported rounding declaration",
+                   stage="frontend", source=span, actual=rounding)
+        schedules.append(_StagedSchedule(tile_m, tile_n, order, rounding))
+    return tuple(schedules)
+
+
+def _parse_guarded_stage(stage_index: int, stage_items: list[_Item],
+                         params: list[Any], *, tirx: Any, span: str,
+                         declared_rounding: str | None) -> dict[str, Any]:
+    """Prove one guarded explicit-per-K GEMM launch and return its geometry."""
+    calls = [item for item in stage_items if item.kind == "call"]
+    tile_calls = [item for item in calls
+                  if _op_name(item.node) in ALLOWED_TILEOPS]
+    stores = [item for item in stage_items if item.kind == "store"]
+    fills = [item for item in tile_calls
+             if _op_name(item.node) == "tl.tileop.fill"]
+    gemms = [item for item in tile_calls
+             if _op_name(item.node) == "tl.tileop.gemm"]
+    copies = [item for item in tile_calls
+              if _op_name(item.node) == "tl.tileop.copy"]
+    if len(gemms) != 1:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} must contain exactly one GEMM",
+               stage="frontend", source=span, actual=len(gemms))
+    if len(copies) != 2:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} must contain exactly the two explicit "
+               "FP16 round-trip copies", stage="frontend", source=span,
+               actual=len(copies))
+    gemm_item = gemms[0]
+    if gemm_item.guards or len(gemm_item.loops) != 1 or \
+            gemm_item.blocks is None:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} GEMM must be unguarded inside one K loop",
+               stage="frontend", source=span)
+    k_loop = gemm_item.loops[0]
+    try:
+        k_kind = int(k_loop.kind)
+    except Exception:
+        k_kind = -1
+    if k_kind != 0:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} K loop must be serial/pipelined",
+               stage="frontend", source=span, actual=k_kind)
+    if _int_imm(k_loop.min) != 0 or \
+            (getattr(k_loop, "step", None) is not None and
+             _int_imm(k_loop.step) != 1):
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} K loop must start at zero and step by one",
+               stage="frontend", source=span)
+    trips = _int_imm(k_loop.extent)
+    if trips is None or trips <= 0:
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} needs a static positive K trip count",
+               stage="frontend", source=span, actual=repr(k_loop.extent))
+
+    a_reg, b_reg, c_reg, gm, gn, gk = _gemm_header(gemm_item.node, tirx, span)
+    if a_reg.physical != (gm, gk) or b_reg.physical != (gk, gn) or \
+            c_reg.physical != (gm, gn):
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} GEMM regions do not describe a full tile",
+               stage="frontend", source=span)
+    for reg, label in ((a_reg, "A"), (b_reg, "B"), (c_reg, "GEMM accumulator")):
+        if _param_of(reg.buffer, params) is not None or reg.offset != (0, 0):
+            reject(RK_E_SHAPE,
+                   f"stage {stage_index} {label} must be a local zero-offset tile",
+                   stage="frontend", source=span)
+        _check_plain_tile_buffer(reg, f"stage {stage_index} {label}", span)
+    if not (1 <= gm <= 256 and 1 <= gn <= 256 and gk == 256):
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} requires BM/BN <= 256 and BK == 256",
+               stage="frontend", source=span, actual=[gm, gn, gk])
+
+    block_loops = gemm_item.blocks
+    if len(block_loops) != 2:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} requires a 2-D block grid",
+               stage="frontend", source=span, actual=len(block_loops))
+    for block in block_loops:
+        if _int_imm(block.min) != 0 or \
+                (getattr(block, "step", None) is not None and
+                 _int_imm(block.step) != 1):
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} block grid must start at zero and "
+                   "step by one", stage="frontend", source=span)
+
+    a_param = b_param = c_param = None
+    a_guarded = b_guarded = y_guarded = None
+    for item in stores:
+        if not item.guards:
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} has an unguarded store",
+                   stage="frontend", source=span,
+                   actual=_buffer_name(item.node.buffer))
+        target = _param_of(item.node.buffer, params)
+        if target is not None:
+            if y_guarded is not None:
+                reject(RK_E_UNSUPPORTED,
+                       f"stage {stage_index} has more than one parameter write",
+                       stage="frontend", source=span)
+            y_guarded = item
+            c_param = target
+        elif _same_buffer(item.node.buffer, a_reg.buffer):
+            a_guarded = item
+        elif _same_buffer(item.node.buffer, b_reg.buffer):
+            b_guarded = item
+        else:
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} guarded store targets an unrelated "
+                   "buffer", stage="frontend", source=span,
+                   actual=_buffer_name(item.node.buffer))
+    if a_guarded is None or b_guarded is None or y_guarded is None or \
+            len(stores) != 3:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} requires guarded A, B and output stores",
+               stage="frontend", source=span,
+               actual={"A": a_guarded is not None,
+                       "B": b_guarded is not None,
+                       "Y": y_guarded is not None,
+                       "stores": len(stores)})
+
+    a_store = a_guarded.node
+    b_store = b_guarded.node
+    if type(a_store.value).__name__ != "BufferLoad" or \
+            type(b_store.value).__name__ != "BufferLoad":
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} guarded inputs must load parameters",
+               stage="frontend", source=span)
+    a_loaded = a_store.value
+    b_loaded = b_store.value
+    a_i0, a_j0 = _tile_parallel_axes(a_guarded, gm, gk,
+                                     f"stage {stage_index} A load", span)
+    b_i0, b_j0 = _tile_parallel_axes(b_guarded, gk, gn,
+                                     f"stage {stage_index} B load", span)
+    y_i0, y_j0 = _tile_parallel_axes(y_guarded, gm, gn,
+                                     f"stage {stage_index} output", span)
+    a_local = {"ai": a_i0, "aj": a_j0}
+    b_local = {"bi": b_i0, "bj": b_j0}
+    y_local = {"yi": y_i0, "yj": y_j0}
+
+    def block_coeff(expr: Any, index: int,
+                    local: dict[str, Any]) -> int:
+        parsed = _affine_expr(expr, tirx,
+                              {f"b{index}": block_loops[index].loop_var,
+                               **local})
+        return 0 if parsed is None else parsed[0].get(f"b{index}", 0)
+
+    m_candidates: list[Any] = []
+    n_candidates: list[Any] = []
+    y_indices = tuple(y_guarded.node.indices)
+    for index, block in enumerate(block_loops):
+        a_row = block_coeff(a_loaded.indices[0], index, a_local)
+        b_col = block_coeff(b_loaded.indices[1], index, b_local)
+        y_row = block_coeff(y_indices[0], index, y_local)
+        y_col = block_coeff(y_indices[1], index, y_local)
+        if a_row == gm and y_row == gm:
+            m_candidates.append(block)
+        if b_col == gn and y_col == gn:
+            n_candidates.append(block)
+    if len(m_candidates) != 1 or len(n_candidates) != 1 or \
+            m_candidates[0] is n_candidates[0]:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} cannot prove the block-axis to M/N mapping",
+               stage="frontend", source=span,
+               actual={"M": len(m_candidates), "N": len(n_candidates)})
+    by_loop, bx_loop = m_candidates[0], n_candidates[0]
+    grid_y = _int_imm(by_loop.extent)
+    grid_x = _int_imm(bx_loop.extent)
+    if grid_x is None or grid_y is None or grid_x < 1 or grid_y < 1:
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} block-grid extents must be static positive",
+               stage="frontend", source=span)
+    roles = {"bx": bx_loop.loop_var, "by": by_loop.loop_var,
+             "ko": k_loop.loop_var, **a_local, **b_local}
+    if a_guarded.loops[:1] != (k_loop,) or b_guarded.loops[:1] != (k_loop,):
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} A/B loads must be inside the K loop",
+               stage="frontend", source=span)
+    for item, i_var, j_var, label in ((a_guarded, a_i0, a_j0, "A"),
+                                      (b_guarded, b_i0, b_j0, "B")):
+        indices = item.node.indices
+        if len(indices) != 2 or not _same_var(indices[0], i_var) or \
+                not _same_var(indices[1], j_var):
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} {label} tile store indices are not "
+                   "its tile loops", stage="frontend", source=span)
+    a_terms = _guard_terms(a_guarded.guards, tirx, roles,
+                           f"stage {stage_index} A tail", span)
+    b_terms = _guard_terms(b_guarded.guards, tirx, roles,
+                           f"stage {stage_index} B tail", span)
+    a_param = _param_of(a_loaded.buffer, params)
+    b_param = _param_of(b_loaded.buffer, params)
+    if a_param is None or b_param is None:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} A/B loads must be parameters",
+               stage="frontend", source=span)
+    a_shape = tuple(int(x) for x in a_param.shape)
+    b_shape = tuple(int(x) for x in b_param.shape)
+    c_shape = tuple(int(x) for x in c_param.shape) if c_param is not None else ()
+    if len(a_shape) != 2 or len(b_shape) != 2 or len(c_shape) != 2:
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} parameters must be rank 2",
+               stage="frontend", source=span)
+    logical_m, logical_k = a_shape
+    if b_shape[0] != logical_k:
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} A/B disagree on logical K",
+               stage="frontend", source=span)
+    logical_n = b_shape[1]
+    if c_shape != (logical_m, logical_n):
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} output shape does not match M/N",
+               stage="frontend", source=span)
+    if grid_x != (logical_n + gn - 1) // gn or \
+            grid_y != (logical_m + gm - 1) // gm or \
+            trips != (logical_k + gk - 1) // gk:
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} grid/trips do not equal ceildiv coverage",
+               stage="frontend", source=span,
+               actual={"grid_x": grid_x, "grid_y": grid_y, "trips": trips,
+                       "logical": [logical_m, logical_n, logical_k],
+                       "tile": [gm, gn, gk]})
+    _match_guard_terms(a_terms,
+                       [({"by": gm, "ai": 1}, logical_m),
+                        ({"ko": gk, "aj": 1}, logical_k)],
+                       f"stage {stage_index} A tail", span)
+    _match_guard_terms(b_terms,
+                       [({"ko": gk, "bi": 1}, logical_k),
+                        ({"bx": gn, "bj": 1}, logical_n)],
+                       f"stage {stage_index} B tail", span)
+    for region, axis, expected, label in (
+            (a_loaded, 0, {"by": gm, "ai": 1}, "A row"),
+            (a_loaded, 1, {"ko": gk, "aj": 1}, "A column"),
+            (b_loaded, 0, {"ko": gk, "bi": 1}, "B row"),
+            (b_loaded, 1, {"bx": gn, "bj": 1}, "B column")):
+        _match_index(*_affine_coeffs(region.indices[axis], tirx, roles,
+                                     f"stage {stage_index} {label}", span),
+                     expected, f"stage {stage_index} {label}", span)
+
+    for reg, label, guarded, dims in (
+            (a_reg, "A", a_guarded, (gm, gk)),
+            (b_reg, "B", b_guarded, (gk, gn))):
+        matches = [f for f in fills
+                   if k_loop in f.loops and
+                   _same_buffer(_region(f.node.args[0], tirx, "fill",
+                                        expect_mask=2).buffer, reg.buffer)]
+        if len(matches) != 1:
+            reject(RK_E_NUMERIC_CONTRACT,
+                   f"stage {stage_index} {label} needs one zero fill per K block",
+                   stage="frontend", source=span, actual=len(matches))
+        fill = matches[0]
+        fill_reg = _region(fill.node.args[0], tirx, "fill", expect_mask=2)
+        if fill.guards or fill_reg.physical != dims or \
+                fill_reg.offset != (0, 0) or \
+                _int_imm(fill.node.args[1]) != 0 or fill.order >= guarded.order:
+            reject(RK_E_NUMERIC_CONTRACT,
+                   f"stage {stage_index} {label} zero fill must cover the full "
+                   "tile before the guarded load", stage="frontend", source=span)
+
+    persistent_acc = None
+    roundtrip_load = roundtrip_store = None
+    for item in copies:
+        if k_loop not in item.loops:
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} round-trip copies must be in the K loop",
+                   stage="frontend", source=span)
+        src = _region(item.node.args[0], tirx, "roundtrip source",
+                      expect_mask=1)
+        dst = _region(item.node.args[1], tirx, "roundtrip destination",
+                      expect_mask=2)
+        if src.physical != (gm, gn) or dst.physical != (gm, gn) or \
+                src.offset != (0, 0) or dst.offset != (0, 0):
+            reject(RK_E_NUMERIC_CONTRACT,
+                   f"stage {stage_index} round-trip must move the full tile",
+                   stage="frontend", source=span)
+        if _same_buffer(src.buffer, c_reg.buffer) and \
+                not _same_buffer(dst.buffer, c_reg.buffer):
+            candidate = dst.buffer
+            if roundtrip_store is not None:
+                reject(RK_E_UNSUPPORTED,
+                       f"stage {stage_index} has duplicate round-trip stores",
+                       stage="frontend", source=span)
+            roundtrip_store = item
+        elif _same_buffer(dst.buffer, c_reg.buffer) and \
+                not _same_buffer(src.buffer, c_reg.buffer):
+            candidate = src.buffer
+            if roundtrip_load is not None:
+                reject(RK_E_UNSUPPORTED,
+                       f"stage {stage_index} has duplicate round-trip loads",
+                       stage="frontend", source=span)
+            roundtrip_load = item
+        else:
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} copy is not an accumulator round trip",
+                   stage="frontend", source=span)
+        if persistent_acc is not None and \
+                not _same_buffer(persistent_acc, candidate):
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} round-trip copies disagree on the "
+                   "running accumulator", stage="frontend", source=span)
+        persistent_acc = candidate
+    if roundtrip_load is None or roundtrip_store is None or \
+            persistent_acc is None:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} needs one load and one store round trip",
+               stage="frontend", source=span)
+    if str(getattr(persistent_acc, "dtype", "")) != "float16" or \
+            str(getattr(c_reg.buffer, "dtype", "")) != "float32":
+        reject(RK_E_NUMERIC_CONTRACT,
+               f"stage {stage_index} requires FP16 running and FP32 GEMM "
+               "accumulators", stage="frontend", source=span)
+    if not (roundtrip_load.order < gemm_item.order < roundtrip_store.order):
+        reject(RK_E_NUMERIC_CONTRACT,
+               f"stage {stage_index} round-trip order must be load, GEMM, store",
+               stage="frontend", source=span)
+    acc_fills = [f for f in fills
+                 if not f.loops and
+                 _same_buffer(_region(f.node.args[0], tirx, "fill",
+                                      expect_mask=2).buffer, persistent_acc)]
+    if len(acc_fills) != 1 or len(fills) != 3:
+        reject(RK_E_NUMERIC_CONTRACT,
+               f"stage {stage_index} needs one running-accumulator zero fill "
+               "outside the K loop and two input fills inside it",
+               stage="frontend", source=span, actual=len(fills))
+    acc_fill = acc_fills[0]
+    acc_fill_reg = _region(acc_fill.node.args[0], tirx, "fill", expect_mask=2)
+    first_other = min((item.order for item in stage_items
+                       if item is not acc_fill), default=acc_fill.order + 1)
+    if acc_fill.guards or acc_fill_reg.physical != (gm, gn) or \
+            acc_fill_reg.offset != (0, 0) or \
+            _int_imm(acc_fill.node.args[1]) != 0 or \
+            acc_fill.order >= first_other:
+        reject(RK_E_NUMERIC_CONTRACT,
+               f"stage {stage_index} running accumulator must be zeroed once "
+               "before every other stage operation", stage="frontend",
+               source=span)
+
+    y_store = y_guarded.node
+    if k_loop in y_guarded.loops or y_guarded.blocks != gemm_item.blocks or \
+            y_guarded.order <= gemm_item.order:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} output must run after the K loop",
+               stage="frontend", source=span)
+    y_roles = {"bx": bx_loop.loop_var, "by": by_loop.loop_var,
+               "yi": y_i0, "yj": y_j0}
+    y_terms = _guard_terms(y_guarded.guards, tirx, y_roles,
+                           f"stage {stage_index} output tail", span)
+    _match_guard_terms(y_terms,
+                       [({"by": gm, "yi": 1}, logical_m),
+                        ({"bx": gn, "yj": 1}, logical_n)],
+                       f"stage {stage_index} output tail", span)
+    if type(y_store.value).__name__ == "Cast" and \
+            type(y_store.value.value).__name__ == "BufferLoad":
+        y_load = y_store.value.value
+    elif type(y_store.value).__name__ == "BufferLoad":
+        y_load = y_store.value
+    else:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} output must read the FP16 running "
+               "accumulator", stage="frontend", source=span)
+    if not _same_buffer(y_load.buffer, persistent_acc) or \
+            str(getattr(y_load.buffer, "dtype", "")) != "float16":
+        reject(RK_E_NUMERIC_CONTRACT,
+               f"stage {stage_index} output does not read the FP16 running "
+               "accumulator", stage="frontend", source=span)
+    if len(y_load.indices) != 2 or not _same_var(y_load.indices[0], y_i0) or \
+            not _same_var(y_load.indices[1], y_j0):
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} output accumulator indices are not tile "
+               "loops", stage="frontend", source=span)
+    _match_index(*_affine_coeffs(y_store.indices[0], tirx, y_roles,
+                                 f"stage {stage_index} output row", span),
+                 {"by": gm, "yi": 1},
+                 f"stage {stage_index} output row", span)
+    _match_index(*_affine_coeffs(y_store.indices[1], tirx, y_roles,
+                                 f"stage {stage_index} output column", span),
+                 {"bx": gn, "yj": 1},
+                 f"stage {stage_index} output column", span)
+    if len(params) != 5 or a_param is b_param or a_param is c_param or \
+            b_param is c_param:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} expects distinct A, B and output "
+               "parameters", stage="frontend", source=span)
+
+    if declared_rounding is not None and \
+            declared_rounding != "explicit_per_k_fp16":
+        reject(RK_E_NUMERIC_CONTRACT,
+               f"stage {stage_index} rounding declaration does not match the "
+               "proven per-K FP16 source", stage="frontend", source=span,
+               actual=declared_rounding)
+
+    k_tail = logical_k - (trips - 1) * gk
+    m_tail = logical_m - (grid_y - 1) * gm
+    n_tail = logical_n - (grid_x - 1) * gn
+    k_blocks = [{"index": index, "k0": index * gk,
+                 "extent": min(gk, logical_k - index * gk)}
+                for index in range(trips)]
+    tail_contract = {
+        "form": "guarded_rect_tail_v1",
+        "zero_fill": ["A_tile_each_k_iteration", "B_tile_each_k_iteration"],
+        "guarded_reads": {"A": [logical_m, logical_k],
+                          "B": [logical_k, logical_n]},
+        "guarded_write": [logical_m, logical_n],
+        "tiles": {"M": gm, "N": gn, "K": gk},
+        "tails": {"M": m_tail, "N": n_tail, "K": k_tail},
+        "grid": {"x": grid_x, "y": grid_y},
+        "k_trips": trips,
+        "k_blocks": k_blocks,
+        "rounding_points": "after_each_k_block",
+        "physical_k_tile": gk,
+        "physical_padding": "zero",
+        "tail_physical_extent": ((k_tail + 31) // 32) * 32,
+    }
+    return {
+        "stage": stage_index, "a_param": a_param, "b_param": b_param,
+        "c_param": c_param, "logical_m": logical_m, "logical_n": logical_n,
+        "logical_k": logical_k, "gm": gm, "gn": gn, "gk": gk,
+        "grid_x": grid_x, "grid_y": grid_y, "trips": trips,
+        "k_blocks": k_blocks, "k_tail": k_tail,
+        "source_rounding": "explicit_per_k_fp16",
+        "tail_contract": tail_contract,
+        "source_mn_tiling": {
+            "block_m": gm, "block_n": gn,
+            "grid_x": grid_x, "grid_y": grid_y,
+            "coverage": "ragged_tail",
+            "m_tail": m_tail, "n_tail": n_tail,
+        },
+    }
+
+
+def _source_schedule_from_stage(info: dict[str, Any],
+                                staged: _StagedSchedule | None) -> dict[str, Any]:
+    use_m = staged.tile_m if staged is not None and staged.tile_m is not None \
+        else info["gm"]
+    use_n = staged.tile_n if staged is not None and staged.tile_n is not None \
+        else info["gn"]
+    use_order = staged.order if staged is not None else "m_major"
+    if not 1 <= use_m <= 256 or not 1 <= use_n <= 256:
+        reject(RK_E_UNSUPPORTED,
+               "staged M/N tile sizes must be within 1..256",
+               stage="frontend", actual=[use_m, use_n])
+    return {"kind": "mn_tiles_v1", "tile_m": int(use_m),
+            "tile_n": int(use_n), "order": use_order,
+            "k_tile": SCHEDULE_K_TILE,
+            "accumulation": "ordered_ascending_f16_writeback"}
+
+
+def _extract_staged_two_matmul(items: list[_Item], params: list[Any], *,
+                               tirx: Any, prim_func: Any, span: str,
+                               options: CompileOptions,
+                               profile_hash: str) -> Any:
+    """Extract exactly two launch-separated guarded GEMM stages Z and Y."""
+    active = [item for item in items
+              if item.kind == "store" or
+              (item.kind == "call" and _op_name(item.node) in ALLOWED_TILEOPS)]
+    groups: list[list[_Item]] = []
+    keys: list[int] = []
+    for item in active:
+        key = id(item.blocks)
+        if not keys or key != keys[-1]:
+            if key in keys:
+                reject(RK_E_UNSUPPORTED,
+                       "a T.Kernel block scope is not contiguous",
+                       stage="frontend", source=span)
+            keys.append(key)
+            groups.append([])
+        groups[-1].append(item)
+    if len(groups) != 2:
+        reject(RK_E_UNSUPPORTED,
+               "scheduled staged execution requires exactly two T.Kernel "
+               "launches", stage="frontend", source=span, actual=len(groups))
+    staged = _staged_schedule_annotations(prim_func, len(groups), span)
+    if staged is None:
+        reject(RK_E_UNSUPPORTED,
+               "scheduled staged execution requires the versioned per-stage "
+               "schedule marker", stage="frontend", source=span)
+    if len(params) != 5:
+        reject(RK_E_UNSUPPORTED,
+               "two-stage scheduled source expects X, W1, W2, Z and Y",
+               stage="frontend", source=span, actual=len(params))
+
+    s0 = _parse_guarded_stage(0, groups[0], params, tirx=tirx, span=span,
+                              declared_rounding=staged[0].source_k_rounding)
+    s1 = _parse_guarded_stage(1, groups[1], params, tirx=tirx, span=span,
+                              declared_rounding=staged[1].source_k_rounding)
+
+    a0 = next(i for i, p in enumerate(params) if _same_buffer(p, s0["a_param"]))
+    b0 = next(i for i, p in enumerate(params) if _same_buffer(p, s0["b_param"]))
+    z = next(i for i, p in enumerate(params) if _same_buffer(p, s0["c_param"]))
+    a1 = next(i for i, p in enumerate(params) if _same_buffer(p, s1["a_param"]))
+    b1 = next(i for i, p in enumerate(params) if _same_buffer(p, s1["b_param"]))
+    y = next(i for i, p in enumerate(params) if _same_buffer(p, s1["c_param"]))
+    if a1 != z or len({a0, b0, a1, b1, y}) != 5:
+        reject(RK_E_UNSUPPORTED,
+               "the two scheduled stages must form X->W1->Z->W2->Y with one "
+               "distinct intermediate", stage="frontend", source=span,
+               actual={"a0": a0, "b0": b0, "z": z, "a1": a1,
+                       "b1": b1, "y": y})
+    if _same_buffer(params[a0], params[b0]) or \
+            _same_buffer(params[b1], params[z]):
+        reject(RK_E_UNSUPPORTED,
+               "stage operand roles overlap", stage="frontend", source=span)
+
+    contract0 = _contract_with_points(options, ("gemm0_accumulator",))
+    contract1 = _contract_with_points(options, ("gemm1_accumulator",))
+
+    def stage_attrs(info: dict[str, Any], contract: NumericContract,
+                    index: int, sched: _StagedSchedule) -> dict[str, Any]:
+        hints = {
+            "source_k_block": info["gk"],
+            "source_k_trips": info["trips"],
+            "logical_k": info["logical_k"],
+            "k_tail": info["k_tail"],
+            "k_blocks": info["k_blocks"],
+            "source_rounding": info["source_rounding"],
+            "rounding_points": "after_each_k_block",
+            "source_loop_annotations": {},
+            "lowering_k_tile": 256,
+            "pipeline_hint_dropped": False,
+            "narrowing_base": "explicit FP16 after each K block",
+            "tail_contract": info["tail_contract"],
+        }
+        return {
+            "b_layout": "kn",
+            "numeric_contract": contract.to_dict(),
+            "source_accumulator_dtype": "float16",
+            "source_k_rounding": info["source_rounding"],
+            "source_k_loop": hints,
+            "source_mn_tiling": info["source_mn_tiling"],
+            "source_tail_contract": info["tail_contract"],
+            "source_schedule": _source_schedule_from_stage(info, sched),
+            "source_stage_index": index,
+            "source_stage_count": 2,
+            "source_stage_boundary": "kernel_launch",
+            "source_stage_schedule_contract": "staged_mn_tiles_v1",
+            "source_narrowing_points": list(F16_NARROWING_NAMES),
+        }
+
+    values = (
+        _value(a0, _buffer_name(params[a0]),
+               TensorType("float16", tuple(int(x) for x in params[a0].shape)),
+               None, "input"),
+        _value(b0, _buffer_name(params[b0]),
+               TensorType("float16", tuple(int(x) for x in params[b0].shape)),
+               None, "constant"),
+        _value(b1, _buffer_name(params[b1]),
+               TensorType("float16", tuple(int(x) for x in params[b1].shape)),
+               None, "constant"),
+        _value(z, _buffer_name(params[z]),
+               TensorType("float16", tuple(int(x) for x in params[z].shape)),
+               0, "temporary"),
+        _value(y, _buffer_name(params[y]),
+               TensorType("float16", tuple(int(x) for x in params[y].shape)),
+               1, "output"),
+    )
+    ops = (
+        _op(0, "matmul", (a0, b0), (z,),
+            stage_attrs(s0, contract0, 0, staged[0]), span),
+        _op(1, "matmul", (z, b1), (y,),
+            stage_attrs(s1, contract1, 1, staged[1]), span),
+    )
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
+                  ops=ops, inputs=(a0,), outputs=(y,),
+                  profile_hash=profile_hash, source_hash=span,
+                  state_signature="")
+
+
 def _detect_k_block(items: list[_Item], tirx: Any, span: str,
                     params: list[Any]) -> _KBlock | None:
     tile_items = [item for item in items
@@ -4556,17 +5226,10 @@ def extract(prim_func: Any, *, options: CompileOptions,
                    stage="frontend", source=span, op=name,
                    alternative="only tl.tileop.fill/copy/gemm are lowered")
 
-    # Guarded parallel stores are only accepted by the explicit rectangular-tail
-    # K-loop form.  They must never fall through to a path that ignores guards.
-    if any(item.guards for item in items):
-        return _extract_ragged_tail(
-            items, params, tirx=tirx, prim_func=prim_func, span=span,
-            options=options, profile_hash=profile_hash,
-            b_is_input=b_is_input)
-
     # Several distinct T.Kernel block scopes are an explicit staged pipeline.
-    # It is dispatched before the single-K-loop detector because each launch is
-    # a separate global-synchronisation boundary.
+    # It is dispatched before the guarded single-GEMM path because each launch
+    # is a separate global-synchronisation boundary and the per-stage contract
+    # must not be mistaken for one guarded GEMM.
     stage_items = [item for item in items
                    if item.kind == "store" or
                    (item.kind == "call" and
@@ -4577,14 +5240,27 @@ def extract(prim_func: Any, *, options: CompileOptions,
         if not stage_keys or key != stage_keys[-1]:
             stage_keys.append(key)
     if len(stage_keys) > 1:
+        staged_attrs = dict(getattr(prim_func, "attrs", {}) or {})
+        if "rknpu.staged_schedule" in staged_attrs:
+            return _extract_staged_two_matmul(
+                items, params, tirx=tirx, prim_func=prim_func, span=span,
+                options=options, profile_hash=profile_hash)
         if _schedule_annotation(prim_func, span).present:
             reject(RK_E_UNSUPPORTED,
-                   "explicit M/N scheduling for multi-kernel staged dataflow "
-                   "is not implemented yet; the schedule is not silently "
-                   "ignored", stage="frontend", source=span)
+                   "explicit M/N scheduling for general multi-kernel staged "
+                   "dataflow is not implemented; only the versioned two-stage "
+                   "contract is admitted", stage="frontend", source=span)
         return _extract_staged_dataflow(
             items, params, tirx=tirx, prim_func=prim_func, span=span,
             options=options, profile_hash=profile_hash)
+
+    # Guarded parallel stores are only accepted by the explicit rectangular-tail
+    # K-loop form.  They must never fall through to a path that ignores guards.
+    if any(item.guards for item in items):
+        return _extract_ragged_tail(
+            items, params, tirx=tirx, prim_func=prim_func, span=span,
+            options=options, profile_hash=profile_hash,
+            b_is_input=b_is_input)
 
     # A K-blocked reduction takes the dedicated path; everything else must be
     # loop free.

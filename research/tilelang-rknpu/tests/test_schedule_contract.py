@@ -85,25 +85,28 @@ class ScheduleContractTests(unittest.TestCase):
         base = matmul_module(m=32, k=64, n=48)
         contract = base.ops[0].attrs["numeric_contract"]
         attrs = {"b_layout": "kn", "numeric_contract": contract,
-                 "source_schedule": schedule(32, 48)}
+                 "source_schedule": schedule(32, 16)}
         values = (
             Value(0, "X", TensorType("float16", (32, 64)), None, "input"),
             Value(1, "W1", TensorType("float16", (64, 48)), None, "constant"),
-            Value(2, "Z", TensorType("float16", (32, 48)), 0, "temporary"),
+            Value(2, "Z1", TensorType("float16", (32, 48)), 0, "temporary"),
             Value(3, "W2", TensorType("float16", (48, 32)), None, "constant"),
-            Value(4, "Y", TensorType("float16", (32, 32)), 1, "output"),
+            Value(4, "Z2", TensorType("float16", (32, 32)), 1, "temporary"),
+            Value(5, "W3", TensorType("float16", (32, 16)), None, "constant"),
+            Value(6, "Y", TensorType("float16", (32, 16)), 2, "output"),
         )
         ops = (
             Op(0, "matmul", (0, 1), (2,), dict(attrs)),
             Op(1, "matmul", (2, 3), (4,), dict(attrs)),
+            Op(2, "matmul", (4, 5), (6,), dict(attrs)),
         )
         module = Module(name="multi-node-schedule-test", values=values,
-                        ops=ops, inputs=(0,), outputs=(4,),
+                        ops=ops, inputs=(0,), outputs=(6,),
                         source_hash="test")
         with self.assertRaises(BackendError) as ctx:
             compile_rkir(module, profile=PROFILE, options=OPTIONS)
         self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_UNSUPPORTED)
-        self.assertIn("multi-node dataflow",
+        self.assertIn("restricted two-stage",
                       ctx.exception.diagnostics[0].message)
 
     def test_scheduled_legacy_final_narrowing_source_is_rejected(self):
