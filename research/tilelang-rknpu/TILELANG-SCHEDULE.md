@@ -67,6 +67,22 @@ A direct-RKIR matmul can express the same schedule by putting the identical
 TileLang carrier; tests and board experiments verify the same task/buffer counts
 and bit-identical outputs.
 
+## Tuner, replay and model override
+
+`tools/tune_schedule.py prepare` compiles finite M/N candidates for real SmolLM
+shapes and captured activations.  `run` performs static C-verifier preflight,
+board correctness checks and full-call timing, selects a winner (retaining the
+default when it is within 2% of the measured best), and writes `policy.json`
+with a cache identity.  `replay` is invoked in a fresh SSH process and rejects
+changed package/weights/library/plan/schedule identities.
+
+The selected QK-prefill plan can be applied to the full model through
+`--schedule-policy` (`smollm2-plan-overrides-v1`), without changing the accepted
+package manifest/weights identity.  The V5 fixed acceptance under that override
+passed 56/56 gates with bit-identical observation arrays; the end-to-end
+benchmark did not show a stable speedup, so the operator gain is not misreported
+as a model gain.
+
 ## Unsupported in this milestone
 
 - Explicit schedules on staged/multi-node dataflow are rejected until that

@@ -413,6 +413,20 @@ The shipped experiment includes SmolLM-shaped prefill QKV, attention QK prefill
 and attention QK decode plans.  Explicit schedules on multi-node dataflow are
 rejected until that lowerer is schedule-aware.
 
+The finite board tuner and new-process replay are:
+
+```bash
+python3 tools/tune_schedule.py prepare   --capture .data/evidence/smollm2-20261029T120416Z/acceptance/board/run-00/captured-00.npz   --out /tmp/schedule-tuning
+./scripts/run-smollm2.sh schedule-tune /tmp/schedule-tuning/plans   /tmp/schedule-tuning/board
+
+# Optional whole-model plan override (does not change the accepted package
+# manifest/weights identity); the runner validates the policy/plan hash.
+RK_SMOLLM_SCHEDULE_POLICY=/tmp/schedule-tuning/model-override.json   ./scripts/run-smollm2.sh board-run   models/smollm2_v5_requests/acceptance.json /tmp/scheduled-acceptance
+```
+
+The delivered tuning/cache/replay and V5 model-override results are under
+`results/20261030T030803Z-tilelang-schedule/`.
+
 ## Layout reuse / A-B campaign (2026-10-28)
 
 Final report: [LAYOUT-REUSE-REPORT.md](LAYOUT-REUSE-REPORT.md).

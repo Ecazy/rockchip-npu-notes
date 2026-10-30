@@ -1,0 +1,8648 @@
+{
+ "cases": [
+  {
+   "candidates": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 23,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 17,
+     "download_calls": 4,
+     "mean_us": 1241.8040035602946,
+     "median_us": 1238.6930029606447,
+     "min_us": 1234.6100120339543,
+     "name": "default",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/default.rkplan.json",
+     "plan_hash": "56695c6882374b2ed7ab17f760a11c0cb3da6c1c16896a8197008a2aa3acab1c",
+     "plan_sha256": "b2bb4b566b0132b258cb2d9af5784403a2d68ae84962e8a91de728ce17754152",
+     "publish_count": 4,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       256
+      ],
+      [
+       0,
+       256,
+       44,
+       256
+      ],
+      [
+       0,
+       512,
+       44,
+       256
+      ],
+      [
+       0,
+       768,
+       44,
+       192
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "default": true,
+      "name": "default",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "selected": true,
+     "selection_reason": "autotuner_measured_best",
+     "source": "default",
+     "source_schedule": null,
+     "submit_count": 4,
+     "submit_report_count": 4,
+     "task_count": 12,
+     "task_report_count": 12,
+     "times_us": [
+      1252.1089956862852,
+      1238.6930029606447,
+      1234.6100120339543
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 7126.783995772712
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "buffer_count": 81,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 35,
+     "download_calls": 24,
+     "mean_us": 3439.192669854189,
+     "median_us": 3436.9570057606325,
+     "min_us": 3399.0400115726516,
+     "name": "m16_n128_m",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m16_n128_m.rkplan.json",
+     "plan_hash": "4ba77a19eb71c7ee6b60cdbddf2f943218bc06e3c8f4b738aaf45851a483424b",
+     "plan_sha256": "206cfbf252ba3b04f90ade72358c102e335971b9b5ce9808d7f18f7878ddba26",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       16,
+       128
+      ],
+      [
+       0,
+       128,
+       16,
+       128
+      ],
+      [
+       0,
+       256,
+       16,
+       128
+      ],
+      [
+       0,
+       384,
+       16,
+       128
+      ],
+      [
+       0,
+       512,
+       16,
+       128
+      ],
+      [
+       0,
+       640,
+       16,
+       128
+      ],
+      [
+       0,
+       768,
+       16,
+       128
+      ],
+      [
+       0,
+       896,
+       16,
+       64
+      ],
+      [
+       16,
+       0,
+       16,
+       128
+      ],
+      [
+       16,
+       128,
+       16,
+       128
+      ],
+      [
+       16,
+       256,
+       16,
+       128
+      ],
+      [
+       16,
+       384,
+       16,
+       128
+      ],
+      [
+       16,
+       512,
+       16,
+       128
+      ],
+      [
+       16,
+       640,
+       16,
+       128
+      ],
+      [
+       16,
+       768,
+       16,
+       128
+      ],
+      [
+       16,
+       896,
+       16,
+       64
+      ],
+      [
+       32,
+       0,
+       12,
+       128
+      ],
+      [
+       32,
+       128,
+       12,
+       128
+      ],
+      [
+       32,
+       256,
+       12,
+       128
+      ],
+      [
+       32,
+       384,
+       12,
+       128
+      ],
+      [
+       32,
+       512,
+       12,
+       128
+      ],
+      [
+       32,
+       640,
+       12,
+       128
+      ],
+      [
+       32,
+       768,
+       12,
+       128
+      ],
+      [
+       32,
+       896,
+       12,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m16_n128_m",
+      "order": "m_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 72,
+     "task_report_count": 72,
+     "times_us": [
+      3481.580992229283,
+      3399.0400115726516,
+      3436.9570057606325
+     ],
+     "upload_calls": 9,
+     "workspace_init_us": 12273.176995222457
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "buffer_count": 81,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 35,
+     "download_calls": 24,
+     "mean_us": 3427.62300473017,
+     "median_us": 3428.206007811241,
+     "min_us": 3366.95701116696,
+     "name": "m16_n128_n",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m16_n128_n.rkplan.json",
+     "plan_hash": "4b02eaf0fb823bf92fbb2f469b7d0b252613f8d010ba62b6fbb74195b1318ee1",
+     "plan_sha256": "653bb22502f1e8fbde14e24613e51ef464041ec8893c2cb3f50633281c04d464",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       16,
+       128
+      ],
+      [
+       16,
+       0,
+       16,
+       128
+      ],
+      [
+       32,
+       0,
+       12,
+       128
+      ],
+      [
+       0,
+       128,
+       16,
+       128
+      ],
+      [
+       16,
+       128,
+       16,
+       128
+      ],
+      [
+       32,
+       128,
+       12,
+       128
+      ],
+      [
+       0,
+       256,
+       16,
+       128
+      ],
+      [
+       16,
+       256,
+       16,
+       128
+      ],
+      [
+       32,
+       256,
+       12,
+       128
+      ],
+      [
+       0,
+       384,
+       16,
+       128
+      ],
+      [
+       16,
+       384,
+       16,
+       128
+      ],
+      [
+       32,
+       384,
+       12,
+       128
+      ],
+      [
+       0,
+       512,
+       16,
+       128
+      ],
+      [
+       16,
+       512,
+       16,
+       128
+      ],
+      [
+       32,
+       512,
+       12,
+       128
+      ],
+      [
+       0,
+       640,
+       16,
+       128
+      ],
+      [
+       16,
+       640,
+       16,
+       128
+      ],
+      [
+       32,
+       640,
+       12,
+       128
+      ],
+      [
+       0,
+       768,
+       16,
+       128
+      ],
+      [
+       16,
+       768,
+       16,
+       128
+      ],
+      [
+       32,
+       768,
+       12,
+       128
+      ],
+      [
+       0,
+       896,
+       16,
+       64
+      ],
+      [
+       16,
+       896,
+       16,
+       64
+      ],
+      [
+       32,
+       896,
+       12,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m16_n128_n",
+      "order": "n_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 72,
+     "task_report_count": 72,
+     "times_us": [
+      3366.95701116696,
+      3487.705995212309,
+      3428.206007811241
+     ],
+     "upload_calls": 9,
+     "workspace_init_us": 11820.223997347057
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "buffer_count": 34,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 20,
+     "download_calls": 8,
+     "mean_us": 1744.0476707027603,
+     "median_us": 1726.6450013266876,
+     "min_us": 1702.4370026774704,
+     "name": "m32_n256_m",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m32_n256_m.rkplan.json",
+     "plan_hash": "5b216d11cf1a5710b04be40866682335314227554a70f9cf87d92d2c7d0f8824",
+     "plan_sha256": "ac5409412c2d191c1f6fffbc598f49325223fede5dc5cf823b758b3329f7378e",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       256
+      ],
+      [
+       0,
+       256,
+       32,
+       256
+      ],
+      [
+       0,
+       512,
+       32,
+       256
+      ],
+      [
+       0,
+       768,
+       32,
+       192
+      ],
+      [
+       32,
+       0,
+       12,
+       256
+      ],
+      [
+       32,
+       256,
+       12,
+       256
+      ],
+      [
+       32,
+       512,
+       12,
+       256
+      ],
+      [
+       32,
+       768,
+       12,
+       192
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m32_n256_m",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "submit_count": 8,
+     "submit_report_count": 8,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      1726.6450013266876,
+      1803.0610081041232,
+      1702.4370026774704
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 8326.686001964845
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "buffer_count": 62,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 32,
+     "download_calls": 16,
+     "mean_us": 2563.231328773933,
+     "median_us": 2465.134995873086,
+     "min_us": 2460.4689970146865,
+     "name": "m32_n128_n",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m32_n128_n.rkplan.json",
+     "plan_hash": "385e04c93f75943f2ade4d259188ecaf882bb7757aeea41ff199aa8800442273",
+     "plan_sha256": "c96a17621f0167fee4442476efa81c94f142fb534c66ee796dbc844e59594fe1",
+     "publish_count": 16,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       128
+      ],
+      [
+       32,
+       0,
+       12,
+       128
+      ],
+      [
+       0,
+       128,
+       32,
+       128
+      ],
+      [
+       32,
+       128,
+       12,
+       128
+      ],
+      [
+       0,
+       256,
+       32,
+       128
+      ],
+      [
+       32,
+       256,
+       12,
+       128
+      ],
+      [
+       0,
+       384,
+       32,
+       128
+      ],
+      [
+       32,
+       384,
+       12,
+       128
+      ],
+      [
+       0,
+       512,
+       32,
+       128
+      ],
+      [
+       32,
+       512,
+       12,
+       128
+      ],
+      [
+       0,
+       640,
+       32,
+       128
+      ],
+      [
+       32,
+       640,
+       12,
+       128
+      ],
+      [
+       0,
+       768,
+       32,
+       128
+      ],
+      [
+       32,
+       768,
+       12,
+       128
+      ],
+      [
+       0,
+       896,
+       32,
+       64
+      ],
+      [
+       32,
+       896,
+       12,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m32_n128_n",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "submit_count": 16,
+     "submit_report_count": 16,
+     "task_count": 48,
+     "task_report_count": 48,
+     "times_us": [
+      2465.134995873086,
+      2460.4689970146865,
+      2764.089993434027
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 10305.326009984128
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 29,
+     "download_calls": 8,
+     "mean_us": 1675.3120047117893,
+     "median_us": 1665.9780085319653,
+     "min_us": 1659.8539950791746,
+     "name": "m64_n128_m",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m64_n128_m.rkplan.json",
+     "plan_hash": "e51226f2dc6d74dddb50889b77997f7f8cdb03381d66f504a7d556a419205cef",
+     "plan_sha256": "cb1966cab1eb7df266a91e488a1945e7255a0d43fd84e773a2014a4ede895b45",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m64_n128_m",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "submit_report_count": 8,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      1700.1040105242282,
+      1665.9780085319653,
+      1659.8539950791746
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 9774.584003025666
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 29,
+     "download_calls": 8,
+     "mean_us": 1692.811672304136,
+     "median_us": 1656.9370054639876,
+     "min_us": 1649.0620037075132,
+     "name": "m128_n128_m",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m128_n128_m.rkplan.json",
+     "plan_hash": "4873068fb41768451f6072ecf05888fefeb73c62b63fb5ac4f3c8624662e6109",
+     "plan_sha256": "1886d132542feda8c500b3e7f1f241e543f45ed9695f48839aadb024b7e77d8c",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m128_n128_m",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "submit_report_count": 8,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      1772.4360077409074,
+      1656.9370054639876,
+      1649.0620037075132
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 9083.96799059119
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 29,
+     "download_calls": 8,
+     "mean_us": 1672.1039961945887,
+     "median_us": 1668.895987677388,
+     "min_us": 1653.4370079170913,
+     "name": "m128_n128_n",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m128_n128_n.rkplan.json",
+     "plan_hash": "e117c44d9a8cb8fa1b4c5b4112b0e278917e0acc668c3390187d69fe39b4669d",
+     "plan_sha256": "c39f365b421a7f72c854e249566a3fce010c48abe249c5ea3741d30b67a406c1",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m128_n128_n",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "submit_report_count": 8,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      1693.9789929892868,
+      1668.895987677388,
+      1653.4370079170913
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 8945.594992837869
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 29,
+     "download_calls": 8,
+     "mean_us": 1700.3953301658232,
+     "median_us": 1689.8949979804456,
+     "min_us": 1658.3959950366989,
+     "name": "m256_n128_n",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m256_n128_n.rkplan.json",
+     "plan_hash": "199daaab298a3fb2b6f24f9c85b648b6af55299f937b42e54efcdb3eb3a29a33",
+     "plan_sha256": "5a23e5dae0d10ee1b19a96d26c8de4e8b8250328c50b1c371c639a14d18b2607",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m256_n128_n",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "submit_report_count": 8,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      1689.8949979804456,
+      1658.3959950366989,
+      1752.8949974803254
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 8765.762991970405
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "buffer_count": 78,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 50,
+     "download_calls": 15,
+     "mean_us": 2491.5793328545988,
+     "median_us": 2477.093003108166,
+     "min_us": 2438.30299586989,
+     "name": "m256_n64_m",
+     "output_sha256": "b5b867e97bfb9573f36c0f72472bc6dadb6b202cc013113794da3cdad4bf7107",
+     "plan": "prefill_qkv/m256_n64_m.rkplan.json",
+     "plan_hash": "206099488d31f14d091946eacea5cbe0e98a30a9be5631f652c17e0307e11254",
+     "plan_sha256": "3015fa3f91ce72f6bdbb555f8f56e4a944c301b608d4ef7eb85b628d3fbec71c",
+     "publish_count": 15,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       64
+      ],
+      [
+       0,
+       64,
+       44,
+       64
+      ],
+      [
+       0,
+       128,
+       44,
+       64
+      ],
+      [
+       0,
+       192,
+       44,
+       64
+      ],
+      [
+       0,
+       256,
+       44,
+       64
+      ],
+      [
+       0,
+       320,
+       44,
+       64
+      ],
+      [
+       0,
+       384,
+       44,
+       64
+      ],
+      [
+       0,
+       448,
+       44,
+       64
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ],
+      [
+       0,
+       576,
+       44,
+       64
+      ],
+      [
+       0,
+       640,
+       44,
+       64
+      ],
+      [
+       0,
+       704,
+       44,
+       64
+      ],
+      [
+       0,
+       768,
+       44,
+       64
+      ],
+      [
+       0,
+       832,
+       44,
+       64
+      ],
+      [
+       0,
+       896,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.001953125,
+     "requested": {
+      "name": "m256_n64_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "submit_count": 15,
+     "submit_report_count": 15,
+     "task_count": 45,
+     "task_report_count": 45,
+     "times_us": [
+      2559.3419995857403,
+      2438.30299586989,
+      2477.093003108166
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 11542.85301163327
+    }
+   ],
+   "id": "prefill_qkv",
+   "k": 576,
+   "kind": "prefill",
+   "m": 44,
+   "n": 960
+  },
+  {
+   "candidates": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 63,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 41,
+     "download_calls": 12,
+     "mean_us": 3603.690337816564,
+     "median_us": 3620.121002313681,
+     "min_us": 3536.7050004424527,
+     "name": "default",
+     "output_sha256": "73da5c5f86026f334dc67ba69455c1568d8fa524539ba986ea58891af88f2170",
+     "plan": "prefill_gate_up/default.rkplan.json",
+     "plan_hash": "2e96ea8c221a5d20da9c9d3659a4bd725344098bdce44d08e20bd9cab5262fbc",
+     "plan_sha256": "7da5fc037ce2ca7554e7d6ddd5f4c2f815e0e18b0cead430f7efcf02fc40dbdd",
+     "publish_count": 12,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       256
+      ],
+      [
+       0,
+       256,
+       44,
+       256
+      ],
+      [
+       0,
+       512,
+       44,
+       256
+      ],
+      [
+       0,
+       768,
+       44,
+       256
+      ],
+      [
+       0,
+       1024,
+       44,
+       256
+      ],
+      [
+       0,
+       1280,
+       44,
+       256
+      ],
+      [
+       0,
+       1536,
+       44,
+       256
+      ],
+      [
+       0,
+       1792,
+       44,
+       256
+      ],
+      [
+       0,
+       2048,
+       44,
+       256
+      ],
+      [
+       0,
+       2304,
+       44,
+       256
+      ],
+      [
+       0,
+       2560,
+       44,
+       256
+      ],
+      [
+       0,
+       2816,
+       44,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.0009765625,
+     "requested": {
+      "default": true,
+      "name": "default",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "selected": true,
+     "selection_reason": "autotuner_measured_best",
+     "source": "default",
+     "source_schedule": null,
+     "submit_count": 12,
+     "submit_report_count": 12,
+     "task_count": 36,
+     "task_report_count": 36,
+     "times_us": [
+      3654.2450106935576,
+      3536.7050004424527,
+      3620.121002313681
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 23025.03999089822
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "buffer_count": 90,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 44,
+     "download_calls": 24,
+     "mean_us": 6048.3116685645655,
+     "median_us": 5406.555996160023,
+     "min_us": 4995.603012503125,
+     "name": "m32_n256_m",
+     "output_sha256": "73da5c5f86026f334dc67ba69455c1568d8fa524539ba986ea58891af88f2170",
+     "plan": "prefill_gate_up/m32_n256_m.rkplan.json",
+     "plan_hash": "85ccac848d14ba440378476aaceaa773840af0a317412e5b2e5c90295005c741",
+     "plan_sha256": "101d1fd4bc6cb9ae738bfd81871514ddf3e2cea77b0f4ef90a6b949539334298",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       256
+      ],
+      [
+       0,
+       256,
+       32,
+       256
+      ],
+      [
+       0,
+       512,
+       32,
+       256
+      ],
+      [
+       0,
+       768,
+       32,
+       256
+      ],
+      [
+       0,
+       1024,
+       32,
+       256
+      ],
+      [
+       0,
+       1280,
+       32,
+       256
+      ],
+      [
+       0,
+       1536,
+       32,
+       256
+      ],
+      [
+       0,
+       1792,
+       32,
+       256
+      ],
+      [
+       0,
+       2048,
+       32,
+       256
+      ],
+      [
+       0,
+       2304,
+       32,
+       256
+      ],
+      [
+       0,
+       2560,
+       32,
+       256
+      ],
+      [
+       0,
+       2816,
+       32,
+       256
+      ],
+      [
+       32,
+       0,
+       12,
+       256
+      ],
+      [
+       32,
+       256,
+       12,
+       256
+      ],
+      [
+       32,
+       512,
+       12,
+       256
+      ],
+      [
+       32,
+       768,
+       12,
+       256
+      ],
+      [
+       32,
+       1024,
+       12,
+       256
+      ],
+      [
+       32,
+       1280,
+       12,
+       256
+      ],
+      [
+       32,
+       1536,
+       12,
+       256
+      ],
+      [
+       32,
+       1792,
+       12,
+       256
+      ],
+      [
+       32,
+       2048,
+       12,
+       256
+      ],
+      [
+       32,
+       2304,
+       12,
+       256
+      ],
+      [
+       32,
+       2560,
+       12,
+       256
+      ],
+      [
+       32,
+       2816,
+       12,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.0009765625,
+     "requested": {
+      "name": "m32_n256_m",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 72,
+     "task_report_count": 72,
+     "times_us": [
+      4995.603012503125,
+      5406.555996160023,
+      7742.775997030549
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 27342.81799348537
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "buffer_count": 174,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 80,
+     "download_calls": 48,
+     "mean_us": 7648.027332227987,
+     "median_us": 7284.781997441314,
+     "min_us": 6308.3779969019815,
+     "name": "m32_n128_n",
+     "output_sha256": "73da5c5f86026f334dc67ba69455c1568d8fa524539ba986ea58891af88f2170",
+     "plan": "prefill_gate_up/m32_n128_n.rkplan.json",
+     "plan_hash": "e43e7848635824e0086f837521be4d5cc2073a7f699b0ad5062e1f227364aac3",
+     "plan_sha256": "4902b4e4f3fd4ba4e2b5e057825394f8019c2c7a919ebcaecd1c64953d839c04",
+     "publish_count": 48,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       128
+      ],
+      [
+       32,
+       0,
+       12,
+       128
+      ],
+      [
+       0,
+       128,
+       32,
+       128
+      ],
+      [
+       32,
+       128,
+       12,
+       128
+      ],
+      [
+       0,
+       256,
+       32,
+       128
+      ],
+      [
+       32,
+       256,
+       12,
+       128
+      ],
+      [
+       0,
+       384,
+       32,
+       128
+      ],
+      [
+       32,
+       384,
+       12,
+       128
+      ],
+      [
+       0,
+       512,
+       32,
+       128
+      ],
+      [
+       32,
+       512,
+       12,
+       128
+      ],
+      [
+       0,
+       640,
+       32,
+       128
+      ],
+      [
+       32,
+       640,
+       12,
+       128
+      ],
+      [
+       0,
+       768,
+       32,
+       128
+      ],
+      [
+       32,
+       768,
+       12,
+       128
+      ],
+      [
+       0,
+       896,
+       32,
+       128
+      ],
+      [
+       32,
+       896,
+       12,
+       128
+      ],
+      [
+       0,
+       1024,
+       32,
+       128
+      ],
+      [
+       32,
+       1024,
+       12,
+       128
+      ],
+      [
+       0,
+       1152,
+       32,
+       128
+      ],
+      [
+       32,
+       1152,
+       12,
+       128
+      ],
+      [
+       0,
+       1280,
+       32,
+       128
+      ],
+      [
+       32,
+       1280,
+       12,
+       128
+      ],
+      [
+       0,
+       1408,
+       32,
+       128
+      ],
+      [
+       32,
+       1408,
+       12,
+       128
+      ],
+      [
+       0,
+       1536,
+       32,
+       128
+      ],
+      [
+       32,
+       1536,
+       12,
+       128
+      ],
+      [
+       0,
+       1664,
+       32,
+       128
+      ],
+      [
+       32,
+       1664,
+       12,
+       128
+      ],
+      [
+       0,
+       1792,
+       32,
+       128
+      ],
+      [
+       32,
+       1792,
+       12,
+       128
+      ],
+      [
+       0,
+       1920,
+       32,
+       128
+      ],
+      [
+       32,
+       1920,
+       12,
+       128
+      ],
+      [
+       0,
+       2048,
+       32,
+       128
+      ],
+      [
+       32,
+       2048,
+       12,
+       128
+      ],
+      [
+       0,
+       2176,
+       32,
+       128
+      ],
+      [
+       32,
+       2176,
+       12,
+       128
+      ],
+      [
+       0,
+       2304,
+       32,
+       128
+      ],
+      [
+       32,
+       2304,
+       12,
+       128
+      ],
+      [
+       0,
+       2432,
+       32,
+       128
+      ],
+      [
+       32,
+       2432,
+       12,
+       128
+      ],
+      [
+       0,
+       2560,
+       32,
+       128
+      ],
+      [
+       32,
+       2560,
+       12,
+       128
+      ],
+      [
+       0,
+       2688,
+       32,
+       128
+      ],
+      [
+       32,
+       2688,
+       12,
+       128
+      ],
+      [
+       0,
+       2816,
+       32,
+       128
+      ],
+      [
+       32,
+       2816,
+       12,
+       128
+      ],
+      [
+       0,
+       2944,
+       32,
+       128
+      ],
+      [
+       32,
+       2944,
+       12,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0009765625,
+     "requested": {
+      "name": "m32_n128_n",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "submit_count": 48,
+     "submit_report_count": 48,
+     "task_count": 144,
+     "task_report_count": 144,
+     "times_us": [
+      7284.781997441314,
+      9350.922002340667,
+      6308.3779969019815
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 32904.83100863639
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "buffer_count": 123,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 77,
+     "download_calls": 24,
+     "mean_us": 5176.628998015076,
+     "median_us": 4904.60499713663,
+     "min_us": 4894.687997875735,
+     "name": "m64_n128_m",
+     "output_sha256": "73da5c5f86026f334dc67ba69455c1568d8fa524539ba986ea58891af88f2170",
+     "plan": "prefill_gate_up/m64_n128_m.rkplan.json",
+     "plan_hash": "1395eab4ff3801096f3b9a18da3e7a8e62619de9e17a04de3345392643549317",
+     "plan_sha256": "fe885c732153d330e8a47b4062c7b5bf5919e1835df573f8d96f0a2fbca67708",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       128
+      ],
+      [
+       0,
+       1024,
+       44,
+       128
+      ],
+      [
+       0,
+       1152,
+       44,
+       128
+      ],
+      [
+       0,
+       1280,
+       44,
+       128
+      ],
+      [
+       0,
+       1408,
+       44,
+       128
+      ],
+      [
+       0,
+       1536,
+       44,
+       128
+      ],
+      [
+       0,
+       1664,
+       44,
+       128
+      ],
+      [
+       0,
+       1792,
+       44,
+       128
+      ],
+      [
+       0,
+       1920,
+       44,
+       128
+      ],
+      [
+       0,
+       2048,
+       44,
+       128
+      ],
+      [
+       0,
+       2176,
+       44,
+       128
+      ],
+      [
+       0,
+       2304,
+       44,
+       128
+      ],
+      [
+       0,
+       2432,
+       44,
+       128
+      ],
+      [
+       0,
+       2560,
+       44,
+       128
+      ],
+      [
+       0,
+       2688,
+       44,
+       128
+      ],
+      [
+       0,
+       2816,
+       44,
+       128
+      ],
+      [
+       0,
+       2944,
+       44,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0009765625,
+     "requested": {
+      "name": "m64_n128_m",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 72,
+     "task_report_count": 72,
+     "times_us": [
+      4894.687997875735,
+      4904.60499713663,
+      5730.5939990328625
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 28071.68300205376
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 123,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 77,
+     "download_calls": 24,
+     "mean_us": 4561.511668725871,
+     "median_us": 4474.401997867972,
+     "min_us": 4206.9470073329285,
+     "name": "m128_n128_m",
+     "output_sha256": "73da5c5f86026f334dc67ba69455c1568d8fa524539ba986ea58891af88f2170",
+     "plan": "prefill_gate_up/m128_n128_m.rkplan.json",
+     "plan_hash": "d3066b0fb9e307dfc72797edc8ac72797cc21a52efd0bdd182969a9ca1dd2f4d",
+     "plan_sha256": "82ebe942f2beeab38242997c3222f423998c4d3a6d1aa3d097ae7fdde9d47510",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       128
+      ],
+      [
+       0,
+       1024,
+       44,
+       128
+      ],
+      [
+       0,
+       1152,
+       44,
+       128
+      ],
+      [
+       0,
+       1280,
+       44,
+       128
+      ],
+      [
+       0,
+       1408,
+       44,
+       128
+      ],
+      [
+       0,
+       1536,
+       44,
+       128
+      ],
+      [
+       0,
+       1664,
+       44,
+       128
+      ],
+      [
+       0,
+       1792,
+       44,
+       128
+      ],
+      [
+       0,
+       1920,
+       44,
+       128
+      ],
+      [
+       0,
+       2048,
+       44,
+       128
+      ],
+      [
+       0,
+       2176,
+       44,
+       128
+      ],
+      [
+       0,
+       2304,
+       44,
+       128
+      ],
+      [
+       0,
+       2432,
+       44,
+       128
+      ],
+      [
+       0,
+       2560,
+       44,
+       128
+      ],
+      [
+       0,
+       2688,
+       44,
+       128
+      ],
+      [
+       0,
+       2816,
+       44,
+       128
+      ],
+      [
+       0,
+       2944,
+       44,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0009765625,
+     "requested": {
+      "name": "m128_n128_m",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 72,
+     "task_report_count": 72,
+     "times_us": [
+      5003.1860009767115,
+      4206.9470073329285,
+      4474.401997867972
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 28123.308991780505
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 123,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 77,
+     "download_calls": 24,
+     "mean_us": 5303.5016705204425,
+     "median_us": 5141.435001860373,
+     "min_us": 4818.5630002990365,
+     "name": "m128_n128_n",
+     "output_sha256": "73da5c5f86026f334dc67ba69455c1568d8fa524539ba986ea58891af88f2170",
+     "plan": "prefill_gate_up/m128_n128_n.rkplan.json",
+     "plan_hash": "cf4ef182a00202e867a57a06a803df322113cb62f47c839bb3f5cf66cefc8480",
+     "plan_sha256": "4c0f1f62ba0cf10fd058ba87883e761f3eefea996b06a8b166bbd69b89b5b211",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       128
+      ],
+      [
+       0,
+       1024,
+       44,
+       128
+      ],
+      [
+       0,
+       1152,
+       44,
+       128
+      ],
+      [
+       0,
+       1280,
+       44,
+       128
+      ],
+      [
+       0,
+       1408,
+       44,
+       128
+      ],
+      [
+       0,
+       1536,
+       44,
+       128
+      ],
+      [
+       0,
+       1664,
+       44,
+       128
+      ],
+      [
+       0,
+       1792,
+       44,
+       128
+      ],
+      [
+       0,
+       1920,
+       44,
+       128
+      ],
+      [
+       0,
+       2048,
+       44,
+       128
+      ],
+      [
+       0,
+       2176,
+       44,
+       128
+      ],
+      [
+       0,
+       2304,
+       44,
+       128
+      ],
+      [
+       0,
+       2432,
+       44,
+       128
+      ],
+      [
+       0,
+       2560,
+       44,
+       128
+      ],
+      [
+       0,
+       2688,
+       44,
+       128
+      ],
+      [
+       0,
+       2816,
+       44,
+       128
+      ],
+      [
+       0,
+       2944,
+       44,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0009765625,
+     "requested": {
+      "name": "m128_n128_n",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 72,
+     "task_report_count": 72,
+     "times_us": [
+      4818.5630002990365,
+      5141.435001860373,
+      5950.5070094019175
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 28952.797001693398
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 123,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 77,
+     "download_calls": 24,
+     "mean_us": 5802.245325564097,
+     "median_us": 5202.0999864907935,
+     "min_us": 5050.14399823267,
+     "name": "m256_n128_n",
+     "output_sha256": "73da5c5f86026f334dc67ba69455c1568d8fa524539ba986ea58891af88f2170",
+     "plan": "prefill_gate_up/m256_n128_n.rkplan.json",
+     "plan_hash": "90f93a0752aa0f47503194768f50ec80f825b7f8612e8bb1e694d280b4b34bde",
+     "plan_sha256": "a769b99322cadc23719e106652eb9583ae294f34bfc0e79f42f7d1275a9eae8e",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       128
+      ],
+      [
+       0,
+       1024,
+       44,
+       128
+      ],
+      [
+       0,
+       1152,
+       44,
+       128
+      ],
+      [
+       0,
+       1280,
+       44,
+       128
+      ],
+      [
+       0,
+       1408,
+       44,
+       128
+      ],
+      [
+       0,
+       1536,
+       44,
+       128
+      ],
+      [
+       0,
+       1664,
+       44,
+       128
+      ],
+      [
+       0,
+       1792,
+       44,
+       128
+      ],
+      [
+       0,
+       1920,
+       44,
+       128
+      ],
+      [
+       0,
+       2048,
+       44,
+       128
+      ],
+      [
+       0,
+       2176,
+       44,
+       128
+      ],
+      [
+       0,
+       2304,
+       44,
+       128
+      ],
+      [
+       0,
+       2432,
+       44,
+       128
+      ],
+      [
+       0,
+       2560,
+       44,
+       128
+      ],
+      [
+       0,
+       2688,
+       44,
+       128
+      ],
+      [
+       0,
+       2816,
+       44,
+       128
+      ],
+      [
+       0,
+       2944,
+       44,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0009765625,
+     "requested": {
+      "name": "m256_n128_n",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 72,
+     "task_report_count": 72,
+     "times_us": [
+      5050.14399823267,
+      5202.0999864907935,
+      7154.4919919688255
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 33955.69199346937
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "buffer_count": 243,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 149,
+     "download_calls": 48,
+     "mean_us": 9086.176001195176,
+     "median_us": 9495.670994510874,
+     "min_us": 7980.7730071479455,
+     "name": "m256_n64_m",
+     "output_sha256": "73da5c5f86026f334dc67ba69455c1568d8fa524539ba986ea58891af88f2170",
+     "plan": "prefill_gate_up/m256_n64_m.rkplan.json",
+     "plan_hash": "1f1ba5ba053c02bd559261186de128ab5178e4b4259caf241b5fc105effc87cf",
+     "plan_sha256": "f57ae1cbe5b2f8762b9b92df5c9b95d485d071c1ae5dbbd3dec215bf4855e044",
+     "publish_count": 48,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       64
+      ],
+      [
+       0,
+       64,
+       44,
+       64
+      ],
+      [
+       0,
+       128,
+       44,
+       64
+      ],
+      [
+       0,
+       192,
+       44,
+       64
+      ],
+      [
+       0,
+       256,
+       44,
+       64
+      ],
+      [
+       0,
+       320,
+       44,
+       64
+      ],
+      [
+       0,
+       384,
+       44,
+       64
+      ],
+      [
+       0,
+       448,
+       44,
+       64
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ],
+      [
+       0,
+       576,
+       44,
+       64
+      ],
+      [
+       0,
+       640,
+       44,
+       64
+      ],
+      [
+       0,
+       704,
+       44,
+       64
+      ],
+      [
+       0,
+       768,
+       44,
+       64
+      ],
+      [
+       0,
+       832,
+       44,
+       64
+      ],
+      [
+       0,
+       896,
+       44,
+       64
+      ],
+      [
+       0,
+       960,
+       44,
+       64
+      ],
+      [
+       0,
+       1024,
+       44,
+       64
+      ],
+      [
+       0,
+       1088,
+       44,
+       64
+      ],
+      [
+       0,
+       1152,
+       44,
+       64
+      ],
+      [
+       0,
+       1216,
+       44,
+       64
+      ],
+      [
+       0,
+       1280,
+       44,
+       64
+      ],
+      [
+       0,
+       1344,
+       44,
+       64
+      ],
+      [
+       0,
+       1408,
+       44,
+       64
+      ],
+      [
+       0,
+       1472,
+       44,
+       64
+      ],
+      [
+       0,
+       1536,
+       44,
+       64
+      ],
+      [
+       0,
+       1600,
+       44,
+       64
+      ],
+      [
+       0,
+       1664,
+       44,
+       64
+      ],
+      [
+       0,
+       1728,
+       44,
+       64
+      ],
+      [
+       0,
+       1792,
+       44,
+       64
+      ],
+      [
+       0,
+       1856,
+       44,
+       64
+      ],
+      [
+       0,
+       1920,
+       44,
+       64
+      ],
+      [
+       0,
+       1984,
+       44,
+       64
+      ],
+      [
+       0,
+       2048,
+       44,
+       64
+      ],
+      [
+       0,
+       2112,
+       44,
+       64
+      ],
+      [
+       0,
+       2176,
+       44,
+       64
+      ],
+      [
+       0,
+       2240,
+       44,
+       64
+      ],
+      [
+       0,
+       2304,
+       44,
+       64
+      ],
+      [
+       0,
+       2368,
+       44,
+       64
+      ],
+      [
+       0,
+       2432,
+       44,
+       64
+      ],
+      [
+       0,
+       2496,
+       44,
+       64
+      ],
+      [
+       0,
+       2560,
+       44,
+       64
+      ],
+      [
+       0,
+       2624,
+       44,
+       64
+      ],
+      [
+       0,
+       2688,
+       44,
+       64
+      ],
+      [
+       0,
+       2752,
+       44,
+       64
+      ],
+      [
+       0,
+       2816,
+       44,
+       64
+      ],
+      [
+       0,
+       2880,
+       44,
+       64
+      ],
+      [
+       0,
+       2944,
+       44,
+       64
+      ],
+      [
+       0,
+       3008,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.0009765625,
+     "requested": {
+      "name": "m256_n64_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "submit_count": 48,
+     "submit_report_count": 48,
+     "task_count": 144,
+     "task_report_count": 144,
+     "times_us": [
+      7980.7730071479455,
+      9495.670994510874,
+      9782.084001926705
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 39040.83601082675
+    }
+   ],
+   "id": "prefill_gate_up",
+   "k": 576,
+   "kind": "prefill",
+   "m": 44,
+   "n": 3072
+  },
+  {
+   "candidates": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 30,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 26,
+     "download_calls": 3,
+     "mean_us": 1744.7276671494667,
+     "median_us": 1721.6859996551648,
+     "min_us": 1708.561001578346,
+     "name": "default",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/default.rkplan.json",
+     "plan_hash": "0967ee8ef056a3aa64ef3daa2cd0c06ec51da75d2e1117648b0ad1604e050217",
+     "plan_sha256": "c3dedf004b9105bf5d26916928df6bd5d00cf29f4d8d0d95ca8a5a5b33095037",
+     "publish_count": 3,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       256
+      ],
+      [
+       0,
+       256,
+       44,
+       256
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "default": true,
+      "name": "default",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "selected": true,
+     "selection_reason": "autotuner_measured_best",
+     "source": "default",
+     "source_schedule": null,
+     "submit_count": 3,
+     "submit_report_count": 3,
+     "task_count": 18,
+     "task_report_count": 18,
+     "times_us": [
+      1721.6859996551648,
+      1708.561001578346,
+      1803.9360002148896
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 10915.193997789174
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "buffer_count": 78,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 50,
+     "download_calls": 15,
+     "mean_us": 3334.2909979789206,
+     "median_us": 3387.956996448338,
+     "min_us": 2970.586996525526,
+     "name": "m16_n128_m",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m16_n128_m.rkplan.json",
+     "plan_hash": "4411de2d79a938cb7bc3c834b172f1286dfb3407fcb6800abe322ad7023532d1",
+     "plan_sha256": "127e275d6514ed927513d8795d550585e4d4090a4422a3b3d4fd0fed7a686018",
+     "publish_count": 15,
+     "publish_order": [
+      [
+       0,
+       0,
+       16,
+       128
+      ],
+      [
+       0,
+       128,
+       16,
+       128
+      ],
+      [
+       0,
+       256,
+       16,
+       128
+      ],
+      [
+       0,
+       384,
+       16,
+       128
+      ],
+      [
+       0,
+       512,
+       16,
+       64
+      ],
+      [
+       16,
+       0,
+       16,
+       128
+      ],
+      [
+       16,
+       128,
+       16,
+       128
+      ],
+      [
+       16,
+       256,
+       16,
+       128
+      ],
+      [
+       16,
+       384,
+       16,
+       128
+      ],
+      [
+       16,
+       512,
+       16,
+       64
+      ],
+      [
+       32,
+       0,
+       12,
+       128
+      ],
+      [
+       32,
+       128,
+       12,
+       128
+      ],
+      [
+       32,
+       256,
+       12,
+       128
+      ],
+      [
+       32,
+       384,
+       12,
+       128
+      ],
+      [
+       32,
+       512,
+       12,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m16_n128_m",
+      "order": "m_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "submit_count": 15,
+     "submit_report_count": 15,
+     "task_count": 90,
+     "task_report_count": 90,
+     "times_us": [
+      3644.329000962898,
+      2970.586996525526,
+      3387.956996448338
+     ],
+     "upload_calls": 18,
+     "workspace_init_us": 15853.047996643
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "buffer_count": 78,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 50,
+     "download_calls": 15,
+     "mean_us": 3679.1333307822547,
+     "median_us": 3663.869996671565,
+     "min_us": 3652.494997368194,
+     "name": "m16_n128_n",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m16_n128_n.rkplan.json",
+     "plan_hash": "47ec51dd7c76874c7701032ad92b0198a611e6adf41d3a8006721fef6f6ae686",
+     "plan_sha256": "c5dc7fd5dc3a6f3f54b5029f10b7b916a4176f16bffa551ca31ea4f4ca2216bd",
+     "publish_count": 15,
+     "publish_order": [
+      [
+       0,
+       0,
+       16,
+       128
+      ],
+      [
+       16,
+       0,
+       16,
+       128
+      ],
+      [
+       32,
+       0,
+       12,
+       128
+      ],
+      [
+       0,
+       128,
+       16,
+       128
+      ],
+      [
+       16,
+       128,
+       16,
+       128
+      ],
+      [
+       32,
+       128,
+       12,
+       128
+      ],
+      [
+       0,
+       256,
+       16,
+       128
+      ],
+      [
+       16,
+       256,
+       16,
+       128
+      ],
+      [
+       32,
+       256,
+       12,
+       128
+      ],
+      [
+       0,
+       384,
+       16,
+       128
+      ],
+      [
+       16,
+       384,
+       16,
+       128
+      ],
+      [
+       32,
+       384,
+       12,
+       128
+      ],
+      [
+       0,
+       512,
+       16,
+       64
+      ],
+      [
+       16,
+       512,
+       16,
+       64
+      ],
+      [
+       32,
+       512,
+       12,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m16_n128_n",
+      "order": "n_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 16,
+      "tile_n": 128
+     },
+     "submit_count": 15,
+     "submit_report_count": 15,
+     "task_count": 90,
+     "task_report_count": 90,
+     "times_us": [
+      3663.869996671565,
+      3652.494997368194,
+      3721.0349983070046
+     ],
+     "upload_calls": 18,
+     "workspace_init_us": 16180.293998331763
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "buffer_count": 42,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 32,
+     "download_calls": 6,
+     "mean_us": 2252.3183239779123,
+     "median_us": 2242.887989268638,
+     "min_us": 2239.0959929907694,
+     "name": "m32_n256_m",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m32_n256_m.rkplan.json",
+     "plan_hash": "831981e104fc389c67e8220417f9532ca997a5c4d1ac4a89df0fc0a0ce05ff94",
+     "plan_sha256": "0f2426d599cbf7b2a077578f8804bbb35ede9eb0ba6c45c1cb4073c16e003d74",
+     "publish_count": 6,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       256
+      ],
+      [
+       0,
+       256,
+       32,
+       256
+      ],
+      [
+       0,
+       512,
+       32,
+       64
+      ],
+      [
+       32,
+       0,
+       12,
+       256
+      ],
+      [
+       32,
+       256,
+       12,
+       256
+      ],
+      [
+       32,
+       512,
+       12,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m32_n256_m",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "submit_count": 6,
+     "submit_report_count": 6,
+     "task_count": 36,
+     "task_report_count": 36,
+     "times_us": [
+      2274.9709896743298,
+      2242.887989268638,
+      2239.0959929907694
+     ],
+     "upload_calls": 12,
+     "workspace_init_us": 12164.970001322217
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "buffer_count": 62,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 44,
+     "download_calls": 10,
+     "mean_us": 2767.2979971005893,
+     "median_us": 2744.5479936432093,
+     "min_us": 2720.0490003451705,
+     "name": "m32_n128_n",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m32_n128_n.rkplan.json",
+     "plan_hash": "4950894e4c0dc5530ece1d2569555e534133e29250991fdfa94bb37cc8182e6c",
+     "plan_sha256": "bea979e065daa708d37c3e221b842ae4844292ca1ac014ec12949fee57f22840",
+     "publish_count": 10,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       128
+      ],
+      [
+       32,
+       0,
+       12,
+       128
+      ],
+      [
+       0,
+       128,
+       32,
+       128
+      ],
+      [
+       32,
+       128,
+       12,
+       128
+      ],
+      [
+       0,
+       256,
+       32,
+       128
+      ],
+      [
+       32,
+       256,
+       12,
+       128
+      ],
+      [
+       0,
+       384,
+       32,
+       128
+      ],
+      [
+       32,
+       384,
+       12,
+       128
+      ],
+      [
+       0,
+       512,
+       32,
+       64
+      ],
+      [
+       32,
+       512,
+       12,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m32_n128_n",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "submit_count": 10,
+     "submit_report_count": 10,
+     "task_count": 60,
+     "task_report_count": 60,
+     "times_us": [
+      2837.2969973133877,
+      2744.5479936432093,
+      2720.0490003451705
+     ],
+     "upload_calls": 12,
+     "workspace_init_us": 14193.484996212646
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "buffer_count": 46,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 38,
+     "download_calls": 5,
+     "mean_us": 1895.225660215753,
+     "median_us": 1833.3929911023006,
+     "min_us": 1790.2269901242107,
+     "name": "m64_n128_m",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m64_n128_m.rkplan.json",
+     "plan_hash": "75534675f76f8e35e5f85f73b3d2ad66b76ce68accecad311d4576b48505afe5",
+     "plan_sha256": "b9c78fa7c42f4b239450d04b665c64b5f47eee4616f6304a4a247f9956717535",
+     "publish_count": 5,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m64_n128_m",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "submit_count": 5,
+     "submit_report_count": 5,
+     "task_count": 30,
+     "task_report_count": 30,
+     "times_us": [
+      1790.2269901242107,
+      1833.3929911023006,
+      2062.056999420747
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 13170.33200757578
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 46,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 38,
+     "download_calls": 5,
+     "mean_us": 2019.8633380156632,
+     "median_us": 2013.3500074734911,
+     "min_us": 2004.891008255072,
+     "name": "m128_n128_m",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m128_n128_m.rkplan.json",
+     "plan_hash": "b5fab96352a7e0566339d9b3662e3dc62eabb2a58318ca397aaede3b7ee6d8cd",
+     "plan_sha256": "33c204b5838f66900853a3c1e2b79781e0b3cc4331dc72294d6bb8ae5ac8d2a2",
+     "publish_count": 5,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m128_n128_m",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 5,
+     "submit_report_count": 5,
+     "task_count": 30,
+     "task_report_count": 30,
+     "times_us": [
+      2041.3489983184263,
+      2013.3500074734911,
+      2004.891008255072
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 12582.046998431906
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 46,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 38,
+     "download_calls": 5,
+     "mean_us": 2033.0849947640672,
+     "median_us": 2030.5569923948497,
+     "min_us": 2013.057004660368,
+     "name": "m128_n128_n",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m128_n128_n.rkplan.json",
+     "plan_hash": "2fb5e65b79244bf756199651954f7ddee98545a12047213b3f47e7501c6f2918",
+     "plan_sha256": "1b6500980720045ba124e390c71da0cc53430e38e000039b61fd13cca3e96ec3",
+     "publish_count": 5,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m128_n128_n",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 5,
+     "submit_report_count": 5,
+     "task_count": 30,
+     "task_report_count": 30,
+     "times_us": [
+      2055.640987236984,
+      2013.057004660368,
+      2030.5569923948497
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 12501.965000410564
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 46,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 38,
+     "download_calls": 5,
+     "mean_us": 2069.154337126141,
+     "median_us": 2046.8910079216585,
+     "min_us": 2034.641001955606,
+     "name": "m256_n128_n",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m256_n128_n.rkplan.json",
+     "plan_hash": "e11a318228010da9adcbe79f72dadb962f737e921818fe09608126f1977ca9b0",
+     "plan_sha256": "56b71a2cc879e717a1572a565852134474b2155e5d5df45033a670683c08f79c",
+     "publish_count": 5,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m256_n128_n",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 5,
+     "submit_report_count": 5,
+     "task_count": 30,
+     "task_report_count": 30,
+     "times_us": [
+      2046.8910079216585,
+      2125.931001501158,
+      2034.641001955606
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 12589.21399130486
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "buffer_count": 78,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 62,
+     "download_calls": 9,
+     "mean_us": 2721.2149968060353,
+     "median_us": 2717.131996178068,
+     "min_us": 2688.2569945883006,
+     "name": "m256_n64_m",
+     "output_sha256": "decba8df9aba0a032d036a6f4287022ac65065f8b0cbd9da3cf7b9d6f63a3662",
+     "plan": "prefill_down/m256_n64_m.rkplan.json",
+     "plan_hash": "382878b8a81d9d2c0e726143406c4840f46df86c20d7d793334ab4d2fbbea511",
+     "plan_sha256": "0ee648b027837e3e8e84d38baa53adc2beecb7f727cae9e34daef05fd30cef3b",
+     "publish_count": 9,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       64
+      ],
+      [
+       0,
+       64,
+       44,
+       64
+      ],
+      [
+       0,
+       128,
+       44,
+       64
+      ],
+      [
+       0,
+       192,
+       44,
+       64
+      ],
+      [
+       0,
+       256,
+       44,
+       64
+      ],
+      [
+       0,
+       320,
+       44,
+       64
+      ],
+      [
+       0,
+       384,
+       44,
+       64
+      ],
+      [
+       0,
+       448,
+       44,
+       64
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.00390625,
+     "requested": {
+      "name": "m256_n64_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "submit_count": 9,
+     "submit_report_count": 9,
+     "task_count": 54,
+     "task_report_count": 54,
+     "times_us": [
+      2758.2559996517375,
+      2717.131996178068,
+      2688.2569945883006
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 15662.592006265186
+    }
+   ],
+   "id": "prefill_down",
+   "k": 1536,
+   "kind": "prefill",
+   "m": 44,
+   "n": 576
+  },
+  {
+   "candidates": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 23,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 17,
+     "download_calls": 4,
+     "mean_us": 797.1149946873387,
+     "median_us": 811.9899866869673,
+     "min_us": 758.9070009998977,
+     "name": "default",
+     "output_sha256": "081b3bfbaf0dbe5c21fdc076eaad45eafdf6ce717b39f1c7b9de8c68768df4ed",
+     "plan": "decode_qkv/default.rkplan.json",
+     "plan_hash": "5f513a0c1165cbb6a563f399daa16101ca6e4a484d5a116dfbaa7f1ed55d6a5b",
+     "plan_sha256": "d5fa52354be8e6cae28cd715e091991ec6527d941c692f0f637a9bf30ce6af8c",
+     "publish_count": 4,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       256
+      ],
+      [
+       0,
+       256,
+       1,
+       256
+      ],
+      [
+       0,
+       512,
+       1,
+       256
+      ],
+      [
+       0,
+       768,
+       1,
+       192
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "requested": {
+      "default": true,
+      "name": "default",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "selected": true,
+     "selection_reason": "autotuner_measured_best",
+     "source": "default",
+     "source_schedule": null,
+     "submit_count": 4,
+     "submit_report_count": 4,
+     "task_count": 12,
+     "task_report_count": 12,
+     "times_us": [
+      820.447996375151,
+      811.9899866869673,
+      758.9070009998977
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 7949.56499885302
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 29,
+     "download_calls": 8,
+     "mean_us": 1221.1926708308358,
+     "median_us": 1213.3179989177734,
+     "min_us": 1192.9020110983402,
+     "name": "m256_n128_m",
+     "output_sha256": "081b3bfbaf0dbe5c21fdc076eaad45eafdf6ce717b39f1c7b9de8c68768df4ed",
+     "plan": "decode_qkv/m256_n128_m.rkplan.json",
+     "plan_hash": "d2266d9e6c3371b3b309626a062fee929728902b68d2fc79761381586b2c39aa",
+     "plan_sha256": "2d5569cf5fd89be148703ff6d72379ffe0948e1578ad70095458bf2d4906af3f",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       128
+      ],
+      [
+       0,
+       128,
+       1,
+       128
+      ],
+      [
+       0,
+       256,
+       1,
+       128
+      ],
+      [
+       0,
+       384,
+       1,
+       128
+      ],
+      [
+       0,
+       512,
+       1,
+       128
+      ],
+      [
+       0,
+       640,
+       1,
+       128
+      ],
+      [
+       0,
+       768,
+       1,
+       128
+      ],
+      [
+       0,
+       896,
+       1,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "requested": {
+      "name": "m256_n128_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "submit_report_count": 8,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      1257.3580024763942,
+      1213.3179989177734,
+      1192.9020110983402
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 8840.595997753553
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 29,
+     "download_calls": 8,
+     "mean_us": 1204.859994080228,
+     "median_us": 1200.7769983028993,
+     "min_us": 1195.2349886996672,
+     "name": "m256_n128_n",
+     "output_sha256": "081b3bfbaf0dbe5c21fdc076eaad45eafdf6ce717b39f1c7b9de8c68768df4ed",
+     "plan": "decode_qkv/m256_n128_n.rkplan.json",
+     "plan_hash": "a66ae28dbe17c32efc44718386505e8bca6a0fe747254997cd3fc9ce9d5e33b2",
+     "plan_sha256": "61791a1e96b4a25c9bf994f7caffc6658bfbc8f92c2c9c09f758b60c158da3ec",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       128
+      ],
+      [
+       0,
+       128,
+       1,
+       128
+      ],
+      [
+       0,
+       256,
+       1,
+       128
+      ],
+      [
+       0,
+       384,
+       1,
+       128
+      ],
+      [
+       0,
+       512,
+       1,
+       128
+      ],
+      [
+       0,
+       640,
+       1,
+       128
+      ],
+      [
+       0,
+       768,
+       1,
+       128
+      ],
+      [
+       0,
+       896,
+       1,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "requested": {
+      "name": "m256_n128_n",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "submit_report_count": 8,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      1218.5679952381179,
+      1200.7769983028993,
+      1195.2349886996672
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 10264.160999213345
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "buffer_count": 78,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 50,
+     "download_calls": 15,
+     "mean_us": 1976.8913286194827,
+     "median_us": 1977.4749962380156,
+     "min_us": 1943.057999596931,
+     "name": "m256_n64_m",
+     "output_sha256": "081b3bfbaf0dbe5c21fdc076eaad45eafdf6ce717b39f1c7b9de8c68768df4ed",
+     "plan": "decode_qkv/m256_n64_m.rkplan.json",
+     "plan_hash": "fc93915d9c17f18fbfff907a846762d519eeba74665c77f1c9feb16b96a6d3c2",
+     "plan_sha256": "a7d1e8267d17525374e6761d61a3b524119a0beffed5783d4baaaba1a1fd70c9",
+     "publish_count": 15,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       64
+      ],
+      [
+       0,
+       64,
+       1,
+       64
+      ],
+      [
+       0,
+       128,
+       1,
+       64
+      ],
+      [
+       0,
+       192,
+       1,
+       64
+      ],
+      [
+       0,
+       256,
+       1,
+       64
+      ],
+      [
+       0,
+       320,
+       1,
+       64
+      ],
+      [
+       0,
+       384,
+       1,
+       64
+      ],
+      [
+       0,
+       448,
+       1,
+       64
+      ],
+      [
+       0,
+       512,
+       1,
+       64
+      ],
+      [
+       0,
+       576,
+       1,
+       64
+      ],
+      [
+       0,
+       640,
+       1,
+       64
+      ],
+      [
+       0,
+       704,
+       1,
+       64
+      ],
+      [
+       0,
+       768,
+       1,
+       64
+      ],
+      [
+       0,
+       832,
+       1,
+       64
+      ],
+      [
+       0,
+       896,
+       1,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "requested": {
+      "name": "m256_n64_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "submit_count": 15,
+     "submit_report_count": 15,
+     "task_count": 45,
+     "task_report_count": 45,
+     "times_us": [
+      2010.1409900235012,
+      1977.4749962380156,
+      1943.057999596931
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 12122.094994992949
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 1,
+      "tile_n": 256
+     },
+     "buffer_count": 23,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 17,
+     "download_calls": 4,
+     "mean_us": 768.7263375070567,
+     "median_us": 817.8230054909363,
+     "min_us": 665.8670026808977,
+     "name": "m1_n256_m",
+     "output_sha256": "081b3bfbaf0dbe5c21fdc076eaad45eafdf6ce717b39f1c7b9de8c68768df4ed",
+     "plan": "decode_qkv/m1_n256_m.rkplan.json",
+     "plan_hash": "7527c393821a147b98e669f4a4ccc47f485fff4a1ac0277e35956e406e86472d",
+     "plan_sha256": "e9fe8b628348476718e2b5562a23553382cf22bad3a2e4de1d927aca63f12a63",
+     "publish_count": 4,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       256
+      ],
+      [
+       0,
+       256,
+       1,
+       256
+      ],
+      [
+       0,
+       512,
+       1,
+       256
+      ],
+      [
+       0,
+       768,
+       1,
+       192
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "requested": {
+      "name": "m1_n256_m",
+      "order": "m_major",
+      "tile_m": 1,
+      "tile_n": 256
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 1,
+      "tile_n": 256
+     },
+     "submit_count": 4,
+     "submit_report_count": 4,
+     "task_count": 12,
+     "task_report_count": 12,
+     "times_us": [
+      822.489004349336,
+      817.8230054909363,
+      665.8670026808977
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 7633.1110030878335
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 1,
+      "tile_n": 128
+     },
+     "buffer_count": 43,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 29,
+     "download_calls": 8,
+     "mean_us": 1224.5956750120968,
+     "median_us": 1224.1090007591993,
+     "min_us": 1213.610012200661,
+     "name": "m1_n128_n",
+     "output_sha256": "081b3bfbaf0dbe5c21fdc076eaad45eafdf6ce717b39f1c7b9de8c68768df4ed",
+     "plan": "decode_qkv/m1_n128_n.rkplan.json",
+     "plan_hash": "2086a6343eaa74d2f6bbd232586d818a09fed9712208461b672efc94757785a7",
+     "plan_sha256": "dfa365d95ae725a9b90a420801edd5b39ef1e21693a7d6fdeb4b121069695c14",
+     "publish_count": 8,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       128
+      ],
+      [
+       0,
+       128,
+       1,
+       128
+      ],
+      [
+       0,
+       256,
+       1,
+       128
+      ],
+      [
+       0,
+       384,
+       1,
+       128
+      ],
+      [
+       0,
+       512,
+       1,
+       128
+      ],
+      [
+       0,
+       640,
+       1,
+       128
+      ],
+      [
+       0,
+       768,
+       1,
+       128
+      ],
+      [
+       0,
+       896,
+       1,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.0001220703125,
+     "requested": {
+      "name": "m1_n128_n",
+      "order": "n_major",
+      "tile_m": 1,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 1,
+      "tile_n": 128
+     },
+     "submit_count": 8,
+     "submit_report_count": 8,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      1236.06801207643,
+      1224.1090007591993,
+      1213.610012200661
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 8998.677003546618
+    }
+   ],
+   "id": "decode_qkv",
+   "k": 576,
+   "kind": "decode",
+   "m": 1,
+   "n": 960
+  },
+  {
+   "candidates": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 83,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 53,
+     "download_calls": 16,
+     "mean_us": 5966.187998031576,
+     "median_us": 5191.01700047031,
+     "min_us": 4768.981001689099,
+     "name": "default",
+     "output_sha256": "0f1e8099c9ee6669d6163790307863f9c879dea40406219273813a120d1625f2",
+     "plan": "lm_head_shard0/default.rkplan.json",
+     "plan_hash": "1d16e3eb658f9bf6a888281d922de208cb1f10aa10d02de20c50986c88e175d2",
+     "plan_sha256": "41c373b1851771474a50034c8c80abe27b24f2ce0ccad0b28ef138834a900691",
+     "publish_count": 16,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       256
+      ],
+      [
+       0,
+       256,
+       44,
+       256
+      ],
+      [
+       0,
+       512,
+       44,
+       256
+      ],
+      [
+       0,
+       768,
+       44,
+       256
+      ],
+      [
+       0,
+       1024,
+       44,
+       256
+      ],
+      [
+       0,
+       1280,
+       44,
+       256
+      ],
+      [
+       0,
+       1536,
+       44,
+       256
+      ],
+      [
+       0,
+       1792,
+       44,
+       256
+      ],
+      [
+       0,
+       2048,
+       44,
+       256
+      ],
+      [
+       0,
+       2304,
+       44,
+       256
+      ],
+      [
+       0,
+       2560,
+       44,
+       256
+      ],
+      [
+       0,
+       2816,
+       44,
+       256
+      ],
+      [
+       0,
+       3072,
+       44,
+       256
+      ],
+      [
+       0,
+       3328,
+       44,
+       256
+      ],
+      [
+       0,
+       3584,
+       44,
+       256
+      ],
+      [
+       0,
+       3840,
+       44,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.015625,
+     "requested": {
+      "default": true,
+      "name": "default",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "selected": true,
+     "selection_reason": "autotuner_measured_best",
+     "source": "default",
+     "source_schedule": null,
+     "submit_count": 16,
+     "submit_report_count": 16,
+     "task_count": 48,
+     "task_report_count": 48,
+     "times_us": [
+      4768.981001689099,
+      5191.01700047031,
+      7938.56599193532
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 40368.77700127661
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "buffer_count": 118,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 56,
+     "download_calls": 32,
+     "mean_us": 8228.103329505151,
+     "median_us": 7587.027997942641,
+     "min_us": 6562.707989360206,
+     "name": "m32_n256_m",
+     "output_sha256": "0f1e8099c9ee6669d6163790307863f9c879dea40406219273813a120d1625f2",
+     "plan": "lm_head_shard0/m32_n256_m.rkplan.json",
+     "plan_hash": "c24640dc5123580078de1d140bc885c704dd6b43dca5473673293f837cb884b6",
+     "plan_sha256": "a7ac7835e7e5abebd2b49fe4b21999b2975f9457dd915f73cee4c3f1f95ae253",
+     "publish_count": 32,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       256
+      ],
+      [
+       0,
+       256,
+       32,
+       256
+      ],
+      [
+       0,
+       512,
+       32,
+       256
+      ],
+      [
+       0,
+       768,
+       32,
+       256
+      ],
+      [
+       0,
+       1024,
+       32,
+       256
+      ],
+      [
+       0,
+       1280,
+       32,
+       256
+      ],
+      [
+       0,
+       1536,
+       32,
+       256
+      ],
+      [
+       0,
+       1792,
+       32,
+       256
+      ],
+      [
+       0,
+       2048,
+       32,
+       256
+      ],
+      [
+       0,
+       2304,
+       32,
+       256
+      ],
+      [
+       0,
+       2560,
+       32,
+       256
+      ],
+      [
+       0,
+       2816,
+       32,
+       256
+      ],
+      [
+       0,
+       3072,
+       32,
+       256
+      ],
+      [
+       0,
+       3328,
+       32,
+       256
+      ],
+      [
+       0,
+       3584,
+       32,
+       256
+      ],
+      [
+       0,
+       3840,
+       32,
+       256
+      ],
+      [
+       32,
+       0,
+       12,
+       256
+      ],
+      [
+       32,
+       256,
+       12,
+       256
+      ],
+      [
+       32,
+       512,
+       12,
+       256
+      ],
+      [
+       32,
+       768,
+       12,
+       256
+      ],
+      [
+       32,
+       1024,
+       12,
+       256
+      ],
+      [
+       32,
+       1280,
+       12,
+       256
+      ],
+      [
+       32,
+       1536,
+       12,
+       256
+      ],
+      [
+       32,
+       1792,
+       12,
+       256
+      ],
+      [
+       32,
+       2048,
+       12,
+       256
+      ],
+      [
+       32,
+       2304,
+       12,
+       256
+      ],
+      [
+       32,
+       2560,
+       12,
+       256
+      ],
+      [
+       32,
+       2816,
+       12,
+       256
+      ],
+      [
+       32,
+       3072,
+       12,
+       256
+      ],
+      [
+       32,
+       3328,
+       12,
+       256
+      ],
+      [
+       32,
+       3584,
+       12,
+       256
+      ],
+      [
+       32,
+       3840,
+       12,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.015625,
+     "requested": {
+      "name": "m32_n256_m",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "submit_count": 32,
+     "submit_report_count": 32,
+     "task_count": 96,
+     "task_report_count": 96,
+     "times_us": [
+      6562.707989360206,
+      7587.027997942641,
+      10534.574001212604
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 43806.89999379683
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "buffer_count": 230,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 104,
+     "download_calls": 64,
+     "mean_us": 10224.605992940875,
+     "median_us": 10410.32599459868,
+     "min_us": 8386.767993215472,
+     "name": "m32_n128_n",
+     "output_sha256": "0f1e8099c9ee6669d6163790307863f9c879dea40406219273813a120d1625f2",
+     "plan": "lm_head_shard0/m32_n128_n.rkplan.json",
+     "plan_hash": "756604c56494e3eb90a39a0bc67f2d9214946441ec7c9a646f02354a17423b02",
+     "plan_sha256": "c4ac88ab922a01e8779bc045425dbad2c3c5d3251fde57b01d003f0bd309e09d",
+     "publish_count": 64,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       128
+      ],
+      [
+       32,
+       0,
+       12,
+       128
+      ],
+      [
+       0,
+       128,
+       32,
+       128
+      ],
+      [
+       32,
+       128,
+       12,
+       128
+      ],
+      [
+       0,
+       256,
+       32,
+       128
+      ],
+      [
+       32,
+       256,
+       12,
+       128
+      ],
+      [
+       0,
+       384,
+       32,
+       128
+      ],
+      [
+       32,
+       384,
+       12,
+       128
+      ],
+      [
+       0,
+       512,
+       32,
+       128
+      ],
+      [
+       32,
+       512,
+       12,
+       128
+      ],
+      [
+       0,
+       640,
+       32,
+       128
+      ],
+      [
+       32,
+       640,
+       12,
+       128
+      ],
+      [
+       0,
+       768,
+       32,
+       128
+      ],
+      [
+       32,
+       768,
+       12,
+       128
+      ],
+      [
+       0,
+       896,
+       32,
+       128
+      ],
+      [
+       32,
+       896,
+       12,
+       128
+      ],
+      [
+       0,
+       1024,
+       32,
+       128
+      ],
+      [
+       32,
+       1024,
+       12,
+       128
+      ],
+      [
+       0,
+       1152,
+       32,
+       128
+      ],
+      [
+       32,
+       1152,
+       12,
+       128
+      ],
+      [
+       0,
+       1280,
+       32,
+       128
+      ],
+      [
+       32,
+       1280,
+       12,
+       128
+      ],
+      [
+       0,
+       1408,
+       32,
+       128
+      ],
+      [
+       32,
+       1408,
+       12,
+       128
+      ],
+      [
+       0,
+       1536,
+       32,
+       128
+      ],
+      [
+       32,
+       1536,
+       12,
+       128
+      ],
+      [
+       0,
+       1664,
+       32,
+       128
+      ],
+      [
+       32,
+       1664,
+       12,
+       128
+      ],
+      [
+       0,
+       1792,
+       32,
+       128
+      ],
+      [
+       32,
+       1792,
+       12,
+       128
+      ],
+      [
+       0,
+       1920,
+       32,
+       128
+      ],
+      [
+       32,
+       1920,
+       12,
+       128
+      ],
+      [
+       0,
+       2048,
+       32,
+       128
+      ],
+      [
+       32,
+       2048,
+       12,
+       128
+      ],
+      [
+       0,
+       2176,
+       32,
+       128
+      ],
+      [
+       32,
+       2176,
+       12,
+       128
+      ],
+      [
+       0,
+       2304,
+       32,
+       128
+      ],
+      [
+       32,
+       2304,
+       12,
+       128
+      ],
+      [
+       0,
+       2432,
+       32,
+       128
+      ],
+      [
+       32,
+       2432,
+       12,
+       128
+      ],
+      [
+       0,
+       2560,
+       32,
+       128
+      ],
+      [
+       32,
+       2560,
+       12,
+       128
+      ],
+      [
+       0,
+       2688,
+       32,
+       128
+      ],
+      [
+       32,
+       2688,
+       12,
+       128
+      ],
+      [
+       0,
+       2816,
+       32,
+       128
+      ],
+      [
+       32,
+       2816,
+       12,
+       128
+      ],
+      [
+       0,
+       2944,
+       32,
+       128
+      ],
+      [
+       32,
+       2944,
+       12,
+       128
+      ],
+      [
+       0,
+       3072,
+       32,
+       128
+      ],
+      [
+       32,
+       3072,
+       12,
+       128
+      ],
+      [
+       0,
+       3200,
+       32,
+       128
+      ],
+      [
+       32,
+       3200,
+       12,
+       128
+      ],
+      [
+       0,
+       3328,
+       32,
+       128
+      ],
+      [
+       32,
+       3328,
+       12,
+       128
+      ],
+      [
+       0,
+       3456,
+       32,
+       128
+      ],
+      [
+       32,
+       3456,
+       12,
+       128
+      ],
+      [
+       0,
+       3584,
+       32,
+       128
+      ],
+      [
+       32,
+       3584,
+       12,
+       128
+      ],
+      [
+       0,
+       3712,
+       32,
+       128
+      ],
+      [
+       32,
+       3712,
+       12,
+       128
+      ],
+      [
+       0,
+       3840,
+       32,
+       128
+      ],
+      [
+       32,
+       3840,
+       12,
+       128
+      ],
+      [
+       0,
+       3968,
+       32,
+       128
+      ],
+      [
+       32,
+       3968,
+       12,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.015625,
+     "requested": {
+      "name": "m32_n128_n",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "submit_count": 64,
+     "submit_report_count": 64,
+     "task_count": 192,
+     "task_report_count": 192,
+     "times_us": [
+      10410.32599459868,
+      11876.723991008475,
+      8386.767993215472
+     ],
+     "upload_calls": 6,
+     "workspace_init_us": 52937.99198989291
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "buffer_count": 163,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 101,
+     "download_calls": 32,
+     "mean_us": 7220.407661710245,
+     "median_us": 7274.948991835117,
+     "min_us": 6660.122991888784,
+     "name": "m64_n128_m",
+     "output_sha256": "0f1e8099c9ee6669d6163790307863f9c879dea40406219273813a120d1625f2",
+     "plan": "lm_head_shard0/m64_n128_m.rkplan.json",
+     "plan_hash": "e5136fb93f005478440b7ac6578589d047a8ef666cc1e6406a310a1d5b8cdabb",
+     "plan_sha256": "005d12c348f8ec9523878f019ad0d22bd3110544cca22df5ddf9854c537d5c4d",
+     "publish_count": 32,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       128
+      ],
+      [
+       0,
+       1024,
+       44,
+       128
+      ],
+      [
+       0,
+       1152,
+       44,
+       128
+      ],
+      [
+       0,
+       1280,
+       44,
+       128
+      ],
+      [
+       0,
+       1408,
+       44,
+       128
+      ],
+      [
+       0,
+       1536,
+       44,
+       128
+      ],
+      [
+       0,
+       1664,
+       44,
+       128
+      ],
+      [
+       0,
+       1792,
+       44,
+       128
+      ],
+      [
+       0,
+       1920,
+       44,
+       128
+      ],
+      [
+       0,
+       2048,
+       44,
+       128
+      ],
+      [
+       0,
+       2176,
+       44,
+       128
+      ],
+      [
+       0,
+       2304,
+       44,
+       128
+      ],
+      [
+       0,
+       2432,
+       44,
+       128
+      ],
+      [
+       0,
+       2560,
+       44,
+       128
+      ],
+      [
+       0,
+       2688,
+       44,
+       128
+      ],
+      [
+       0,
+       2816,
+       44,
+       128
+      ],
+      [
+       0,
+       2944,
+       44,
+       128
+      ],
+      [
+       0,
+       3072,
+       44,
+       128
+      ],
+      [
+       0,
+       3200,
+       44,
+       128
+      ],
+      [
+       0,
+       3328,
+       44,
+       128
+      ],
+      [
+       0,
+       3456,
+       44,
+       128
+      ],
+      [
+       0,
+       3584,
+       44,
+       128
+      ],
+      [
+       0,
+       3712,
+       44,
+       128
+      ],
+      [
+       0,
+       3840,
+       44,
+       128
+      ],
+      [
+       0,
+       3968,
+       44,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.015625,
+     "requested": {
+      "name": "m64_n128_m",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "submit_count": 32,
+     "submit_report_count": 32,
+     "task_count": 96,
+     "task_report_count": 96,
+     "times_us": [
+      6660.122991888784,
+      7274.948991835117,
+      7726.1510014068335
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 47599.3930012919
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 163,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 101,
+     "download_calls": 32,
+     "mean_us": 7445.377336504559,
+     "median_us": 7765.234011458233,
+     "min_us": 6719.330995110795,
+     "name": "m128_n128_m",
+     "output_sha256": "0f1e8099c9ee6669d6163790307863f9c879dea40406219273813a120d1625f2",
+     "plan": "lm_head_shard0/m128_n128_m.rkplan.json",
+     "plan_hash": "e655e6df5da33b91ecce7a594451e790623b494015235ec2305ef1ac3fcaa76f",
+     "plan_sha256": "64e1528b3dc225e4a34313aa18c391fefd387cd2c260ce5ba93f61c87ef9ec8c",
+     "publish_count": 32,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       128
+      ],
+      [
+       0,
+       1024,
+       44,
+       128
+      ],
+      [
+       0,
+       1152,
+       44,
+       128
+      ],
+      [
+       0,
+       1280,
+       44,
+       128
+      ],
+      [
+       0,
+       1408,
+       44,
+       128
+      ],
+      [
+       0,
+       1536,
+       44,
+       128
+      ],
+      [
+       0,
+       1664,
+       44,
+       128
+      ],
+      [
+       0,
+       1792,
+       44,
+       128
+      ],
+      [
+       0,
+       1920,
+       44,
+       128
+      ],
+      [
+       0,
+       2048,
+       44,
+       128
+      ],
+      [
+       0,
+       2176,
+       44,
+       128
+      ],
+      [
+       0,
+       2304,
+       44,
+       128
+      ],
+      [
+       0,
+       2432,
+       44,
+       128
+      ],
+      [
+       0,
+       2560,
+       44,
+       128
+      ],
+      [
+       0,
+       2688,
+       44,
+       128
+      ],
+      [
+       0,
+       2816,
+       44,
+       128
+      ],
+      [
+       0,
+       2944,
+       44,
+       128
+      ],
+      [
+       0,
+       3072,
+       44,
+       128
+      ],
+      [
+       0,
+       3200,
+       44,
+       128
+      ],
+      [
+       0,
+       3328,
+       44,
+       128
+      ],
+      [
+       0,
+       3456,
+       44,
+       128
+      ],
+      [
+       0,
+       3584,
+       44,
+       128
+      ],
+      [
+       0,
+       3712,
+       44,
+       128
+      ],
+      [
+       0,
+       3840,
+       44,
+       128
+      ],
+      [
+       0,
+       3968,
+       44,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.015625,
+     "requested": {
+      "name": "m128_n128_m",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 32,
+     "submit_report_count": 32,
+     "task_count": 96,
+     "task_report_count": 96,
+     "times_us": [
+      6719.330995110795,
+      7765.234011458233,
+      7851.567002944648
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 47714.308006106876
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 163,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 101,
+     "download_calls": 32,
+     "mean_us": 8050.091996362123,
+     "median_us": 7980.773996678181,
+     "min_us": 7736.0680006677285,
+     "name": "m128_n128_n",
+     "output_sha256": "0f1e8099c9ee6669d6163790307863f9c879dea40406219273813a120d1625f2",
+     "plan": "lm_head_shard0/m128_n128_n.rkplan.json",
+     "plan_hash": "eec39143dcd51e0712258c1e9fa6c0cb9f15f40ffbc31affa18efb235106c5ce",
+     "plan_sha256": "2532d3cc5371b13bdcfe73b30f702cdfd47c4d87b8cc728bf5db8ba7489c168c",
+     "publish_count": 32,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       128
+      ],
+      [
+       0,
+       1024,
+       44,
+       128
+      ],
+      [
+       0,
+       1152,
+       44,
+       128
+      ],
+      [
+       0,
+       1280,
+       44,
+       128
+      ],
+      [
+       0,
+       1408,
+       44,
+       128
+      ],
+      [
+       0,
+       1536,
+       44,
+       128
+      ],
+      [
+       0,
+       1664,
+       44,
+       128
+      ],
+      [
+       0,
+       1792,
+       44,
+       128
+      ],
+      [
+       0,
+       1920,
+       44,
+       128
+      ],
+      [
+       0,
+       2048,
+       44,
+       128
+      ],
+      [
+       0,
+       2176,
+       44,
+       128
+      ],
+      [
+       0,
+       2304,
+       44,
+       128
+      ],
+      [
+       0,
+       2432,
+       44,
+       128
+      ],
+      [
+       0,
+       2560,
+       44,
+       128
+      ],
+      [
+       0,
+       2688,
+       44,
+       128
+      ],
+      [
+       0,
+       2816,
+       44,
+       128
+      ],
+      [
+       0,
+       2944,
+       44,
+       128
+      ],
+      [
+       0,
+       3072,
+       44,
+       128
+      ],
+      [
+       0,
+       3200,
+       44,
+       128
+      ],
+      [
+       0,
+       3328,
+       44,
+       128
+      ],
+      [
+       0,
+       3456,
+       44,
+       128
+      ],
+      [
+       0,
+       3584,
+       44,
+       128
+      ],
+      [
+       0,
+       3712,
+       44,
+       128
+      ],
+      [
+       0,
+       3840,
+       44,
+       128
+      ],
+      [
+       0,
+       3968,
+       44,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.015625,
+     "requested": {
+      "name": "m128_n128_n",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 32,
+     "submit_report_count": 32,
+     "task_count": 96,
+     "task_report_count": 96,
+     "times_us": [
+      7980.773996678181,
+      8433.433991740458,
+      7736.0680006677285
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 47086.94099099375
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 163,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 101,
+     "download_calls": 32,
+     "mean_us": 8382.87966810943,
+     "median_us": 9597.752999980003,
+     "min_us": 5383.51500290446,
+     "name": "m256_n128_n",
+     "output_sha256": "0f1e8099c9ee6669d6163790307863f9c879dea40406219273813a120d1625f2",
+     "plan": "lm_head_shard0/m256_n128_n.rkplan.json",
+     "plan_hash": "0e4eb5f54ccb586a8d17c349c9c5e4ab7f5a53fd3e498f0750e85db727dfcc3b",
+     "plan_sha256": "046faeaf29e93fa107a3fb3da6cdee6d184acf755028e7f3476da07efdf94efb",
+     "publish_count": 32,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       128
+      ],
+      [
+       0,
+       128,
+       44,
+       128
+      ],
+      [
+       0,
+       256,
+       44,
+       128
+      ],
+      [
+       0,
+       384,
+       44,
+       128
+      ],
+      [
+       0,
+       512,
+       44,
+       128
+      ],
+      [
+       0,
+       640,
+       44,
+       128
+      ],
+      [
+       0,
+       768,
+       44,
+       128
+      ],
+      [
+       0,
+       896,
+       44,
+       128
+      ],
+      [
+       0,
+       1024,
+       44,
+       128
+      ],
+      [
+       0,
+       1152,
+       44,
+       128
+      ],
+      [
+       0,
+       1280,
+       44,
+       128
+      ],
+      [
+       0,
+       1408,
+       44,
+       128
+      ],
+      [
+       0,
+       1536,
+       44,
+       128
+      ],
+      [
+       0,
+       1664,
+       44,
+       128
+      ],
+      [
+       0,
+       1792,
+       44,
+       128
+      ],
+      [
+       0,
+       1920,
+       44,
+       128
+      ],
+      [
+       0,
+       2048,
+       44,
+       128
+      ],
+      [
+       0,
+       2176,
+       44,
+       128
+      ],
+      [
+       0,
+       2304,
+       44,
+       128
+      ],
+      [
+       0,
+       2432,
+       44,
+       128
+      ],
+      [
+       0,
+       2560,
+       44,
+       128
+      ],
+      [
+       0,
+       2688,
+       44,
+       128
+      ],
+      [
+       0,
+       2816,
+       44,
+       128
+      ],
+      [
+       0,
+       2944,
+       44,
+       128
+      ],
+      [
+       0,
+       3072,
+       44,
+       128
+      ],
+      [
+       0,
+       3200,
+       44,
+       128
+      ],
+      [
+       0,
+       3328,
+       44,
+       128
+      ],
+      [
+       0,
+       3456,
+       44,
+       128
+      ],
+      [
+       0,
+       3584,
+       44,
+       128
+      ],
+      [
+       0,
+       3712,
+       44,
+       128
+      ],
+      [
+       0,
+       3840,
+       44,
+       128
+      ],
+      [
+       0,
+       3968,
+       44,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.015625,
+     "requested": {
+      "name": "m256_n128_n",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 32,
+     "submit_report_count": 32,
+     "task_count": 96,
+     "task_report_count": 96,
+     "times_us": [
+      5383.51500290446,
+      9597.752999980003,
+      10167.371001443826
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 47465.22899949923
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "buffer_count": 323,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 197,
+     "download_calls": 64,
+     "mean_us": 10298.604669515043,
+     "median_us": 10887.028009165078,
+     "min_us": 7356.030997470953,
+     "name": "m256_n64_m",
+     "output_sha256": "0f1e8099c9ee6669d6163790307863f9c879dea40406219273813a120d1625f2",
+     "plan": "lm_head_shard0/m256_n64_m.rkplan.json",
+     "plan_hash": "cc70f20cc9d4efe54a52c77cd631d43968316599d76b414871525282dfac0bb5",
+     "plan_sha256": "c018a5a83154cab25fa389438677161ef4026164a264ac7c5fb8cd3b5c9bd444",
+     "publish_count": 64,
+     "publish_order": [
+      [
+       0,
+       0,
+       44,
+       64
+      ],
+      [
+       0,
+       64,
+       44,
+       64
+      ],
+      [
+       0,
+       128,
+       44,
+       64
+      ],
+      [
+       0,
+       192,
+       44,
+       64
+      ],
+      [
+       0,
+       256,
+       44,
+       64
+      ],
+      [
+       0,
+       320,
+       44,
+       64
+      ],
+      [
+       0,
+       384,
+       44,
+       64
+      ],
+      [
+       0,
+       448,
+       44,
+       64
+      ],
+      [
+       0,
+       512,
+       44,
+       64
+      ],
+      [
+       0,
+       576,
+       44,
+       64
+      ],
+      [
+       0,
+       640,
+       44,
+       64
+      ],
+      [
+       0,
+       704,
+       44,
+       64
+      ],
+      [
+       0,
+       768,
+       44,
+       64
+      ],
+      [
+       0,
+       832,
+       44,
+       64
+      ],
+      [
+       0,
+       896,
+       44,
+       64
+      ],
+      [
+       0,
+       960,
+       44,
+       64
+      ],
+      [
+       0,
+       1024,
+       44,
+       64
+      ],
+      [
+       0,
+       1088,
+       44,
+       64
+      ],
+      [
+       0,
+       1152,
+       44,
+       64
+      ],
+      [
+       0,
+       1216,
+       44,
+       64
+      ],
+      [
+       0,
+       1280,
+       44,
+       64
+      ],
+      [
+       0,
+       1344,
+       44,
+       64
+      ],
+      [
+       0,
+       1408,
+       44,
+       64
+      ],
+      [
+       0,
+       1472,
+       44,
+       64
+      ],
+      [
+       0,
+       1536,
+       44,
+       64
+      ],
+      [
+       0,
+       1600,
+       44,
+       64
+      ],
+      [
+       0,
+       1664,
+       44,
+       64
+      ],
+      [
+       0,
+       1728,
+       44,
+       64
+      ],
+      [
+       0,
+       1792,
+       44,
+       64
+      ],
+      [
+       0,
+       1856,
+       44,
+       64
+      ],
+      [
+       0,
+       1920,
+       44,
+       64
+      ],
+      [
+       0,
+       1984,
+       44,
+       64
+      ],
+      [
+       0,
+       2048,
+       44,
+       64
+      ],
+      [
+       0,
+       2112,
+       44,
+       64
+      ],
+      [
+       0,
+       2176,
+       44,
+       64
+      ],
+      [
+       0,
+       2240,
+       44,
+       64
+      ],
+      [
+       0,
+       2304,
+       44,
+       64
+      ],
+      [
+       0,
+       2368,
+       44,
+       64
+      ],
+      [
+       0,
+       2432,
+       44,
+       64
+      ],
+      [
+       0,
+       2496,
+       44,
+       64
+      ],
+      [
+       0,
+       2560,
+       44,
+       64
+      ],
+      [
+       0,
+       2624,
+       44,
+       64
+      ],
+      [
+       0,
+       2688,
+       44,
+       64
+      ],
+      [
+       0,
+       2752,
+       44,
+       64
+      ],
+      [
+       0,
+       2816,
+       44,
+       64
+      ],
+      [
+       0,
+       2880,
+       44,
+       64
+      ],
+      [
+       0,
+       2944,
+       44,
+       64
+      ],
+      [
+       0,
+       3008,
+       44,
+       64
+      ],
+      [
+       0,
+       3072,
+       44,
+       64
+      ],
+      [
+       0,
+       3136,
+       44,
+       64
+      ],
+      [
+       0,
+       3200,
+       44,
+       64
+      ],
+      [
+       0,
+       3264,
+       44,
+       64
+      ],
+      [
+       0,
+       3328,
+       44,
+       64
+      ],
+      [
+       0,
+       3392,
+       44,
+       64
+      ],
+      [
+       0,
+       3456,
+       44,
+       64
+      ],
+      [
+       0,
+       3520,
+       44,
+       64
+      ],
+      [
+       0,
+       3584,
+       44,
+       64
+      ],
+      [
+       0,
+       3648,
+       44,
+       64
+      ],
+      [
+       0,
+       3712,
+       44,
+       64
+      ],
+      [
+       0,
+       3776,
+       44,
+       64
+      ],
+      [
+       0,
+       3840,
+       44,
+       64
+      ],
+      [
+       0,
+       3904,
+       44,
+       64
+      ],
+      [
+       0,
+       3968,
+       44,
+       64
+      ],
+      [
+       0,
+       4032,
+       44,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.015625,
+     "requested": {
+      "name": "m256_n64_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "submit_count": 64,
+     "submit_report_count": 64,
+     "task_count": 192,
+     "task_report_count": 192,
+     "times_us": [
+      7356.030997470953,
+      10887.028009165078,
+      12652.7550019091
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 64380.220996099524
+    }
+   ],
+   "id": "lm_head_shard0",
+   "k": 576,
+   "kind": "prefill",
+   "m": 44,
+   "n": 4096
+  },
+  {
+   "candidates": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 7,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 5,
+     "download_calls": 3,
+     "mean_us": 2434.1219977941364,
+     "median_us": 2428.385996608995,
+     "min_us": 2413.8029984897003,
+     "name": "default",
+     "output_sha256": "4611a8473ac23110a59ee431e56877c331d6e9b9099da7d4688ee4e0813c4b8b",
+     "plan": "attention_qk_prefill/default.rkplan.json",
+     "plan_hash": "1fe0fe8cbf0ae516c77cd0200c56f8f0b25bed04bdd8bc496fb1c64b32b32e4f",
+     "plan_sha256": "b803e9dbb262853d941f623709dd9bee2cf1d432c4dc280689919076fed6aa71",
+     "publish_count": 3,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       256
+      ],
+      [
+       256,
+       0,
+       256,
+       256
+      ],
+      [
+       512,
+       0,
+       256,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.0078125,
+     "requested": {
+      "default": true,
+      "name": "default",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "source": "default",
+     "source_schedule": null,
+     "submit_count": 3,
+     "submit_report_count": 3,
+     "task_count": 3,
+     "task_report_count": 3,
+     "times_us": [
+      2460.176998283714,
+      2428.385996608995,
+      2413.8029984897003
+     ],
+     "upload_calls": 4,
+     "workspace_init_us": 1864.6009993972257
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "buffer_count": 49,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 26,
+     "download_calls": 24,
+     "mean_us": 2813.3810022457815,
+     "median_us": 3124.002003460191,
+     "min_us": 2140.2229904197156,
+     "name": "m32_n256_m",
+     "output_sha256": "4611a8473ac23110a59ee431e56877c331d6e9b9099da7d4688ee4e0813c4b8b",
+     "plan": "attention_qk_prefill/m32_n256_m.rkplan.json",
+     "plan_hash": "075a3f7de94d82889a17b1aa979ae7bd77f6811789f3f83290b1b4f3a841f940",
+     "plan_sha256": "2d99c7d4b18336b0203140213182fc5e502fa366657e81753220b9706dcc29c6",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       256
+      ],
+      [
+       32,
+       0,
+       32,
+       256
+      ],
+      [
+       64,
+       0,
+       32,
+       256
+      ],
+      [
+       96,
+       0,
+       32,
+       256
+      ],
+      [
+       128,
+       0,
+       32,
+       256
+      ],
+      [
+       160,
+       0,
+       32,
+       256
+      ],
+      [
+       192,
+       0,
+       32,
+       256
+      ],
+      [
+       224,
+       0,
+       32,
+       256
+      ],
+      [
+       256,
+       0,
+       32,
+       256
+      ],
+      [
+       288,
+       0,
+       32,
+       256
+      ],
+      [
+       320,
+       0,
+       32,
+       256
+      ],
+      [
+       352,
+       0,
+       32,
+       256
+      ],
+      [
+       384,
+       0,
+       32,
+       256
+      ],
+      [
+       416,
+       0,
+       32,
+       256
+      ],
+      [
+       448,
+       0,
+       32,
+       256
+      ],
+      [
+       480,
+       0,
+       32,
+       256
+      ],
+      [
+       512,
+       0,
+       32,
+       256
+      ],
+      [
+       544,
+       0,
+       32,
+       256
+      ],
+      [
+       576,
+       0,
+       32,
+       256
+      ],
+      [
+       608,
+       0,
+       32,
+       256
+      ],
+      [
+       640,
+       0,
+       32,
+       256
+      ],
+      [
+       672,
+       0,
+       32,
+       256
+      ],
+      [
+       704,
+       0,
+       32,
+       256
+      ],
+      [
+       736,
+       0,
+       32,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.0078125,
+     "requested": {
+      "name": "m32_n256_m",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 32,
+      "tile_n": 256
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      3175.918012857437,
+      3124.002003460191,
+      2140.2229904197156
+     ],
+     "upload_calls": 25,
+     "workspace_init_us": 4838.105000089854
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "buffer_count": 74,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 27,
+     "download_calls": 48,
+     "mean_us": 4862.896336514193,
+     "median_us": 4768.3979937573895,
+     "min_us": 4738.064002594911,
+     "name": "m32_n128_n",
+     "output_sha256": "4611a8473ac23110a59ee431e56877c331d6e9b9099da7d4688ee4e0813c4b8b",
+     "plan": "attention_qk_prefill/m32_n128_n.rkplan.json",
+     "plan_hash": "ef3f4285ef528f43b997f64375c8f78cf9ce3c9b7f7393f2f2c2c1576975bae4",
+     "plan_sha256": "89530ecac841fe295e423e10abee3911367c7004a776799a7d4dc07415c19ae1",
+     "publish_count": 48,
+     "publish_order": [
+      [
+       0,
+       0,
+       32,
+       128
+      ],
+      [
+       32,
+       0,
+       32,
+       128
+      ],
+      [
+       64,
+       0,
+       32,
+       128
+      ],
+      [
+       96,
+       0,
+       32,
+       128
+      ],
+      [
+       128,
+       0,
+       32,
+       128
+      ],
+      [
+       160,
+       0,
+       32,
+       128
+      ],
+      [
+       192,
+       0,
+       32,
+       128
+      ],
+      [
+       224,
+       0,
+       32,
+       128
+      ],
+      [
+       256,
+       0,
+       32,
+       128
+      ],
+      [
+       288,
+       0,
+       32,
+       128
+      ],
+      [
+       320,
+       0,
+       32,
+       128
+      ],
+      [
+       352,
+       0,
+       32,
+       128
+      ],
+      [
+       384,
+       0,
+       32,
+       128
+      ],
+      [
+       416,
+       0,
+       32,
+       128
+      ],
+      [
+       448,
+       0,
+       32,
+       128
+      ],
+      [
+       480,
+       0,
+       32,
+       128
+      ],
+      [
+       512,
+       0,
+       32,
+       128
+      ],
+      [
+       544,
+       0,
+       32,
+       128
+      ],
+      [
+       576,
+       0,
+       32,
+       128
+      ],
+      [
+       608,
+       0,
+       32,
+       128
+      ],
+      [
+       640,
+       0,
+       32,
+       128
+      ],
+      [
+       672,
+       0,
+       32,
+       128
+      ],
+      [
+       704,
+       0,
+       32,
+       128
+      ],
+      [
+       736,
+       0,
+       32,
+       128
+      ],
+      [
+       0,
+       128,
+       32,
+       128
+      ],
+      [
+       32,
+       128,
+       32,
+       128
+      ],
+      [
+       64,
+       128,
+       32,
+       128
+      ],
+      [
+       96,
+       128,
+       32,
+       128
+      ],
+      [
+       128,
+       128,
+       32,
+       128
+      ],
+      [
+       160,
+       128,
+       32,
+       128
+      ],
+      [
+       192,
+       128,
+       32,
+       128
+      ],
+      [
+       224,
+       128,
+       32,
+       128
+      ],
+      [
+       256,
+       128,
+       32,
+       128
+      ],
+      [
+       288,
+       128,
+       32,
+       128
+      ],
+      [
+       320,
+       128,
+       32,
+       128
+      ],
+      [
+       352,
+       128,
+       32,
+       128
+      ],
+      [
+       384,
+       128,
+       32,
+       128
+      ],
+      [
+       416,
+       128,
+       32,
+       128
+      ],
+      [
+       448,
+       128,
+       32,
+       128
+      ],
+      [
+       480,
+       128,
+       32,
+       128
+      ],
+      [
+       512,
+       128,
+       32,
+       128
+      ],
+      [
+       544,
+       128,
+       32,
+       128
+      ],
+      [
+       576,
+       128,
+       32,
+       128
+      ],
+      [
+       608,
+       128,
+       32,
+       128
+      ],
+      [
+       640,
+       128,
+       32,
+       128
+      ],
+      [
+       672,
+       128,
+       32,
+       128
+      ],
+      [
+       704,
+       128,
+       32,
+       128
+      ],
+      [
+       736,
+       128,
+       32,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0078125,
+     "requested": {
+      "name": "m32_n128_n",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 32,
+      "tile_n": 128
+     },
+     "submit_count": 48,
+     "submit_report_count": 48,
+     "task_count": 48,
+     "task_report_count": 48,
+     "times_us": [
+      4738.064002594911,
+      4768.3979937573895,
+      5082.227013190277
+     ],
+     "upload_calls": 26,
+     "workspace_init_us": 6967.827997868881
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "buffer_count": 38,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 15,
+     "download_calls": 24,
+     "mean_us": 3091.1413341527805,
+     "median_us": 3105.0440011313185,
+     "min_us": 3059.836002648808,
+     "name": "m64_n128_m",
+     "output_sha256": "4611a8473ac23110a59ee431e56877c331d6e9b9099da7d4688ee4e0813c4b8b",
+     "plan": "attention_qk_prefill/m64_n128_m.rkplan.json",
+     "plan_hash": "ee84c7b0ff4249e3b90f3ad711450f27c84f11814276940037624ce6461394fa",
+     "plan_sha256": "f72748d6cb75abbef80de6df03d1634439d46a57f182aa6cda2acf6f499aa2e8",
+     "publish_count": 24,
+     "publish_order": [
+      [
+       0,
+       0,
+       64,
+       128
+      ],
+      [
+       0,
+       128,
+       64,
+       128
+      ],
+      [
+       64,
+       0,
+       64,
+       128
+      ],
+      [
+       64,
+       128,
+       64,
+       128
+      ],
+      [
+       128,
+       0,
+       64,
+       128
+      ],
+      [
+       128,
+       128,
+       64,
+       128
+      ],
+      [
+       192,
+       0,
+       64,
+       128
+      ],
+      [
+       192,
+       128,
+       64,
+       128
+      ],
+      [
+       256,
+       0,
+       64,
+       128
+      ],
+      [
+       256,
+       128,
+       64,
+       128
+      ],
+      [
+       320,
+       0,
+       64,
+       128
+      ],
+      [
+       320,
+       128,
+       64,
+       128
+      ],
+      [
+       384,
+       0,
+       64,
+       128
+      ],
+      [
+       384,
+       128,
+       64,
+       128
+      ],
+      [
+       448,
+       0,
+       64,
+       128
+      ],
+      [
+       448,
+       128,
+       64,
+       128
+      ],
+      [
+       512,
+       0,
+       64,
+       128
+      ],
+      [
+       512,
+       128,
+       64,
+       128
+      ],
+      [
+       576,
+       0,
+       64,
+       128
+      ],
+      [
+       576,
+       128,
+       64,
+       128
+      ],
+      [
+       640,
+       0,
+       64,
+       128
+      ],
+      [
+       640,
+       128,
+       64,
+       128
+      ],
+      [
+       704,
+       0,
+       64,
+       128
+      ],
+      [
+       704,
+       128,
+       64,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0078125,
+     "requested": {
+      "name": "m64_n128_m",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 64,
+      "tile_n": 128
+     },
+     "submit_count": 24,
+     "submit_report_count": 24,
+     "task_count": 24,
+     "task_report_count": 24,
+     "times_us": [
+      3105.0440011313185,
+      3059.836002648808,
+      3108.543998678215
+     ],
+     "upload_calls": 14,
+     "workspace_init_us": 4054.1150083299726
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 20,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 9,
+     "download_calls": 12,
+     "mean_us": 2942.1013314276934,
+     "median_us": 2908.170994487591,
+     "min_us": 2876.0880086338148,
+     "name": "m128_n128_m",
+     "output_sha256": "4611a8473ac23110a59ee431e56877c331d6e9b9099da7d4688ee4e0813c4b8b",
+     "plan": "attention_qk_prefill/m128_n128_m.rkplan.json",
+     "plan_hash": "372f9e3720fa819108a530f98c64f06e88a14a569a419f99510171602013db7d",
+     "plan_sha256": "b04389337c5982c2a517448a322a834bcc215ef6fdd7d277f0b6b7bd0dc9355f",
+     "publish_count": 12,
+     "publish_order": [
+      [
+       0,
+       0,
+       128,
+       128
+      ],
+      [
+       0,
+       128,
+       128,
+       128
+      ],
+      [
+       128,
+       0,
+       128,
+       128
+      ],
+      [
+       128,
+       128,
+       128,
+       128
+      ],
+      [
+       256,
+       0,
+       128,
+       128
+      ],
+      [
+       256,
+       128,
+       128,
+       128
+      ],
+      [
+       384,
+       0,
+       128,
+       128
+      ],
+      [
+       384,
+       128,
+       128,
+       128
+      ],
+      [
+       512,
+       0,
+       128,
+       128
+      ],
+      [
+       512,
+       128,
+       128,
+       128
+      ],
+      [
+       640,
+       0,
+       128,
+       128
+      ],
+      [
+       640,
+       128,
+       128,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0078125,
+     "requested": {
+      "name": "m128_n128_m",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 12,
+     "submit_report_count": 12,
+     "task_count": 12,
+     "task_report_count": 12,
+     "times_us": [
+      2908.170994487591,
+      2876.0880086338148,
+      3042.0449911616743
+     ],
+     "upload_calls": 8,
+     "workspace_init_us": 2543.5919960727915
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "buffer_count": 20,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 9,
+     "download_calls": 12,
+     "mean_us": 2926.0600034225113,
+     "median_us": 2908.755006501451,
+     "min_us": 2890.0879988214,
+     "name": "m128_n128_n",
+     "output_sha256": "4611a8473ac23110a59ee431e56877c331d6e9b9099da7d4688ee4e0813c4b8b",
+     "plan": "attention_qk_prefill/m128_n128_n.rkplan.json",
+     "plan_hash": "854c929420e70f30409e74aff0745e7dd19369e0c02b22fad341e51582eb4473",
+     "plan_sha256": "e0e0984cfdfc799aa8402734e01e4e720c0d049a60db85f9ed761ec571ec4201",
+     "publish_count": 12,
+     "publish_order": [
+      [
+       0,
+       0,
+       128,
+       128
+      ],
+      [
+       128,
+       0,
+       128,
+       128
+      ],
+      [
+       256,
+       0,
+       128,
+       128
+      ],
+      [
+       384,
+       0,
+       128,
+       128
+      ],
+      [
+       512,
+       0,
+       128,
+       128
+      ],
+      [
+       640,
+       0,
+       128,
+       128
+      ],
+      [
+       0,
+       128,
+       128,
+       128
+      ],
+      [
+       128,
+       128,
+       128,
+       128
+      ],
+      [
+       256,
+       128,
+       128,
+       128
+      ],
+      [
+       384,
+       128,
+       128,
+       128
+      ],
+      [
+       512,
+       128,
+       128,
+       128
+      ],
+      [
+       640,
+       128,
+       128,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0078125,
+     "requested": {
+      "name": "m128_n128_n",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 128,
+      "tile_n": 128
+     },
+     "submit_count": 12,
+     "submit_report_count": 12,
+     "task_count": 12,
+     "task_report_count": 12,
+     "times_us": [
+      2908.755006501451,
+      2890.0879988214,
+      2979.337004944682
+     ],
+     "upload_calls": 8,
+     "workspace_init_us": 2540.67599598784
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 11,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 6,
+     "download_calls": 6,
+     "mean_us": 2082.570339553058,
+     "median_us": 2079.848010907881,
+     "min_us": 2076.3479988090694,
+     "name": "m256_n128_n",
+     "output_sha256": "4611a8473ac23110a59ee431e56877c331d6e9b9099da7d4688ee4e0813c4b8b",
+     "plan": "attention_qk_prefill/m256_n128_n.rkplan.json",
+     "plan_hash": "f7e6197050d5edac300799cb620853a15a81abefc2bc8179490f31b254af72e3",
+     "plan_sha256": "c3e1ec84a3e01da00cd51e3fefde0595898c6681eab3d7a03603497c3a6a406c",
+     "publish_count": 6,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       128
+      ],
+      [
+       256,
+       0,
+       256,
+       128
+      ],
+      [
+       512,
+       0,
+       256,
+       128
+      ],
+      [
+       0,
+       128,
+       256,
+       128
+      ],
+      [
+       256,
+       128,
+       256,
+       128
+      ],
+      [
+       512,
+       128,
+       256,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0078125,
+     "requested": {
+      "name": "m256_n128_n",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "selected": true,
+     "selection_reason": "autotuner_measured_best",
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 6,
+     "submit_report_count": 6,
+     "task_count": 6,
+     "task_report_count": 6,
+     "times_us": [
+      2076.3479988090694,
+      2091.515008942224,
+      2079.848010907881
+     ],
+     "upload_calls": 5,
+     "workspace_init_us": 2002.5580015499145
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "buffer_count": 19,
+     "correct": false,
+     "correct_tolerance": true,
+     "data_bo_count": 8,
+     "download_calls": 12,
+     "mean_us": 2429.3583361820006,
+     "median_us": 2420.220000203699,
+     "min_us": 2376.7620004946366,
+     "name": "m256_n64_m",
+     "output_sha256": "4611a8473ac23110a59ee431e56877c331d6e9b9099da7d4688ee4e0813c4b8b",
+     "plan": "attention_qk_prefill/m256_n64_m.rkplan.json",
+     "plan_hash": "bcb947e9cdd25fbb988f73acc508c5469782fa98232427cd2de2d0bc46eaf5d5",
+     "plan_sha256": "74e4928b5c059c751f27be419092017ec8f99367b70816ac5eb136c701b754b1",
+     "publish_count": 12,
+     "publish_order": [
+      [
+       0,
+       0,
+       256,
+       64
+      ],
+      [
+       0,
+       64,
+       256,
+       64
+      ],
+      [
+       0,
+       128,
+       256,
+       64
+      ],
+      [
+       0,
+       192,
+       256,
+       64
+      ],
+      [
+       256,
+       0,
+       256,
+       64
+      ],
+      [
+       256,
+       64,
+       256,
+       64
+      ],
+      [
+       256,
+       128,
+       256,
+       64
+      ],
+      [
+       256,
+       192,
+       256,
+       64
+      ],
+      [
+       512,
+       0,
+       256,
+       64
+      ],
+      [
+       512,
+       64,
+       256,
+       64
+      ],
+      [
+       512,
+       128,
+       256,
+       64
+      ],
+      [
+       512,
+       192,
+       256,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.0078125,
+     "requested": {
+      "name": "m256_n64_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "submit_count": 12,
+     "submit_report_count": 12,
+     "task_count": 12,
+     "task_report_count": 12,
+     "times_us": [
+      2491.0930078476667,
+      2420.220000203699,
+      2376.7620004946366
+     ],
+     "upload_calls": 7,
+     "workspace_init_us": 2693.7990041915327
+    }
+   ],
+   "id": "attention_qk_prefill",
+   "k": 64,
+   "kind": "prefill",
+   "m": 768,
+   "n": 256
+  },
+  {
+   "candidates": [
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "buffer_count": 3,
+     "correct": true,
+     "correct_tolerance": true,
+     "data_bo_count": 3,
+     "download_calls": 1,
+     "mean_us": 220.4000047640875,
+     "median_us": 215.8310089726001,
+     "min_us": 214.37200484797359,
+     "name": "default",
+     "output_sha256": "02733b6df662afd2dbdb9732ea5d13793ce01fa489ab66f303bc4349720cdc41",
+     "plan": "attention_qk_decode/default.rkplan.json",
+     "plan_hash": "aab6ae151a504b1ddaad5c85b94720bdfc20dde087b95248b51c6fac0a5db28a",
+     "plan_sha256": "314c954c7984f00a314c6689fc0d82fb8ca7fd136731e4b09f93b69b6d1f1d9c",
+     "publish_count": 1,
+     "publish_order": [
+      [
+       0,
+       0,
+       3,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.0,
+     "requested": {
+      "default": true,
+      "name": "default",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "selected": true,
+     "selection_reason": "autotuner_measured_best",
+     "source": "default",
+     "source_schedule": null,
+     "submit_count": 1,
+     "submit_report_count": 1,
+     "task_count": 1,
+     "task_report_count": 1,
+     "times_us": [
+      230.9970004716888,
+      215.8310089726001,
+      214.37200484797359
+     ],
+     "upload_calls": 2,
+     "workspace_init_us": 1018.4870043303818
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 5,
+     "correct": true,
+     "correct_tolerance": true,
+     "data_bo_count": 4,
+     "download_calls": 2,
+     "mean_us": 295.1633311264838,
+     "median_us": 294.57999335136265,
+     "min_us": 293.41300250962377,
+     "name": "m256_n128_m",
+     "output_sha256": "02733b6df662afd2dbdb9732ea5d13793ce01fa489ab66f303bc4349720cdc41",
+     "plan": "attention_qk_decode/m256_n128_m.rkplan.json",
+     "plan_hash": "2dfddd72b6e377e2486e2436ac99d74a3757c69330c0429bfec3ecc34dcadaf6",
+     "plan_sha256": "76c63660d15ca2673337a6aa6523289964b54842915c3988c06273165798990f",
+     "publish_count": 2,
+     "publish_order": [
+      [
+       0,
+       0,
+       3,
+       128
+      ],
+      [
+       0,
+       128,
+       3,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0,
+     "requested": {
+      "name": "m256_n128_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 2,
+     "submit_report_count": 2,
+     "task_count": 2,
+     "task_report_count": 2,
+     "times_us": [
+      297.4969975184649,
+      293.41300250962377,
+      294.57999335136265
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 1040.6530054751784
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "buffer_count": 5,
+     "correct": true,
+     "correct_tolerance": true,
+     "data_bo_count": 4,
+     "download_calls": 2,
+     "mean_us": 334.53733097606647,
+     "median_us": 310.62099151313305,
+     "min_us": 295.4539959318936,
+     "name": "m256_n128_n",
+     "output_sha256": "02733b6df662afd2dbdb9732ea5d13793ce01fa489ab66f303bc4349720cdc41",
+     "plan": "attention_qk_decode/m256_n128_n.rkplan.json",
+     "plan_hash": "f8b30008c4a8dcd0c821ba258a57489ca4b4d5f8f6381d6e7be2963e87374e53",
+     "plan_sha256": "eecc2e9f7e0aea186b69774c5c4409eaf58a3e55be8d0adb9f887a9943a20da6",
+     "publish_count": 2,
+     "publish_order": [
+      [
+       0,
+       0,
+       3,
+       128
+      ],
+      [
+       0,
+       128,
+       3,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0,
+     "requested": {
+      "name": "m256_n128_n",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 256,
+      "tile_n": 128
+     },
+     "submit_count": 2,
+     "submit_report_count": 2,
+     "task_count": 2,
+     "task_report_count": 2,
+     "times_us": [
+      295.4539959318936,
+      397.53700548317283,
+      310.62099151313305
+     ],
+     "upload_calls": 3,
+     "workspace_init_us": 827.7390006696805
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "buffer_count": 9,
+     "correct": true,
+     "correct_tolerance": true,
+     "data_bo_count": 6,
+     "download_calls": 4,
+     "mean_us": 471.4246654960637,
+     "median_us": 472.2019948530942,
+     "min_us": 466.95300261490047,
+     "name": "m256_n64_m",
+     "output_sha256": "02733b6df662afd2dbdb9732ea5d13793ce01fa489ab66f303bc4349720cdc41",
+     "plan": "attention_qk_decode/m256_n64_m.rkplan.json",
+     "plan_hash": "8287ab39ec7f9f88a40ec3f7d53d29ce459a7bfb9715991ddd236ba28078b29f",
+     "plan_sha256": "a497d851d1b517b7ccd077cc87397363c84f00f66071d2b9fa159a839a12daf1",
+     "publish_count": 4,
+     "publish_order": [
+      [
+       0,
+       0,
+       3,
+       64
+      ],
+      [
+       0,
+       64,
+       3,
+       64
+      ],
+      [
+       0,
+       128,
+       3,
+       64
+      ],
+      [
+       0,
+       192,
+       3,
+       64
+      ]
+     ],
+     "reference_max_abs": 0.0,
+     "requested": {
+      "name": "m256_n64_m",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 64
+     },
+     "submit_count": 4,
+     "submit_report_count": 4,
+     "task_count": 4,
+     "task_report_count": 4,
+     "times_us": [
+      466.95300261490047,
+      475.1189990201965,
+      472.2019948530942
+     ],
+     "upload_calls": 5,
+     "workspace_init_us": 1348.6499956343323
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 1,
+      "tile_n": 256
+     },
+     "buffer_count": 7,
+     "correct": true,
+     "correct_tolerance": true,
+     "data_bo_count": 5,
+     "download_calls": 3,
+     "mean_us": 438.95300768781453,
+     "median_us": 436.91101018339396,
+     "min_us": 434.5780034782365,
+     "name": "m1_n256_m",
+     "output_sha256": "02733b6df662afd2dbdb9732ea5d13793ce01fa489ab66f303bc4349720cdc41",
+     "plan": "attention_qk_decode/m1_n256_m.rkplan.json",
+     "plan_hash": "58d74a162a78f2397b113505f045b9b96b457848aa85e92fae64b3113f43db8c",
+     "plan_sha256": "50af78c796c70182098dba2a2fbb11986b31efc6ccf266c4a0e02bcf1ce91b9c",
+     "publish_count": 3,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       256
+      ],
+      [
+       1,
+       0,
+       1,
+       256
+      ],
+      [
+       2,
+       0,
+       1,
+       256
+      ]
+     ],
+     "reference_max_abs": 0.0,
+     "requested": {
+      "name": "m1_n256_m",
+      "order": "m_major",
+      "tile_m": 1,
+      "tile_n": 256
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 1,
+      "tile_n": 256
+     },
+     "submit_count": 3,
+     "submit_report_count": 3,
+     "task_count": 3,
+     "task_report_count": 3,
+     "times_us": [
+      436.91101018339396,
+      445.37000940181315,
+      434.5780034782365
+     ],
+     "upload_calls": 4,
+     "workspace_init_us": 1118.8189964741468
+    },
+    {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 1,
+      "tile_n": 128
+     },
+     "buffer_count": 11,
+     "correct": true,
+     "correct_tolerance": true,
+     "data_bo_count": 6,
+     "download_calls": 6,
+     "mean_us": 658.1860022076095,
+     "median_us": 669.6580094285309,
+     "min_us": 633.4920035442337,
+     "name": "m1_n128_n",
+     "output_sha256": "02733b6df662afd2dbdb9732ea5d13793ce01fa489ab66f303bc4349720cdc41",
+     "plan": "attention_qk_decode/m1_n128_n.rkplan.json",
+     "plan_hash": "28dc958b0855567e24aa4593664d0a3215f44d3ee1be975eaaec5abd208c97b6",
+     "plan_sha256": "4c427be402e4557af505681b31a7bffa7f8e0bedf66b34cd87b72d50d890cd27",
+     "publish_count": 6,
+     "publish_order": [
+      [
+       0,
+       0,
+       1,
+       128
+      ],
+      [
+       1,
+       0,
+       1,
+       128
+      ],
+      [
+       2,
+       0,
+       1,
+       128
+      ],
+      [
+       0,
+       128,
+       1,
+       128
+      ],
+      [
+       1,
+       128,
+       1,
+       128
+      ],
+      [
+       2,
+       128,
+       1,
+       128
+      ]
+     ],
+     "reference_max_abs": 0.0,
+     "requested": {
+      "name": "m1_n128_n",
+      "order": "n_major",
+      "tile_m": 1,
+      "tile_n": 128
+     },
+     "source": "tilelang",
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "n_major",
+      "tile_m": 1,
+      "tile_n": 128
+     },
+     "submit_count": 6,
+     "submit_report_count": 6,
+     "task_count": 6,
+     "task_report_count": 6,
+     "times_us": [
+      633.4920035442337,
+      671.4079936500639,
+      669.6580094285309
+     ],
+     "upload_calls": 5,
+     "workspace_init_us": 1517.5230073509738
+    }
+   ],
+   "id": "attention_qk_decode",
+   "k": 64,
+   "kind": "decode",
+   "m": 3,
+   "n": 256
+  }
+ ],
+ "kind": "smollm2-schedule-tuning-run",
+ "manifest": "/mnt/ssd/workspace/smollm-work-20261030T032939Z/tune-plans-20261030T033013Z-207885/manifest.json",
+ "manifest_sha256": "a45aae10087010b22cec101b3437231272257298f8707d00deafd8ee10bc72ea",
+ "package_manifest_sha256": "b923fc5b427cc2ee6f0f88e7d096444a7ab44babdfbd79cc64fe07f5771548be",
+ "package_weights_sha256": "ff04cb6f25633772987ff8cfc66e65046004034e526cf1d6d6bb615333b945bf",
+ "plan_lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+ "schema_version": 1
+}

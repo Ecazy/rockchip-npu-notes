@@ -1,0 +1,54 @@
+{
+ "cases": [
+  {
+   "cache_key": "03fd268b5f3539b5c2db61256972a6bb5679c275b1a5422f122e303942f3b63b",
+   "id": "prefill_qkv",
+   "reason": "autotuner_measured_best",
+   "selected": "default",
+   "winner_median_us": 1238.6930029606447
+  },
+  {
+   "cache_key": "bae5d8c63857ba21a6938e83e6f2797a638ffa07c6f079574e0a3af362bdf8a7",
+   "id": "prefill_gate_up",
+   "reason": "autotuner_measured_best",
+   "selected": "default",
+   "winner_median_us": 3620.121002313681
+  },
+  {
+   "cache_key": "1db15271ba0ca9cbe3f3563386d1f420adf2db9aab9f85c2f5882bdc281cee92",
+   "id": "prefill_down",
+   "reason": "autotuner_measured_best",
+   "selected": "default",
+   "winner_median_us": 1721.6859996551648
+  },
+  {
+   "cache_key": "9c145aa3268c5e5b3045fa1b3ed9fa104c1d90551b0f4b982de8f08ec021baea",
+   "id": "decode_qkv",
+   "reason": "autotuner_measured_best",
+   "selected": "default",
+   "winner_median_us": 811.9899866869673
+  },
+  {
+   "cache_key": "89cd12812eddc498e1b27ce7762950a8dcd7701a84b71544cc84c4b32623ea4d",
+   "id": "lm_head_shard0",
+   "reason": "autotuner_measured_best",
+   "selected": "default",
+   "winner_median_us": 5191.01700047031
+  },
+  {
+   "cache_key": "b2dd91169ef99a051bed38f5732bda1ed37b7d05adea45be90e8763da5e544e5",
+   "id": "attention_qk_prefill",
+   "reason": "autotuner_measured_best",
+   "selected": "m256_n128_n",
+   "winner_median_us": 2079.848010907881
+  },
+  {
+   "cache_key": "65dfa13e68ba103c6931a84f5f31ec3bf6e051a8f9c0257f4c99cd3fdf281577",
+   "id": "attention_qk_decode",
+   "reason": "autotuner_measured_best",
+   "selected": "default",
+   "winner_median_us": 215.8310089726001
+  }
+ ],
+ "kind": "smollm2-schedule-policy-summary"
+}

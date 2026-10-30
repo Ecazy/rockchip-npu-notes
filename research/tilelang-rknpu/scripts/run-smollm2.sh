@@ -82,6 +82,7 @@ cmd_setup_board() {
       tilelang-rknpu/capabilities tilelang-rknpu/models/tilelang_matmul.py \
       tilelang-rknpu/tools/run_smollm2.py \
       tilelang-rknpu/tools/run_schedule_experiment.py \
+      tilelang-rknpu/tools/tune_schedule.py \
       tilelang-rknpu/tools/run_smollm_device_rope.py
   tar -czf "$package_bundle" -C "$HERE/.data/models" \
       smollm2_135m_instruct_package
@@ -116,8 +117,17 @@ cmd_board_run() {
   # Trusted local A/B control only; values are expanded into the remote command.
   local runner_args=${RK_SMOLLM_RUNNER_ARGS:-}
   local remote_package=${RK_SMOLLM_REMOTE_PACKAGE:-package}
+  local schedule_arg=""
+  local schedule_policy=${RK_SMOLLM_SCHEDULE_POLICY:-}
+  if [[ -n "$schedule_policy" ]]; then
+    [[ -f "$schedule_policy" ]] || {
+      echo "schedule policy missing: $schedule_policy" >&2; exit 2; }
+    local remote_policy="schedule-policy-${stamp_request}"
+    "${SCP[@]}" "$schedule_policy" "$TARGET:$remote/$remote_policy" >/dev/null
+    schedule_arg="--schedule-policy '$remote/$remote_policy'"
+  fi
   "${SCP[@]}" "$request" "$TARGET:$remote/$stamp_request" >/dev/null
-  "${SSH[@]}" "cd '$remote' && export PYTHONPATH='$remote/tilelang-rknpu/python' && export RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' && export LD_LIBRARY_PATH='$remote/build' && export RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 tilelang-rknpu/tools/run_smollm2.py --package '$remote_package' --request '$stamp_request' --out '$remote_out' $runner_args"
+  "${SSH[@]}" "cd '$remote' && export PYTHONPATH='$remote/tilelang-rknpu/python' && export RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' && export LD_LIBRARY_PATH='$remote/build' && export RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 tilelang-rknpu/tools/run_smollm2.py --package '$remote_package' --request '$stamp_request' --out '$remote_out' $runner_args $schedule_arg"
   rm -rf "$out"
   mkdir -p "$out"
   "${SCP[@]}" -r "$TARGET:$remote/$remote_out/." "$out/" >/dev/null
@@ -162,7 +172,7 @@ PY
 
 usage() {
   cat >&2 <<EOF
-usage: $0 {fetch|compile|host-check|setup-board|board-run <request.json> <out-dir>|schedule-bench <plans-dir> <out.json>|chat <prompt> [max_new]}
+usage: $0 {fetch|compile|host-check|setup-board|board-run <request.json> <out-dir>|schedule-bench <plans-dir> <out.json>|schedule-tune <plans-dir> <out-dir>|chat <prompt> [max_new]}
 EOF
 }
 
@@ -184,6 +194,32 @@ cmd_schedule_bench() {
   "${SCP[@]}" "$bundle" "$TARGET:$remote/schedule.tgz" >/dev/null
   "${SSH[@]}" "cd '$remote' && rm -rf '$remote_plans' && mkdir -p '$remote_plans' && tar -xzf schedule.tgz -C '$remote_plans' --strip-components=1 && export PYTHONPATH='$remote/tilelang-rknpu/python' RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' LD_LIBRARY_PATH='$remote/build' RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 '$remote/tilelang-rknpu/tools/run_schedule_experiment.py' run --plans '$remote/$remote_plans' --backend board --repeats 5 --out '$remote/$remote_out'"
   "${SCP[@]}" "$TARGET:$remote/$remote_out" "$out" >/dev/null
+}
+
+cmd_schedule_tune() {
+  local plans=$1 out=$2
+  [[ -f "$REMOTE_STATE" ]] || { echo "run setup-board first" >&2; exit 2; }
+  [[ -f "$plans/manifest.json" ]] || {
+    echo "tuning manifest missing: $plans/manifest.json" >&2; exit 2; }
+  board_env
+  trap board_cleanup EXIT
+  local remote stamp remote_plans bundle
+  remote=$(<"$REMOTE_STATE")
+  stamp=$(date -u +%Y%m%dT%H%M%SZ)-$$
+  remote_plans="tune-plans-$stamp"
+  bundle=$(mktemp /tmp/rk-smollm-tune-XXXXXX.tgz)
+  trap 'rm -f -- "${bundle:-}"; board_cleanup' EXIT
+  mkdir -p "$out"
+  tar -czf "$bundle" -C "$(dirname "$plans")" "$(basename "$plans")"
+  "${SCP[@]}" "$bundle" "$TARGET:$remote/tune.tgz" >/dev/null
+  "${SSH[@]}" "cd '$remote' && rm -rf '$remote_plans' && mkdir -p '$remote_plans' && tar -xzf tune.tgz -C '$remote_plans' --strip-components=1 && export PYTHONPATH='$remote/tilelang-rknpu/python' RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' LD_LIBRARY_PATH='$remote/build' RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 '$remote/tilelang-rknpu/tools/tune_schedule.py' run --plans '$remote/$remote_plans' --package '$remote/package' --out '$remote/tune-run.json'"
+  "${SCP[@]}" "$TARGET:$remote/tune-run.json" "$out/tune-run.json" >/dev/null
+  "${SCP[@]}" "$TARGET:$remote/$remote_plans/policy.json" "$out/policy.json" >/dev/null
+  "${SCP[@]}" "$TARGET:$remote/$remote_plans/policy-summary.json" "$out/policy-summary.json" >/dev/null
+  # New SSH process: this is the new-process replay, not a re-use of the
+  # Python process that selected the winner.
+  "${SSH[@]}" "cd '$remote' && export PYTHONPATH='$remote/tilelang-rknpu/python' RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' LD_LIBRARY_PATH='$remote/build' RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 '$remote/tilelang-rknpu/tools/tune_schedule.py' replay --plans '$remote/$remote_plans' --package '$remote/package' --out '$remote/tune-replay.json'"
+  "${SCP[@]}" "$TARGET:$remote/tune-replay.json" "$out/tune-replay.json" >/dev/null
 }
 
 cmd_device_rope_probe() {
@@ -218,6 +254,7 @@ case "${1:-}" in
   setup-board) shift; cmd_setup_board "$@" ;;
   board-run) shift; cmd_board_run "${1:?request}" "${2:?out-dir}" ;;
   schedule-bench) shift; cmd_schedule_bench "${1:?plans dir}" "${2:?out json}" ;;
+  schedule-tune) shift; cmd_schedule_tune "${1:?plans dir}" "${2:?out dir}" ;;
   device-rope-probe) shift; cmd_device_rope_probe "${1:?prompt json}" "${2:?out file}" "${3:-}" ;;
   chat) shift; cmd_chat "${1:?prompt}" "${2:-32}" ;;
   *) usage; exit 2 ;;

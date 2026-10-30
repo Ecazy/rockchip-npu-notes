@@ -477,3 +477,10 @@ results/20261030T013910Z-smollm2-v5-delivery/**/pid
 # under ignored .data paths.
 !results/20261030T030803Z-tilelang-schedule/
 !results/20261030T030803Z-tilelang-schedule/**
+# Schedule experiment: keep plan/policy/result text; large captured/board arrays
+# remain in ignored .data evidence or are regenerated from the package.
+results/20261030T030803Z-tilelang-schedule/**/*.npy
+results/20261030T030803Z-tilelang-schedule/**/*.npz
+!results/20261030T030803Z-tilelang-schedule/tuning/plans/activations.npz
+results/20261030T030803Z-tilelang-schedule/**/*.pid
+results/20261030T030803Z-tilelang-schedule/**/pid

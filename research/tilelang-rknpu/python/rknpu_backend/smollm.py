@@ -167,7 +167,8 @@ class SmolLM2Runner:
                  share_constants: bool = True,
                  persistent_kv: bool = True,
                  profile: bool = False,
-                 cache_host_weights: bool = True):
+                 cache_host_weights: bool = True,
+                 plan_overrides: dict[str, dict[str, Any]] | None = None):
         if not isinstance(fd, int) or fd < 0:
             reject(RK_E_INVALID, "SmolLM2Runner requires a caller-owned fd>=0",
                    stage="smollm")
@@ -175,12 +176,13 @@ class SmolLM2Runner:
                 persistent_kv, bool) or not isinstance(profile, bool) or                 not isinstance(cache_host_weights, bool):
             reject(RK_E_INVALID,
                    "share_constants, persistent_kv, profile and "
-                   "cache_host_weights must be boolean",
-                   stage="smollm")
+                   "cache_host_weights must be boolean and plan_overrides "
+                   "must be a mapping", stage="smollm")
         self.share_constants = share_constants
         self.persistent_kv = persistent_kv
         self.profile = bool(profile)
         self.cache_host_weights = bool(cache_host_weights)
+        self.plan_overrides = dict(plan_overrides or {})
         self._profile_us: dict[str, float] = {}
         self._profile_count: dict[str, int] = {}
         self._cached_embed: np.ndarray | None = None
@@ -321,16 +323,43 @@ class SmolLM2Runner:
                 needed.append(f"lm_head.{profile}.{shard:02d}")
         needed.extend(("attn.qk.decode", "attn.pv.decode",
                        "attn.qk.prefill", "attn.pv.prefill"))
+        unknown_overrides = sorted(set(self.plan_overrides) - set(needed))
+        if unknown_overrides:
+            reject(RK_E_UNSUPPORTED,
+                   "schedule policy names unknown SmolLM2 plan keys",
+                   stage="smollm", actual=unknown_overrides)
         for key in needed:
             if key not in entries:
                 reject(RK_E_SCHEMA, f"package manifest lacks plan {key!r}",
                        stage="smollm")
             info = entries[key]
-            path = self.package_dir / info["path"]
-            plan = Plan.from_dict(json.loads(path.read_text()))
-            if plan.plan_hash != info["plan_hash"]:
-                reject(RK_E_SCHEMA, f"plan hash mismatch for {key!r}",
-                       stage="smollm")
+            override = self.plan_overrides.get(key)
+            if override is not None:
+                if not isinstance(override, dict) or "plan" not in override:
+                    reject(RK_E_INVALID,
+                           f"schedule override for {key!r} must contain a plan",
+                           stage="smollm")
+                plan = Plan.from_dict(override["plan"])
+                expected_hash = override.get("plan_hash")
+                if expected_hash is not None and plan.plan_hash != expected_hash:
+                    reject(RK_E_SCHEMA,
+                           f"schedule override plan hash mismatch for {key!r}",
+                           stage="smollm")
+                expected_task_count = override.get("task_count")
+                if expected_task_count is not None and int(
+                        plan.accounting.task_count) != int(expected_task_count):
+                    reject(RK_E_SCHEMA,
+                           f"schedule override task count mismatch for {key!r}",
+                           stage="smollm")
+            else:
+                path = self.package_dir / info["path"]
+                plan = Plan.from_dict(json.loads(path.read_text()))
+                if plan.plan_hash != info["plan_hash"]:
+                    reject(RK_E_SCHEMA, f"plan hash mismatch for {key!r}",
+                           stage="smollm")
+                if plan.accounting.task_count != int(info["task_count"]):
+                    reject(RK_E_SCHEMA, f"task count mismatch for {key!r}",
+                           stage="smollm")
             if plan.profile_hash != self.manifest["compiler"]["profile_hash"]:
                 reject(RK_E_SCHEMA, f"plan profile mismatch for {key!r}",
                        stage="smollm")
@@ -340,9 +369,6 @@ class SmolLM2Runner:
                 reject(RK_E_UNSUPPORTED,
                        f"plan {key!r} does not contain only matrix NPU tasks",
                        stage="smollm", actual=templates)
-            if plan.accounting.task_count != int(info["task_count"]):
-                reject(RK_E_SCHEMA, f"task count mismatch for {key!r}",
-                       stage="smollm")
             constants: dict[str, np.ndarray] = {}
             if plan.constants:
                 if [c.name for c in plan.constants] != ["B"]:

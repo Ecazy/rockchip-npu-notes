@@ -15,7 +15,7 @@ Test project /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/b
       Start  7: overlap_host
  7/33 Test  #7: overlap_host .....................   Passed    0.00 sec
       Start  8: overlap_evidence_negative
- 8/33 Test  #8: overlap_evidence_negative ........   Passed    0.24 sec
+ 8/33 Test  #8: overlap_evidence_negative ........   Passed    0.23 sec
       Start  9: schedule_host
  9/33 Test  #9: schedule_host ....................   Passed    0.00 sec
       Start 10: schedule_evidence_negative
@@ -25,9 +25,9 @@ Test project /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/b
       Start 12: cost_probe_help
 12/33 Test #12: cost_probe_help ..................   Passed    0.00 sec
       Start 13: multitile_host
-13/33 Test #13: multitile_host ...................   Passed    4.53 sec
+13/33 Test #13: multitile_host ...................   Passed    4.56 sec
       Start 14: graph_host
-14/33 Test #14: graph_host .......................   Passed    5.13 sec
+14/33 Test #14: graph_host .......................   Passed    5.12 sec
       Start 15: graph_cli_help
 15/33 Test #15: graph_cli_help ...................   Passed    0.00 sec
       Start 16: row_cli_help
@@ -41,11 +41,11 @@ Test project /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/b
       Start 20: gdn_host
 20/33 Test #20: gdn_host .........................   Passed    0.00 sec
       Start 21: gdn_evidence_negative
-21/33 Test #21: gdn_evidence_negative ............   Passed    0.04 sec
+21/33 Test #21: gdn_evidence_negative ............   Passed    0.03 sec
       Start 22: gdn_cpu_stages
 22/33 Test #22: gdn_cpu_stages ...................   Passed    0.00 sec
       Start 23: gdn_experiments_evidence
-23/33 Test #23: gdn_experiments_evidence .........   Passed    0.03 sec
+23/33 Test #23: gdn_experiments_evidence .........   Passed    0.04 sec
       Start 24: output_sync
 24/33 Test #24: output_sync ......................   Passed    0.00 sec
       Start 25: command_cache
@@ -55,13 +55,13 @@ Test project /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/b
       Start 27: download_fastpath
 27/33 Test #27: download_fastpath ................   Passed    0.00 sec
       Start 28: fp16_scan
-28/33 Test #28: fp16_scan ........................   Passed    0.00 sec
+28/33 Test #28: fp16_scan ........................   Passed    0.01 sec
       Start 29: task_ref
 29/33 Test #29: task_ref .........................   Passed    0.00 sec
       Start 30: rk_plan_contract
 30/33 Test #30: rk_plan_contract .................   Passed    0.00 sec
       Start 31: rk_plan_host
-31/33 Test #31: rk_plan_host .....................   Passed    0.61 sec
+31/33 Test #31: rk_plan_host .....................   Passed    0.62 sec
       Start 32: provider_context
 32/33 Test #32: provider_context .................   Passed    0.00 sec
       Start 33: provider_seam
@@ -69,4 +69,4 @@ Test project /home/maoyu/Documents/code/rockchip-npu-notes/research/custom-ops/b
 
 100% tests passed, 0 tests failed out of 33
 
-Total Test time (real) =  10.90 sec
+Total Test time (real) =  10.94 sec

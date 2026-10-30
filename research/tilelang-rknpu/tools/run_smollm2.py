@@ -91,6 +91,8 @@ def main(argv=None) -> int:
     ap.add_argument("--profile", action="store_true",
                     help="collect layered decode timing; keep this off for "
                          "final performance measurements")
+    ap.add_argument("--schedule-policy", default="",
+                    help="external plan-override policy for an opt-in schedule")
     args = ap.parse_args(argv)
 
     package = Path(args.package).resolve()
@@ -110,8 +112,26 @@ def main(argv=None) -> int:
     if fd < 0:
         print(f"rocket_open failed: {fd}", file=sys.stderr)
         return 3
+    overrides = None
+    policy_identity = None
+    if args.schedule_policy:
+        policy_path = Path(args.schedule_policy).resolve()
+        policy = json.loads(policy_path.read_text())
+        if policy.get("kind") != "smollm2-plan-overrides-v1":
+            raise SystemExit("unsupported schedule policy kind")
+        overrides = policy.get("overrides")
+        if not isinstance(overrides, dict):
+            raise SystemExit("schedule policy overrides must be an object")
+        policy_identity = {
+            "path": str(policy_path),
+            "sha256": sha256(policy_path),
+            "kind": policy["kind"],
+            "source": policy.get("source", ""),
+            "override_keys": sorted(overrides),
+        }
     overall = {"kind": "smollm2-board-run", "fd_owned_by_runner": True,
                "request_sha256": request_sha256,
+               "schedule_policy": policy_identity,
                "environment": environment(package, lib), "requests": []}
     status = 0
     runner = None
@@ -126,7 +146,8 @@ def main(argv=None) -> int:
             share_constants=not bool(args.no_share_constants),
             persistent_kv=not bool(args.no_persistent_kv),
             profile=bool(args.profile),
-            cache_host_weights=not bool(args.no_cache_host_weights))
+            cache_host_weights=not bool(args.no_cache_host_weights),
+            plan_overrides=overrides)
         load_elapsed = (time.perf_counter() - load_t0) * 1e6
         overall["load_us"] = load_elapsed
         overall["loaded_plan_count"] = len(runner._calls)
@@ -135,6 +156,7 @@ def main(argv=None) -> int:
             "persistent_kv": bool(runner.persistent_kv),
             "profile": bool(runner.profile),
             "cache_host_weights": bool(runner.cache_host_weights),
+            "plan_override_keys": sorted(runner.plan_overrides),
         }
         for index, item in enumerate(request["runs"]):
             mode = item.get("mode", "generate")

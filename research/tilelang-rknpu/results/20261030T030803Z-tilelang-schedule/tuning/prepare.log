@@ -1,0 +1,12 @@
+case prefill_qkv          m= 44 k= 576 n= 960 candidates=10
+case prefill_gate_up      m= 44 k= 576 n=3072 candidates=10
+case prefill_down         m= 44 k=1536 n= 576 candidates=10
+case decode_qkv           m=  1 k= 576 n= 960 candidates=6
+case lm_head_shard0       m= 44 k= 576 n=4096 candidates=10
+case attention_qk_prefill m=768 k=  64 n= 256 candidates=10
+case attention_qk_decode  m=  3 k=  64 n= 256 candidates=6
+{
+ "pass": true,
+ "cases": 7,
+ "candidates": 62
+}
