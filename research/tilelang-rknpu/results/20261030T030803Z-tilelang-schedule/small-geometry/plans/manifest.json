@@ -1,0 +1,356 @@
+{
+ "b_is_input": false,
+ "geometry": {
+  "k": 512,
+  "m": 512,
+  "n": 384
+ },
+ "k_contract": {
+  "accumulation": "ordered_ascending_f16_writeback",
+  "k_tile": 256
+ },
+ "kind": "smollm2-schedule-experiment",
+ "runs": [
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "buffer_count": 22,
+   "data_bo_count": 12,
+   "name": "base_256x128",
+   "plan": "base_256x128.rkplan.json",
+   "plan_hash": "3662f2580758e8f830a129ea72ab2a028abc6c721be754d44cd5edcdb6a13ffc",
+   "plan_sha256": "c722be585a5579e7db1b7de081e8dbe04f8f2d6c31f719904232355ec584895e",
+   "publish_count": 6,
+   "publish_order": [
+    [
+     0,
+     0,
+     256,
+     128
+    ],
+    [
+     0,
+     128,
+     256,
+     128
+    ],
+    [
+     0,
+     256,
+     256,
+     128
+    ],
+    [
+     256,
+     0,
+     256,
+     128
+    ],
+    [
+     256,
+     128,
+     256,
+     128
+    ],
+    [
+     256,
+     256,
+     256,
+     128
+    ]
+   ],
+   "requested": {
+    "name": "base_256x128",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "source_k_loop": {
+    "lowering_k_tile": 256,
+    "narrowing_base": "every 256 K elements",
+    "pipeline_hint_dropped": true,
+    "source_k_block": 256,
+    "source_k_trips": 2,
+    "source_loop_annotations": {
+     "num_stages": 2
+    },
+    "source_loop_span": ""
+   },
+   "source_mn_tiling": {
+    "block_m": 256,
+    "block_n": 128,
+    "coverage": "exact_once",
+    "grid_x": 3,
+    "grid_y": 2
+   },
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 6,
+   "task_count": 12
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "buffer_count": 38,
+   "data_bo_count": 16,
+   "name": "tile_128x128",
+   "plan": "tile_128x128.rkplan.json",
+   "plan_hash": "48a0e1f0c02afb8ba40f53d3ec1295971a1ce9345fe4ff631da6f07a92160a05",
+   "plan_sha256": "ac9596a4b324fb6d889a461f59e72e4997dbfcaa7c0fee64c7eb60562fc80dae",
+   "publish_count": 12,
+   "publish_order": [
+    [
+     0,
+     0,
+     128,
+     128
+    ],
+    [
+     0,
+     128,
+     128,
+     128
+    ],
+    [
+     0,
+     256,
+     128,
+     128
+    ],
+    [
+     128,
+     0,
+     128,
+     128
+    ],
+    [
+     128,
+     128,
+     128,
+     128
+    ],
+    [
+     128,
+     256,
+     128,
+     128
+    ],
+    [
+     256,
+     0,
+     128,
+     128
+    ],
+    [
+     256,
+     128,
+     128,
+     128
+    ],
+    [
+     256,
+     256,
+     128,
+     128
+    ],
+    [
+     384,
+     0,
+     128,
+     128
+    ],
+    [
+     384,
+     128,
+     128,
+     128
+    ],
+    [
+     384,
+     256,
+     128,
+     128
+    ]
+   ],
+   "requested": {
+    "name": "tile_128x128",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "source_k_loop": {
+    "lowering_k_tile": 256,
+    "narrowing_base": "every 256 K elements",
+    "pipeline_hint_dropped": true,
+    "source_k_block": 256,
+    "source_k_trips": 2,
+    "source_loop_annotations": {
+     "num_stages": 2
+    },
+    "source_loop_span": ""
+   },
+   "source_mn_tiling": {
+    "block_m": 128,
+    "block_n": 128,
+    "coverage": "exact_once",
+    "grid_x": 3,
+    "grid_y": 4
+   },
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "submit_count": 12,
+   "task_count": 24
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "buffer_count": 38,
+   "data_bo_count": 16,
+   "name": "tile_128x128_nmajor",
+   "plan": "tile_128x128_nmajor.rkplan.json",
+   "plan_hash": "f360bea8f36297bbd8fab0ad44457d6decb8c9a8735b67721380c0c056c732f5",
+   "plan_sha256": "8bbd3f6d47e9ab10cae60ffbedbb5691ed4137dd69fe5835e980746d2d7f1d5c",
+   "publish_count": 12,
+   "publish_order": [
+    [
+     0,
+     0,
+     128,
+     128
+    ],
+    [
+     128,
+     0,
+     128,
+     128
+    ],
+    [
+     256,
+     0,
+     128,
+     128
+    ],
+    [
+     384,
+     0,
+     128,
+     128
+    ],
+    [
+     0,
+     128,
+     128,
+     128
+    ],
+    [
+     128,
+     128,
+     128,
+     128
+    ],
+    [
+     256,
+     128,
+     128,
+     128
+    ],
+    [
+     384,
+     128,
+     128,
+     128
+    ],
+    [
+     0,
+     256,
+     128,
+     128
+    ],
+    [
+     128,
+     256,
+     128,
+     128
+    ],
+    [
+     256,
+     256,
+     128,
+     128
+    ],
+    [
+     384,
+     256,
+     128,
+     128
+    ]
+   ],
+   "requested": {
+    "name": "tile_128x128_nmajor",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "source_k_loop": {
+    "lowering_k_tile": 256,
+    "narrowing_base": "every 256 K elements",
+    "pipeline_hint_dropped": true,
+    "source_k_block": 256,
+    "source_k_trips": 2,
+    "source_loop_annotations": {
+     "num_stages": 2
+    },
+    "source_loop_span": ""
+   },
+   "source_mn_tiling": {
+    "block_m": 128,
+    "block_n": 128,
+    "coverage": "exact_once",
+    "grid_x": 3,
+    "grid_y": 4
+   },
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "submit_count": 12,
+   "task_count": 24
+  }
+ ],
+ "schema_version": 1,
+ "source": "tiled"
+}

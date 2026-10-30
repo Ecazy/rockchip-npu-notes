@@ -1,0 +1,225 @@
+{
+ "b_is_input": true,
+ "geometry": {
+  "k": 64,
+  "m": 3,
+  "n": 256
+ },
+ "k_contract": {
+  "accumulation": "ordered_ascending_f16_writeback",
+  "k_tile": 256
+ },
+ "kind": "smollm2-schedule-experiment",
+ "runs": [
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "buffer_count": 3,
+   "data_bo_count": 3,
+   "name": "default",
+   "plan": "default.rkplan.json",
+   "plan_hash": "aab6ae151a504b1ddaad5c85b94720bdfc20dde087b95248b51c6fac0a5db28a",
+   "plan_sha256": "314c954c7984f00a314c6689fc0d82fb8ca7fd136731e4b09f93b69b6d1f1d9c",
+   "publish_count": 1,
+   "publish_order": [
+    [
+     0,
+     0,
+     3,
+     256
+    ]
+   ],
+   "requested": null,
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": null,
+   "submit_count": 1,
+   "task_count": 1
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "buffer_count": 5,
+   "data_bo_count": 4,
+   "name": "n128",
+   "plan": "n128.rkplan.json",
+   "plan_hash": "2dfddd72b6e377e2486e2436ac99d74a3757c69330c0429bfec3ecc34dcadaf6",
+   "plan_sha256": "76c63660d15ca2673337a6aa6523289964b54842915c3988c06273165798990f",
+   "publish_count": 2,
+   "publish_order": [
+    [
+     0,
+     0,
+     3,
+     128
+    ],
+    [
+     0,
+     128,
+     3,
+     128
+    ]
+   ],
+   "requested": {
+    "name": "n128",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 2,
+   "task_count": 2
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 1,
+    "tile_n": 256
+   },
+   "buffer_count": 7,
+   "data_bo_count": 5,
+   "name": "m1",
+   "plan": "m1.rkplan.json",
+   "plan_hash": "58d74a162a78f2397b113505f045b9b96b457848aa85e92fae64b3113f43db8c",
+   "plan_sha256": "50af78c796c70182098dba2a2fbb11986b31efc6ccf266c4a0e02bcf1ce91b9c",
+   "publish_count": 3,
+   "publish_order": [
+    [
+     0,
+     0,
+     1,
+     256
+    ],
+    [
+     1,
+     0,
+     1,
+     256
+    ],
+    [
+     2,
+     0,
+     1,
+     256
+    ]
+   ],
+   "requested": {
+    "name": "m1",
+    "order": "m_major",
+    "tile_m": 1,
+    "tile_n": 256
+   },
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 1,
+    "tile_n": 256
+   },
+   "submit_count": 3,
+   "task_count": 3
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 1,
+    "tile_n": 128
+   },
+   "buffer_count": 11,
+   "data_bo_count": 6,
+   "name": "m1_n128_nmajor",
+   "plan": "m1_n128_nmajor.rkplan.json",
+   "plan_hash": "28dc958b0855567e24aa4593664d0a3215f44d3ee1be975eaaec5abd208c97b6",
+   "plan_sha256": "4c427be402e4557af505681b31a7bffa7f8e0bedf66b34cd87b72d50d890cd27",
+   "publish_count": 6,
+   "publish_order": [
+    [
+     0,
+     0,
+     1,
+     128
+    ],
+    [
+     1,
+     0,
+     1,
+     128
+    ],
+    [
+     2,
+     0,
+     1,
+     128
+    ],
+    [
+     0,
+     128,
+     1,
+     128
+    ],
+    [
+     1,
+     128,
+     1,
+     128
+    ],
+    [
+     2,
+     128,
+     1,
+     128
+    ]
+   ],
+   "requested": {
+    "name": "m1_n128_nmajor",
+    "order": "n_major",
+    "tile_m": 1,
+    "tile_n": 128
+   },
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 1,
+    "tile_n": 128
+   },
+   "submit_count": 6,
+   "task_count": 6
+  }
+ ],
+ "schema_version": 1,
+ "source": "full"
+}

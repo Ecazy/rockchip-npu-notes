@@ -1,0 +1,115 @@
+"""Direct-RKIR and rejection tests for the minimal M/N schedule contract."""
+from __future__ import annotations
+
+import unittest
+from dataclasses import replace
+
+from rknpu_backend import (CompileOptions, Module, Op, RK_E_UNSUPPORTED,
+                           TensorType, Value, compile_rkir, default_profile,
+                           matmul_module)
+from rknpu_backend.errors import BackendError
+
+PROFILE = default_profile()
+OPTIONS = CompileOptions(numeric_mode="rk_f16_tiled")
+
+
+def schedule(tile_m=256, tile_n=128, order="m_major"):
+    return {
+        "kind": "mn_tiles_v1", "tile_m": tile_m, "tile_n": tile_n,
+        "order": order, "k_tile": 256,
+        "accumulation": "ordered_ascending_f16_writeback",
+    }
+
+
+def with_schedule(module, value):
+    attrs = dict(module.ops[0].attrs)
+    attrs["source_schedule"] = value
+    return replace(module, ops=(replace(module.ops[0], attrs=attrs),))
+
+
+class ScheduleContractTests(unittest.TestCase):
+    def test_direct_rkir_can_express_mn_schedule(self):
+        module = matmul_module(m=512, k=512, n=384)
+        result = compile_rkir(with_schedule(module, schedule(128, 128)),
+                              profile=PROFILE, options=OPTIONS)
+        self.assertEqual(result.plan.accounting.task_count, 24)
+        first = next(a for a in result.plan.actions
+                     if a.template_id == "co.mm.f16.v1")
+        self.assertEqual(first.attrs["source_schedule"]["tile_m"], 128)
+        self.assertEqual(first.attrs["source_schedule"]["tile_n"], 128)
+        self.assertEqual(first.attrs["applied_schedule"]["tile_m"], 128)
+        self.assertEqual(first.attrs["applied_schedule"]["tile_n"], 128)
+        self.assertEqual(result.report["source"]["source_schedule"],
+                         schedule(128, 128))
+        self.assertEqual(len(result.report["schedule"]["applied"]), 1)
+
+    def test_direct_rkir_traversal_order_changes_publish_order(self):
+        module = matmul_module(m=512, k=512, n=384)
+        row = compile_rkir(with_schedule(module, schedule(256, 128, "m_major")),
+                           profile=PROFILE, options=OPTIONS).plan
+        col = compile_rkir(with_schedule(module, schedule(256, 128, "n_major")),
+                           profile=PROFILE, options=OPTIONS).plan
+        self.assertNotEqual(row.plan_hash, col.plan_hash)
+        self.assertNotEqual([(p.dst_row, p.dst_col) for p in row.publish],
+                            [(p.dst_row, p.dst_col) for p in col.publish])
+
+    def test_unknown_schedule_key_is_rejected(self):
+        module = matmul_module(m=64, k=256, n=64)
+        bad = schedule(64, 64)
+        bad["split_k"] = 2
+        with self.assertRaises(BackendError) as ctx:
+            compile_rkir(with_schedule(module, bad), profile=PROFILE,
+                         options=OPTIONS)
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_UNSUPPORTED)
+        self.assertIn("unsupported or missing fields",
+                      ctx.exception.diagnostics[0].message)
+
+    def test_non_256_k_block_is_rejected_even_with_valid_mn_schedule(self):
+        module = matmul_module(m=64, k=512, n=64)
+        attrs = dict(module.ops[0].attrs)
+        attrs["source_schedule"] = schedule(64, 64)
+        attrs["source_k_loop"] = {"source_k_block": 128,
+                                  "lowering_k_tile": 256}
+        module = replace(module, ops=(replace(module.ops[0], attrs=attrs),))
+        with self.assertRaises(BackendError) as ctx:
+            compile_rkir(module, profile=PROFILE, options=OPTIONS)
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_UNSUPPORTED)
+        self.assertIn("source K block must be 256",
+                      ctx.exception.diagnostics[0].message)
+
+    def test_explicit_schedule_on_multi_node_dataflow_is_rejected(self):
+        base = matmul_module(m=32, k=64, n=48)
+        contract = base.ops[0].attrs["numeric_contract"]
+        attrs = {"b_layout": "kn", "numeric_contract": contract,
+                 "source_schedule": schedule(32, 48)}
+        values = (
+            Value(0, "X", TensorType("float16", (32, 64)), None, "input"),
+            Value(1, "W1", TensorType("float16", (64, 48)), None, "constant"),
+            Value(2, "Z", TensorType("float16", (32, 48)), 0, "temporary"),
+            Value(3, "W2", TensorType("float16", (48, 32)), None, "constant"),
+            Value(4, "Y", TensorType("float16", (32, 32)), 1, "output"),
+        )
+        ops = (
+            Op(0, "matmul", (0, 1), (2,), dict(attrs)),
+            Op(1, "matmul", (2, 3), (4,), dict(attrs)),
+        )
+        module = Module(name="multi-node-schedule-test", values=values,
+                        ops=ops, inputs=(0,), outputs=(4,),
+                        source_hash="test")
+        with self.assertRaises(BackendError) as ctx:
+            compile_rkir(module, profile=PROFILE, options=OPTIONS)
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_UNSUPPORTED)
+        self.assertIn("multi-node dataflow",
+                      ctx.exception.diagnostics[0].message)
+
+    def test_unsupported_order_is_rejected(self):
+        module = matmul_module(m=64, k=256, n=64)
+        with self.assertRaises(BackendError) as ctx:
+            compile_rkir(with_schedule(module, schedule(64, 64, "row_major")),
+                         profile=PROFILE, options=OPTIONS)
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_UNSUPPORTED)
+        self.assertIn("traversal order", ctx.exception.diagnostics[0].message)
+
+
+if __name__ == "__main__":
+    unittest.main()

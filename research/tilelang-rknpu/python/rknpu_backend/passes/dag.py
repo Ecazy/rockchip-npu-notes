@@ -7,14 +7,15 @@ import struct
 from dataclasses import dataclass, field, replace
 
 from ..capabilities import TargetProfile
-from ..errors import RK_E_BUDGET, RK_E_SCHEMA, RK_E_SHAPE, reject
+from ..errors import RK_E_BUDGET, RK_E_SCHEMA, RK_E_SHAPE, RK_E_UNSUPPORTED, \
+    reject
 from ..ir import Module, NumericContract
 from ..options import CompileOptions
 from ..plan import (Action, Binding, ConstantSpec, Publish, TensorLayout, View)
 from ..serialize import sha256_json
 from .legalize import LegalizedGraph
 from .tile import K_TILE, TILE_LIMIT, cube_layout, input_layout, k_slices, \
-    lut_chunks, output_tiles, round_up, weight_layout
+    lut_chunks, mn_schedule_from_attrs, output_tiles, round_up, weight_layout
 
 CUBE_LAYOUT = "co.cube.f16.v1"
 WEIGHT_LAYOUT = "co.weight.f16.v1"
@@ -643,6 +644,13 @@ class _Builder:
         tiles, broadcast expansions and identity weights) are emitted before the
         first NPU task, and downloads are emitted only after every task.
         """
+        for op in self.module.ops:
+            if op.opcode == "matmul" and "source_schedule" in op.attrs:
+                reject(RK_E_UNSUPPORTED,
+                       "explicit M/N scheduling is not implemented for "
+                       "multi-node dataflow plans yet; refusing instead of "
+                       "silently ignoring source_schedule", stage="schedule",
+                       op=op.opcode, source=op.source)
         external = self._external_layouts()
         broadcast_targets = self._broadcast_targets()
 
@@ -1228,7 +1236,6 @@ class _Builder:
         b_binding = self.binding_by_value[b_value.id]
         b_is_constant = b_value.role == "constant"
         ktiles = k_slices(k)
-        tiles = output_tiles(m, n)
         activation = self.legalized.activation_op.opcode \
             if self.legalized.activation_op is not None else None
         binary = self.legalized.binary_op
@@ -1237,6 +1244,12 @@ class _Builder:
         previous_group: str | None = None
         source_k_loop = self.legalized.matmul_op.attrs.get("source_k_loop")
         source_mn_tiling = self.legalized.matmul_op.attrs.get("source_mn_tiling")
+        schedule = mn_schedule_from_attrs(self.legalized.matmul_op.attrs)
+        schedule_dict = schedule.to_dict()
+        # The source M/N tiling is an instruction for the supported
+        # single-GEMM path.  K blocking and accumulation order remain fixed.
+        tiles = output_tiles(m, n, tile_m=schedule.tile_m,
+                             tile_n=schedule.tile_n, order=schedule.order)
 
         # A packed external slice is a pure function of (binding identity,
         # source region, source stride/transpose, destination layout).  Several
@@ -1347,7 +1360,11 @@ class _Builder:
                         attrs={"submit_group": group,
                                "k0": kslice.k0, "kt": kslice.extent,
                                "source_k_loop": source_k_loop,
-                               "source_mn_tiling": source_mn_tiling})
+                               "source_mn_tiling": source_mn_tiling,
+                               "source_schedule":
+                                   self.legalized.matmul_op.attrs.get(
+                                       "source_schedule"),
+                               "applied_schedule": schedule_dict})
                 else:
                     other = acc_views[index & 1]
                     action = self.add_action(
@@ -1358,7 +1375,11 @@ class _Builder:
                         attrs={"submit_group": group,
                                "k0": kslice.k0, "kt": kslice.extent,
                                "source_k_loop": source_k_loop,
-                               "source_mn_tiling": source_mn_tiling})
+                               "source_mn_tiling": source_mn_tiling,
+                               "source_schedule":
+                                   self.legalized.matmul_op.attrs.get(
+                                       "source_schedule"),
+                               "applied_schedule": schedule_dict})
                     current = other
                 mm_tasks.append(action)
                 prior_view = current
@@ -1664,6 +1685,14 @@ def build_draft(module: Module, legalized: LegalizedGraph, *,
                actual=len(module.values) + len(module.ops),
                required=options.max_ir_nodes)
     builder = _Builder(module, legalized, profile=profile, options=options)
+    if legalized.graph_ops is not None:
+        for op in module.ops:
+            if op.opcode == "matmul" and "source_schedule" in op.attrs:
+                reject(RK_E_UNSUPPORTED,
+                       "explicit M/N scheduling is not implemented for "
+                       "multi-node dataflow plans yet; refusing instead of "
+                       "silently ignoring source_schedule", stage="schedule",
+                       op=op.opcode, source=op.source)
     if legalized.swiglu is not None:
         draft = builder.build_swiglu()
     elif legalized.graph_ops is not None:

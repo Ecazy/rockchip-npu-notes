@@ -10,6 +10,7 @@
 - 默认模型优化、最终 baseline/current 复验及厂商 RKNN 对照统一见 [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md)。不同数值政策及不同 campaign 的性能分开解释。
 - 2026-10-28 的 A 切片打包、共享 packed 权重、KV native 驻留与 SmolLM2 端到端对照见 [LAYOUT-REUSE-REPORT.md](LAYOUT-REUSE-REPORT.md)。
 - 2026-10-30 的 V5 交付收口（可执行重放、首次分叉诊断、Host 权重缓存 A/B、固定验收重跑）见 `results/20261030T013910Z-smollm2-v5-delivery/DELIVERY-REPORT.md` 与 `DELIVERY-MANIFEST.json`。
+- TileLang M/N 调度控制的首个里程碑（`source_schedule` → RKIR → RKPlan、prefill/decode 板端实验）见 [TILELANG-SCHEDULE.md](TILELANG-SCHEDULE.md) 和 `results/20261030T030803Z-tilelang-schedule/SCHEDULE-REPORT.md`。
 - TinyTransformer 图级 Submit 融合、device FFN、残差 Add、RMSNorm 实验与 b1/b8 成对测量见 [GRAPH-FUSION-REPORT.md](GRAPH-FUSION-REPORT.md)。
 - 后端重构主线已完成：编译边界收敛到 codegen，新增 `compile_artifact` 直接实例化入口，旧入口与持久化重放保持；TVM 原生图试点已完成但未采用为默认，计算表示继续使用薄 RKIR。结论与证据见 [refactor-specific.md](refactor-specific.md) 第 15 节。原始设计与重构方案各保留一对 overview/specific，按下面的适用范围阅读。
 

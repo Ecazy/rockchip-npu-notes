@@ -1,0 +1,458 @@
+{
+ "b_is_input": false,
+ "geometry": {
+  "k": 576,
+  "m": 256,
+  "n": 960
+ },
+ "k_contract": {
+  "accumulation": "ordered_ascending_f16_writeback",
+  "k_tile": 256
+ },
+ "kind": "smollm2-schedule-experiment",
+ "runs": [
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "buffer_count": 23,
+   "data_bo_count": 17,
+   "name": "default",
+   "plan": "default.rkplan.json",
+   "plan_hash": "2b0c8ee7b7e22ab31c6fdf25e046f2e42fec700b2cb98e129782b68fe1cde493",
+   "plan_sha256": "654950d0d01f8ec6e818f9ef0ff4ee6041d52444147ef338dca4349af112c603",
+   "publish_count": 4,
+   "publish_order": [
+    [
+     0,
+     0,
+     256,
+     256
+    ],
+    [
+     0,
+     256,
+     256,
+     256
+    ],
+    [
+     0,
+     512,
+     256,
+     256
+    ],
+    [
+     0,
+     768,
+     256,
+     192
+    ]
+   ],
+   "requested": null,
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": null,
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "buffer_count": 23,
+   "data_bo_count": 17,
+   "name": "direct_default",
+   "path_kind": "direct_rkir",
+   "plan": "direct_default.rkplan.json",
+   "plan_hash": "9076a16df3e61b5b8a68ada49fc46c1cc0918462a7b50d1916fe61ca9d647340",
+   "plan_sha256": "6a81fe684d2756b292a9d97e260884a5cd93ec26b759ad68248191c583a1cf47",
+   "publish_count": 4,
+   "publish_order": [
+    [
+     0,
+     0,
+     256,
+     256
+    ],
+    [
+     0,
+     256,
+     256,
+     256
+    ],
+    [
+     0,
+     512,
+     256,
+     256
+    ],
+    [
+     0,
+     768,
+     256,
+     192
+    ]
+   ],
+   "requested": null,
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": null,
+   "submit_count": 4,
+   "task_count": 12
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "buffer_count": 43,
+   "data_bo_count": 29,
+   "name": "tn128",
+   "plan": "tn128.rkplan.json",
+   "plan_hash": "dff23eb86f69a454caaa59a56dabbee93e0d1fac0c7ac08d8c8e45c7d0c4789d",
+   "plan_sha256": "3ccb7e1536709d524a0d6bfb7efb0d4e74cc951d015e864b1d46ca6cce820f04",
+   "publish_count": 8,
+   "publish_order": [
+    [
+     0,
+     0,
+     256,
+     128
+    ],
+    [
+     0,
+     128,
+     256,
+     128
+    ],
+    [
+     0,
+     256,
+     256,
+     128
+    ],
+    [
+     0,
+     384,
+     256,
+     128
+    ],
+    [
+     0,
+     512,
+     256,
+     128
+    ],
+    [
+     0,
+     640,
+     256,
+     128
+    ],
+    [
+     0,
+     768,
+     256,
+     128
+    ],
+    [
+     0,
+     896,
+     256,
+     64
+    ]
+   ],
+   "requested": {
+    "name": "tn128",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 8,
+   "task_count": 24
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "buffer_count": 43,
+   "data_bo_count": 29,
+   "name": "direct_tn128",
+   "path_kind": "direct_rkir",
+   "plan": "direct_tn128.rkplan.json",
+   "plan_hash": "597ab32d7b1dfc60cd248b502c200a47138a38cf6b013b087e6a199ac3eb3001",
+   "plan_sha256": "cf78f2a9931e2eea047e873ebe41a8f8e3c42769eab8849caa0f4fc775f530ce",
+   "publish_count": 8,
+   "publish_order": [
+    [
+     0,
+     0,
+     256,
+     128
+    ],
+    [
+     0,
+     128,
+     256,
+     128
+    ],
+    [
+     0,
+     256,
+     256,
+     128
+    ],
+    [
+     0,
+     384,
+     256,
+     128
+    ],
+    [
+     0,
+     512,
+     256,
+     128
+    ],
+    [
+     0,
+     640,
+     256,
+     128
+    ],
+    [
+     0,
+     768,
+     256,
+     128
+    ],
+    [
+     0,
+     896,
+     256,
+     64
+    ]
+   ],
+   "requested": {
+    "name": "tn128",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 8,
+   "task_count": 24
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "buffer_count": 43,
+   "data_bo_count": 29,
+   "name": "n_major",
+   "plan": "n_major.rkplan.json",
+   "plan_hash": "43d742515ed8699bc8c6d6efd2c4b624a51549d4954adc7efd52ef22c8490f88",
+   "plan_sha256": "0184fb00483b15c6900fc491529e4f6af1ca61729374a4410fd0e0c9df01bce5",
+   "publish_count": 8,
+   "publish_order": [
+    [
+     0,
+     0,
+     256,
+     128
+    ],
+    [
+     0,
+     128,
+     256,
+     128
+    ],
+    [
+     0,
+     256,
+     256,
+     128
+    ],
+    [
+     0,
+     384,
+     256,
+     128
+    ],
+    [
+     0,
+     512,
+     256,
+     128
+    ],
+    [
+     0,
+     640,
+     256,
+     128
+    ],
+    [
+     0,
+     768,
+     256,
+     128
+    ],
+    [
+     0,
+     896,
+     256,
+     64
+    ]
+   ],
+   "requested": {
+    "name": "n_major",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 8,
+   "task_count": 24
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "buffer_count": 43,
+   "data_bo_count": 29,
+   "name": "direct_n_major",
+   "path_kind": "direct_rkir",
+   "plan": "direct_n_major.rkplan.json",
+   "plan_hash": "a7843c92b18012da6b291dea35f7ff0ee185aeca3dc3d593d8d553409e6e5a67",
+   "plan_sha256": "fcbc210024f8b0081634b83192d1a521e2b0e85122980fb545825e806fa2212f",
+   "publish_count": 8,
+   "publish_order": [
+    [
+     0,
+     0,
+     256,
+     128
+    ],
+    [
+     0,
+     128,
+     256,
+     128
+    ],
+    [
+     0,
+     256,
+     256,
+     128
+    ],
+    [
+     0,
+     384,
+     256,
+     128
+    ],
+    [
+     0,
+     512,
+     256,
+     128
+    ],
+    [
+     0,
+     640,
+     256,
+     128
+    ],
+    [
+     0,
+     768,
+     256,
+     128
+    ],
+    [
+     0,
+     896,
+     256,
+     64
+    ]
+   ],
+   "requested": {
+    "name": "n_major",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "source_k_loop": null,
+   "source_mn_tiling": null,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 8,
+   "task_count": 24
+  }
+ ],
+ "schema_version": 1,
+ "source": "full"
+}

@@ -200,10 +200,11 @@ class RaggedTailFrontendTests(unittest.TestCase):
         result = compile_tilelang(
             self.fixture.ragged_tail(m=257, n=257, k=300, bm=128, bn=128),
             profile=self.profile, options=self.options)
-        self.assertEqual(result.plan.accounting.task_count, 8)
-        self.assertEqual(len(result.plan.publish), 4)
+        self.assertEqual(result.plan.accounting.task_count, 18)
+        self.assertEqual(len(result.plan.publish), 9)
         self.assertEqual(sorted((p.rows, p.cols) for p in result.plan.publish),
-                         [(1, 1), (1, 256), (256, 1), (256, 256)])
+                         [(1, 1), (1, 128), (1, 128), (128, 1), (128, 1),
+                          (128, 128), (128, 128), (128, 128), (128, 128)])
 
     def test_missing_tail_zero_fill_is_rejected(self):
         base = self.fixture.ragged_tail(m=13, n=33, k=257, bm=16, bn=64)

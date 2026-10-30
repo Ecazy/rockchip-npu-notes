@@ -31,6 +31,7 @@ native TVM graph view in :mod:`rknpu_backend.frontend.native_graph`.
 from __future__ import annotations
 
 import copy
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -124,6 +125,7 @@ def source_identity(graph: Any, *, options: CompileOptions) -> dict[str, Any]:
         "narrowing_points": narrowing,
         "source_k_loop": attrs.get("source_k_loop"),
         "source_mn_tiling": attrs.get("source_mn_tiling"),
+        "source_schedule": attrs.get("source_schedule"),
         "source_tail_contract": attrs.get("source_tail_contract"),
     }
 
@@ -264,6 +266,16 @@ def explain_plan(plan: Plan) -> dict[str, Any]:
         "submits": [s.to_dict() for s in plan.submits],
         "publish": [p.to_dict() for p in plan.publish],
         "accounting": plan.accounting.to_dict(),
+        "schedule": {
+            "applied": sorted({
+                json.dumps(action.attrs.get("applied_schedule"), sort_keys=True)
+                for action in plan.actions
+                if action.kind == "npu_task" and
+                action.attrs.get("applied_schedule") is not None
+            }),
+            "k_tile": 256,
+            "accumulation": "ordered_ascending_f16_writeback",
+        },
         "policy": {
             "numeric_mode": "rk_f16_tiled",
             "fallback": "error",

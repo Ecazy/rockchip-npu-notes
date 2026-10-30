@@ -395,6 +395,24 @@ The delivery overview, latency decomposition, A/B and exact identities are in
 `results/20261030T013910Z-smollm2-v5-delivery/DELIVERY-REPORT.md` and
 `DELIVERY-MANIFEST.json`; large board/reference arrays remain local/ignored.
 
+## TileLang M/N schedule experiment (2026-10-30)
+
+The supported schedule contract is `rknpu.schedule=mn_tiles_v1` plus
+`rknpu.tile_m`, `rknpu.tile_n` and `rknpu.mn_order`; K remains fixed at 256-wide
+ordered FP16 writeback.  See [TILELANG-SCHEDULE.md](TILELANG-SCHEDULE.md).
+
+```bash
+python3 tools/run_schedule_experiment.py compile   --source tiled --out /tmp/schedule-small --m 512 --k 512 --n 384   --schedule base_256x128,256,128,m_major   --schedule tile_128x128,128,128,m_major
+./scripts/run-smollm2.sh schedule-bench /tmp/schedule-small /tmp/schedule-small-board.json
+
+# Same schedule information can be supplied directly through RKIR op attrs
+# (source_schedule) and is exercised by tests/test_schedule_contract.py.
+```
+
+The shipped experiment includes SmolLM-shaped prefill QKV, attention QK prefill
+and attention QK decode plans.  Explicit schedules on multi-node dataflow are
+rejected until that lowerer is schedule-aware.
+
 ## Layout reuse / A-B campaign (2026-10-28)
 
 Final report: [LAYOUT-REUSE-REPORT.md](LAYOUT-REUSE-REPORT.md).

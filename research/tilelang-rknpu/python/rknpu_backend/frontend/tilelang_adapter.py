@@ -43,6 +43,97 @@ from .graph_builder import active_builder
 ALLOWED_TILEOPS = {"tl.tileop.fill", "tl.tileop.copy", "tl.tileop.gemm"}
 FORBIDDEN_TOKENS = ("atomic", "barrier", "shuffle", "sync", "reduce")
 
+# The only scheduling controls admitted in this milestone.  They are PrimFunc
+# attributes rather than guesses from variable names, and the planner consumes
+# the resulting ``source_schedule`` explicitly.
+SCHEDULE_ATTRS = {
+    "rknpu.schedule", "rknpu.tile_m", "rknpu.tile_n", "rknpu.mn_order",
+}
+SCHEDULE_K_TILE = 256
+MN_ORDERS = {"m_major", "n_major"}
+
+
+@dataclass(frozen=True)
+class _ScheduleAnnotation:
+    present: bool
+    tile_m: int | None
+    tile_n: int | None
+    order: str | None
+
+
+def _schedule_annotation(prim_func: Any, span: str) -> _ScheduleAnnotation:
+    """Read and validate explicit ``rknpu.*`` schedule annotations.
+
+    Any schedule-shaped annotation outside the admitted set is rejected.  This
+    is the frontend half of "no silent schedule drops": an unknown K order,
+    tile size or traversal key cannot disappear between TileLang and RKIR.
+    """
+    attrs = dict(getattr(prim_func, "attrs", {}) or {})
+    for key in attrs:
+        if key.startswith(("rknpu.schedule", "rknpu.tile_", "rknpu.mn_",
+                           "rknpu.k_")):
+            if key not in SCHEDULE_ATTRS:
+                reject(RK_E_UNSUPPORTED,
+                       f"unsupported TileLang schedule annotation {key!r}",
+                       stage="frontend", source=span)
+    present = any(key in attrs for key in SCHEDULE_ATTRS)
+    if not present:
+        return _ScheduleAnnotation(False, None, None, None)
+    marker = attrs.get("rknpu.schedule")
+    if marker is not None and marker != "mn_tiles_v1":
+        reject(RK_E_UNSUPPORTED,
+               "unsupported TileLang schedule contract", stage="frontend",
+               source=span, actual=marker, required="mn_tiles_v1")
+    raw_m = attrs.get("rknpu.tile_m")
+    raw_n = attrs.get("rknpu.tile_n")
+    if (raw_m is None) != (raw_n is None):
+        reject(RK_E_UNSUPPORTED,
+               "rknpu.tile_m and rknpu.tile_n must be supplied together",
+               stage="frontend", source=span)
+    def schedule_int(value: Any) -> int | None:
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+        return _int_imm(value)
+    tile_m = None if raw_m is None else schedule_int(raw_m)
+    tile_n = None if raw_n is None else schedule_int(raw_n)
+    if raw_m is not None and (tile_m is None or tile_n is None):
+        reject(RK_E_UNSUPPORTED, "schedule tile sizes must be static integers",
+               stage="frontend", source=span)
+    order = attrs.get("rknpu.mn_order")
+    if order is not None and not isinstance(order, str):
+        order = str(order)
+    if order is not None and order not in MN_ORDERS:
+        reject(RK_E_UNSUPPORTED, "unsupported M/N traversal order",
+               stage="frontend", source=span, actual=order,
+               required=sorted(MN_ORDERS))
+    if tile_m is not None and (not 1 <= tile_m <= 256 or
+                               not 1 <= tile_n <= 256):
+        reject(RK_E_UNSUPPORTED,
+               "M/N schedule tiles must be within 1..256", stage="frontend",
+               source=span, actual=[tile_m, tile_n])
+    return _ScheduleAnnotation(True, tile_m, tile_n, order)
+
+
+def _source_schedule(prim_func: Any, *, tile_m: int, tile_n: int,
+                     span: str, default_order: str = "m_major") -> dict:
+    """Build the RKIR schedule record from source tiling plus annotations."""
+    ann = _schedule_annotation(prim_func, span)
+    use_m = ann.tile_m if ann.tile_m is not None else tile_m
+    use_n = ann.tile_n if ann.tile_n is not None else tile_n
+    use_order = ann.order if ann.order is not None else default_order
+    if not 1 <= use_m <= 256 or not 1 <= use_n <= 256:
+        reject(RK_E_UNSUPPORTED,
+               "M/N schedule tiles must be within 1..256", stage="frontend",
+               source=span, actual=[use_m, use_n])
+    if use_order not in MN_ORDERS:
+        reject(RK_E_UNSUPPORTED, "unsupported M/N traversal order",
+               stage="frontend", source=span, actual=use_order)
+    return {
+        "kind": "mn_tiles_v1", "tile_m": int(use_m), "tile_n": int(use_n),
+        "order": use_order, "k_tile": SCHEDULE_K_TILE,
+        "accumulation": "ordered_ascending_f16_writeback",
+    }
+
 
 @dataclass(frozen=True)
 class _Region:
@@ -3690,6 +3781,8 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                  "grid_x": grid_x, "grid_y": grid_y,
                  "coverage": "ragged_tail",
                  "m_tail": m_tail, "n_tail": n_tail}
+    source_schedule = _source_schedule(
+        prim_func, tile_m=gm, tile_n=gn, span=span)
     values = (
         _value(0, _buffer_name(a_param), TensorType("float16",
                                                    (logical_m, logical_k)),
@@ -3706,6 +3799,7 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                "source_accumulator_dtype": "float32",
                "source_k_loop": hints,
                "source_mn_tiling": mn_tiling,
+               "source_schedule": source_schedule,
                "source_tail_contract": tail_contract}, span),)
     return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
                   ops=ops, inputs=(0,), outputs=(2,),
@@ -4092,6 +4186,8 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
     mn_tiling = {"block_m": block.rows, "block_n": block.cols,
                  "grid_x": block.grid_x, "grid_y": block.grid_y,
                  "coverage": "exact_once"}
+    source_schedule = _source_schedule(
+        prim_func, tile_m=block.rows, tile_n=block.cols, span=span)
     values = [
         _value(0, "A", TensorType("float16", (logical_m, logical_k)), None,
               "input"),
@@ -4103,7 +4199,8 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
               {"b_layout": "kn", "numeric_contract": contract.to_dict(),
                "source_accumulator_dtype": "float32",
                "source_k_loop": hints,
-               "source_mn_tiling": mn_tiling}, span)]
+               "source_mn_tiling": mn_tiling,
+               "source_schedule": source_schedule}, span)]
     return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
                   ops=tuple(ops), inputs=(0,), outputs=(2,),
                   profile_hash=profile_hash, source_hash=span,
@@ -4170,6 +4267,11 @@ def extract(prim_func: Any, *, options: CompileOptions,
         if not stage_keys or key != stage_keys[-1]:
             stage_keys.append(key)
     if len(stage_keys) > 1:
+        if _schedule_annotation(prim_func, span).present:
+            reject(RK_E_UNSUPPORTED,
+                   "explicit M/N scheduling for multi-kernel staged dataflow "
+                   "is not implemented yet; the schedule is not silently "
+                   "ignored", stage="frontend", source=span)
         return _extract_staged_dataflow(
             items, params, tirx=tirx, prim_func=prim_func, span=span,
             options=options, profile_hash=profile_hash)
@@ -4230,6 +4332,11 @@ def extract(prim_func: Any, *, options: CompileOptions,
             items, params, tirx=tirx, prim_func=prim_func, span=span,
             options=options, profile_hash=profile_hash)
     if len(gemms) > 1:
+        if _schedule_annotation(prim_func, span).present:
+            reject(RK_E_UNSUPPORTED,
+                   "explicit M/N scheduling for multi-GEMM dataflow is not "
+                   "implemented yet; the schedule is not silently ignored",
+                   stage="frontend", source=span)
         # Per-node SSA extraction: the module may contain several GEMMs, and
         # fills/copies/stores are associated by buffer identity and def-use.
         if len(gemms) == 3:
@@ -4444,17 +4551,23 @@ def extract(prim_func: Any, *, options: CompileOptions,
             tolerance={"atol": 8e-3, "rtol": 8e-3})
 
     b_role = "input" if b_is_input else "constant"
+    ann = _schedule_annotation(prim_func, span)
+    source_schedule = (_source_schedule(
+        prim_func, tile_m=gm, tile_n=gn, span=span) if ann.present else None)
+    matmul_attrs = {
+        "b_layout": "kn", "numeric_contract": contract.to_dict(),
+        "source_accumulator_dtype": "float32",
+        "tile_m": gm, "tile_n": gn, "tile_k": gk,
+    }
+    if source_schedule is not None:
+        matmul_attrs["source_schedule"] = source_schedule
     values = [
         _value(0, "A", TensorType("float16", (gm, gk)), None, "input"),
         _value(1, "B", TensorType("float16", (gk, gn)), None, b_role),
         _value(2, "Z" if activation else "Y", TensorType("float16", (gm, gn)),
               0, "temporary" if activation else "output"),
     ]
-    ops = [_op(0, "matmul", (0, 1), (2,),
-              {"b_layout": "kn", "numeric_contract": contract.to_dict(),
-               "source_accumulator_dtype": "float32",
-               "tile_m": gm, "tile_n": gn, "tile_k": gk},
-              span)]
+    ops = [_op(0, "matmul", (0, 1), (2,), matmul_attrs, span)]
     if activation:
         values.append(_value(3, "Y", TensorType("float16", (gm, gn)), 1, "output"))
         ops.append(_op(1, activation, (2,), (3,), {}, span))

@@ -471,3 +471,9 @@ results/20261030T013910Z-smollm2-v5-delivery/**/*.npy
 results/20261030T013910Z-smollm2-v5-delivery/**/*.npz
 results/20261030T013910Z-smollm2-v5-delivery/**/*.pid
 results/20261030T013910Z-smollm2-v5-delivery/**/pid
+
+# TileLang schedule-control milestone: plan JSON, board measurements and logs
+# are small enough to commit; model weights and large observation arrays remain
+# under ignored .data paths.
+!results/20261030T030803Z-tilelang-schedule/
+!results/20261030T030803Z-tilelang-schedule/**

@@ -1,0 +1,283 @@
+{
+ "backend": "board",
+ "environment": {
+  "core_mask": "1",
+  "kernel": "6.1.43-rockchip-rk3588-rknpu098",
+  "machine": "aarch64"
+ },
+ "geometry": {
+  "k": 64,
+  "m": 3,
+  "n": 256
+ },
+ "kind": "smollm2-schedule-execution",
+ "lib_path": "/mnt/ssd/workspace/smollm-work-20261030T030959Z/build/librknpu_plan.so",
+ "lib_sha256": "f9ed96ae2f1c38a941ac8a0e379026d8ef6e67ae9dcd62e4aafc11143d5d8419",
+ "pass": true,
+ "reference_pass_all": true,
+ "runs": [
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 256
+   },
+   "buffer_count": 3,
+   "data_bo_count": 3,
+   "download_calls": 1,
+   "expected_sha256": "c6221049a38d2c5bfff2dc7f53472e6ae3d6cb9745ccfeafe08a3c0edf7a4d75",
+   "first_run_sha256": "78a31aa60d25bd4518dedd43c6d4907a3101d074e1fa0df76df33d3ccf4399bf",
+   "mean_us": 233.03880007006228,
+   "median_us": 226.33100161328912,
+   "min_us": 224.58100283984095,
+   "name": "default",
+   "output_sha256": "78a31aa60d25bd4518dedd43c6d4907a3101d074e1fa0df76df33d3ccf4399bf",
+   "plan_hash": "aab6ae151a504b1ddaad5c85b94720bdfc20dde087b95248b51c6fac0a5db28a",
+   "publish_count": 1,
+   "publish_order": [
+    [
+     0,
+     0,
+     3,
+     256
+    ]
+   ],
+   "reference_equal": false,
+   "reference_max_abs": 9.5367431640625e-07,
+   "reference_pass": true,
+   "reference_rmse": 3.4479903376904986e-08,
+   "schedule_equal_to_baseline": true,
+   "source_schedule": null,
+   "submit_count": 1,
+   "submit_report_count": 1,
+   "task_count": 1,
+   "task_report_count": 1,
+   "times_us": [
+    258.1209992058575,
+    230.12200836092234,
+    224.58100283984095,
+    226.33100161328912,
+    226.03898833040148
+   ],
+   "upload_calls": 2
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "buffer_count": 5,
+   "data_bo_count": 4,
+   "download_calls": 2,
+   "expected_sha256": "c6221049a38d2c5bfff2dc7f53472e6ae3d6cb9745ccfeafe08a3c0edf7a4d75",
+   "first_run_sha256": "78a31aa60d25bd4518dedd43c6d4907a3101d074e1fa0df76df33d3ccf4399bf",
+   "mean_us": 1160.4681960307062,
+   "median_us": 1099.5689954143018,
+   "min_us": 1033.360997098498,
+   "name": "n128",
+   "output_sha256": "78a31aa60d25bd4518dedd43c6d4907a3101d074e1fa0df76df33d3ccf4399bf",
+   "plan_hash": "2dfddd72b6e377e2486e2436ac99d74a3757c69330c0429bfec3ecc34dcadaf6",
+   "publish_count": 2,
+   "publish_order": [
+    [
+     0,
+     0,
+     3,
+     128
+    ],
+    [
+     0,
+     128,
+     3,
+     128
+    ]
+   ],
+   "reference_equal": false,
+   "reference_max_abs": 9.5367431640625e-07,
+   "reference_pass": true,
+   "reference_rmse": 3.4479903376904986e-08,
+   "schedule_equal_to_baseline": true,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 2,
+   "submit_report_count": 2,
+   "task_count": 2,
+   "task_report_count": 2,
+   "times_us": [
+    1033.360997098498,
+    1206.3179892720655,
+    1098.110995371826,
+    1364.9820029968396,
+    1099.5689954143018
+   ],
+   "upload_calls": 3
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 1,
+    "tile_n": 256
+   },
+   "buffer_count": 7,
+   "data_bo_count": 5,
+   "download_calls": 3,
+   "expected_sha256": "c6221049a38d2c5bfff2dc7f53472e6ae3d6cb9745ccfeafe08a3c0edf7a4d75",
+   "first_run_sha256": "78a31aa60d25bd4518dedd43c6d4907a3101d074e1fa0df76df33d3ccf4399bf",
+   "mean_us": 396.95299637969583,
+   "median_us": 419.70198799390346,
+   "min_us": 283.4960032487288,
+   "name": "m1",
+   "output_sha256": "78a31aa60d25bd4518dedd43c6d4907a3101d074e1fa0df76df33d3ccf4399bf",
+   "plan_hash": "58d74a162a78f2397b113505f045b9b96b457848aa85e92fae64b3113f43db8c",
+   "publish_count": 3,
+   "publish_order": [
+    [
+     0,
+     0,
+     1,
+     256
+    ],
+    [
+     1,
+     0,
+     1,
+     256
+    ],
+    [
+     2,
+     0,
+     1,
+     256
+    ]
+   ],
+   "reference_equal": false,
+   "reference_max_abs": 9.5367431640625e-07,
+   "reference_pass": true,
+   "reference_rmse": 3.4479903376904986e-08,
+   "schedule_equal_to_baseline": true,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 1,
+    "tile_n": 256
+   },
+   "submit_count": 3,
+   "submit_report_count": 3,
+   "task_count": 3,
+   "task_report_count": 3,
+   "times_us": [
+    437.20299436245114,
+    425.535996328108,
+    419.70198799390346,
+    418.82799996528774,
+    283.4960032487288
+   ],
+   "upload_calls": 4
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 1,
+    "tile_n": 128
+   },
+   "buffer_count": 11,
+   "data_bo_count": 6,
+   "download_calls": 6,
+   "expected_sha256": "c6221049a38d2c5bfff2dc7f53472e6ae3d6cb9745ccfeafe08a3c0edf7a4d75",
+   "first_run_sha256": "78a31aa60d25bd4518dedd43c6d4907a3101d074e1fa0df76df33d3ccf4399bf",
+   "mean_us": 647.3161949543282,
+   "median_us": 647.783002932556,
+   "min_us": 627.0749872783199,
+   "name": "m1_n128_nmajor",
+   "output_sha256": "78a31aa60d25bd4518dedd43c6d4907a3101d074e1fa0df76df33d3ccf4399bf",
+   "plan_hash": "28dc958b0855567e24aa4593664d0a3215f44d3ee1be975eaaec5abd208c97b6",
+   "publish_count": 6,
+   "publish_order": [
+    [
+     0,
+     0,
+     1,
+     128
+    ],
+    [
+     1,
+     0,
+     1,
+     128
+    ],
+    [
+     2,
+     0,
+     1,
+     128
+    ],
+    [
+     0,
+     128,
+     1,
+     128
+    ],
+    [
+     1,
+     128,
+     1,
+     128
+    ],
+    [
+     2,
+     128,
+     1,
+     128
+    ]
+   ],
+   "reference_equal": false,
+   "reference_max_abs": 9.5367431640625e-07,
+   "reference_pass": true,
+   "reference_rmse": 3.4479903376904986e-08,
+   "schedule_equal_to_baseline": true,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 1,
+    "tile_n": 128
+   },
+   "submit_count": 6,
+   "submit_report_count": 6,
+   "task_count": 6,
+   "task_report_count": 6,
+   "times_us": [
+    674.9079911969602,
+    650.1159950857982,
+    636.6989982780069,
+    627.0749872783199,
+    647.783002932556
+   ],
+   "upload_calls": 5
+  }
+ ],
+ "schedule_equal_all": true,
+ "schema_version": 1
+}

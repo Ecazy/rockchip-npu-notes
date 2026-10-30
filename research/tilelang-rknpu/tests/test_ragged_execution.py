@@ -114,10 +114,11 @@ class RaggedExecutionTests(unittest.TestCase):
 
     def test_multi_grid_ragged_tail_assembly_matches_reference(self):
         plan = self.run_case(257, 257, 300, 128, 128)
-        self.assertEqual(plan.accounting.task_count, 8)
-        self.assertEqual(len(plan.publish), 4)
+        self.assertEqual(plan.accounting.task_count, 18)
+        self.assertEqual(len(plan.publish), 9)
         self.assertEqual(sorted((p.rows, p.cols) for p in plan.publish),
-                         [(1, 1), (1, 256), (256, 1), (256, 256)])
+                         [(1, 1), (1, 128), (1, 128), (128, 1), (128, 1),
+                          (128, 128), (128, 128), (128, 128), (128, 128)])
 
 
 if __name__ == "__main__":

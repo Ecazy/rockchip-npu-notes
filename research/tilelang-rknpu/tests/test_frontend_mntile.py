@@ -50,9 +50,10 @@ class MNTileTests(unittest.TestCase):
         self.assertEqual(result.plan.bindings[0].shape, (512, 512))
         self.assertEqual(result.plan.bindings[1].shape, (512, 384))
         self.assertEqual(result.plan.bindings[2].shape, (512, 384))
-        # M/N re-tiled at 256: 2 M tiles * 2 N tiles * 2 K tiles.
-        self.assertEqual(result.plan.accounting.task_count, 8)
-        self.assertEqual(len(result.plan.publish), 4)
+        # The source schedule is now applied: 2 M tiles * 3 N tiles * 2 K
+        # tiles.  The old planner silently re-tiled this to 256x256.
+        self.assertEqual(result.plan.accounting.task_count, 12)
+        self.assertEqual(len(result.plan.publish), 6)
 
     def test_mn_tiling_and_coverage_are_recorded(self):
         result = self.compile(self.fixtures.mn_tiled())
@@ -86,6 +87,43 @@ class MNTileTests(unittest.TestCase):
                   if a.template_id == "co.mm.f16.v1").attrs["source_mn_tiling"]
         self.assertEqual(mn["grid_y"], 2)
         self.assertEqual(mn["grid_x"], 1)
+
+    def test_mn_tile_size_changes_task_buffer_and_plan_identity(self):
+        small = self.compile(self.fixtures.mn_tiled(m=512, n=384, k=512,
+                                                    bm=128, bn=128)).plan
+        large = self.compile(self.fixtures.mn_tiled(m=512, n=384, k=512,
+                                                    bm=256, bn=128)).plan
+        self.assertEqual(small.accounting.task_count, 24)
+        self.assertEqual(large.accounting.task_count, 12)
+        self.assertNotEqual(len(small.buffers), len(large.buffers))
+        self.assertNotEqual(small.plan_hash, large.plan_hash)
+        small_sched = next(a for a in small.actions
+                           if a.template_id == "co.mm.f16.v1").attrs[
+                               "source_schedule"]
+        large_sched = next(a for a in large.actions
+                           if a.template_id == "co.mm.f16.v1").attrs[
+                               "source_schedule"]
+        self.assertEqual((small_sched["tile_m"], small_sched["tile_n"]),
+                         (128, 128))
+        self.assertEqual((large_sched["tile_m"], large_sched["tile_n"]),
+                         (256, 128))
+
+    def test_traversal_order_changes_serialized_plan(self):
+        row = self.compile(self.fixtures.mn_tiled(order="m_major")).plan
+        col = self.compile(self.fixtures.mn_tiled(order="n_major")).plan
+        self.assertEqual(row.accounting.task_count, col.accounting.task_count)
+        self.assertEqual(row.accounting.data_bo_count, col.accounting.data_bo_count)
+        self.assertNotEqual(row.plan_hash, col.plan_hash)
+        self.assertNotEqual([(p.dst_row, p.dst_col) for p in row.publish],
+                            [(p.dst_row, p.dst_col) for p in col.publish])
+        sched = next(a for a in col.actions
+                     if a.template_id == "co.mm.f16.v1").attrs[
+                         "source_schedule"]
+        self.assertEqual(sched["order"], "n_major")
+
+    def test_unsupported_traversal_order_is_rejected(self):
+        self.assert_rejected(self.fixtures.mn_tiled(order="row_major"),
+                             RK_E_UNSUPPORTED, "traversal order")
 
     def test_ambiguous_single_axis_grid_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_single_grid_axis_ambiguous(),

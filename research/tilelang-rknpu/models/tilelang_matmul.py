@@ -28,6 +28,73 @@ def make_matmul_prim(m: int, k: int, n: int):
     return matmul_tile
 
 
+def make_matmul_tiled_prim(m: int, k: int, n: int, *, bm: int, bn: int,
+                          bk: int = 256, order: str = "m_major"):
+    """A real TileLang M/N/K-tiled GEMM with an explicit traversal annotation.
+
+    This is the source-level experiment form: block extents and the block grid
+    are real TileLang schedule choices.  The frontend proves exact coverage and
+    carries the chosen M/N tile plus order into RKIR.
+    """
+    @T.prim_func
+    def matmul_tiled(
+        A: T.Tensor((m, k), "float16"),
+        B: T.Tensor((k, n), "float16"),
+        Y: T.Tensor((m, n), "float16"),
+    ):
+        T.func_attr({
+            "rknpu.schedule": "mn_tiles_v1",
+            "rknpu.mn_order": order,
+        })
+        with T.Kernel(T.ceildiv(n, bn), T.ceildiv(m, bm),
+                      threads=128) as (bx, by):
+            As = T.alloc_shared((bm, bk), "float16")
+            Bs = T.alloc_shared((bk, bn), "float16")
+            Cl = T.alloc_fragment((bm, bn), "float32")
+            T.clear(Cl)
+            for ko in T.Pipelined(T.ceildiv(k, bk), num_stages=2):
+                T.copy(A[by * bm, ko * bk], As)
+                T.copy(B[ko * bk, bx * bn], Bs)
+                T.gemm(As, Bs, Cl)
+            T.copy(Cl, Y[by * bm, bx * bn])
+
+    return matmul_tiled
+
+
+def make_matmul_prim_scheduled(m: int, k: int, n: int, *,
+                               tile_m: int, tile_n: int,
+                               order: str = "m_major"):
+    """Same GEMM as ``make_matmul_prim`` with an explicit M/N schedule.
+
+    TileLang still expresses the source GEMM and its full logical operands; the
+    PrimFunc annotations are the schedule contract consumed by the RKIR lowerer.
+    K blocking and accumulation are intentionally not parameters here.
+    """
+    @T.prim_func
+    def matmul_tile(
+        A: T.Tensor((m, k), "float16"),
+        B: T.Tensor((k, n), "float16"),
+        Y: T.Tensor((m, n), "float16"),
+    ):
+        T.func_attr({
+            "rknpu.schedule": "mn_tiles_v1",
+            "rknpu.tile_m": tile_m,
+            "rknpu.tile_n": tile_n,
+            "rknpu.mn_order": order,
+        })
+        with T.Kernel(1, 1, threads=128) as (bx, by):
+            As = T.alloc_shared((m, k), "float16")
+            Bs = T.alloc_shared((k, n), "float16")
+            Cl = T.alloc_fragment((m, n), "float32")
+            T.copy(A[0, 0], As)
+            T.copy(B[0, 0], Bs)
+            T.clear(Cl)
+            T.gemm(As, Bs, Cl)
+            T.copy(Cl, Y[0, 0])
+
+    return matmul_tile
+
+
 def make_swiglu_ffn_f16(m: int, d: int, h: int):
     """Return the staged-FP16 SwiGLU FFN used by the device-resident FFN plan.
 

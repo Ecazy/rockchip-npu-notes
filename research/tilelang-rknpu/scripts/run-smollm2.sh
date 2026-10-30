@@ -81,6 +81,7 @@ cmd_setup_board() {
       upstream-components/rknpu-submit tilelang-rknpu/python \
       tilelang-rknpu/capabilities tilelang-rknpu/models/tilelang_matmul.py \
       tilelang-rknpu/tools/run_smollm2.py \
+      tilelang-rknpu/tools/run_schedule_experiment.py \
       tilelang-rknpu/tools/run_smollm_device_rope.py
   tar -czf "$package_bundle" -C "$HERE/.data/models" \
       smollm2_135m_instruct_package
@@ -161,8 +162,28 @@ PY
 
 usage() {
   cat >&2 <<EOF
-usage: $0 {fetch|compile|host-check|setup-board|board-run <request.json> <out-dir>|chat <prompt> [max_new]}
+usage: $0 {fetch|compile|host-check|setup-board|board-run <request.json> <out-dir>|schedule-bench <plans-dir> <out.json>|chat <prompt> [max_new]}
 EOF
+}
+
+cmd_schedule_bench() {
+  local plans=$1 out=$2
+  [[ -f "$REMOTE_STATE" ]] || { echo "run setup-board first" >&2; exit 2; }
+  [[ -f "$plans/manifest.json" ]] || {
+    echo "schedule plan manifest missing: $plans/manifest.json" >&2; exit 2; }
+  board_env
+  trap board_cleanup EXIT
+  local remote stamp remote_plans remote_out bundle
+  remote=$(<"$REMOTE_STATE")
+  stamp=$(date -u +%Y%m%dT%H%M%SZ)-$$
+  remote_plans="schedule-plans-$stamp"
+  remote_out="schedule-result-$stamp.json"
+  bundle=$(mktemp /tmp/rk-smollm-schedule-XXXXXX.tgz)
+  trap 'rm -f -- "${bundle:-}"; board_cleanup' EXIT
+  tar -czf "$bundle" -C "$(dirname "$plans")" "$(basename "$plans")"
+  "${SCP[@]}" "$bundle" "$TARGET:$remote/schedule.tgz" >/dev/null
+  "${SSH[@]}" "cd '$remote' && rm -rf '$remote_plans' && mkdir -p '$remote_plans' && tar -xzf schedule.tgz -C '$remote_plans' --strip-components=1 && export PYTHONPATH='$remote/tilelang-rknpu/python' RKNPU_PLAN_LIB='$remote/build/librknpu_plan.so' LD_LIBRARY_PATH='$remote/build' RKNPU_CHIP=rk3588 ROCKET_CHIP=rk3588 RKNPU_CORE_MASK=1 && python3 '$remote/tilelang-rknpu/tools/run_schedule_experiment.py' run --plans '$remote/$remote_plans' --backend board --repeats 5 --out '$remote/$remote_out'"
+  "${SCP[@]}" "$TARGET:$remote/$remote_out" "$out" >/dev/null
 }
 
 cmd_device_rope_probe() {
@@ -196,6 +217,7 @@ case "${1:-}" in
   host-check) shift; cmd_host_check "$@" ;;
   setup-board) shift; cmd_setup_board "$@" ;;
   board-run) shift; cmd_board_run "${1:?request}" "${2:?out-dir}" ;;
+  schedule-bench) shift; cmd_schedule_bench "${1:?plans dir}" "${2:?out json}" ;;
   device-rope-probe) shift; cmd_device_rope_probe "${1:?prompt json}" "${2:?out file}" "${3:-}" ;;
   chat) shift; cmd_chat "${1:?prompt}" "${2:-32}" ;;
   *) usage; exit 2 ;;

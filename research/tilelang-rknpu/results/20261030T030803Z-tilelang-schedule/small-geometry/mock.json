@@ -1,0 +1,343 @@
+{
+ "backend": "mock",
+ "environment": {
+  "core_mask": "unset",
+  "kernel": "7.0.0-38-generic",
+  "machine": "x86_64"
+ },
+ "geometry": {
+  "k": 512,
+  "m": 512,
+  "n": 384
+ },
+ "kind": "smollm2-schedule-execution",
+ "lib_path": "/home/maoyu/Documents/code/rockchip-npu-notes/research/tilelang-rknpu/../custom-ops/build-host-mvp/librknpu_plan_mock.so",
+ "lib_sha256": "3902c13a441a84f1698fa0ec5d9eed8804575c528dd279614a210c2d1a617d2d",
+ "pass": true,
+ "reference_pass_all": true,
+ "runs": [
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "buffer_count": 22,
+   "data_bo_count": 12,
+   "download_calls": 6,
+   "expected_sha256": "46d1ded06f039e86dc2463ea06d913862d2e7e69680a30f355546a69fa1257ae",
+   "first_run_sha256": "8b84eb405aa591fe156ac7572045b6951788f57a19ce6739265a08381e4c8dc5",
+   "mean_us": 686531.8796626525,
+   "median_us": 686023.2369945152,
+   "min_us": 684874.8519987566,
+   "name": "base_256x128",
+   "output_sha256": "8b84eb405aa591fe156ac7572045b6951788f57a19ce6739265a08381e4c8dc5",
+   "plan_hash": "3662f2580758e8f830a129ea72ab2a028abc6c721be754d44cd5edcdb6a13ffc",
+   "publish_count": 6,
+   "publish_order": [
+    [
+     0,
+     0,
+     256,
+     128
+    ],
+    [
+     0,
+     128,
+     256,
+     128
+    ],
+    [
+     0,
+     256,
+     256,
+     128
+    ],
+    [
+     256,
+     0,
+     256,
+     128
+    ],
+    [
+     256,
+     128,
+     256,
+     128
+    ],
+    [
+     256,
+     256,
+     256,
+     128
+    ]
+   ],
+   "reference_equal": false,
+   "reference_max_abs": 0.00048828125,
+   "reference_pass": true,
+   "reference_rmse": 2.9167529191909125e-06,
+   "schedule_equal_to_baseline": true,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 256,
+    "tile_n": 128
+   },
+   "submit_count": 6,
+   "submit_report_count": 6,
+   "task_count": 12,
+   "task_report_count": 12,
+   "times_us": [
+    688697.5499946857,
+    684874.8519987566,
+    686023.2369945152
+   ],
+   "upload_calls": 4
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "buffer_count": 38,
+   "data_bo_count": 16,
+   "download_calls": 12,
+   "expected_sha256": "46d1ded06f039e86dc2463ea06d913862d2e7e69680a30f355546a69fa1257ae",
+   "first_run_sha256": "8b84eb405aa591fe156ac7572045b6951788f57a19ce6739265a08381e4c8dc5",
+   "mean_us": 685115.4696632875,
+   "median_us": 685291.6079951683,
+   "min_us": 683654.2569944868,
+   "name": "tile_128x128",
+   "output_sha256": "8b84eb405aa591fe156ac7572045b6951788f57a19ce6739265a08381e4c8dc5",
+   "plan_hash": "48a0e1f0c02afb8ba40f53d3ec1295971a1ce9345fe4ff631da6f07a92160a05",
+   "publish_count": 12,
+   "publish_order": [
+    [
+     0,
+     0,
+     128,
+     128
+    ],
+    [
+     0,
+     128,
+     128,
+     128
+    ],
+    [
+     0,
+     256,
+     128,
+     128
+    ],
+    [
+     128,
+     0,
+     128,
+     128
+    ],
+    [
+     128,
+     128,
+     128,
+     128
+    ],
+    [
+     128,
+     256,
+     128,
+     128
+    ],
+    [
+     256,
+     0,
+     128,
+     128
+    ],
+    [
+     256,
+     128,
+     128,
+     128
+    ],
+    [
+     256,
+     256,
+     128,
+     128
+    ],
+    [
+     384,
+     0,
+     128,
+     128
+    ],
+    [
+     384,
+     128,
+     128,
+     128
+    ],
+    [
+     384,
+     256,
+     128,
+     128
+    ]
+   ],
+   "reference_equal": false,
+   "reference_max_abs": 0.00048828125,
+   "reference_pass": true,
+   "reference_rmse": 2.9167529191909125e-06,
+   "schedule_equal_to_baseline": true,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "m_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "submit_count": 12,
+   "submit_report_count": 12,
+   "task_count": 24,
+   "task_report_count": 24,
+   "times_us": [
+    683654.2569944868,
+    685291.6079951683,
+    686400.5440002074
+   ],
+   "upload_calls": 8
+  },
+  {
+   "applied_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "buffer_count": 38,
+   "data_bo_count": 16,
+   "download_calls": 12,
+   "expected_sha256": "46d1ded06f039e86dc2463ea06d913862d2e7e69680a30f355546a69fa1257ae",
+   "first_run_sha256": "8b84eb405aa591fe156ac7572045b6951788f57a19ce6739265a08381e4c8dc5",
+   "mean_us": 684938.8559979465,
+   "median_us": 685371.9539940357,
+   "min_us": 683811.1539982492,
+   "name": "tile_128x128_nmajor",
+   "output_sha256": "8b84eb405aa591fe156ac7572045b6951788f57a19ce6739265a08381e4c8dc5",
+   "plan_hash": "f360bea8f36297bbd8fab0ad44457d6decb8c9a8735b67721380c0c056c732f5",
+   "publish_count": 12,
+   "publish_order": [
+    [
+     0,
+     0,
+     128,
+     128
+    ],
+    [
+     128,
+     0,
+     128,
+     128
+    ],
+    [
+     256,
+     0,
+     128,
+     128
+    ],
+    [
+     384,
+     0,
+     128,
+     128
+    ],
+    [
+     0,
+     128,
+     128,
+     128
+    ],
+    [
+     128,
+     128,
+     128,
+     128
+    ],
+    [
+     256,
+     128,
+     128,
+     128
+    ],
+    [
+     384,
+     128,
+     128,
+     128
+    ],
+    [
+     0,
+     256,
+     128,
+     128
+    ],
+    [
+     128,
+     256,
+     128,
+     128
+    ],
+    [
+     256,
+     256,
+     128,
+     128
+    ],
+    [
+     384,
+     256,
+     128,
+     128
+    ]
+   ],
+   "reference_equal": false,
+   "reference_max_abs": 0.00048828125,
+   "reference_pass": true,
+   "reference_rmse": 2.9167529191909125e-06,
+   "schedule_equal_to_baseline": true,
+   "source_schedule": {
+    "accumulation": "ordered_ascending_f16_writeback",
+    "k_tile": 256,
+    "kind": "mn_tiles_v1",
+    "order": "n_major",
+    "tile_m": 128,
+    "tile_n": 128
+   },
+   "submit_count": 12,
+   "submit_report_count": 12,
+   "task_count": 24,
+   "task_report_count": 24,
+   "times_us": [
+    685633.4600015543,
+    685371.9539940357,
+    683811.1539982492
+   ],
+   "upload_calls": 8
+  }
+ ],
+ "schedule_equal_all": true,
+ "schema_version": 1
+}

@@ -16,11 +16,14 @@ import tilelang
 import tilelang.language as T
 
 
-def mn_tiled(m=512, n=384, k=512, bm=256, bn=128, bk=256, grid_y=None):
+def mn_tiled(m=512, n=384, k=512, bm=256, bn=128, bk=256, grid_y=None,
+             order="m_major"):
     gy = grid_y if grid_y is not None else m // bm
     @T.prim_func
     def kernel(A: T.Tensor((m, k), "float16"), B: T.Tensor((k, n), "float16"),
                C: T.Tensor((m, n), "float16")):
+        T.func_attr({"rknpu.schedule": "mn_tiles_v1",
+                     "rknpu.mn_order": order})
         with T.Kernel(T.ceildiv(n, bn), gy, threads=128) as (bx, by):
             A_shared = T.alloc_shared((bm, bk), "float16")
             B_shared = T.alloc_shared((bk, bn), "float16")
