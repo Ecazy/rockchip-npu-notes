@@ -4477,8 +4477,7 @@ def _parse_guarded_stage(stage_index: int, stage_items: list[_Item],
                                  f"stage {stage_index} output column", span),
                  {"bx": gn, "yj": 1},
                  f"stage {stage_index} output column", span)
-    if len(params) != 5 or a_param is b_param or a_param is c_param or \
-            b_param is c_param:
+    if a_param is b_param or a_param is c_param or b_param is c_param:
         reject(RK_E_UNSUPPORTED,
                f"stage {stage_index} expects distinct A, B and output "
                "parameters", stage="frontend", source=span)
@@ -4664,6 +4663,351 @@ def _extract_staged_two_matmul(items: list[_Item], params: list[Any], *,
                   ops=ops, inputs=(a0,), outputs=(y,),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
+
+
+def _parse_elementwise_stage(stage_index: int, stage_items: list[_Item],
+                             params: list[Any], *, tirx: Any,
+                             span: str) -> dict[str, Any]:
+    calls = [item for item in stage_items if item.kind == "call"]
+    tile_calls = [item for item in calls
+                  if _op_name(item.node) in ALLOWED_TILEOPS]
+    stores = [item for item in stage_items if item.kind == "store"]
+    copies = [item for item in tile_calls
+              if _op_name(item.node) == "tl.tileop.copy"]
+    fills = [item for item in tile_calls
+             if _op_name(item.node) == "tl.tileop.fill"]
+    gemms = [item for item in tile_calls
+             if _op_name(item.node) == "tl.tileop.gemm"]
+    if gemms or fills:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} is an elementwise stage; GEMM/fill is "
+               "unexpected", stage="frontend", source=span)
+    if len(stores) != 1:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} needs exactly one elementwise store",
+               stage="frontend", source=span, actual=len(stores))
+    def pidx(buffer: Any) -> int | None:
+        for i, param in enumerate(params):
+            if _same_buffer(buffer, param):
+                return i
+        return None
+
+    store_item = stores[0]
+    target, target_shape, expr = _check_elementwise_store(
+        store_item, tirx, params, span)
+    writes = []
+    for copy_item in copies:
+        src = _region(copy_item.node.args[0], tirx, "copy source",
+                      expect_mask=1)
+        dst = _region(copy_item.node.args[1], tirx, "copy destination",
+                      expect_mask=2)
+        if pidx(dst.buffer) is not None:
+            writes.append((copy_item, src, dst))
+    if len(writes) != 1:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} must publish exactly one parameter value",
+               stage="frontend", source=span, actual=len(writes))
+    publish_item, pub_src, pub_dst = writes[0]
+    out_pid = pidx(pub_dst.buffer)
+    if out_pid is None:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} publish destination is not a parameter",
+               stage="frontend", source=span)
+    if not _same_buffer(target, pub_src.buffer):
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} store target is not the published tile",
+               stage="frontend", source=span)
+    if pub_dst.physical != target_shape:
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} published rectangle differs from tile",
+               stage="frontend", source=span,
+               actual={"published": list(pub_dst.physical),
+                       "tile": list(target_shape)})
+    out_shape = tuple(int(x) for x in params[out_pid].shape)
+    origins: list[tuple[Any, int, _Region]] = []
+    for copy_item in copies:
+        if copy_item is publish_item:
+            continue
+        csrc = _region(copy_item.node.args[0], tirx, "copy source",
+                       expect_mask=1)
+        cdst = _region(copy_item.node.args[1], tirx, "copy destination",
+                       expect_mask=2)
+        src_pid = pidx(csrc.buffer)
+        if src_pid is not None:
+            origins.append((cdst.buffer, src_pid, csrc))
+    def origin_of(buffer: Any) -> int | None:
+        direct = pidx(buffer)
+        if direct is not None:
+            return direct
+        for candidate, pid, _ in origins:
+            if _same_buffer(candidate, buffer):
+                return pid
+        return None
+    def arg_pid(arg: _Expr, label: str) -> int:
+        if arg.kind != "load" or arg.buffer is None:
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} {label} is not a simple tile load",
+                   stage="frontend", source=span)
+        pid = origin_of(arg.buffer)
+        if pid is None:
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} {label} does not resolve to a "
+                   "parameter", stage="frontend", source=span,
+                   actual=_buffer_name(arg.buffer))
+        return pid
+    inner = _strip_expr_casts(expr)
+    if inner.kind == "sigmoid" and len(inner.args) == 1:
+        opcode = "sigmoid"
+        inputs = (arg_pid(inner.args[0], "sigmoid input"),)
+    elif inner.kind in {"mul", "add"} and len(inner.args) == 2:
+        opcode = inner.kind
+        inputs = (arg_pid(inner.args[0], f"{opcode} lhs"),
+                  arg_pid(inner.args[1], f"{opcode} rhs"))
+    else:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} elementwise operation must be sigmoid, "
+               "mul or add", stage="frontend", source=span,
+               actual=inner.kind)
+    # Prove copy source bases exactly against the output tile indices.
+    block_roles = {f"b{i}": loop.loop_var
+                   for i, loop in enumerate(store_item.blocks)}
+    row_parsed = _affine_expr(pub_dst.raw_indices[0], tirx, block_roles)
+    col_parsed = _affine_expr(pub_dst.raw_indices[1], tirx, block_roles)
+    if row_parsed is None or col_parsed is None:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} store indices are not affine",
+               stage="frontend", source=span)
+    row_block = next((k for k, v in row_parsed[0].items()
+                      if v == target_shape[0] and k.startswith("b")), None)
+    col_block = next((k for k, v in col_parsed[0].items()
+                      if v == target_shape[1] and k.startswith("b")), None)
+    if row_block is None or col_block is None:
+        reject(RK_E_UNSUPPORTED,
+               f"stage {stage_index} cannot identify M/N block variables",
+               stage="frontend", source=span)
+    block_extents = [_int_imm(loop.extent) for loop in store_item.blocks]
+    row_grid = block_extents[int(row_block[1:])] if row_block else 1
+    col_grid = block_extents[int(col_block[1:])] if col_block else 1
+    if row_grid is None or col_grid is None or             row_grid * target_shape[0] != out_shape[0] or             col_grid * target_shape[1] != out_shape[1]:
+        reject(RK_E_SHAPE,
+               f"stage {stage_index} elementwise tile does not cover its output",
+               stage="frontend", source=span,
+               actual={"grid": [row_grid, col_grid],
+                       "tile": list(target_shape),
+                       "output": list(out_shape)})
+    mapping = {"tile_rows": target_shape[0], "tile_cols": target_shape[1],
+               "row_grid": row_grid, "col_grid": col_grid,
+               "extents": block_extents,
+               "roles": dict(block_roles)}
+    sources: dict[int, list[int]] = {}
+    for _, pid, csrc in origins:
+        parsed_row = _affine_expr(csrc.raw_indices[0], tirx, block_roles)
+        parsed_col = _affine_expr(csrc.raw_indices[1], tirx, block_roles)
+        if parsed_row is None or parsed_col is None:
+            reject(RK_E_UNSUPPORTED,
+                   f"stage {stage_index} copy source indices are not affine",
+                   stage="frontend", source=span)
+        if parsed_row[1] != 0 or parsed_row[0] != {row_block: target_shape[0]}:
+            reject(RK_E_SHAPE,
+                   f"stage {stage_index} copy source row is not the M tile",
+                   stage="frontend", source=span,
+                   actual=parsed_row)
+        expected_col = {col_block: target_shape[1]}
+        if {k: v for k, v in parsed_col[0].items() if v} != expected_col:
+            reject(RK_E_SHAPE,
+                   f"stage {stage_index} copy source column is not the N tile",
+                   stage="frontend", source=span,
+                   actual=parsed_col[0], required=expected_col)
+        if csrc.physical != target_shape:
+            reject(RK_E_SHAPE,
+                   f"stage {stage_index} copy source does not cover the tile",
+                   stage="frontend", source=span,
+                   actual=list(csrc.physical))
+        sources.setdefault(pid, []).append(parsed_col[1])
+    return {"stage": stage_index, "opcode": opcode, "inputs": inputs,
+            "output": out_pid, "mapping": mapping,
+            "sources": sources, "tile": target_shape}
+
+
+def _extract_staged_scheduled_ffn(items: list[_Item], params: list[Any], *,
+                                  tirx: Any, prim_func: Any, span: str,
+                                  options: CompileOptions,
+                                  profile_hash: str) -> Any:
+    """Extract the closed packed-gate/up -> SwiGLU -> down -> residual graph."""
+    active = [item for item in items
+              if item.kind == "store" or
+              (item.kind == "call" and _op_name(item.node) in ALLOWED_TILEOPS)]
+    groups: list[list[_Item]] = []
+    keys: list[int] = []
+    for item in active:
+        key = id(item.blocks)
+        if not keys or key != keys[-1]:
+            if key in keys:
+                reject(RK_E_UNSUPPORTED,
+                       "a T.Kernel block scope is not contiguous",
+                       stage="frontend", source=span)
+            keys.append(key)
+            groups.append([])
+        groups[-1].append(item)
+    if len(groups) != 6:
+        reject(RK_E_UNSUPPORTED,
+               "scheduled FFN requires six launches: gate/up, sigmoid, silu, "
+               "gated mul, down, residual", stage="frontend", source=span,
+               actual=len(groups))
+    staged = _staged_schedule_annotations(prim_func, 6, span)
+    if staged is None:
+        reject(RK_E_UNSUPPORTED,
+               "scheduled FFN requires rknpu.staged_schedule",
+               stage="frontend", source=span)
+    if len(params) != 9:
+        reject(RK_E_UNSUPPORTED,
+               "scheduled FFN expects X, Wgu, Wd, Zgu, S, Silu, A, P and Y",
+               stage="frontend", source=span, actual=len(params))
+    s0 = _parse_guarded_stage(0, groups[0], params, tirx=tirx, span=span,
+                              declared_rounding=staged[0].source_k_rounding)
+    e1 = _parse_elementwise_stage(1, groups[1], params, tirx=tirx, span=span)
+    e2 = _parse_elementwise_stage(2, groups[2], params, tirx=tirx, span=span)
+    e3 = _parse_elementwise_stage(3, groups[3], params, tirx=tirx, span=span)
+    s4 = _parse_guarded_stage(4, groups[4], params, tirx=tirx, span=span,
+                              declared_rounding=staged[4].source_k_rounding)
+    e5 = _parse_elementwise_stage(5, groups[5], params, tirx=tirx, span=span)
+
+    def pid_of(buffer: Any) -> int:
+        for i, p in enumerate(params):
+            if _same_buffer(p, buffer):
+                return i
+        reject(RK_E_SHAPE, "FFN parameter identity is not unique",
+               stage="frontend", source=span)
+    x = pid_of(s0["a_param"])
+    wgu = pid_of(s0["b_param"])
+    zgu = pid_of(s0["c_param"])
+    wd = pid_of(s4["b_param"])
+    p_out = pid_of(s4["c_param"])
+    z_param = params[zgu]
+    m = int(z_param.shape[0])
+    inter = int(params[6].shape[1])
+    if s4["a_param"] is not params[6] or e1["output"] != 4 or \
+            e2["output"] != 5 or e3["output"] != 6 or e5["output"] != 8:
+        reject(RK_E_UNSUPPORTED,
+               "FFN stage parameter roles do not form X->Zgu->S->Silu->A->P->Y",
+               stage="frontend", source=span)
+    if e1["opcode"] != "sigmoid" or e1["inputs"] != (zgu,) or \
+            e1["sources"].get(zgu) != [0]:
+        reject(RK_E_UNSUPPORTED,
+               "SwiGLU stage1 must be sigmoid of the gate half at column 0",
+               stage="frontend", source=span, actual=e1)
+    if e2["opcode"] != "mul" or set(e2["inputs"]) != {zgu, 4} or \
+            e2["sources"].get(zgu) != [0]:
+        reject(RK_E_UNSUPPORTED,
+               "SwiGLU stage2 must be gate * sigmoid(gate)",
+               stage="frontend", source=span, actual=e2)
+    if e3["opcode"] != "mul" or set(e3["inputs"]) != {5, zgu} or \
+            e3["sources"].get(zgu) != [inter]:
+        reject(RK_E_UNSUPPORTED,
+               "SwiGLU stage3 must multiply by the up half at column H",
+               stage="frontend", source=span, actual=e3)
+    if e5["opcode"] != "add" or set(e5["inputs"]) != {p_out, x}:
+        reject(RK_E_UNSUPPORTED,
+               "FFN residual stage must be P + X", stage="frontend",
+               source=span, actual=e5)
+
+    contract0 = _contract_with_points(options, ("gemm0_accumulator",))
+    contract4 = _contract_with_points(options, ("gemm4_accumulator",))
+
+    def matmul_attrs(info: dict[str, Any], contract: NumericContract,
+                     index: int, sched: _StagedSchedule) -> dict[str, Any]:
+        hints = {"source_k_block": info["gk"],
+                 "source_k_trips": info["trips"],
+                 "logical_k": info["logical_k"],
+                 "k_tail": info["k_tail"],
+                 "k_blocks": info["k_blocks"],
+                 "source_rounding": info["source_rounding"],
+                 "rounding_points": "after_each_k_block",
+                 "source_loop_annotations": {}, "lowering_k_tile": 256,
+                 "pipeline_hint_dropped": False,
+                 "narrowing_base": "explicit FP16 after each K block",
+                 "tail_contract": info["tail_contract"]}
+        return {"b_layout": "kn", "numeric_contract": contract.to_dict(),
+                "source_accumulator_dtype": "float16",
+                "source_k_rounding": info["source_rounding"],
+                "source_k_loop": hints,
+                "source_mn_tiling": info["source_mn_tiling"],
+                "source_tail_contract": info["tail_contract"],
+                "source_schedule": _source_schedule_from_stage(info, sched),
+                "source_stage_index": index,
+                "source_stage_count": 6,
+                "source_stage_boundary": "kernel_launch",
+                "source_stage_schedule_contract": "staged_mn_tiles_v1",
+                "source_narrowing_points": list(F16_NARROWING_NAMES)}
+
+    def ew_attrs(info: dict[str, Any], sched: _StagedSchedule,
+                 index: int, point: str) -> dict[str, Any]:
+        return {"source_stage_index": index, "source_stage_count": 6,
+                "source_stage_boundary": "kernel_launch",
+                "source_elementwise_schedule": {
+                    "kind": "elementwise_tiles_v1",
+                    "tile_m": sched.tile_m, "tile_n": sched.tile_n,
+                    "order": sched.order},
+                "source_mn_tiling": info["mapping"],
+                "source_rounding": point,
+                "source_stage_schedule_contract": "staged_mn_tiles_v1"}
+
+    values = (
+        _value(0, _buffer_name(params[x]),
+               TensorType("float16", tuple(int(v) for v in params[x].shape)),
+               None, "input"),
+        _value(1, _buffer_name(params[wgu]),
+               TensorType("float16", tuple(int(v) for v in params[wgu].shape)),
+               None, "constant"),
+        _value(2, _buffer_name(params[wd]),
+               TensorType("float16", tuple(int(v) for v in params[wd].shape)),
+               None, "constant"),
+        _value(3, _buffer_name(params[zgu]),
+               TensorType("float16", tuple(int(v) for v in params[zgu].shape)),
+               0, "temporary"),
+        _value(4, "G", TensorType("float16", (m, inter)), 1, "temporary"),
+        _value(5, "U", TensorType("float16", (m, inter)), 2, "temporary"),
+        _value(6, _buffer_name(params[4]),
+               TensorType("float16", tuple(int(v) for v in params[4].shape)),
+               3, "temporary"),
+        _value(7, _buffer_name(params[5]),
+               TensorType("float16", tuple(int(v) for v in params[5].shape)),
+               4, "temporary"),
+        _value(8, _buffer_name(params[6]),
+               TensorType("float16", tuple(int(v) for v in params[6].shape)),
+               5, "temporary"),
+        _value(9, _buffer_name(params[7]),
+               TensorType("float16", tuple(int(v) for v in params[7].shape)),
+               6, "temporary"),
+        _value(10, _buffer_name(params[8]),
+               TensorType("float16", tuple(int(v) for v in params[8].shape)),
+               7, "output"),
+    )
+    ops = (
+        _op(0, "matmul", (0, 1), (3,),
+            matmul_attrs(s0, contract0, 0, staged[0]), span),
+        _op(1, "view", (3,), (4,),
+            {"row_offset": 0, "col_offset": 0,
+             "rows": m, "cols": inter}, span),
+        _op(2, "view", (3,), (5,),
+            {"row_offset": 0, "col_offset": inter,
+             "rows": m, "cols": inter}, span),
+        _op(3, "sigmoid", (4,), (6,),
+            ew_attrs(e1, staged[1], 1, "fp16_after_sigmoid"), span),
+        _op(4, "mul", (4, 6), (7,),
+            ew_attrs(e2, staged[2], 2, "fp16_after_silu_mul"), span),
+        _op(5, "mul", (7, 5), (8,),
+            ew_attrs(e3, staged[3], 3, "fp16_after_gate_mul"), span),
+        _op(6, "matmul", (8, 2), (9,),
+            matmul_attrs(s4, contract4, 4, staged[4]), span),
+        _op(7, "add", (9, 0), (10,),
+            ew_attrs(e5, staged[5], 5, "fp16_after_residual_add"), span),
+    )
+    return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
+                  ops=ops, inputs=(0,), outputs=(10,),
+                  profile_hash=profile_hash, source_hash=span,
+                  state_signature="")
+
 
 
 def _detect_k_block(items: list[_Item], tirx: Any, span: str,
@@ -5242,9 +5586,18 @@ def extract(prim_func: Any, *, options: CompileOptions,
     if len(stage_keys) > 1:
         staged_attrs = dict(getattr(prim_func, "attrs", {}) or {})
         if "rknpu.staged_schedule" in staged_attrs:
-            return _extract_staged_two_matmul(
-                items, params, tirx=tirx, prim_func=prim_func, span=span,
-                options=options, profile_hash=profile_hash)
+            if len(stage_keys) == 2:
+                return _extract_staged_two_matmul(
+                    items, params, tirx=tirx, prim_func=prim_func, span=span,
+                    options=options, profile_hash=profile_hash)
+            if len(stage_keys) == 6:
+                return _extract_staged_scheduled_ffn(
+                    items, params, tirx=tirx, prim_func=prim_func, span=span,
+                    options=options, profile_hash=profile_hash)
+            reject(RK_E_UNSUPPORTED,
+                   "the staged schedule contract currently admits exactly two "
+                   "GEMM launches or the six-launch SwiGLU FFN pattern",
+                   stage="frontend", source=span, actual=len(stage_keys))
         if _schedule_annotation(prim_func, span).present:
             reject(RK_E_UNSUPPORTED,
                    "explicit M/N scheduling for general multi-kernel staged "

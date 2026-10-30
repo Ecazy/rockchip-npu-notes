@@ -14,8 +14,9 @@ from ..options import CompileOptions
 from ..plan import (Action, Binding, ConstantSpec, Publish, TensorLayout, View)
 from ..serialize import sha256_json
 from .legalize import LegalizedGraph
-from .tile import K_TILE, TILE_LIMIT, cube_layout, input_layout, k_slices, \
-    lut_chunks, mn_schedule_from_attrs, output_tiles, round_up, weight_layout
+from .tile import K_TILE, MN_TILE_ORDERS, TILE_LIMIT, cube_layout, \
+    input_layout, k_slices, lut_chunks, mn_schedule_from_attrs, output_tiles, \
+    round_up, weight_layout
 
 CUBE_LAYOUT = "co.cube.f16.v1"
 WEIGHT_LAYOUT = "co.weight.f16.v1"
@@ -1396,6 +1397,418 @@ class _Builder:
             constants=self.constants, buffers=self.buffers, views=self.views,
             actions=self.actions, publish=self.publish)
 
+    def build_scheduled_swiglu_ffn(self) -> DraftPlan:
+        """Schedule-aware packed gate/up -> SwiGLU -> down -> residual."""
+        ops = self.module.ops
+        expected = ["matmul", "view", "view", "sigmoid", "mul", "mul",
+                    "matmul", "add"]
+        if [op.opcode for op in ops] != expected:
+            reject(RK_E_UNSUPPORTED,
+                   "scheduled FFN lowerer requires the closed eight-op graph",
+                   stage="schedule", actual=[op.opcode for op in ops])
+        op0, vg, vu, sig, silu, act, op4, res = ops
+        x = self.module.value(op0.inputs[0])
+        wgu = self.module.value(op0.inputs[1])
+        zgu = self.module.value(op0.outputs[0])
+        g = self.module.value(vg.outputs[0])
+        u = self.module.value(vu.outputs[0])
+        s = self.module.value(sig.outputs[0])
+        silu_v = self.module.value(silu.outputs[0])
+        a = self.module.value(act.outputs[0])
+        wd = self.module.value(op4.inputs[1])
+        p = self.module.value(op4.outputs[0])
+        y = self.module.value(res.outputs[0])
+        m, d = x.type.shape
+        twoh = zgu.type.shape[1]
+        h = twoh // 2
+        if twoh % 2 or a.type.shape != (m, h) or s.type.shape != (m, h) or \
+                silu_v.type.shape != (m, h) or u.type.shape != (m, h) or \
+                g.type.shape != (m, h) or wgu.type.shape != (d, twoh) or \
+                wd.type.shape != (h, d) or p.type.shape != (m, d) or \
+                y.type.shape != (m, d):
+            reject(RK_E_SHAPE, "scheduled FFN operand shapes do not compose",
+                   stage="schedule")
+        if vg.attrs != {"row_offset": 0, "col_offset": 0,
+                        "rows": m, "cols": h} or \
+                vu.attrs != {"row_offset": 0, "col_offset": h,
+                             "rows": m, "cols": h}:
+            reject(RK_E_UNSUPPORTED,
+                   "FFN view ops must be the exact gate/up halves",
+                   stage="schedule", actual={"gate": dict(vg.attrs),
+                                              "up": dict(vu.attrs)})
+        if sig.inputs != (g.id,) or set(silu.inputs) != {g.id, s.id} or \
+                set(act.inputs) != {silu_v.id, u.id} or \
+                res.inputs != (p.id, x.id):
+            reject(RK_E_UNSUPPORTED,
+                   "scheduled FFN graph is not packed-gate/up -> SwiGLU -> down",
+                   stage="schedule")
+        s0 = mn_schedule_from_attrs(op0.attrs, where="stage0")
+        s4 = mn_schedule_from_attrs(op4.attrs, where="stage4")
+        if s0.tile_n != 256:
+            reject(RK_E_UNSUPPORTED,
+                   "FFN stage0 tile_n must be 256", stage="schedule",
+                   actual=s0.tile_n)
+        if h % 256 or twoh % 256 or d % s4.tile_n:
+            reject(RK_E_UNSUPPORTED,
+                   "FFN intermediate width must be 256-aligned and down output "
+                   "must be tile-aligned", stage="schedule",
+                   actual={"h": h, "twoh": twoh, "d": d,
+                           "down_tile_n": s4.tile_n})
+        def ew_schedule(op: Any, index: int) -> dict:
+            raw = op.attrs.get("source_elementwise_schedule")
+            if not isinstance(raw, dict) or raw.get("kind") != "elementwise_tiles_v1":
+                reject(RK_E_UNSUPPORTED,
+                       f"FFN stage{index} lacks its elementwise schedule",
+                       stage="schedule", actual=raw)
+            tm, tn = raw.get("tile_m"), raw.get("tile_n")
+            order = raw.get("order")
+            if not isinstance(tm, int) or not isinstance(tn, int) or \
+                    not 1 <= tm <= 256 or not 1 <= tn <= 256 or \
+                    order not in MN_TILE_ORDERS:
+                reject(RK_E_UNSUPPORTED,
+                       f"FFN stage{index} elementwise schedule is invalid",
+                       stage="schedule", actual=raw)
+            if tm != s0.tile_m:
+                reject(RK_E_UNSUPPORTED,
+                       "all FFN stages must use the same applied M tile",
+                       stage="schedule", actual={"stage": index, "tile_m": tm,
+                                                 "stage0_tile_m": s0.tile_m})
+            return raw
+        e1 = ew_schedule(sig, 1)
+        e2 = ew_schedule(silu, 2)
+        e3 = ew_schedule(act, 3)
+        e5 = ew_schedule(res, 5)
+        if e1["tile_n"] != 256 or e2["tile_n"] != 256 or e3["tile_n"] != 256:
+            reject(RK_E_UNSUPPORTED,
+                   "SwiGLU stages must use 256-wide elementwise tiles",
+                   stage="schedule")
+        if s4.tile_m != s0.tile_m or e5["tile_m"] != s4.tile_m or \
+                e5["tile_n"] != s4.tile_n:
+            reject(RK_E_UNSUPPORTED,
+                   "down and residual must share the applied tile geometry",
+                   stage="schedule")
+
+        x_binding = self.binding_by_value[x.id]
+        wgu_binding = self.binding_by_value[wgu.id]
+        wd_binding = self.binding_by_value[wd.id]
+        input_cache: dict[tuple, tuple[int, int]] = {}
+        weight_cache: dict[tuple, tuple[int, int]] = {}
+
+        def cube_view(rows: int, cols: int) -> tuple[int, int, int, int]:
+            pr, pc, pbytes = cube_layout(rows, cols)
+            layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols, pr, pc,
+                                  8, pbytes)
+            buffer_id = self.add_buffer(role="workspace", capacity=pbytes,
+                                        layout_id=CUBE_LAYOUT,
+                                        padding_state="finite")
+            view_id = self.add_view(buffer_id, 0, layout)
+            return buffer_id, view_id, pr, pc
+
+        def input_upload(value_id: int, binding: int, m0: int, c0: int,
+                         rows: int, cols: int, stride: int) -> tuple[int, int]:
+            key = (value_id, m0, c0, rows, cols, stride)
+            cached = input_cache.get(key)
+            if cached is not None:
+                return cached
+            pr, pc, pbytes = input_layout(rows, cols)
+            layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols, pr, pc,
+                                  8, pbytes)
+            buffer_id = self.add_buffer(role="input_slice", capacity=pbytes,
+                                        layout_id=CUBE_LAYOUT, reuse=False,
+                                        padding_state="zero")
+            view = self.add_view(buffer_id, 0, layout)
+            action = self.add_action(
+                "upload", outputs=(view,), origin="host_pack:ffn:input",
+                attrs={"source_binding": binding,
+                       "src_row_offset": m0, "src_col_offset": c0,
+                       "src_row_stride": stride,
+                       "transpose_source": False, "cache": "input"})
+            input_cache[key] = (view, action)
+            return view, action
+
+        def weight_upload(value_id: int, binding: int, n0: int, k0: int,
+                          cols: int, kt: int) -> tuple[int, int]:
+            key = (value_id, n0, k0, cols, kt)
+            cached = weight_cache.get(key)
+            if cached is not None:
+                return cached
+            pr, pc, pbytes = weight_layout(cols, kt)
+            layout = TensorLayout("float16", WEIGHT_LAYOUT, cols, kt, pr, pc,
+                                  32, pbytes)
+            buffer_id = self.add_buffer(role="weight", capacity=pbytes,
+                                        layout_id=WEIGHT_LAYOUT, reuse=False,
+                                        padding_state="zero")
+            view = self.add_view(buffer_id, 0, layout)
+            action = self.add_action(
+                "upload", outputs=(view,), origin="host_pack:ffn:weight",
+                attrs={"source_binding": binding,
+                       "src_row_offset": k0, "src_col_offset": n0,
+                       "src_row_stride": d if value_id == wd.id else twoh,
+                       "transpose_source": True, "cache": "constant"})
+            weight_cache[key] = (view, action)
+            return view, action
+
+        def matmul_chain(tile: Any, a_views: list[int], w_views: list[int],
+                         uploads: list[int], ktiles: list[Any], *,
+                         stage: int, group: str,
+                         deps_extra: tuple[int, ...] = (),
+                         extra_attrs: dict | None = None) -> tuple[int, int]:
+            cr, cc, cbytes = cube_layout(tile.rows, tile.cols)
+            acc: list[int] = []
+            for _ in range(1 if len(ktiles) == 1 else 2):
+                layout = TensorLayout("float16", CUBE_LAYOUT, tile.rows,
+                                      tile.cols, cr, cc, 8, cbytes)
+                b = self.add_buffer(role="accumulator", capacity=cbytes,
+                                    layout_id=CUBE_LAYOUT,
+                                    padding_state="finite")
+                acc.append(self.add_view(b, 0, layout))
+            current = acc[0]
+            prior = None
+            tasks: list[int] = []
+            for index, kslice in enumerate(ktiles):
+                deps = tuple(dict.fromkeys(
+                    tuple(uploads) + deps_extra +
+                    (() if index == 0 else (tasks[-1],))))
+                attrs = {"submit_group": group, "k0": kslice.k0,
+                         "kt": kslice.extent,
+                         "k_physical_extent": ((kslice.extent + 31) // 32) * 32,
+                         "k_padding": (((kslice.extent + 31) // 32) * 32
+                                       - kslice.extent),
+                         "source_stage_index": stage,
+                         "stage_barrier": "all_previous_submits",
+                         "source_schedule": (op0.attrs.get("source_schedule")
+                                             if stage == 0 else
+                                             op4.attrs.get("source_schedule")),
+                         "applied_schedule": (s0.to_dict() if stage == 0
+                                              else s4.to_dict())}
+                if extra_attrs:
+                    attrs.update(extra_attrs)
+                if index == 0:
+                    task = self.add_action(
+                        "npu_task", template_id="co.mm.f16.v1",
+                        inputs=(a_views[index], w_views[index]),
+                        outputs=(current,), deps=deps,
+                        origin=f"lowering:ffn:stage{stage}:mm:{kslice.k0}",
+                        attrs=attrs)
+                else:
+                    other = acc[index & 1]
+                    task = self.add_action(
+                        "npu_task", template_id="co.mm_acc.f16.v1",
+                        inputs=(a_views[index], w_views[index], prior),
+                        outputs=(other,), deps=deps,
+                        origin=f"lowering:ffn:stage{stage}:mm_acc:{kslice.k0}",
+                        attrs=attrs)
+                    current = other
+                tasks.append(task)
+                prior = current
+            return current, tasks[-1]
+
+        # ----- Host uploads first ------------------------------------------
+        s0_tiles = output_tiles(m, twoh, tile_m=s0.tile_m,
+                                tile_n=s0.tile_n, order=s0.order)
+        for tile in s0_tiles:
+            for kslice in k_slices(d):
+                input_upload(x.id, x_binding, tile.m0, kslice.k0,
+                             tile.rows, kslice.extent, d)
+                weight_upload(wgu.id, wgu_binding, tile.n0, kslice.k0,
+                              tile.cols, kslice.extent)
+        s4_tiles = output_tiles(m, d, tile_m=s4.tile_m,
+                                tile_n=s4.tile_n, order=s4.order)
+        for tile in s4_tiles:
+            for kslice in k_slices(h):
+                weight_upload(wd.id, wd_binding, tile.n0, kslice.k0,
+                              tile.cols, kslice.extent)
+            input_upload(x.id, x_binding, tile.m0, tile.n0,
+                         tile.rows, tile.cols, d)
+        _, identity256 = self.identity_for(256)
+        identity256_upload = self._last_upload_of(identity256)
+        _, identity_out = self.identity_for(s4.tile_n)
+        identity_out_upload = self._last_upload_of(identity_out)
+
+        # ----- stage 0: packed gate/up ------------------------------------
+        z_tiles: dict[tuple[int, int], int] = {}
+        z_tasks: dict[tuple[int, int], int] = {}
+        for tile in s0_tiles:
+            ktiles = k_slices(d)
+            a_views = [input_upload(x.id, x_binding, tile.m0, k.k0,
+                                    tile.rows, k.extent, d)[0]
+                       for k in ktiles]
+            w_views = [weight_upload(wgu.id, wgu_binding, tile.n0, k.k0,
+                                     tile.cols, k.extent)[0]
+                       for k in ktiles]
+            uploads = [input_upload(x.id, x_binding, tile.m0, k.k0,
+                                     tile.rows, k.extent, d)[1]
+                       for k in ktiles]
+            uploads += [weight_upload(wgu.id, wgu_binding, tile.n0, k.k0,
+                                      tile.cols, k.extent)[1]
+                        for k in ktiles]
+            view, task = matmul_chain(
+                tile, a_views, w_views, uploads, ktiles, stage=0,
+                group=f"mm:s0:{tile.m0}:{tile.n0}")
+            z_tiles[(tile.m0, tile.n0)] = view
+            z_tasks[(tile.m0, tile.n0)] = task
+            self.buffers[self.views[view].buffer_id].role = "workspace"
+
+        # ----- stages 1-3: sigmoid, silu, gated mul ------------------------
+        sig_tiles: dict[tuple[int, int], int] = {}
+        sig_tasks: dict[tuple[int, int], int] = {}
+        act_tiles: dict[tuple[int, int], int] = {}
+        act_tasks: dict[tuple[int, int], int] = {}
+        h_tiles = output_tiles(m, h, tile_m=s0.tile_m, tile_n=256,
+                               order=e1["order"])
+        for tile in h_tiles:
+            gate = z_tiles.get((tile.m0, tile.n0))
+            if gate is None:
+                reject(RK_E_SHAPE, "gate half has no producer tile",
+                       stage="schedule", actual=[tile.m0, tile.n0])
+            _, sig_view, pr, pc = cube_view(tile.rows, tile.cols)
+            chunks = lut_chunks(pr * pc)
+            last = None
+            for index, (offset, count) in enumerate(chunks):
+                linear = TensorLayout("float16", LINEAR_LAYOUT, 1, count, 1,
+                                      count, 1, count * 2)
+                src = self.add_view(self.views[gate].buffer_id, offset * 2,
+                                    linear, (0, 1, 0, count))
+                dst = self.add_view(self.views[sig_view].buffer_id,
+                                    offset * 2, linear, (0, 1, 0, count))
+                last = self.add_action(
+                    "npu_task", template_id="co.lut.sigmoid.f16.v1",
+                    inputs=(src,), outputs=(dst,),
+                    deps=(z_tasks[(tile.m0, tile.n0)],) if index == 0
+                    else (last,),
+                    origin=f"lowering:ffn:sigmoid:{index}",
+                    attrs={"submit_group": f"ew:s1:{tile.m0}:{tile.n0}",
+                           "source_stage_index": 1, "chunk_index": index,
+                           "source_elementwise_schedule": e1,
+                           "gate_source": {"view": gate,
+                                           "action": z_tasks[(tile.m0, tile.n0)],
+                                           "tile": [tile.m0, tile.n0,
+                                                    tile.rows, tile.cols],
+                                           "half": "gate"}})
+            sig_tiles[(tile.m0, tile.n0)] = sig_view
+            sig_tasks[(tile.m0, tile.n0)] = last
+
+        h_tiles = output_tiles(m, h, tile_m=s0.tile_m, tile_n=256,
+                               order=e2["order"])
+        silu_tiles: dict[tuple[int, int], int] = {}
+        silu_tasks: dict[tuple[int, int], int] = {}
+        for tile in h_tiles:
+            gate = z_tiles[(tile.m0, tile.n0)]
+            sig_view = sig_tiles[(tile.m0, tile.n0)]
+            _, silu_view, _, _ = cube_view(tile.rows, tile.cols)
+            deps = (sig_tasks[(tile.m0, tile.n0)], z_tasks[(tile.m0, tile.n0)])
+            if identity256_upload is not None:
+                deps += (identity256_upload,)
+            task = self.add_action(
+                "npu_task", template_id="co.ew_mul.f16.v1",
+                inputs=(gate, sig_view, identity256), outputs=(silu_view,),
+                deps=deps, origin="lowering:ffn:silu_mul",
+                attrs={"submit_group": f"ew:s2:{tile.m0}:{tile.n0}",
+                       "source_stage_index": 2,
+                       "source_elementwise_schedule": e2,
+                       "gate_source": {"view": gate,
+                                       "action": z_tasks[(tile.m0, tile.n0)]},
+                       "sig_source": {"view": sig_view,
+                                      "action": sig_tasks[(tile.m0, tile.n0)]}})
+            silu_tiles[(tile.m0, tile.n0)] = silu_view
+            silu_tasks[(tile.m0, tile.n0)] = task
+
+        h_tiles = output_tiles(m, h, tile_m=s0.tile_m, tile_n=256,
+                               order=e3["order"])
+        for tile in h_tiles:
+            silu_view = silu_tiles[(tile.m0, tile.n0)]
+            up = z_tiles.get((tile.m0, h + tile.n0))
+            if up is None:
+                reject(RK_E_SHAPE, "up half has no producer tile",
+                       stage="schedule", actual=[tile.m0, h + tile.n0])
+            _, act_view, _, _ = cube_view(tile.rows, tile.cols)
+            deps = (silu_tasks[(tile.m0, tile.n0)],
+                    z_tasks[(tile.m0, h + tile.n0)])
+            if identity256_upload is not None:
+                deps += (identity256_upload,)
+            task = self.add_action(
+                "npu_task", template_id="co.ew_mul.f16.v1",
+                inputs=(silu_view, up, identity256), outputs=(act_view,),
+                deps=deps, origin="lowering:ffn:up_mul",
+                attrs={"submit_group": f"ew:s3:{tile.m0}:{tile.n0}",
+                       "source_stage_index": 3,
+                       "source_elementwise_schedule": e3,
+                       "silu_source": {"view": silu_view,
+                                       "action": silu_tasks[(tile.m0, tile.n0)]},
+                       "up_source": {"view": up,
+                                     "action": z_tasks[(tile.m0, h + tile.n0)],
+                                     "half": "up"}})
+            act_tiles[(tile.m0, tile.n0)] = act_view
+            act_tasks[(tile.m0, tile.n0)] = task
+            self.buffers[self.views[act_view].buffer_id].role = "workspace"
+
+        # ----- stage 4: down projection -----------------------------------
+        p_tiles: dict[tuple[int, int], int] = {}
+        p_tasks: dict[tuple[int, int], int] = {}
+        for tile in s4_tiles:
+            ktiles = k_slices(h)
+            a_views = []
+            for k in ktiles:
+                av = act_tiles.get((tile.m0, k.k0))
+                if av is None:
+                    reject(RK_E_SHAPE,
+                           "down K region has no produced activation tile",
+                           stage="schedule", actual=[tile.m0, k.k0])
+                a_views.append(av)
+            w_views = [weight_upload(wd.id, wd_binding, tile.n0, k.k0,
+                                     tile.cols, k.extent)[0]
+                       for k in ktiles]
+            uploads = [weight_upload(wd.id, wd_binding, tile.n0, k.k0,
+                                      tile.cols, k.extent)[1]
+                       for k in ktiles]
+            deps = tuple(act_tasks[(tile.m0, k.k0)] for k in ktiles)
+            act_meta = [{"view": a_views[i],
+                         "action": act_tasks[(tile.m0, k.k0)],
+                         "k0": k.k0, "kt": k.extent}
+                        for i, k in enumerate(ktiles)]
+            view, task = matmul_chain(
+                tile, a_views, w_views, uploads, ktiles, stage=4,
+                group=f"mm:s4:{tile.m0}:{tile.n0}", deps_extra=deps,
+                extra_attrs={"activation_sources": act_meta})
+            p_tiles[(tile.m0, tile.n0)] = view
+            p_tasks[(tile.m0, tile.n0)] = task
+
+        # ----- stage 5: residual add and publish ---------------------------
+        for tile in output_tiles(m, d, tile_m=s4.tile_m,
+                                 tile_n=s4.tile_n, order=e5["order"]):
+            pv = p_tiles[(tile.m0, tile.n0)]
+            xv, xu = input_upload(x.id, x_binding, tile.m0, tile.n0,
+                                  tile.rows, tile.cols, d)
+            _, yv, _, _ = cube_view(tile.rows, tile.cols)
+            deps = (p_tasks[(tile.m0, tile.n0)], xu)
+            if identity_out_upload is not None:
+                deps += (identity_out_upload,)
+            resid = self.add_action(
+                "npu_task", template_id="co.ew_add.f16.v1",
+                inputs=(pv, xv, identity_out), outputs=(yv,), deps=deps,
+                origin="lowering:ffn:residual",
+                attrs={"submit_group": f"ew:s5:{tile.m0}:{tile.n0}",
+                       "source_stage_index": 5,
+                       "source_elementwise_schedule": e5,
+                       "down_source": {"view": pv,
+                                       "action": p_tasks[(tile.m0, tile.n0)]},
+                       "residual_source": {"view": xv, "action": xu}})
+            binding = self.binding_by_value[y.id]
+            download = self.add_action(
+                "download", inputs=(yv,), deps=(resid,),
+                origin="host:download:ffn",
+                attrs={"binding_id": binding, "submit_group": None})
+            self.buffers[self.views[yv].buffer_id].role = "output"
+            self.publish.append(Publish(
+                self.bindings[binding].name, binding, yv,
+                dst_row=tile.m0, dst_col=tile.n0, rows=tile.rows,
+                cols=tile.cols))
+        return DraftPlan(
+            name=self.module.name, profile_hash=self.profile.profile_hash,
+            source_hash=self.module.source_hash, bindings=self.bindings,
+            constants=self.constants, buffers=self.buffers, views=self.views,
+            actions=self.actions, publish=self.publish)
+
     def build_swiglu(self) -> DraftPlan:
         """Lower the matched SwiGLU FFN, one primitive tile per stage.
 
@@ -2025,25 +2438,33 @@ def build_draft(module: Module, legalized: LegalizedGraph, *,
                actual=len(module.values) + len(module.ops),
                required=options.max_ir_nodes)
     builder = _Builder(module, legalized, profile=profile, options=options)
+    scheduled: list[Op] = []
+    two_stage = False
+    ffn_scheduled = False
     if legalized.graph_ops is not None:
         scheduled = [op for op in module.ops
                      if op.opcode == "matmul" and
                      "source_schedule" in op.attrs]
+        opcodes = [op.opcode for op in module.ops]
         two_stage = (
             len(module.ops) == 2 and
             all(op.opcode == "matmul" for op in module.ops) and
             module.ops[1].inputs[0] == module.ops[0].outputs[0] and
             module.value(module.ops[0].outputs[0]).role == "temporary"
         )
-        if scheduled and not (two_stage and len(scheduled) == 2):
+        ffn_scheduled = opcodes == [
+            "matmul", "view", "view", "sigmoid", "mul", "mul",
+            "matmul", "add"]
+        if scheduled and not ((two_stage or ffn_scheduled) and
+                             len(scheduled) == 2):
             reject(RK_E_UNSUPPORTED,
                    "explicit M/N scheduling is admitted only for the "
                    "restricted two-stage X->W1->Z->W2->Y contract",
                    stage="schedule", op=scheduled[0].opcode,
                    source=scheduled[0].source)
-    else:
-        two_stage = False
-    if two_stage and len(scheduled) == 2:
+    if ffn_scheduled and len(scheduled) == 2:
+        draft = builder.build_scheduled_swiglu_ffn()
+    elif two_stage and len(scheduled) == 2:
         draft = builder.build_scheduled_two_stage()
     elif legalized.swiglu is not None:
         draft = builder.build_swiglu()

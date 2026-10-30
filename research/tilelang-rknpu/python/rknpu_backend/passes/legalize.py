@@ -408,6 +408,12 @@ def _legalize_static_dataflow(module: Module, *, profile: TargetProfile,
             legalized.append(LegalizedOp(op.id, "co.mm.f16.v1",
                                          "co.mm.f16.v1"))
             matmuls.append(op)
+        elif op.opcode == "view":
+            if op.attrs.get("row_offset") is None or \
+                    op.attrs.get("col_offset") is None:
+                reject(RK_E_SHAPE, "view requires explicit offsets",
+                       stage="legalize", op=op.opcode, source=op.source)
+            legalized.append(LegalizedOp(op.id, "view", ""))
         elif op.opcode in ACTIVATION_CAPABILITY:
             if op.opcode != "relu" and not options.allow_approx_lut:
                 reject(RK_E_NUMERIC_CONTRACT,

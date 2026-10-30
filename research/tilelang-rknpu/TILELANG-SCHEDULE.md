@@ -155,6 +155,31 @@ region, row offset and logical K; submit groups remain serial, with all stage-0
 submits before stage-1.  A missing producer dependency is rejected by the C
 verifier; out-of-buffer or mismatched views are rejected by the plan/view layer.
 
+## SmolLM-shaped scheduled FFN
+
+The closed FFN graph is:
+
+```text
+Zgu = X @ Wgu                         (packed gate/up, K=576 tail)
+G = view(Zgu[:, :H]); U = view(Zgu[:, H:])
+S = fp16(sigmoid_lut(G)); Silu = fp16(G*S); A = fp16(Silu*U)
+P = A @ Wd                           (down, K=H)
+Y = fp16(P + X)                      (residual)
+```
+
+It is six real `T.Kernel` launches: gate/up matmul, sigmoid, silu multiply,
+gated multiply, down matmul, residual add.  The packed gate/up output is split
+by two zero-copy `view` IR nodes, so no Host split or repack is used.  Every
+stage has its own `rknpu.stageN.*` annotations; a global schedule is rejected.
+
+Support domain: SmolLM D=576, H=1536; stage0 tile_n=256; all stages use the same
+applied M; SwiGLU elementwise tile_n=256; down/residual tile_n must divide 576
+(64 or 192 in the experiment); intermediate H is 256-aligned.  Unsupported
+shapes/tile combinations are rejected.  The device numeric policy is an explicit
+experimental path: FP16 after sigmoid LUT, after gate multiply, after gated
+multiply, after down K blocks, and after residual add.  It is not the default
+Host FP32 SwiGLU path and did not change V5 gates.
+
 ## Unsupported in this milestone
 
 - General staged/multi-node schedule propagation is rejected.  Only the
@@ -186,6 +211,9 @@ The first milestone experiment and measurements are in
 
 The restricted two-stage experiment is in
 `results/20261030T102526Z-two-stage/TWO-STAGE-REPORT.md`.
+
+The SmolLM FFN experiment is in
+`results/20261030T112127Z-ffn/FFN-REPORT.md`.
 
 The K-tail round is in
 `results/20261030T083436Z-k-tail/K-TAIL-REPORT.md`: it adds explicit per-K

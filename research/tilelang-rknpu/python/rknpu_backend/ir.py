@@ -20,7 +20,7 @@ KIND = "rkir"
 DTYPE_F16 = "float16"
 SUPPORTED_DTYPES = {DTYPE_F16}
 SUPPORTED_OPS = {"matmul", "add", "mul", "relu", "silu", "gelu", "sigmoid",
-                 "hardsigmoid", "rsqrt"}
+                 "hardsigmoid", "rsqrt", "view"}
 UNARY_OPS = {"relu", "silu", "gelu", "sigmoid", "hardsigmoid", "rsqrt"}
 BINARY_OPS = {"add", "mul"}
 MAX_EXTENT = 4096
@@ -274,8 +274,15 @@ class Value:
                    obj["producer"], obj["role"])
 
 
+ELEMENTWISE_SCHEDULE_META = {
+    "source_stage_index", "source_stage_count", "source_stage_boundary",
+    "source_elementwise_schedule", "source_mn_tiling", "source_rounding",
+    "source_stage_schedule_contract",
+}
+
+
 def _check_elementwise_attrs(op: "Op", allowed: str) -> None:
-    unknown = sorted(set(op.attrs) - {allowed})
+    unknown = sorted(set(op.attrs) - ({allowed} | ELEMENTWISE_SCHEDULE_META))
     if unknown:
         reject(RK_E_UNSUPPORTED,
                "broadcast/general elementwise attributes are not supported",
@@ -329,6 +336,16 @@ class Op:
             # NumericContract is metadata about explicit FP16 narrowing points,
             # not an arithmetic attribute.
             _check_elementwise_attrs(self, "numeric_contract")
+        elif self.opcode == "view":
+            if len(self.inputs) != 1:
+                reject(RK_E_SHAPE, "view needs exactly one input",
+                       stage="infer", op=self.opcode, source=self.source)
+            if set(self.attrs) != {"row_offset", "col_offset",
+                                   "rows", "cols"}:
+                reject(RK_E_UNSUPPORTED,
+                       "view requires only row_offset, col_offset, rows, cols",
+                       stage="infer", op=self.opcode, source=self.source,
+                       actual=sorted(self.attrs))
         if self.side_effects:
             reject(RK_E_UNSUPPORTED, "side-effecting ops are not supported by the MVP",
                    stage="frontend", op=self.opcode, source=self.source)
@@ -522,6 +539,34 @@ class Module:
                            "matmul must carry an explicit NumericContract",
                            stage="infer", op=op.opcode, source=op.source)
                 NumericContract.from_dict(op.attrs["numeric_contract"])
+            elif op.opcode == "view":
+                x = by_id[op.inputs[0]]
+                row_offset = op.attrs.get("row_offset")
+                col_offset = op.attrs.get("col_offset")
+                rows = op.attrs.get("rows")
+                cols = op.attrs.get("cols")
+                if not all(_is_int(v) and v >= 0
+                           for v in (row_offset, col_offset)) or \
+                        not all(_is_int(v) and v > 0 for v in (rows, cols)):
+                    reject(RK_E_SHAPE,
+                           "view offsets and extents must be non-negative/positive "
+                           "integers", stage="infer", op=op.opcode,
+                           source=op.source)
+                if x.type.rank != 2 or out.type.rank != 2 or \
+                        x.type.dtype != out.type.dtype:
+                    reject(RK_E_SHAPE,
+                           "view input/output must be same-dtype rank 2",
+                           stage="infer", op=op.opcode, source=op.source)
+                if row_offset + rows > x.type.shape[0] or \
+                        col_offset + cols > x.type.shape[1]:
+                    reject(RK_E_SHAPE, "view region exceeds its input",
+                           stage="infer", op=op.opcode, source=op.source,
+                           actual={"input": list(x.type.shape),
+                                   "region": [row_offset, col_offset,
+                                              rows, cols]})
+                if out.type.shape != (rows, cols):
+                    reject(RK_E_SHAPE, "view result shape mismatch",
+                           stage="infer", op=op.opcode, source=op.source)
             elif op.opcode in UNARY_OPS:
                 x = by_id[op.inputs[0]]
                 if x.type != out.type:
