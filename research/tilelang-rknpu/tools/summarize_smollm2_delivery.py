@@ -83,9 +83,15 @@ def main(argv=None) -> int:
     # manifest file itself is committed immediately after generation, so do
     # not list that one transient staged path as a dirty code path.
     out_abs = out_path.resolve()
-    dirty_paths = [
-        line for line in dirty_paths
-        if Path(line[3:].strip()).resolve() != out_abs]
+    results_abs = r.resolve()
+    def _task_output_path(line: str) -> bool:
+        try:
+            path = Path(line[3:].strip()).resolve()
+        except OSError:
+            return False
+        return path == out_abs or results_abs in path.parents
+    dirty_paths = [line for line in dirty_paths
+                   if not _task_output_path(line)]
     manifest = {
         "schema_version": 1,
         "kind": "smollm2-v5-delivery-manifest",
