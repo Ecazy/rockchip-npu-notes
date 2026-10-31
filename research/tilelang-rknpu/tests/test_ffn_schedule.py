@@ -9,8 +9,10 @@ from pathlib import Path
 import numpy as np
 
 from rknpu_backend import (CompileOptions, RK_E_NUMERIC_CONTRACT, RK_E_SHAPE,
-                           RK_E_UNSUPPORTED, compile_tilelang, default_profile)
+                           RK_E_UNSUPPORTED, compile_rkir, compile_tilelang,
+                           default_profile)
 from rknpu_backend.errors import BackendError
+from rknpu_backend.ir import TensorType
 from rknpu_backend.frontend.tilelang_adapter import extract, tilelang_available
 from rknpu_backend.plan import with_plan_hash
 from rknpu_backend.runtime.ffi import LibRKPlan, make_binding
@@ -36,15 +38,46 @@ def kchain(x, w):
     return acc
 
 
-def declared_ffn(x, wgu, wd):
-    z = kchain(x, wgu)
+def r0_host(h, r, wgu, wd):
+    z = kchain(h, wgu)
+    gate = z[:, :H]
+    up = z[:, H:]
+    sig = np.float32(1.0) / (np.float32(1.0) +
+                              np.exp(-gate.astype(np.float32)))
+    act = f16(gate.astype(np.float32) * sig * up.astype(np.float32))
+    return f16(kchain(act, wd) + r)
+
+
+def r1_fp16_points(h, r, wgu, wd):
+    z = kchain(h, wgu)
     gate = z[:, :H]
     up = z[:, H:]
     sig = f16(1.0 / (1.0 + np.exp(-gate.astype(np.float64))))
     silu = f16(gate * sig)
     act = f16(silu * up)
-    down = kchain(act, wd)
-    return f16(down + x), z, sig, silu, act, down
+    return f16(kchain(act, wd) + r)
+
+
+def lut_sigmoid(values):
+    step = 32.0 / 2596.0
+    grid = np.arange(-512, 513, dtype=np.float64) * step
+    q = np.clip(np.rint(1.0 / (1.0 + np.exp(-grid)) * 32768.0), 1.0,
+                32767.0)
+    v = values.astype(np.float64)
+    qi = np.interp(v, grid, q)
+    edge = 512.0 * step
+    qi = np.where(v > edge, q[-1] + 0.447 * (v - edge), qi)
+    qi = np.where(v < -edge, q[0] - 0.447 * (-v - edge), qi)
+    return f16((np.clip(qi, 1.0, 32767.0) + 1.0) / 32768.0)
+
+
+def r2_declared_lut(h, r, wgu, wd):
+    z = kchain(h, wgu)
+    gate = z[:, :H]
+    up = z[:, H:]
+    silu = f16(gate * lut_sigmoid(gate))
+    act = f16(silu * up)
+    return f16(kchain(act, wd) + r)
 
 
 def with_stage_rounding(prim_func, index, value):
@@ -124,7 +157,7 @@ class FFNScheduleTests(unittest.TestCase):
         plan = self.compile(m=M, tn=192).plan
         self.assertEqual([b.name for b in plan.bindings
                           if not b.name.startswith("__identity_")],
-                         ["X", "Wgu", "Wd", "Y"])
+                         ["H", "R", "Wgu", "Wd", "Y"])
         self.assertEqual(plan.accounting.task_count, 81)
         self.assertEqual(plan.accounting.submit_count, 36)
         self.assertEqual(len(plan.publish), 3)
@@ -197,7 +230,7 @@ class FFNScheduleTests(unittest.TestCase):
             self.lib.create_plan(broken)
         self.assertIn("dependency", ctx.exception.diagnostics[0].message)
 
-    def _run(self, plan, x, wgu, wd, rounds=1):
+    def _run(self, plan, h, r, wgu, wd, rounds=1):
         if self.lib is None:
             raise unittest.SkipTest(f"mock library not built: {MOCK_LIB}")
         cplan = self.lib.create_plan(plan)
@@ -218,39 +251,161 @@ class FFNScheduleTests(unittest.TestCase):
             bindings.append(make_binding(spec.binding_id, arr))
         ws = self.lib.create_workspace(cplan, bindings, fd=0)
         self.addCleanup(ws.destroy)
-        in_id = next(b.id for b in plan.bindings if b.role == "input")
+        inputs = {b.name: b.id for b in plan.bindings if b.role == "input"}
         out_id = next(b.id for b in plan.bindings if b.role == "output")
         previous = None
         for round_index in range(rounds):
-            current = x if round_index == 0 else f16(
-                x.astype(np.float32) * 0.75 + 0.125)
-            y = np.zeros((current.shape[0], D), dtype=np.float16)
+            current_h = h if round_index == 0 else f16(
+                h.astype(np.float32) * 0.75 + 0.125)
+            current_r = r if round_index == 0 else f16(
+                r.astype(np.float32) * 0.75 + 0.125)
+            y = np.zeros((h.shape[0], D), dtype=np.float16)
             self._arrays.append(y)
-            report = ws.run([make_binding(in_id, current)],
-                            [make_binding(out_id, y)])
-            expected = declared_ffn(current, wgu, wd)[0]
+            report = ws.run([
+                make_binding(inputs["H"], current_h),
+                make_binding(inputs["R"], current_r),
+            ], [make_binding(out_id, y)])
+            expected = r1_fp16_points(current_h, current_r, wgu, wd)
             np.testing.assert_array_equal(y, expected)
             if previous is not None:
                 self.assertFalse(np.array_equal(previous, y))
             previous = y.copy()
         return report
 
+    def test_h_and_r_are_independent_inputs_and_residual_is_not_h(self):
+        plan = self.compile(m=M, tn=192).plan
+        inputs = {b.name: b for b in plan.bindings if b.role == "input"}
+        self.assertEqual(set(inputs), {"H", "R"})
+        self.assertNotEqual(inputs["H"].id, inputs["R"].id)
+        rng = np.random.default_rng(111)
+        h = f16(rng.normal(0, 0.2, (M, D)))
+        r = f16(rng.normal(0, 0.2, (M, D)))
+        self.assertGreater(float(np.max(np.abs(h.astype(np.float32) -
+                                            r.astype(np.float32)))), 0.1)
+        wgu = f16(rng.normal(0, 0.02, (D, 2 * H)))
+        wd0 = np.zeros((H, D), dtype=np.float16)
+        report = self._run(plan, h, r, wgu, wd0, rounds=1)
+        self.assertEqual(report.task_count, 81)
+
+    def test_fixed_h_changing_r_only_changes_final_add(self):
+        plan = self.compile(m=M, tn=192).plan
+        rng = np.random.default_rng(112)
+        h = f16(rng.normal(0, 0.2, (M, D)))
+        r1 = f16(rng.normal(0, 0.2, (M, D)))
+        r2 = f16(r1.astype(np.float32) + 0.5)
+        wgu = f16(rng.normal(0, 0.02, (D, 2 * H)))
+        wd = f16(rng.normal(0, 0.02, (H, D)))
+        z = kchain(h, wgu)
+        gate = z[:, :H]; up = z[:, H:]
+        sig = f16(1.0 / (1.0 + np.exp(-gate.astype(np.float64))))
+        act = f16(f16(gate * sig) * up)
+        down = kchain(act, wd)
+        y1 = f16(down + r1)
+        y2 = f16(down + r2)
+        self.assertTrue(np.array_equal(y1, r1_fp16_points(h, r1, wgu, wd)))
+        self.assertTrue(np.array_equal(y2, r1_fp16_points(h, r2, wgu, wd)))
+        self.assertFalse(np.array_equal(r1, r2))
+        self.assertFalse(np.array_equal(y1, y2))
+
+    def test_duplicate_h_r_input_value_is_rejected(self):
+        module = extract(self.fixture.make_ffn(m=M, tn=192),
+                         options=self.options,
+                         profile_hash=self.profile.profile_hash)
+        res = module.ops[-1]
+        h_id = module.ops[0].inputs[0]
+        bad_op = replace(res, inputs=(res.inputs[0], h_id))
+        bad = replace(module, ops=module.ops[:-1] + (bad_op,))
+        with self.assertRaises(BackendError) as ctx:
+            compile_rkir(bad, profile=self.profile, options=self.options)
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_UNSUPPORTED)
+
+    def test_gate_up_views_are_distinct_halves_without_host_repack(self):
+        module = extract(self.fixture.make_ffn(m=M, tn=192),
+                         options=self.options,
+                         profile_hash=self.profile.profile_hash)
+        self.assertEqual(module.ops[1].attrs["col_offset"], 0)
+        self.assertEqual(module.ops[2].attrs["col_offset"], H)
+        self.assertEqual(module.ops[1].inputs, module.ops[2].inputs)
+        plan = self.compile(m=M, tn=192).plan
+        for task in plan.actions:
+            if task.kind == "npu_task" and task.attrs.get("source_stage_index") in (1, 3):
+                for key in ("gate_source", "up_source"):
+                    if key in task.attrs:
+                        view = task.attrs[key]["view"]
+                        self.assertNotIn(view, [p.view_id for p in plan.publish])
+                        self.assertFalse(any(a.kind == "upload" and view in a.outputs
+                                             for a in plan.actions))
+
+    def test_every_ffn_stage_names_its_producer_dependencies(self):
+        plan = self.compile(m=M, tn=192).plan
+        by_id = {a.id: a for a in plan.actions}
+
+        def ancestors(aid):
+            seen = set()
+            stack = list(by_id[aid].deps)
+            while stack:
+                dep = stack.pop()
+                if dep in seen:
+                    continue
+                seen.add(dep)
+                stack.extend(by_id[dep].deps)
+            return seen
+
+        for task in plan.actions:
+            if task.kind != "npu_task":
+                continue
+            for key in ("gate_source", "sig_source", "silu_source",
+                        "up_source", "down_source", "residual_source"):
+                source = task.attrs.get(key)
+                if source is not None:
+                    self.assertIn(source["action"], ancestors(task.id),
+                                  (task.id, key))
+
+    def test_r_dtype_and_shape_are_rejected(self):
+        module = extract(self.fixture.make_ffn(m=M, tn=192),
+                         options=self.options,
+                         profile_hash=self.profile.profile_hash)
+        r = module.value(1)
+        bad_shape = replace(r, type=TensorType("float16", (M, D - 32)))
+        bad_vals = tuple(bad_shape if v.id == r.id else v
+                         for v in module.values)
+        with self.assertRaises(BackendError):
+            compile_rkir(replace(module, values=bad_vals),
+                         profile=self.profile, options=self.options)
+
+    def test_stage0_rounding_mismatch_is_rejected(self):
+        base = self.fixture.make_ffn(m=M, tn=192)
+        broken = with_stage_rounding(base, 0, "fp32_final_narrowing")
+        self.assert_rejected(broken, RK_E_NUMERIC_CONTRACT,
+                             "rounding declaration does not match")
+
     def test_mock_execution_matches_declared_reference(self):
         plan = self.compile(m=M, tn=192).plan
         rng = np.random.default_rng(101)
         wgu = f16(rng.normal(0, 0.02, (D, 2 * H)))
         wd = f16(rng.normal(0, 0.02, (H, D)))
-        x = f16(rng.normal(0, 0.2, (M, D)))
-        report = self._run(plan, x, wgu, wd, rounds=2)
+        h = f16(rng.normal(0, 0.2, (M, D)))
+        r = f16(rng.normal(0, 0.2, (M, D)))
+        report = self._run(plan, h, r, wgu, wd, rounds=2)
         self.assertEqual(report.task_count, 81)
+
+    def test_zero_wd_returns_r_bitwise(self):
+        plan = self.compile(m=M, tn=192).plan
+        rng = np.random.default_rng(113)
+        h = f16(rng.normal(0, 0.2, (M, D)))
+        r = f16(rng.normal(0, 0.2, (M, D)))
+        wgu = f16(rng.normal(0, 0.02, (D, 2 * H)))
+        wd = np.zeros((H, D), dtype=np.float16)
+        self._run(plan, h, r, wgu, wd, rounds=1)
 
     def test_mock_execution_m1(self):
         plan = self.compile(m=1, bm=1, tn=192).plan
         rng = np.random.default_rng(102)
         wgu = f16(rng.normal(0, 0.02, (D, 2 * H)))
         wd = f16(rng.normal(0, 0.02, (H, D)))
-        x = f16(rng.normal(0, 0.2, (1, D)))
-        report = self._run(plan, x, wgu, wd, rounds=2)
+        h = f16(rng.normal(0, 0.2, (1, D)))
+        r = f16(rng.normal(0, 0.2, (1, D)))
+        report = self._run(plan, h, r, wgu, wd, rounds=2)
         self.assertEqual(report.task_count, 75)
 
 

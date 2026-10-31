@@ -1418,7 +1418,17 @@ class _Builder:
         wd = self.module.value(op4.inputs[1])
         p = self.module.value(op4.outputs[0])
         y = self.module.value(res.outputs[0])
+        r = self.module.value(res.inputs[1])
         m, d = x.type.shape
+        if r.id == x.id:
+            reject(RK_E_UNSUPPORTED,
+                   "FFN H and R must be distinct input values; alias is not "
+                   "admitted", stage="schedule")
+        if r.type.shape != (m, d) or r.role != "input":
+            reject(RK_E_SHAPE,
+                   "FFN residual R must be an independent input with H shape",
+                   stage="schedule", actual={"shape": list(r.type.shape),
+                                              "role": r.role})
         twoh = zgu.type.shape[1]
         h = twoh // 2
         if twoh % 2 or a.type.shape != (m, h) or s.type.shape != (m, h) or \
@@ -1438,7 +1448,7 @@ class _Builder:
                                               "up": dict(vu.attrs)})
         if sig.inputs != (g.id,) or set(silu.inputs) != {g.id, s.id} or \
                 set(act.inputs) != {silu_v.id, u.id} or \
-                res.inputs != (p.id, x.id):
+                res.inputs != (p.id, r.id):
             reject(RK_E_UNSUPPORTED,
                    "scheduled FFN graph is not packed-gate/up -> SwiGLU -> down",
                    stage="schedule")
@@ -1489,6 +1499,7 @@ class _Builder:
                    stage="schedule")
 
         x_binding = self.binding_by_value[x.id]
+        r_binding = self.binding_by_value[r.id]
         wgu_binding = self.binding_by_value[wgu.id]
         wd_binding = self.binding_by_value[wd.id]
         input_cache: dict[tuple, tuple[int, int]] = {}
@@ -1618,7 +1629,7 @@ class _Builder:
             for kslice in k_slices(h):
                 weight_upload(wd.id, wd_binding, tile.n0, kslice.k0,
                               tile.cols, kslice.extent)
-            input_upload(x.id, x_binding, tile.m0, tile.n0,
+            input_upload(r.id, r_binding, tile.m0, tile.n0,
                          tile.rows, tile.cols, d)
         _, identity256 = self.identity_for(256)
         identity256_upload = self._last_upload_of(identity256)
@@ -1777,7 +1788,7 @@ class _Builder:
         for tile in output_tiles(m, d, tile_m=s4.tile_m,
                                  tile_n=s4.tile_n, order=e5["order"]):
             pv = p_tiles[(tile.m0, tile.n0)]
-            xv, xu = input_upload(x.id, x_binding, tile.m0, tile.n0,
+            xv, xu = input_upload(r.id, r_binding, tile.m0, tile.n0,
                                   tile.rows, tile.cols, d)
             _, yv, _, _ = cube_view(tile.rows, tile.cols)
             deps = (p_tasks[(tile.m0, tile.n0)], xu)

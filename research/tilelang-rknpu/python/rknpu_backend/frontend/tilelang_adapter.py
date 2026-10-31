@@ -4859,9 +4859,9 @@ def _extract_staged_scheduled_ffn(items: list[_Item], params: list[Any], *,
         reject(RK_E_UNSUPPORTED,
                "scheduled FFN requires rknpu.staged_schedule",
                stage="frontend", source=span)
-    if len(params) != 9:
+    if len(params) != 10:
         reject(RK_E_UNSUPPORTED,
-               "scheduled FFN expects X, Wgu, Wd, Zgu, S, Silu, A, P and Y",
+               "scheduled FFN expects H, R, Wgu, Wd, Zgu, S, Silu, A, P and Y",
                stage="frontend", source=span, actual=len(params))
     s0 = _parse_guarded_stage(0, groups[0], params, tirx=tirx, span=span,
                               declared_rounding=staged[0].source_k_rounding)
@@ -4878,38 +4878,39 @@ def _extract_staged_scheduled_ffn(items: list[_Item], params: list[Any], *,
                 return i
         reject(RK_E_SHAPE, "FFN parameter identity is not unique",
                stage="frontend", source=span)
-    x = pid_of(s0["a_param"])
+    h_in = pid_of(s0["a_param"])
     wgu = pid_of(s0["b_param"])
     zgu = pid_of(s0["c_param"])
     wd = pid_of(s4["b_param"])
     p_out = pid_of(s4["c_param"])
     z_param = params[zgu]
     m = int(z_param.shape[0])
-    inter = int(params[6].shape[1])
-    if s4["a_param"] is not params[6] or e1["output"] != 4 or \
-            e2["output"] != 5 or e3["output"] != 6 or e5["output"] != 8:
+    inter = int(params[7].shape[1])
+    if h_in != 0 or s4["a_param"] is not params[7] or             e1["output"] != 5 or e2["output"] != 6 or             e3["output"] != 7 or e5["output"] != 9:
         reject(RK_E_UNSUPPORTED,
-               "FFN stage parameter roles do not form X->Zgu->S->Silu->A->P->Y",
+               "FFN stage parameter roles do not form "
+               "H->Zgu->S->Silu->A->P->Y with R residual",
                stage="frontend", source=span)
-    if e1["opcode"] != "sigmoid" or e1["inputs"] != (zgu,) or \
-            e1["sources"].get(zgu) != [0]:
+    if e1["opcode"] != "sigmoid" or e1["inputs"] != (zgu,) or             e1["sources"].get(zgu) != [0]:
         reject(RK_E_UNSUPPORTED,
                "SwiGLU stage1 must be sigmoid of the gate half at column 0",
                stage="frontend", source=span, actual=e1)
-    if e2["opcode"] != "mul" or set(e2["inputs"]) != {zgu, 4} or \
-            e2["sources"].get(zgu) != [0]:
+    if e2["opcode"] != "mul" or set(e2["inputs"]) != {zgu, 5} or             e2["sources"].get(zgu) != [0]:
         reject(RK_E_UNSUPPORTED,
                "SwiGLU stage2 must be gate * sigmoid(gate)",
                stage="frontend", source=span, actual=e2)
-    if e3["opcode"] != "mul" or set(e3["inputs"]) != {5, zgu} or \
-            e3["sources"].get(zgu) != [inter]:
+    if e3["opcode"] != "mul" or set(e3["inputs"]) != {6, zgu} or             e3["sources"].get(zgu) != [inter]:
         reject(RK_E_UNSUPPORTED,
                "SwiGLU stage3 must multiply by the up half at column H",
                stage="frontend", source=span, actual=e3)
-    if e5["opcode"] != "add" or set(e5["inputs"]) != {p_out, x}:
+    if e5["opcode"] != "add" or set(e5["inputs"]) != {p_out, 1}:
         reject(RK_E_UNSUPPORTED,
-               "FFN residual stage must be P + X", stage="frontend",
-               source=span, actual=e5)
+               "FFN residual stage must add the independent R input",
+               stage="frontend", source=span, actual=e5)
+    if h_in == 1:
+        reject(RK_E_UNSUPPORTED,
+               "FFN H and R inputs must be distinct parameters",
+               stage="frontend", source=span)
 
     contract0 = _contract_with_points(options, ("gemm0_accumulator",))
     contract4 = _contract_with_points(options, ("gemm4_accumulator",))
@@ -4953,58 +4954,61 @@ def _extract_staged_scheduled_ffn(items: list[_Item], params: list[Any], *,
                 "source_stage_schedule_contract": "staged_mn_tiles_v1"}
 
     values = (
-        _value(0, _buffer_name(params[x]),
-               TensorType("float16", tuple(int(v) for v in params[x].shape)),
+        _value(0, _buffer_name(params[0]),
+               TensorType("float16", tuple(int(v) for v in params[0].shape)),
                None, "input"),
-        _value(1, _buffer_name(params[wgu]),
-               TensorType("float16", tuple(int(v) for v in params[wgu].shape)),
+        _value(1, _buffer_name(params[1]),
+               TensorType("float16", tuple(int(v) for v in params[1].shape)),
+               None, "input"),
+        _value(2, _buffer_name(params[2]),
+               TensorType("float16", tuple(int(v) for v in params[2].shape)),
                None, "constant"),
-        _value(2, _buffer_name(params[wd]),
-               TensorType("float16", tuple(int(v) for v in params[wd].shape)),
+        _value(3, _buffer_name(params[3]),
+               TensorType("float16", tuple(int(v) for v in params[3].shape)),
                None, "constant"),
-        _value(3, _buffer_name(params[zgu]),
-               TensorType("float16", tuple(int(v) for v in params[zgu].shape)),
-               0, "temporary"),
-        _value(4, "G", TensorType("float16", (m, inter)), 1, "temporary"),
-        _value(5, "U", TensorType("float16", (m, inter)), 2, "temporary"),
-        _value(6, _buffer_name(params[4]),
+        _value(4, _buffer_name(params[4]),
                TensorType("float16", tuple(int(v) for v in params[4].shape)),
-               3, "temporary"),
+               0, "temporary"),
+        _value(5, "G", TensorType("float16", (m, inter)), 1, "temporary"),
+        _value(6, "U", TensorType("float16", (m, inter)), 2, "temporary"),
         _value(7, _buffer_name(params[5]),
                TensorType("float16", tuple(int(v) for v in params[5].shape)),
-               4, "temporary"),
+               3, "temporary"),
         _value(8, _buffer_name(params[6]),
                TensorType("float16", tuple(int(v) for v in params[6].shape)),
-               5, "temporary"),
+               4, "temporary"),
         _value(9, _buffer_name(params[7]),
                TensorType("float16", tuple(int(v) for v in params[7].shape)),
-               6, "temporary"),
+               5, "temporary"),
         _value(10, _buffer_name(params[8]),
                TensorType("float16", tuple(int(v) for v in params[8].shape)),
+               6, "temporary"),
+        _value(11, _buffer_name(params[9]),
+               TensorType("float16", tuple(int(v) for v in params[9].shape)),
                7, "output"),
     )
     ops = (
-        _op(0, "matmul", (0, 1), (3,),
+        _op(0, "matmul", (0, 2), (4,),
             matmul_attrs(s0, contract0, 0, staged[0]), span),
-        _op(1, "view", (3,), (4,),
+        _op(1, "view", (4,), (5,),
             {"row_offset": 0, "col_offset": 0,
              "rows": m, "cols": inter}, span),
-        _op(2, "view", (3,), (5,),
+        _op(2, "view", (4,), (6,),
             {"row_offset": 0, "col_offset": inter,
              "rows": m, "cols": inter}, span),
-        _op(3, "sigmoid", (4,), (6,),
+        _op(3, "sigmoid", (5,), (7,),
             ew_attrs(e1, staged[1], 1, "fp16_after_sigmoid"), span),
-        _op(4, "mul", (4, 6), (7,),
+        _op(4, "mul", (5, 7), (8,),
             ew_attrs(e2, staged[2], 2, "fp16_after_silu_mul"), span),
-        _op(5, "mul", (7, 5), (8,),
+        _op(5, "mul", (8, 6), (9,),
             ew_attrs(e3, staged[3], 3, "fp16_after_gate_mul"), span),
-        _op(6, "matmul", (8, 2), (9,),
+        _op(6, "matmul", (9, 3), (10,),
             matmul_attrs(s4, contract4, 4, staged[4]), span),
-        _op(7, "add", (9, 0), (10,),
+        _op(7, "add", (10, 1), (11,),
             ew_attrs(e5, staged[5], 5, "fp16_after_residual_add"), span),
     )
     return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=values,
-                  ops=ops, inputs=(0,), outputs=(10,),
+                  ops=ops, inputs=(0, 1), outputs=(11,),
                   profile_hash=profile_hash, source_hash=span,
                   state_signature="")
 

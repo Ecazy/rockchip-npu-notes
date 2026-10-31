@@ -18,7 +18,8 @@ def make_ffn(m=256, d=576, h=1536, bm=256, bn=256, tn=192,
              order0="m_major", order1="m_major", order2="m_major",
              order3="m_major", order4="m_major", order5="m_major"):
     @T.prim_func
-    def kernel(X: T.Tensor((m, d), "float16"),
+    def kernel(H: T.Tensor((m, d), "float16"),
+               R: T.Tensor((m, d), "float16"),
                Wgu: T.Tensor((d, 2 * h), "float16"),
                Wd: T.Tensor((h, d), "float16"),
                Zgu: T.Tensor((m, 2 * h), "float16"),
@@ -58,7 +59,7 @@ def make_ffn(m=256, d=576, h=1536, bm=256, bn=256, tn=192,
                 T.fill(Bs, 0)
                 for i, j in T.Parallel(bm, 256):
                     if mb * bm + i < m and ko * 256 + j < d:
-                        As[i, j] = X[mb * bm + i, ko * 256 + j]
+                        As[i, j] = H[mb * bm + i, ko * 256 + j]
                 for i, j in T.Parallel(256, 256):
                     if ko * 256 + i < d and nb * 256 + j < 2 * h:
                         Bs[i, j] = Wgu[ko * 256 + i, nb * 256 + j]
@@ -134,7 +135,7 @@ def make_ffn(m=256, d=576, h=1536, bm=256, bn=256, tn=192,
             Xs = T.alloc_shared((bm, tn), "float16")
             Yl = T.alloc_fragment((bm, tn), "float16")
             T.copy(P[mb * bm, nb * tn], Ps)
-            T.copy(X[mb * bm, nb * tn], Xs)
+            T.copy(R[mb * bm, nb * tn], Xs)
             for i, j in T.Parallel(bm, tn):
                 Yl[i, j] = T.cast(Ps[i, j] + Xs[i, j], "float16")
             T.copy(Yl, Y[mb * bm, nb * tn])
@@ -145,7 +146,8 @@ def make_ffn(m=256, d=576, h=1536, bm=256, bn=256, tn=192,
 def bad_gate_up_swap(m=256, d=576, h=1536, bm=256, bn=256, tn=192):
     """Negative: act multiplies silu by the gate half instead of the up half."""
     @T.prim_func
-    def kernel(X: T.Tensor((m, d), "float16"),
+    def kernel(H: T.Tensor((m, d), "float16"),
+               R: T.Tensor((m, d), "float16"),
                Wgu: T.Tensor((d, 2 * h), "float16"),
                Wd: T.Tensor((h, d), "float16"),
                Zgu: T.Tensor((m, 2 * h), "float16"),
@@ -179,7 +181,7 @@ def bad_gate_up_swap(m=256, d=576, h=1536, bm=256, bn=256, tn=192):
                 T.fill(As, 0); T.fill(Bs, 0)
                 for i, j in T.Parallel(bm, 256):
                     if mb * bm + i < m and ko * 256 + j < d:
-                        As[i, j] = X[mb * bm + i, ko * 256 + j]
+                        As[i, j] = H[mb * bm + i, ko * 256 + j]
                 for i, j in T.Parallel(256, 256):
                     if ko * 256 + i < d and nb * 256 + j < 2 * h:
                         Bs[i, j] = Wgu[ko * 256 + i, nb * 256 + j]
@@ -242,7 +244,7 @@ def bad_gate_up_swap(m=256, d=576, h=1536, bm=256, bn=256, tn=192):
             Xs = T.alloc_shared((bm, tn), "float16")
             Yl = T.alloc_fragment((bm, tn), "float16")
             T.copy(P[mb * bm, nb * tn], Ps)
-            T.copy(X[mb * bm, nb * tn], Xs)
+            T.copy(R[mb * bm, nb * tn], Xs)
             for i, j in T.Parallel(bm, tn):
                 Yl[i, j] = T.cast(Ps[i, j] + Xs[i, j], "float16")
             T.copy(Yl, Y[mb * bm, nb * tn])
