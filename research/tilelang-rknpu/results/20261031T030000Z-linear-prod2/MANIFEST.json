@@ -1,0 +1,49 @@
+{
+ "arms": {
+  "B": "make_matmul_prim merged",
+  "D": "make_matmul_prim interleaved_reuse",
+  "P": "packaged production gate_up"
+ },
+ "cache": "production defaults",
+ "code_commit": "81d3e32cc94a09bbfcdcba2bb307212c6ea0918e",
+ "files": {
+  "PRODUCTION-CONFIRM-REPORT.md": "e7136cf63bc1d45113cf335f095f38b82e8a3ed4a6395de72794f83a59ec9461",
+  "m1/B.rkplan.json": "c99cbd24646c10b822218cea562beb750d03e98b6b0e7e1124a905b4bb316818",
+  "m1/C.rkplan.json": "244c8ad4d65aeb613663c7f2760d7fa879ee21280ed316434abbbff2fde69937",
+  "m1/D.rkplan.json": "b1605da6b0b8969a109e351a51f98273223af3da67d128d21df44e53a9cb9245",
+  "m1/P.rkplan.json": "1c0eff2cec5728b622e06de0f6bae2acd0189a5630b4f0753ab27bb0c0ae430e",
+  "m1/board-run.json": "0724b9cdae87a0de16c8fa46768e22a645079cd95fe417e67e46a4836e79469c",
+  "m1/inputs.npz": "f6c33a3dbcc0cee9b68db92834bbdc97eb6b763e77b9a8e589d696d44f7f963d",
+  "m1/manifest.json": "cd19b91ccf19a83cd6b719316f1e266407597874d9eb62fd54715e50081dc924",
+  "m1/plans/B.rkplan.json": "c99cbd24646c10b822218cea562beb750d03e98b6b0e7e1124a905b4bb316818",
+  "m1/plans/C.rkplan.json": "244c8ad4d65aeb613663c7f2760d7fa879ee21280ed316434abbbff2fde69937",
+  "m1/plans/D.rkplan.json": "b1605da6b0b8969a109e351a51f98273223af3da67d128d21df44e53a9cb9245",
+  "m1/plans/P.rkplan.json": "1c0eff2cec5728b622e06de0f6bae2acd0189a5630b4f0753ab27bb0c0ae430e",
+  "m1/plans/inputs.npz": "f6c33a3dbcc0cee9b68db92834bbdc97eb6b763e77b9a8e589d696d44f7f963d",
+  "m256/B.rkplan.json": "b7ebf8e937fcf31bade952f0297b027e754e1d617f9e3a8cb1fab7ead3f4b038",
+  "m256/C.rkplan.json": "e02ecfdb532fa00bbb33f5a8bc650fa42540296df18cb5f2b625adc37c0afb50",
+  "m256/D.rkplan.json": "bc683a53989d808c71b838b7b27faac7be91f4c49d2d61bd80358e3ec02aca23",
+  "m256/P.rkplan.json": "cf9c6fae5de1ccd57cea1092bf083d438f5d84e73066399c1ed2fd8bcdb09b36",
+  "m256/board-run.json": "0149e19bdf59f2eec910f616198598d921ed994221dde2a00665f6cd2052b292",
+  "m256/inputs.npz": "374e04632c1da8a304046364f1ddbe3aefa8fdcb94e4a166c00e3dcb00fee653",
+  "m256/manifest.json": "76f9e38db75eb298c0bccb7c38dc011426776763c81533045d2fe0ccde6260db",
+  "m256/plans/B.rkplan.json": "b7ebf8e937fcf31bade952f0297b027e754e1d617f9e3a8cb1fab7ead3f4b038",
+  "m256/plans/C.rkplan.json": "e02ecfdb532fa00bbb33f5a8bc650fa42540296df18cb5f2b625adc37c0afb50",
+  "m256/plans/D.rkplan.json": "bc683a53989d808c71b838b7b27faac7be91f4c49d2d61bd80358e3ec02aca23",
+  "m256/plans/P.rkplan.json": "cf9c6fae5de1ccd57cea1092bf083d438f5d84e73066399c1ed2fd8bcdb09b36",
+  "m256/plans/inputs.npz": "374e04632c1da8a304046364f1ddbe3aefa8fdcb94e4a166c00e3dcb00fee653"
+ },
+ "files_checked": 25,
+ "kind": "smollm-gateup-production-confirmation",
+ "mismatches": 0,
+ "report": "e7136cf63bc1d45113cf335f095f38b82e8a3ed4a6395de72794f83a59ec9461",
+ "schema_version": 1,
+ "workload": {
+  "K": 576,
+  "M": [
+   1,
+   256
+  ],
+  "N": 3072
+ }
+}
