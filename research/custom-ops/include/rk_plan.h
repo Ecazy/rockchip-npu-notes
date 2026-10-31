@@ -108,6 +108,8 @@ enum rk_core_policy { RK_CORE_SINGLE = 0, RK_CORE_AUTO = 1 };
  * logical destination element; channel requires rank-1 [N] == destination cols. */
 #define RK_ACTION_FLAG_BROADCAST_SCALAR 4u
 #define RK_ACTION_FLAG_BROADCAST_CHANNEL 8u
+#define RK_ACTION_FLAG_DATA_REUSE 16u
+#define RK_ACTION_FLAG_WEIGHT_REUSE 32u
 
 typedef struct rk_diag {
     uint32_t abi_version;
@@ -188,6 +190,9 @@ typedef struct rk_action_desc {
     uint32_t source_row_offset;
     uint32_t source_col_offset;
     uint32_t source_row_stride;
+    uint32_t source_k0;
+    uint32_t source_k_index;
+    uint32_t source_k_count;
     uint32_t flags;
     uint32_t act_kind;
     const uint32_t *inputs;

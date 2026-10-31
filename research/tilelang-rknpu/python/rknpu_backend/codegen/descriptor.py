@@ -161,6 +161,9 @@ class RKActionDesc(ctypes.Structure):
         ("source_binding", ctypes.c_uint32), ("source_row_offset", ctypes.c_uint32),
         ("source_col_offset", ctypes.c_uint32),
         ("source_row_stride", ctypes.c_uint32),
+        ("source_k0", ctypes.c_uint32),
+        ("source_k_index", ctypes.c_uint32),
+        ("source_k_count", ctypes.c_uint32),
         ("flags", ctypes.c_uint32), ("act_kind", ctypes.c_uint32),
         ("inputs", ctypes.POINTER(ctypes.c_uint32)),
         ("outputs", ctypes.POINTER(ctypes.c_uint32)),
@@ -300,6 +303,10 @@ def build_plan_descriptor(plan: Plan):
             flags |= RK_ACTION_FLAG_TRANSPOSE_SOURCE
         if attrs.get("cache") == "constant":
             flags |= RK_ACTION_FLAG_CACHE_CONSTANT
+        if attrs.get("data_reuse"):
+            flags |= 16
+        if attrs.get("weight_reuse"):
+            flags |= 32
         if attrs.get("broadcast") == "scalar":
             flags |= RK_ACTION_FLAG_BROADCAST_SCALAR
         elif attrs.get("broadcast") == "channel":
@@ -320,6 +327,9 @@ def build_plan_descriptor(plan: Plan):
             source_row_offset=int(attrs.get("src_row_offset", 0)),
             source_col_offset=int(attrs.get("src_col_offset", 0)),
             source_row_stride=int(attrs.get("src_row_stride", 0)),
+            source_k0=int(attrs.get("k0", 0)),
+            source_k_index=int(attrs.get("k_index", 0)),
+            source_k_count=int(attrs.get("k_count", 0)),
             flags=flags, act_kind=0,
             inputs=in_ptr, outputs=out_ptr, deps=dep_ptr,
             origin=origin)

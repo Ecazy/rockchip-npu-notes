@@ -11,12 +11,16 @@ int rk_emit_action(const rk_plan *plan, const co_view *views,
     int rc = 0;
     switch (a->template_id) {
     case RK_TEMPLATE_MM_F16:
-        rc = co_emit_mm(out, views[a->inputs[0]], views[a->inputs[1]],
-                        views[a->outputs[0]]);
+        rc = co_emit_mm_reuse(out, views[a->inputs[0]], views[a->inputs[1]],
+                              views[a->outputs[0]],
+                              (a->flags & RK_ACTION_FLAG_DATA_REUSE) != 0,
+                              (a->flags & RK_ACTION_FLAG_WEIGHT_REUSE) != 0);
         break;
     case RK_TEMPLATE_MM_ACC_F16:
-        rc = co_emit_mm_acc(out, views[a->inputs[0]], views[a->inputs[1]],
-                            views[a->inputs[2]], views[a->outputs[0]]);
+        rc = co_emit_mm_acc_reuse(out, views[a->inputs[0]], views[a->inputs[1]],
+                                  views[a->inputs[2]], views[a->outputs[0]],
+                                  (a->flags & RK_ACTION_FLAG_DATA_REUSE) != 0,
+                                  (a->flags & RK_ACTION_FLAG_WEIGHT_REUSE) != 0);
         break;
     case RK_TEMPLATE_EW_ADD_F16:
         rc = co_emit_ew(out, views[a->inputs[0]], views[a->inputs[1]],

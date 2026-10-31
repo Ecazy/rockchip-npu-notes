@@ -20,6 +20,13 @@ target_compile_options(custom_ops PRIVATE -Wall -Wextra)
 add_executable(custom_ops_probe tools/c/probe.c)
 target_link_libraries(custom_ops_probe PRIVATE custom_ops)
 target_compile_options(custom_ops_probe PRIVATE -Wall -Wextra -Werror)
+add_executable(upstream_int16_tp_probe ../upstream-components/rocket-userspace/tests/matmul_int16_rocket.c)
+target_include_directories(upstream_int16_tp_probe PRIVATE "${RKT}/include" "${RKT}/src")
+target_link_libraries(upstream_int16_tp_probe PRIVATE custom_ops m)
+target_compile_options(upstream_int16_tp_probe PRIVATE -Wall -Wextra)
+add_executable(int16_tp_layout_probe tools/c/int16_tp_layout_probe.c)
+target_link_libraries(int16_tp_layout_probe PRIVATE custom_ops)
+target_compile_options(int16_tp_layout_probe PRIVATE -Wall -Wextra -Werror)
 add_executable(linear_hardsigmoid tools/c/operator_cli.c)
 target_link_libraries(linear_hardsigmoid PRIVATE custom_ops)
 target_compile_options(linear_hardsigmoid PRIVATE -Wall -Wextra -Werror)
@@ -190,7 +197,7 @@ target_link_options(rknpu_plan_mock PRIVATE
   -Wl,--wrap=co_execute_plan_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max -Wl,--wrap=co_emit_ew_add_relu
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc -Wl,--wrap=co_emit_mm_reuse -Wl,--wrap=co_emit_mm_acc_reuse
   -Wl,--wrap=rocket_context_faulted)
 set_target_properties(rknpu_plan_mock PROPERTIES OUTPUT_NAME rknpu_plan_mock)
 
@@ -205,7 +212,7 @@ target_link_options(mock_signature_probe PRIVATE
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max -Wl,--wrap=co_emit_ew_add_relu
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc -Wl,--wrap=co_emit_mm_reuse -Wl,--wrap=co_emit_mm_acc_reuse
   -Wl,--wrap=rocket_context_faulted)
 target_compile_options(mock_signature_probe PRIVATE -Wall -Wextra -Werror)
 
@@ -220,7 +227,7 @@ target_link_options(rk_mock_scenarios PRIVATE
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max -Wl,--wrap=co_emit_ew_add_relu
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc -Wl,--wrap=co_emit_mm_reuse -Wl,--wrap=co_emit_mm_acc_reuse
   -Wl,--wrap=rocket_context_faulted)
 
 # Exercise execute_impl's production submit/output-sync loop.  The submit stub
@@ -236,7 +243,7 @@ target_link_options(output_sync_test PRIVATE
   -Wl,--wrap=rocket_batched_submit_supported
   -Wl,--wrap=rocket_submit_tasks_flags
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew -Wl,--wrap=co_emit_ew_max -Wl,--wrap=co_emit_ew_add_relu
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc -Wl,--wrap=co_emit_mm_reuse -Wl,--wrap=co_emit_mm_acc_reuse
   -Wl,--wrap=rocket_context_faulted)
 add_test(NAME output_sync COMMAND output_sync_test)
 
@@ -253,7 +260,7 @@ target_link_options(command_cache_test PRIVATE
   -Wl,--wrap=rocket_batched_submit_supported
   -Wl,--wrap=rocket_submit_tasks_flags
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew -Wl,--wrap=co_emit_ew_max -Wl,--wrap=co_emit_ew_add_relu
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc -Wl,--wrap=co_emit_mm_reuse -Wl,--wrap=co_emit_mm_acc_reuse
   -Wl,--wrap=rocket_context_faulted)
 add_test(NAME command_cache COMMAND command_cache_test)
 set_tests_properties(command_cache PROPERTIES ENVIRONMENT "ROCKET_CHIP=rk3588")
@@ -269,7 +276,7 @@ target_link_options(guard_scan_test PRIVATE
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max -Wl,--wrap=co_emit_ew_add_relu
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc -Wl,--wrap=co_emit_mm_reuse -Wl,--wrap=co_emit_mm_acc_reuse
   -Wl,--wrap=rocket_context_faulted)
 add_test(NAME guard_scan COMMAND guard_scan_test)
 
@@ -285,7 +292,7 @@ target_link_options(download_fastpath_test PRIVATE
   -Wl,--wrap=rocket_batched_submit_supported -Wl,--wrap=co_execute_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max -Wl,--wrap=co_emit_ew_add_relu
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc -Wl,--wrap=co_emit_mm_reuse -Wl,--wrap=co_emit_mm_acc_reuse
   -Wl,--wrap=rocket_context_faulted)
 add_test(NAME download_fastpath COMMAND download_fastpath_test)
 
@@ -319,7 +326,7 @@ target_link_options(rk_plan_host_test PRIVATE
   -Wl,--wrap=co_execute_plan_profiled
   -Wl,--wrap=co_emit_lut -Wl,--wrap=co_emit_ew
   -Wl,--wrap=co_emit_ew_max -Wl,--wrap=co_emit_ew_add_relu
-  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc
+  -Wl,--wrap=co_emit_mm -Wl,--wrap=co_emit_mm_acc -Wl,--wrap=co_emit_mm_reuse -Wl,--wrap=co_emit_mm_acc_reuse
   -Wl,--wrap=rocket_context_faulted)
 add_test(NAME rk_plan_host COMMAND rk_plan_host_test)
 

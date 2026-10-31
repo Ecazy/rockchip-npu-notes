@@ -260,7 +260,7 @@ int co_ones_upload(co_view *v,unsigned k,int mean) {
     for(unsigned i=0;i<k;i++) a[i]=(_Float16)(mean?1.0/(double)k:1.0);
     int rc=co_upload_f16(v,a); free(a); return rc;
 }
-static int finish_mm_op(co_program *p,co_view x,co_view w,co_view o,co_view *operand,int mul,int ew_op,int relu) {
+static int finish_mm_op(co_program *p,co_view x,co_view w,co_view o,co_view *operand,int mul,int ew_op,int relu,int data_reuse,int weight_reuse) {
     if(!p||!valid(x)||!valid(w)||!valid(o)||x.tensor.type!=CO_F16||w.tensor.type!=CO_F16||
        x.tensor.layout!=CO_CUBE||w.tensor.layout!=CO_WEIGHT||o.tensor.layout!=CO_CUBE||
        (operand?x.tensor.physical_cols!=w.tensor.cols:x.tensor.cols!=w.tensor.cols)||
@@ -280,6 +280,7 @@ static int finish_mm_op(co_program *p,co_view x,co_view w,co_view o,co_view *ope
         .input_dma=address(x),.weights_dma=address(w),.output_dma=address(o),
         .tasks=p->words,.fp32tofp16=o.tensor.type==CO_F16,.accumulate=operand!=NULL,
         .ew_mul=mul,.ew_op=(uint8_t)ew_op,.ew_relu=(uint8_t)relu,
+        .data_reuse=(uint8_t)data_reuse,.weight_reuse=(uint8_t)weight_reuse,
         .add_dma=operand?address(*operand):0};
     int rc=gen_matmul_fp16(&a); if(rc) return rc;
     p->count=a.task_count;p->reads[0]=x;p->reads[1]=w;p->nreads=2;p->output=o;
@@ -287,10 +288,13 @@ static int finish_mm_op(co_program *p,co_view x,co_view w,co_view o,co_view *ope
     return p->count&&p->count<=CO_MAX_WORDS?0:ROCKET_E_TILING;
 }
 static int finish_mm(co_program *p,co_view x,co_view w,co_view o,co_view *operand,int mul) {
-    return finish_mm_op(p,x,w,o,operand,mul,0,0);
+    return finish_mm_op(p,x,w,o,operand,mul,0,0,0,0);
 }
 int co_emit_mm(co_program *p,co_view x,co_view w,co_view o) { return finish_mm(p,x,w,o,NULL,0); }
-int co_emit_mm_acc(co_program *p,co_view x,co_view w,co_view prior,co_view o) {
+int co_emit_mm_reuse(co_program *p,co_view x,co_view w,co_view o,int data_reuse,int weight_reuse) {
+    return finish_mm_op(p,x,w,o,NULL,0,0,0,data_reuse,weight_reuse);
+}
+static int co_emit_mm_acc_impl(co_program *p,co_view x,co_view w,co_view prior,co_view o,int data_reuse,int weight_reuse) {
     if(!p||!valid(x)||!valid(w)||!valid(prior)||!valid(o)||
        x.tensor.type!=CO_F16||w.tensor.type!=CO_F16||prior.tensor.type!=CO_F16||o.tensor.type!=CO_F16||
        x.tensor.layout!=CO_CUBE||w.tensor.layout!=CO_WEIGHT||
@@ -311,10 +315,18 @@ int co_emit_mm_acc(co_program *p,co_view x,co_view w,co_view prior,co_view o) {
     memset(p,0,sizeof(*p));
     matmul_params_t a={.m=x.tensor.physical_rows,.k=x.tensor.physical_cols,.n=o.tensor.physical_cols,
         .input_dma=address(x),.weights_dma=address(w),.output_dma=address(o),
-        .tasks=p->words,.fp32tofp16=1,.accumulate=1,.ew_mul=0,.add_dma=address(prior)};
+        .tasks=p->words,.fp32tofp16=1,.accumulate=1,.ew_mul=0,
+        .data_reuse=(uint8_t)data_reuse,.weight_reuse=(uint8_t)weight_reuse,
+        .add_dma=address(prior)};
     int rc=gen_matmul_fp16(&a); if(rc) return rc;
     p->count=a.task_count;p->reads[0]=x;p->reads[1]=w;p->reads[2]=prior;p->nreads=3;p->output=o;
     return p->count&&p->count<=CO_MAX_WORDS?0:ROCKET_E_TILING;
+}
+int co_emit_mm_acc(co_program *p,co_view x,co_view w,co_view prior,co_view o) {
+    return co_emit_mm_acc_impl(p,x,w,prior,o,0,0);
+}
+int co_emit_mm_acc_reuse(co_program *p,co_view x,co_view w,co_view prior,co_view o,int data_reuse,int weight_reuse) {
+    return co_emit_mm_acc_impl(p,x,w,prior,o,data_reuse,weight_reuse);
 }
 int co_emit_ew(co_program *p,co_view x,co_view b,co_view id,co_view o,int mul) {
     if(mul!=0&&mul!=1) return ROCKET_E_SHAPE;
@@ -327,12 +339,12 @@ int co_emit_ew_add_relu(co_program *p,co_view x,co_view b,co_view id,co_view o) 
         return ROCKET_E_SHAPE;
     /* Same EW ADD datapath as co_emit_ew, with the EW ReLU comparator enabled
      * instead of the separate EW MAX task. */
-    return finish_mm_op(p,x,id,o,&b,0,0,1);
+    return finish_mm_op(p,x,id,o,&b,0,0,1,0,0);
 }
 int co_emit_ew_max(co_program *p,co_view x,co_view b,co_view id,co_view o) {
     if(id.tensor.rows!=x.tensor.physical_cols || id.tensor.cols!=x.tensor.physical_cols)
         return ROCKET_E_SHAPE;
-    return finish_mm_op(p,x,id,o,&b,0,2,0); /* ew_op=2 => EW ALU MAX */
+    return finish_mm_op(p,x,id,o,&b,0,2,0,0,0); /* ew_op=2 => EW ALU MAX */
 }
 int co_emit_lut(co_program *p,co_view x,co_view o,enum co_act kind) {
     if(!p||!same(x,o)||x.tensor.type!=CO_F16||

@@ -94,6 +94,7 @@ def options_to_dict(options: CompileOptions) -> dict[str, Any]:
         "allow_approx_lut": options.allow_approx_lut,
         "fallback": options.fallback,
         "submit_mode": options.submit_mode,
+        "linear_task_order": options.linear_task_order,
         "tile_limit": options.tile_limit,
         "device_budget_bytes": options.device_budget_bytes,
         "host_budget_bytes": options.host_budget_bytes,

@@ -74,11 +74,15 @@ int co_identity_upload(co_view *weights);
 int co_ones_upload(co_view *weights, unsigned logical_k, int mean);
 
 int co_emit_mm(co_program *, co_view x, co_view weights, co_view out);
+int co_emit_mm_reuse(co_program *, co_view x, co_view weights, co_view out,
+                     int data_reuse, int weight_reuse);
 /* K-tile accumulation: out[M,N] = conv(x[M,Kt], weights[N,Kt]) + prior[M,N], fused
  * into one DPU EW add (gen_matmul_fp16 accumulate=1). x/weights are one <=256-wide
  * tile; prior and out must be the identical [M,N] cube in NON-overlapping BOs (the
  * ping-pong accumulator pair), never aliases of x/weights. */
 int co_emit_mm_acc(co_program *, co_view x, co_view weights, co_view prior, co_view out);
+int co_emit_mm_acc_reuse(co_program *, co_view x, co_view weights, co_view prior,
+                         co_view out, int data_reuse, int weight_reuse);
 int co_emit_ew(co_program *, co_view x, co_view operand, co_view identity,
                co_view out, int multiply);  /* exact-shape only; no implicit broadcast */
 /* Add+ReLU in one DPU EW stage: out = relu(x + operand), using the same

@@ -47,6 +47,7 @@ def _options(args: argparse.Namespace) -> CompileOptions:
         allow_approx_lut=bool(args.allow_approx_lut),
         fallback=args.fallback,
         submit_mode=args.submit_mode,
+        linear_task_order=args.linear_task_order,
         tile_limit=args.tile_limit,
         device_budget_bytes=args.device_budget_bytes,
         host_budget_bytes=args.host_budget_bytes,
@@ -270,6 +271,10 @@ def _add_compile_args(parser: argparse.ArgumentParser) -> None:
                         default="error")
     parser.add_argument("--submit-mode", choices=["chain", "separate"],
                         default="chain")
+    parser.add_argument("--linear-task-order",
+                        choices=["baseline", "scheduled_baseline", "merged",
+                                 "interleaved", "interleaved_reuse"],
+                        default="baseline")
     parser.add_argument("--tile-limit", type=int, default=256)
     parser.add_argument("--device-budget-bytes", type=int,
                         default=256 * 1024 * 1024)

@@ -13,7 +13,7 @@ class FFITests(unittest.TestCase):
             ffi.RKTensorDesc: 48,
             ffi.RKBufferDesc: 56,
             ffi.RKViewDesc: 88,
-            ffi.RKActionDesc: 144,
+            ffi.RKActionDesc: 160,
             ffi.RKSubmitDesc: 48,
             ffi.RKPublishDesc: 32,
             ffi.RKPlanDesc: 168,

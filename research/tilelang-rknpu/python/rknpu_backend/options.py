@@ -38,6 +38,10 @@ class CompileOptions:
     allow_experimental: bool = False
     max_actions: int = 1_000_000
     max_ir_nodes: int = 4096
+    # Explicit single-matmul execution policy.  The source computes the same
+    # graph in every case; this only selects task order, submit grouping and
+    # proven CBUF input reuse.
+    linear_task_order: str = "baseline"
 
     def __post_init__(self) -> None:
         if self.numeric_mode not in {"strict", "rk_f16_tiled"}:
@@ -50,6 +54,15 @@ class CompileOptions:
             reject(RK_E_UNSUPPORTED,
                    "MVP only permits fallback=error; host_prepare needs a declared "
                    "rule and is not part of this minimal path",
+                   stage="options")
+        if self.linear_task_order not in {"baseline", "scheduled_baseline", "merged",
+                                          "interleaved", "interleaved_reuse"}:
+            reject(RK_E_UNSUPPORTED,
+                   f"unknown linear_task_order {self.linear_task_order!r}",
+                   stage="options")
+        if self.linear_task_order == "interleaved_reuse" and                 self.submit_mode != "chain":
+            reject(RK_E_UNSUPPORTED,
+                   "interleaved_reuse requires submit_mode='chain'",
                    stage="options")
         if self.submit_mode not in {"chain", "separate"}:
             reject(RK_E_UNSUPPORTED, f"unknown submit mode {self.submit_mode!r}",

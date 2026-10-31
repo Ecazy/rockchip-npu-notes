@@ -1073,6 +1073,174 @@ class _Builder:
             constants=self.constants, buffers=self.buffers, views=self.views,
             actions=self.actions, publish=self.publish)
 
+
+    def build_scheduled_linear(self) -> DraftPlan:
+        """A/B/C/D task order and submit grouping for one FP16 matmul."""
+        if len(self.module.ops) != 1 or self.module.ops[0].opcode != "matmul":
+            reject(RK_E_UNSUPPORTED,
+                   "linear schedule policy requires exactly one matmul op",
+                   stage="schedule")
+        op = self.module.ops[0]
+        a = self.module.value(op.inputs[0])
+        w = self.module.value(op.inputs[1])
+        y = self.module.value(op.outputs[0])
+        m, k = a.type.shape
+        n = y.type.shape[1]
+        if w.type.shape != (k, n) or op.attrs.get("b_layout", "kn") != "kn":
+            reject(RK_E_UNSUPPORTED,
+                   "linear schedule policy supports only B=[K,N] kn layout",
+                   stage="schedule", actual=list(w.type.shape))
+        if m not in (1, 256) or k != 576 or n != 3072:
+            reject(RK_E_UNSUPPORTED,
+                   "linear schedule policy is limited to M=1/256, K=576, N=3072",
+                   stage="schedule", actual={"m": m, "k": k, "n": n})
+        policy = self.options.linear_task_order
+        if policy not in {"baseline", "scheduled_baseline", "merged",
+                          "interleaved", "interleaved_reuse"}:
+            reject(RK_E_UNSUPPORTED, f"unknown linear task policy {policy!r}",
+                   stage="schedule")
+        tile_m = 1 if m == 1 else 256
+        tiles = output_tiles(m, n, tile_m=tile_m, tile_n=256,
+                             order="m_major")
+        ktiles = k_slices(k)
+        a_binding = self.binding_by_value[a.id]
+        w_binding = self.binding_by_value[w.id]
+        y_binding = self.binding_by_value[y.id]
+        input_cache: dict[tuple, tuple[int, int]] = {}
+        weight_cache: dict[tuple, tuple[int, int]] = {}
+
+        def input_upload(tile, ks):
+            key = (a.id, tile.m0, ks.k0, tile.rows, ks.extent)
+            if key not in input_cache:
+                pr, pc, pbytes = input_layout(tile.rows, ks.extent)
+                layout = TensorLayout("float16", CUBE_LAYOUT, tile.rows,
+                                      ks.extent, pr, pc, 8, pbytes)
+                b = self.add_buffer(role="input_slice", capacity=pbytes,
+                                    layout_id=CUBE_LAYOUT, reuse=False,
+                                    padding_state="zero")
+                v = self.add_view(b, 0, layout)
+                act = self.add_action(
+                    "upload", outputs=(v,), origin="host_pack:linear:input",
+                    attrs={"source_binding": a_binding,
+                           "src_row_offset": tile.m0,
+                           "src_col_offset": ks.k0,
+                           "src_row_stride": k,
+                           "transpose_source": False, "cache": "input"})
+                input_cache[key] = (v, act)
+            return input_cache[key]
+
+        def weight_upload(tile, ks):
+            key = (w.id, tile.n0, ks.k0, tile.cols, ks.extent)
+            if key not in weight_cache:
+                pr, pc, pbytes = weight_layout(tile.cols, ks.extent)
+                layout = TensorLayout("float16", WEIGHT_LAYOUT, tile.cols,
+                                      ks.extent, pr, pc, 32, pbytes)
+                b = self.add_buffer(role="weight", capacity=pbytes,
+                                    layout_id=WEIGHT_LAYOUT, reuse=False,
+                                    padding_state="zero")
+                v = self.add_view(b, 0, layout)
+                act = self.add_action(
+                    "upload", outputs=(v,), origin="host_pack:linear:weight",
+                    attrs={"source_binding": w_binding,
+                           "src_row_offset": ks.k0,
+                           "src_col_offset": tile.n0,
+                           "src_row_stride": n,
+                           "transpose_source": True, "cache": "constant"})
+                weight_cache[key] = (v, act)
+            return weight_cache[key]
+
+        a_views = {(t.m0, t.n0): [input_upload(t, ks)[0] for ks in ktiles]
+                   for t in tiles}
+        w_views = {(t.m0, t.n0): [weight_upload(t, ks)[0] for ks in ktiles]
+                   for t in tiles}
+        a_uploads = {(t.m0, t.n0): [input_upload(t, ks)[1] for ks in ktiles]
+                     for t in tiles}
+        w_uploads = {(t.m0, t.n0): [weight_upload(t, ks)[1] for ks in ktiles]
+                     for t in tiles}
+        accs: dict[tuple[int, int], list[int]] = {}
+        final_view: dict[tuple[int, int], int] = {}
+        for tile in tiles:
+            cr, cc, cbytes = cube_layout(tile.rows, tile.cols)
+            pair = []
+            for _ in range(2 if len(ktiles) > 1 else 1):
+                layout = TensorLayout("float16", CUBE_LAYOUT, tile.rows,
+                                      tile.cols, cr, cc, 8, cbytes)
+                b = self.add_buffer(role="accumulator", capacity=cbytes,
+                                    layout_id=CUBE_LAYOUT,
+                                    padding_state="finite")
+                pair.append(self.add_view(b, 0, layout))
+            accs[(tile.m0, tile.n0)] = pair
+
+        group = (f"mm:{tiles[0].m0}:{tiles[0].n0}"
+                 if policy in {"baseline", "scheduled_baseline"}
+                 else "mk:linear")
+        def emit(tile, kidx):
+            ks = ktiles[kidx]
+            key = (tile.m0, tile.n0)
+            prior = None if kidx == 0 else accs[key][(kidx - 1) & 1]
+            out = accs[key][kidx & 1]
+            deps = tuple(dict.fromkeys((a_uploads[key][kidx],
+                                        w_uploads[key][kidx])))
+            if prior is not None:
+                prev_id = self._linear_prev[key][kidx - 1]
+                deps += (prev_id,)
+            reuse = (policy == "interleaved_reuse" and
+                     tile is not tiles[0])
+            submit = (f"mm:{tile.m0}:{tile.n0}"
+                      if policy in {"baseline", "scheduled_baseline"}
+                      else "mk:linear")
+            attrs = {"submit_group": submit,
+                     "k0": ks.k0, "k_index": kidx,
+                     "k_count": len(ktiles),
+                     "data_reuse": bool(reuse), "weight_reuse": False,
+                     "linear_task_policy": policy}
+            if prior is None:
+                tid = self.add_action(
+                    "npu_task", template_id="co.mm.f16.v1",
+                    inputs=(a_views[key][kidx], w_views[key][kidx]),
+                    outputs=(out,), deps=deps,
+                    origin=f"lowering:linear:{policy}:k{kidx}:n{tile.n0}",
+                    attrs=attrs)
+            else:
+                tid = self.add_action(
+                    "npu_task", template_id="co.mm_acc.f16.v1",
+                    inputs=(a_views[key][kidx], w_views[key][kidx], prior),
+                    outputs=(out,), deps=deps,
+                    origin=f"lowering:linear:{policy}:k{kidx}:n{tile.n0}",
+                    attrs=attrs)
+            self._linear_prev[key][kidx] = tid
+        self._linear_prev = {(t.m0, t.n0): {} for t in tiles}
+        if policy in {"baseline", "scheduled_baseline", "merged"}:
+            for tile in tiles:
+                group = (f"mm:{tile.m0}:{tile.n0}"
+                         if policy in {"baseline", "scheduled_baseline"}
+                         else "mk:linear")
+                for kidx in range(len(ktiles)):
+                    emit(tile, kidx)
+        else:
+            for kidx in range(len(ktiles)):
+                for tile in tiles:
+                    emit(tile, kidx)
+        for tile in tiles:
+            key = (tile.m0, tile.n0)
+            final_view[key] = accs[key][(len(ktiles) - 1) & 1]
+            binding = y_binding
+            download = self.add_action(
+                "download", inputs=(final_view[key],),
+                deps=(self._linear_prev[key][len(ktiles) - 1],),
+                origin="host:download:linear",
+                attrs={"binding_id": binding, "submit_group": None})
+            self.buffers[self.views[final_view[key]].buffer_id].role = "output"
+            self.publish.append(Publish(
+                self.bindings[binding].name, binding, final_view[key],
+                dst_row=tile.m0, dst_col=tile.n0, rows=tile.rows,
+                cols=tile.cols))
+        return DraftPlan(
+            name=self.module.name, profile_hash=self.profile.profile_hash,
+            source_hash=self.module.source_hash, bindings=self.bindings,
+            constants=self.constants, buffers=self.buffers, views=self.views,
+            actions=self.actions, publish=self.publish)
+
     def build_scheduled_two_stage(self) -> DraftPlan:
         """Lower X->W1->Z->W2->Y with a schedule-aware intermediate map.
 
@@ -2473,7 +2641,10 @@ def build_draft(module: Module, legalized: LegalizedGraph, *,
                    "restricted two-stage X->W1->Z->W2->Y contract",
                    stage="schedule", op=scheduled[0].opcode,
                    source=scheduled[0].source)
-    if ffn_scheduled and len(scheduled) == 2:
+    if (options.linear_task_order != "baseline" and
+            len(module.ops) == 1 and module.ops[0].opcode == "matmul"):
+        draft = builder.build_scheduled_linear()
+    elif ffn_scheduled and len(scheduled) == 2:
         draft = builder.build_scheduled_swiglu_ffn()
     elif two_stage and len(scheduled) == 2:
         draft = builder.build_scheduled_two_stage()

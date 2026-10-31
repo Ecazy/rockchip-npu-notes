@@ -347,6 +347,8 @@ def build_submits(draft: DraftPlan, *, options: CompileOptions) -> list[Submit]:
             reject(RK_E_SHAPE, "submit group exceeds 64 tasks", stage="schedule")
         if group.startswith("mm:"):
             recipe = "linear_k_acc_v1"
+        elif group.startswith("mk:"):
+            recipe = "multi_k_acc_v1"
         elif group.startswith("swiglu:"):
             recipe = "swiglu_ffn_v1"
         else:

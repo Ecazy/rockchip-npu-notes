@@ -164,6 +164,7 @@ class CompiledArtifact:
             "fallback": self._snapshot.options.fallback,
             "approx_lut": self._snapshot.options.allow_approx_lut,
             "submit_mode": self._snapshot.options.submit_mode,
+            "linear_task_order": self._snapshot.options.linear_task_order,
             "device_access": "none (compile/explain)",
         }
         return report

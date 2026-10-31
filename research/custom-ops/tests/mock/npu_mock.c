@@ -282,10 +282,27 @@ int __wrap_co_emit_mm(co_program *p, co_view x, co_view w, co_view y) {
     if (!rc) mock_tag(p, MOCK_TAG_MM, 0);
     return rc;
 }
+int __real_co_emit_mm_reuse(co_program *, co_view, co_view, co_view, int, int);
+int __wrap_co_emit_mm_reuse(co_program *p, co_view x, co_view w, co_view y,
+                            int data_reuse, int weight_reuse) {
+    int rc = __real_co_emit_mm_reuse(p, x, w, y, data_reuse, weight_reuse);
+    if (!rc) mock_tag(p, MOCK_TAG_MM, 0);
+    return rc;
+}
 int __real_co_emit_mm_acc(co_program *, co_view, co_view, co_view, co_view);
 int __wrap_co_emit_mm_acc(co_program *p, co_view x, co_view w, co_view prior,
                           co_view y) {
     int rc = __real_co_emit_mm_acc(p, x, w, prior, y);
+    if (!rc) mock_tag(p, MOCK_TAG_MM_ACC, 0);
+    return rc;
+}
+int __real_co_emit_mm_acc_reuse(co_program *, co_view, co_view, co_view,
+                                co_view, int, int);
+int __wrap_co_emit_mm_acc_reuse(co_program *p, co_view x, co_view w,
+                                co_view prior, co_view y, int data_reuse,
+                                int weight_reuse) {
+    int rc = __real_co_emit_mm_acc_reuse(p, x, w, prior, y, data_reuse,
+                                         weight_reuse);
     if (!rc) mock_tag(p, MOCK_TAG_MM_ACC, 0);
     return rc;
 }

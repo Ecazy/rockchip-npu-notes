@@ -44,6 +44,10 @@ RECIPE_SIGNATURES = {
     # task reading a buffer written earlier in the same submit); this entry is
     # the plan-level half of that admission.
     "independent_mm_v1": [("co.mm.f16.v1", "co.mm.f16.v1", None)],
+    # Multiple independent output K-accumulation chains in one submit.  The
+    # exact per-chain K order is re-proven by the C verifier from explicit
+    # source_k_index/source_k_count/deps metadata.
+    "multi_k_acc_v1": [],
     # Each SwiGLU stage is its own submit; the recipe names the stage shapes.
     "swiglu_ffn_v1": [
         ("co.mm.f16.v1", None, None),
@@ -96,6 +100,11 @@ def _recipe_matches(recipe: str, templates: list[str]) -> bool:
         return templates == ["co.ew_add.f16.v1", "co.ew_max.f16.v1"]
     if recipe == "dependency_chain_v1":
         return bool(templates)
+    if recipe == "multi_k_acc_v1":
+        return (bool(templates) and templates[0] == "co.mm.f16.v1" and
+                all(t in {"co.mm.f16.v1", "co.mm_acc.f16.v1"}
+                    for t in templates) and
+                "co.mm_acc.f16.v1" in templates)
     signatures = RECIPE_SIGNATURES.get(recipe)
     if not signatures or not templates:
         return False

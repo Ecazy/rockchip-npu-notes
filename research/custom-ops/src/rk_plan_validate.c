@@ -238,6 +238,13 @@ static int validate_download(const rk_plan_desc *desc, const rk_action_desc *a, 
 /* Declared arity of every template this backend emits.  Used to bound the input
  * and output arrays *before* they are indexed: a forged count would otherwise be
  * walked out of bounds. */
+static int tensor_geometry_equal(const rk_tensor_desc *a,
+                                  const rk_tensor_desc *b) {
+    return a->layout == b->layout && a->rows == b->rows &&
+           a->cols == b->cols && a->physical_rows == b->physical_rows &&
+           a->physical_cols == b->physical_cols;
+}
+
 static int action_depends_on(const rk_action_desc *a, uint32_t dep) {
     for (uint32_t i = 0; i < a->ndeps; i++)
         if (a->deps[i] == dep) return 1;
@@ -955,6 +962,43 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
             }
             task_submit[task] = i;
         }
+        /* CBUF reuse is a submit-scope hazard, not a multi-K-only rule.  It is
+         * legal only inside one chained submit, never on the first task, and only
+         * when the immediately preceding task reads the same operand view with
+         * the same K slot and identical physical geometry (same bank split). */
+        for (uint32_t j = 0; j < s->ntask_ids; j++) {
+            const rk_action_desc *a = &desc->actions[s->task_ids[j]];
+            uint32_t reuse = a->flags &
+                (RK_ACTION_FLAG_DATA_REUSE | RK_ACTION_FLAG_WEIGHT_REUSE);
+            if (!reuse) continue;
+            if (s->mode != RK_SUBMIT_CHAIN || j == 0) {
+                free(task_submit);
+                return fail(diag, RK_E_SCHEMA, "validate",
+                            "CBUF reuse requires a chained submit and non-first task");
+            }
+            const rk_action_desc *p = &desc->actions[s->task_ids[j - 1]];
+            if (p->source_k_index != a->source_k_index) {
+                free(task_submit);
+                return fail(diag, RK_E_SCHEMA, "validate",
+                            "CBUF reuse crosses a K boundary");
+            }
+            if ((a->flags & RK_ACTION_FLAG_DATA_REUSE) &&
+                (p->inputs[0] != a->inputs[0] ||
+                 !tensor_geometry_equal(&view_at(desc, p->inputs[0])->tensor,
+                                        &view_at(desc, a->inputs[0])->tensor))) {
+                free(task_submit);
+                return fail(diag, RK_E_SCHEMA, "validate",
+                            "data_reuse predecessor input view/geometry mismatch");
+            }
+            if ((a->flags & RK_ACTION_FLAG_WEIGHT_REUSE) &&
+                (p->inputs[1] != a->inputs[1] ||
+                 !tensor_geometry_equal(&view_at(desc, p->inputs[1])->tensor,
+                                        &view_at(desc, a->inputs[1])->tensor))) {
+                free(task_submit);
+                return fail(diag, RK_E_SCHEMA, "validate",
+                            "weight_reuse predecessor weight view/geometry mismatch");
+            }
+        }
         /* Submit whitelist: a group is an all-MM chain, an all-MM_ACC chain that
          * continues one, a LUT run (optionally finished by one EW multiply) or a
          * single element-wise task.  Anything else would be an unverified chain.
@@ -1080,6 +1124,115 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
                 }
             }
             if (all_plain_mm && s->ntask_ids > 1) continue;  /* admitted group */
+            /* Multi-output K-accumulation submit: every task is MM or MM_ACC,
+             * at least one ACC, and every ACC continues the output it names as
+             * its prior operand.  K index/count fields make the K order explicit;
+             * reuse bits are checked against the immediately preceding task. */
+            int mixed_mm_chain = s->ntask_ids > 0 &&
+                desc->actions[s->task_ids[0]].template_id == RK_TEMPLATE_MM_F16 &&
+                desc->actions[s->task_ids[0]].source_k_count > 0;
+            int any_acc = 0;
+            for (uint32_t j = 0; j < s->ntask_ids && mixed_mm_chain; j++) {
+                uint32_t tpl = desc->actions[s->task_ids[j]].template_id;
+                if (tpl == RK_TEMPLATE_MM_F16) continue;
+                if (tpl == RK_TEMPLATE_MM_ACC_F16) { any_acc = 1; continue; }
+                mixed_mm_chain = 0;
+            }
+            if (mixed_mm_chain && any_acc) {
+                for (uint32_t j = 0; j < s->ntask_ids; j++) {
+                    const rk_action_desc *a = &desc->actions[s->task_ids[j]];
+                    if (a->source_k_count == 0 ||
+                        a->source_k_index >= a->source_k_count) {
+                        free(task_submit);
+                        return fail(diag, RK_E_SCHEMA, "validate",
+                                    "multi-K task has invalid K index/count");
+                    }
+                    if (j == 0 && a->source_k_index != 0) {
+                        free(task_submit);
+                        return fail(diag, RK_E_SCHEMA, "validate",
+                                    "multi-K submit must start at K index 0");
+                    }
+                    if ((a->flags & (RK_ACTION_FLAG_DATA_REUSE |
+                                     RK_ACTION_FLAG_WEIGHT_REUSE)) && j == 0) {
+                        free(task_submit);
+                        return fail(diag, RK_E_SCHEMA, "validate",
+                                    "first multi-K task cannot reuse CBUF");
+                    }
+                    if (a->template_id == RK_TEMPLATE_MM_ACC_F16) {
+                        uint32_t prior = UINT32_MAX;
+                        for (uint32_t q = 0; q < j; q++) {
+                            const rk_action_desc *p = &desc->actions[s->task_ids[q]];
+                            if (p->noutputs == 1 && p->outputs[0] == a->inputs[2]) {
+                                prior = s->task_ids[q];
+                            }
+                        }
+                        if (prior == UINT32_MAX) {
+                            free(task_submit);
+                            return fail(diag, RK_E_SCHEMA, "validate",
+                                        "multi-K ACC prior has no earlier producer");
+                        }
+                        const rk_action_desc *p = &desc->actions[prior];
+                        if (p->source_k_count != a->source_k_count ||
+                            p->source_k_index + 1u != a->source_k_index) {
+                            free(task_submit);
+                            return fail(diag, RK_E_SCHEMA, "validate",
+                                        "multi-K ACC does not continue the previous K index");
+                        }
+                        int dep_ok = 0;
+                        for (uint32_t q = 0; q < a->ndeps; q++)
+                            if (a->deps[q] == prior) dep_ok = 1;
+                        if (!dep_ok) {
+                            free(task_submit);
+                            return fail(diag, RK_E_SCHEMA, "validate",
+                                        "multi-K ACC lacks its prior dependency");
+                        }
+                    } else if (a->source_k_index != 0) {
+                        free(task_submit);
+                        return fail(diag, RK_E_SCHEMA, "validate",
+                                    "plain MM in multi-K submit must start a chain");
+                    }
+                    if (a->flags & RK_ACTION_FLAG_DATA_REUSE) {
+                        if (j == 0 ||
+                            desc->actions[s->task_ids[j - 1]].inputs[0] != a->inputs[0] ||
+                            desc->actions[s->task_ids[j - 1]].source_k_index !=
+                                a->source_k_index) {
+                            free(task_submit);
+                            return fail(diag, RK_E_SCHEMA, "validate",
+                                        "data_reuse does not match the immediately previous input tile/K");
+                        }
+                    }
+                    if (a->flags & RK_ACTION_FLAG_WEIGHT_REUSE) {
+                        if (j == 0 ||
+                            desc->actions[s->task_ids[j - 1]].inputs[1] != a->inputs[1] ||
+                            desc->actions[s->task_ids[j - 1]].source_k_index !=
+                                a->source_k_index) {
+                            free(task_submit);
+                            return fail(diag, RK_E_SCHEMA, "validate",
+                                        "weight_reuse does not match the immediately previous weight tile/K");
+                        }
+                    }
+                }
+                /* Every non-final K task must have its ACC continuation later. */
+                for (uint32_t j = 0; j < s->ntask_ids; j++) {
+                    const rk_action_desc *a = &desc->actions[s->task_ids[j]];
+                    if (a->source_k_index + 1u >= a->source_k_count) continue;
+                    int next_found = 0;
+                    for (uint32_t q = j + 1; q < s->ntask_ids; q++) {
+                        const rk_action_desc *b = &desc->actions[s->task_ids[q]];
+                        if (b->template_id == RK_TEMPLATE_MM_ACC_F16 &&
+                            b->inputs[2] == a->outputs[0] &&
+                            b->source_k_index == a->source_k_index + 1u) {
+                            next_found = 1; break;
+                        }
+                    }
+                    if (!next_found) {
+                        free(task_submit);
+                        return fail(diag, RK_E_SCHEMA, "validate",
+                                    "multi-K chain is missing its next K task");
+                    }
+                }
+                continue;  /* admitted multi-K submit */
+            }
             /* Exact mixed-template chain admission.  There are three
              * validated sequences: staged SwiGLU FFN, approximate RMSNorm and
              * the single-head device RoPE reorder.  Structural "looks ordered"

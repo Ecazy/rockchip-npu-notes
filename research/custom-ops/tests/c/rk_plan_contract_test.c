@@ -87,6 +87,9 @@ static void dump_layout(FILE *out) {
     RK_DUMP_FIELD(rk_action_desc, source_row_offset);
     RK_DUMP_FIELD(rk_action_desc, source_col_offset);
     RK_DUMP_FIELD(rk_action_desc, source_row_stride);
+    RK_DUMP_FIELD(rk_action_desc, source_k0);
+    RK_DUMP_FIELD(rk_action_desc, source_k_index);
+    RK_DUMP_FIELD(rk_action_desc, source_k_count);
     RK_DUMP_FIELD(rk_action_desc, flags);
     RK_DUMP_FIELD(rk_action_desc, act_kind);
     RK_DUMP_FIELD(rk_action_desc, inputs);
