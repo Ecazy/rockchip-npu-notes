@@ -205,6 +205,10 @@ def prepare(args) -> int:
         },
         "candidates": [],
     }
+    policy_path = out.parent / "module-acceptance-policy.json"
+    if policy_path.is_file():
+        manifest["policy"] = {"path": policy_path.name,
+                              "sha256": sha(policy_path)}
     from rknpu_backend.runtime.ffi import LibRKPlan
     validator = LibRKPlan(os.environ["RKNPU_PLAN_MOCK_LIB"]) \
         if os.environ.get("RKNPU_PLAN_MOCK_LIB") else None
