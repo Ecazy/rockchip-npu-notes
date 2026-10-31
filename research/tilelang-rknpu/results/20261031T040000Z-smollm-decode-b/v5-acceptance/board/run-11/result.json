@@ -1,0 +1,200 @@
+{
+ "index": 11,
+ "mode": "generate",
+ "repeat": 1,
+ "runs": [
+  {
+   "all_ids": [
+    1,
+    28,
+    253
+   ],
+   "decode_forwards": 1,
+   "decode_us": 442852.1060035564,
+   "first_sample_us": 451.7850175034255,
+   "generate_wall_us": 960908.2390088588,
+   "generated_ids": [
+    28,
+    253
+   ],
+   "output_tokens": 2,
+   "prefill_us": 510065.366019262,
+   "prompt_ids": [
+    1
+   ],
+   "reset_us": 6740.991986589506,
+   "sampling_us": 901.8199925776571,
+   "stages": {
+    "decode": {
+     "forward_count": 1,
+     "stats_delta": {
+      "download_bytes": 5603328,
+      "download_calls": 1032,
+      "host_action_bytes": 58208044,
+      "host_action_us": 46510.2542366907,
+      "kv_state_append_bytes": 23040,
+      "kv_state_append_calls": 180,
+      "kv_state_append_us": 8761.849661823362,
+      "kv_state_clear_bytes": 0,
+      "kv_state_clear_calls": 0,
+      "kv_state_clear_us": 0.0,
+      "kv_state_init_bytes": 0,
+      "kv_state_init_calls": 0,
+      "kv_state_init_us": 0.0,
+      "plan_call_us": 263136.391964376,
+      "plan_download_us": 6685.871124267578,
+      "plan_guard_us": 80599.53591918945,
+      "plan_output_sync_us": 8364.312225341797,
+      "plan_pack_us": 7864.305969238281,
+      "plan_publish_us": 192.79470825195312,
+      "plan_submit_wait_us": 144150.69561767578,
+      "plan_workspace_us": 252599.93225097656,
+      "submit_count": 702,
+      "task_count": 3006,
+      "upload_bytes": 3207168,
+      "upload_calls": 666
+     },
+     "wall_us": 442852.1060035564
+    },
+    "generate_overhead_us": 347.9550068732351,
+    "generate_wall_us": 960908.2390088588,
+    "prefill": {
+     "stats_delta": {
+      "download_bytes": 5603328,
+      "download_calls": 1032,
+      "host_action_bytes": 58208044,
+      "host_action_us": 50943.48307464272,
+      "kv_state_append_bytes": 0,
+      "kv_state_append_calls": 0,
+      "kv_state_append_us": 0.0,
+      "kv_state_clear_bytes": 0,
+      "kv_state_clear_calls": 0,
+      "kv_state_clear_us": 0.0,
+      "kv_state_init_bytes": 5898240,
+      "kv_state_init_calls": 180,
+      "kv_state_init_us": 44233.56940969825,
+      "plan_call_us": 280641.54504676163,
+      "plan_download_us": 7891.244812011719,
+      "plan_guard_us": 99438.5198059082,
+      "plan_output_sync_us": 10219.266143798828,
+      "plan_pack_us": 8305.98193359375,
+      "plan_publish_us": 228.07696533203125,
+      "plan_submit_wait_us": 138826.46826171875,
+      "plan_workspace_us": 269846.5231323242,
+      "submit_count": 702,
+      "task_count": 3006,
+      "upload_bytes": 3207168,
+      "upload_calls": 666
+     },
+     "wall_us": 510065.366019262
+    },
+    "reset": {
+     "stats_delta": {
+      "download_bytes": 0,
+      "download_calls": 0,
+      "host_action_bytes": 0,
+      "host_action_us": 0.0,
+      "kv_state_append_bytes": 0,
+      "kv_state_append_calls": 0,
+      "kv_state_append_us": 0.0,
+      "kv_state_clear_bytes": 5898240,
+      "kv_state_clear_calls": 180,
+      "kv_state_clear_us": 4409.14326463826,
+      "kv_state_init_bytes": 0,
+      "kv_state_init_calls": 0,
+      "kv_state_init_us": 0.0,
+      "plan_call_us": 0.0,
+      "plan_download_us": 0.0,
+      "plan_guard_us": 0.0,
+      "plan_output_sync_us": 0.0,
+      "plan_pack_us": 0.0,
+      "plan_publish_us": 0.0,
+      "plan_submit_wait_us": 0.0,
+      "plan_workspace_us": 0.0,
+      "submit_count": 0,
+      "task_count": 0,
+      "upload_bytes": 0,
+      "upload_calls": 0
+     },
+     "wall_us": 6740.991986589506
+    },
+    "sampling": {
+     "calls": 2,
+     "stats_delta": {
+      "download_bytes": 0,
+      "download_calls": 0,
+      "host_action_bytes": 196616,
+      "host_action_us": 825.1140243411064,
+      "kv_state_append_bytes": 0,
+      "kv_state_append_calls": 0,
+      "kv_state_append_us": 0.0,
+      "kv_state_clear_bytes": 0,
+      "kv_state_clear_calls": 0,
+      "kv_state_clear_us": 0.0,
+      "kv_state_init_bytes": 0,
+      "kv_state_init_calls": 0,
+      "kv_state_init_us": 0.0,
+      "plan_call_us": 0.0,
+      "plan_download_us": 0.0,
+      "plan_guard_us": 0.0,
+      "plan_output_sync_us": 0.0,
+      "plan_pack_us": 0.0,
+      "plan_publish_us": 0.0,
+      "plan_submit_wait_us": 0.0,
+      "plan_workspace_us": 0.0,
+      "submit_count": 0,
+      "task_count": 0,
+      "upload_bytes": 0,
+      "upload_calls": 0
+     },
+     "wall_us": 901.8199925776571
+    }
+   },
+   "steps": [
+    {
+     "elapsed_us": 442852.1060035564,
+     "stats_delta": {
+      "download_bytes": 5603328,
+      "download_calls": 1032,
+      "host_action_bytes": 58208044,
+      "host_action_us": 46510.2542366907,
+      "kv_state_append_bytes": 23040,
+      "kv_state_append_calls": 180,
+      "kv_state_append_us": 8761.849661823362,
+      "kv_state_clear_bytes": 0,
+      "kv_state_clear_calls": 0,
+      "kv_state_clear_us": 0.0,
+      "kv_state_init_bytes": 0,
+      "kv_state_init_calls": 0,
+      "kv_state_init_us": 0.0,
+      "plan_call_us": 263136.391964376,
+      "plan_download_us": 6685.871124267578,
+      "plan_guard_us": 80599.53591918945,
+      "plan_output_sync_us": 8364.312225341797,
+      "plan_pack_us": 7864.305969238281,
+      "plan_publish_us": 192.79470825195312,
+      "plan_submit_wait_us": 144150.69561767578,
+      "plan_workspace_us": 252599.93225097656,
+      "submit_count": 702,
+      "task_count": 3006,
+      "upload_bytes": 3207168,
+      "upload_calls": 666
+     },
+     "step_index": 0,
+     "token_id": 28,
+     "valid_len": 2,
+     "wall_us": 442852.1060035564
+    }
+   ],
+   "stop_reason": "max_new_tokens",
+   "stopped_by_eos": false,
+   "ttft_us": 517258.14302335493
+  }
+ ],
+ "token_count": 1,
+ "token_ids": [
+  1
+ ],
+ "valid_len_after": 2,
+ "wall_us": 961111.2370039336
+}
