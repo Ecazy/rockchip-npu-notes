@@ -2649,3 +2649,60 @@ int rk_workspace_destroy(rk_workspace *ws, rk_diag *diag) {
     free(ws);
     return 0;
 }
+
+int rk_workspace_task_cbuf(rk_workspace *ws, uint32_t action_id,
+                           uint32_t *values, uint32_t capacity,
+                           rk_task_cbuf_info *out, rk_diag *diag) {
+    if (!ws || !out) return RK_E_INVALID;
+    memset(out, 0, sizeof(*out));
+    out->action_id = action_id;
+    out->first_reuse_task = UINT32_MAX;
+    const rk_action_desc *a = rk_plan_action(ws->plan, action_id);
+    if (!a || a->kind != RK_ACTION_NPU_TASK) return RK_E_INVALID;
+    co_program p;
+    int rc = rk_emit_action(ws->plan, ws->views, action_id, &p, diag);
+    if (rc) return rc;
+    out->task_count = p.count;
+    uint32_t task = 0;
+    for (uint32_t i = 0; i < p.count; i++) {
+        uint64_t w = p.words[i];
+        uint32_t reg = (uint32_t)(w & 0xffffu);
+        if (reg != 0x1040u) continue;
+        uint32_t value = (uint32_t)((w >> 16) & 0xffffffffu);
+        if (out->cbuf_writes < capacity) values[out->cbuf_writes] = value;
+        out->cbuf_writes++;
+        if (value & 0x1000u) {
+            out->data_reuse_tasks++;
+            if (out->first_reuse_task == UINT32_MAX)
+                out->first_reuse_task = task;
+        }
+        if (value & 0x2000u) out->weight_reuse_tasks++;
+        if (!out->first_cbuf_con0) out->first_cbuf_con0 = value;
+        task++;
+    }
+    return 0;
+}
+
+int rk_workspace_get_cache_info(rk_workspace *ws, rk_workspace_cache_info *out,
+                                rk_diag *diag) {
+    (void)diag;
+    if (!ws || !out) return RK_E_INVALID;
+    memset(out, 0, sizeof(*out));
+    out->nsubmits = ws->plan ? ws->plan->nsubmits : 0;
+    out->program_cache_requested = ws->program_cache;
+    out->program_cache_ready = ws->program_cache_ready;
+    out->command_cache_requested = ws->command_cache;
+    out->command_cache_ready = ws->command_cache_ready;
+    out->multi_submit_requested = ws->multi_submit_cache;
+    out->multi_submit_ready = ws->multi_submit_ready;
+    out->multi_submit_cached = ws->multi_submit_cached;
+    out->program_cache_submit = ws->program_cache_submit;
+    out->program_cache_tasks = ws->program_cache_tasks;
+    out->command_plan_present = ws->command_plan != NULL;
+    out->submit_cache_present = ws->submit_cache != NULL;
+    out->host_bytes = rk_workspace_host_bytes(ws, 1);
+    out->device_bytes = ws->plan ? ws->plan->claimed_device_bytes : 0;
+    out->skipped_budget = ws->multi_submit_skipped_budget;
+    out->skipped_static = ws->multi_submit_skipped_static;
+    return 0;
+}

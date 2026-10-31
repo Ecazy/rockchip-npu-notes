@@ -178,6 +178,39 @@ class RKStateSource(ctypes.Structure):
     ]
 
 
+class RKCacheInfo(ctypes.Structure):
+    _fields_ = [
+        ("nsubmits", ctypes.c_uint32),
+        ("program_cache_requested", ctypes.c_uint32),
+        ("program_cache_ready", ctypes.c_uint32),
+        ("command_cache_requested", ctypes.c_uint32),
+        ("command_cache_ready", ctypes.c_uint32),
+        ("multi_submit_requested", ctypes.c_uint32),
+        ("multi_submit_ready", ctypes.c_uint32),
+        ("multi_submit_cached", ctypes.c_uint32),
+        ("program_cache_submit", ctypes.c_uint32),
+        ("program_cache_tasks", ctypes.c_uint32),
+        ("command_plan_present", ctypes.c_uint32),
+        ("submit_cache_present", ctypes.c_uint32),
+        ("host_bytes", ctypes.c_uint64),
+        ("device_bytes", ctypes.c_uint64),
+        ("skipped_budget", ctypes.c_uint32),
+        ("skipped_static", ctypes.c_uint32),
+    ]
+
+
+class RKTaskCbufInfo(ctypes.Structure):
+    _fields_ = [
+        ("action_id", ctypes.c_uint32),
+        ("task_count", ctypes.c_uint32),
+        ("cbuf_writes", ctypes.c_uint32),
+        ("data_reuse_tasks", ctypes.c_uint32),
+        ("weight_reuse_tasks", ctypes.c_uint32),
+        ("first_reuse_task", ctypes.c_uint32),
+        ("first_cbuf_con0", ctypes.c_uint32),
+    ]
+
+
 class RKDiag(ctypes.Structure):
     _fields_ = [
         ("abi_version", ctypes.c_uint32), ("struct_size", ctypes.c_uint32),
@@ -578,6 +611,26 @@ class LibRKPlan:
             # must stay valid instead of being dropped here.
             raise _diag_to_exception(diag, "workspace_destroy")
         workspace.handle = ctypes.c_void_p()
+
+    def cache_info(self, workspace):
+        info = RKCacheInfo()
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_get_cache_info(
+            workspace.handle, ctypes.byref(info), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "cache_info")
+        return info
+
+    def task_cbuf(self, workspace, action_id: int, capacity: int = 2048):
+        values = (ctypes.c_uint32 * capacity)()
+        info = RKTaskCbufInfo()
+        diag = RKDiag()
+        rc = self.cdll.rk_workspace_task_cbuf(
+            workspace.handle, int(action_id), values, capacity,
+            ctypes.byref(info), ctypes.byref(diag))
+        if rc:
+            raise _diag_to_exception(diag, "task_cbuf")
+        return info, list(values[:min(info.cbuf_writes, capacity)])
 
     def create_plan(self, plan: Plan) -> CPlan:
         desc, holder = build_plan_descriptor(plan)

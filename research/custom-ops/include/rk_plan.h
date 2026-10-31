@@ -395,6 +395,45 @@ typedef struct rk_group_report {
 typedef struct rk_plan rk_plan;
 typedef struct rk_workspace rk_workspace;
 
+typedef struct {
+    uint32_t nsubmits;
+    uint32_t program_cache_requested;
+    uint32_t program_cache_ready;
+    uint32_t command_cache_requested;
+    uint32_t command_cache_ready;
+    uint32_t multi_submit_requested;
+    uint32_t multi_submit_ready;
+    uint32_t multi_submit_cached;
+    uint32_t program_cache_submit;
+    uint32_t program_cache_tasks;
+    uint32_t command_plan_present;
+    uint32_t submit_cache_present;
+    uint64_t host_bytes;
+    uint64_t device_bytes;
+    uint32_t skipped_budget;
+    uint32_t skipped_static;
+} rk_workspace_cache_info;
+
+int rk_workspace_get_cache_info(rk_workspace *ws, rk_workspace_cache_info *out,
+                                rk_diag *diag);
+
+typedef struct {
+    uint32_t action_id;
+    uint32_t task_count;
+    uint32_t cbuf_writes;
+    uint32_t data_reuse_tasks;
+    uint32_t weight_reuse_tasks;
+    uint32_t first_reuse_task;
+    uint32_t first_cbuf_con0;
+} rk_task_cbuf_info;
+
+/* Diagnostic only: emit one action through the real generator and decode
+ * CNA_CBUF_CON0 (register 0x1040) bit12/13 per task.  Values are one raw
+ * CNA_CBUF_CON0 word per task (up to capacity). */
+int rk_workspace_task_cbuf(rk_workspace *ws, uint32_t action_id,
+                           uint32_t *values, uint32_t capacity,
+                           rk_task_cbuf_info *out, rk_diag *diag);
+
 /* Immutable packed-constant sharing.
  *
  * A shared constant is one already-packed upload destination BO.  It is keyed

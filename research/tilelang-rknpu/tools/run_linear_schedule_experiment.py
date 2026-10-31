@@ -58,8 +58,8 @@ def _check(out, ref):
 
 
 def prepare(args):
-    from rknpu_backend import CompileOptions, compile_tilelang, default_profile, save_plan
-    from models.tilelang_matmul import make_matmul_tiled_tail_prim
+    from rknpu_backend import CompileOptions, compile_tilelang, default_profile, load_plan, save_plan
+    from models.tilelang_matmul import make_matmul_prim
     pkg = Path(args.package).resolve()
     cap_path = Path(args.capture).resolve()
     out = Path(args.out).resolve()
@@ -94,14 +94,19 @@ def prepare(args):
         "inputs": "inputs.npz", "inputs_sha256": sha(plans / "inputs.npz"),
         "plans": {},
     }
-    for name, policy in (("A", "scheduled_baseline"), ("B", "merged"),
+    for name, policy in (("P", "production_package"), ("B", "merged"),
                          ("C", "interleaved"), ("D", "interleaved_reuse")):
-        opt = CompileOptions(numeric_mode="rk_f16_tiled",
-                             linear_task_order=policy)
-        plan = compile_tilelang(
-            make_matmul_tiled_tail_prim(args.m, D, H,
-                                        bm=args.m, bn=256),
-            profile=prof, options=opt).plan
+        if name == "P":
+            key = ("layer.0.gate_up.prefill" if args.m == 256
+                   else "layer.0.gate_up.decode")
+            src = pkg / pm["plans"][key]["path"]
+            plan = load_plan(str(src))
+        else:
+            opt = CompileOptions(numeric_mode="rk_f16_tiled",
+                                 linear_task_order=policy)
+            plan = compile_tilelang(
+                make_matmul_prim(args.m, D, H),
+                profile=prof, options=opt).plan
         path = plans / f"{name}.rkplan.json"
         save_plan(plan, str(path))
         manifest["plans"][name] = {
@@ -141,12 +146,13 @@ def run(args):
     root = Path(args.plans).resolve()
     man = json.loads((root / "manifest.json").read_text())
     data = np.load(root / man["inputs"], allow_pickle=False)
-    # Fairness: A is 12 submits, B/C/D are one submit.  The creation-time
-    # program/command caches only apply to single-submit plans, so disable all
-    # three caches for every arm.
-    for key in ("RK_PLAN_PROGRAM_CACHE", "RK_PLAN_COMMAND_CACHE",
-                "RK_PLAN_MULTI_SUBMIT_CACHE"):
-        os.environ[key] = "0"
+    if not args.production_cache:
+        # Mechanism-isolation control: A is 12 submits, B/C/D are one submit.
+        # The creation-time program/command caches only apply to single-submit
+        # plans, so disable all three caches for every arm.
+        for key in ("RK_PLAN_PROGRAM_CACHE", "RK_PLAN_COMMAND_CACHE",
+                    "RK_PLAN_MULTI_SUBMIT_CACHE"):
+            os.environ[key] = "0"
     lib = LibRKPlan(os.environ["RKNPU_PLAN_LIB"])
     if args.mock:
         fd = 0
@@ -155,7 +161,7 @@ def run(args):
         fd = int(lib.cdll.rocket_open())
         if fd < 0:
             raise SystemExit("rocket_open failed")
-    policies = ["A", "B", "C", "D"]
+    policies = ["P", "B", "C", "D"]
     if args.only:
         policies = [x.strip() for x in args.only.split(",") if x.strip()]
     rows = []
@@ -173,10 +179,27 @@ def run(args):
                 outs = [b.id for b in plan.bindings if b.role == "output"]
                 if set(ins) != {"A"} or len(outs) != 1:
                     raise SystemExit("GEMM plan must expose A -> Y")
-                handles[name] = (plan, cp, ws, arrs, ins["A"], outs[0])
+                cache = lib.cache_info(ws)
+                cbuf = []
+                reuse_tasks = 0
+                for action in plan.actions:
+                    if action.kind != "npu_task":
+                        continue
+                    info, values = lib.task_cbuf(ws, action.id)
+                    reuse_tasks += info.data_reuse_tasks
+                    cbuf.append({"action_id": action.id,
+                                 "task_count": info.task_count,
+                                 "cbuf_writes": info.cbuf_writes,
+                                 "data_reuse_tasks": info.data_reuse_tasks,
+                                 "weight_reuse_tasks": info.weight_reuse_tasks,
+                                 "first_reuse_task": info.first_reuse_task,
+                                 "first_cbuf_con0": info.first_cbuf_con0,
+                                 "values": values[:4]})
+                handles[name] = (plan, cp, ws, arrs, ins["A"], outs[0],
+                                 cache, reuse_tasks, cbuf)
             try:
                 def invoke(name):
-                    plan, cp, ws, arrs, inp, out = handles[name]
+                    plan, cp, ws, arrs, inp, out, _, _, _ = handles[name]
                     y = np.zeros((man["m"], man["n"]), dtype=np.float16)
                     t0 = time.perf_counter()
                     rep = ws.run([make_binding(inp, h)],
@@ -201,16 +224,25 @@ def run(args):
                         us, chk, rep, y = invoke(name)
                         times[name].append(us)
                         checks[name].append(chk)
-                        if name == "A" and a_reference is None:
+                        if name == policies[0] and a_reference is None:
                             a_reference = y.copy()
                         row[name] = {"us": us, "check": chk,
                                      "bitwise_vs_A": bool(np.array_equal(y, a_reference))
                                      if a_reference is not None else None,
                                      "task_count": rep.task_count,
-                                     "submit_count": rep.submit_count}
+                                     "submit_count": rep.submit_count,
+                                     "pack_us": rep.pack_us,
+                                     "emit_us": rep.emit_us,
+                                     "submit_wait_us": rep.submit_wait_us,
+                                     "output_sync_us": rep.output_sync_us,
+                                     "upload_calls": rep.upload_calls,
+                                     "upload_bytes": rep.upload_bytes,
+                                     "download_calls": rep.download_calls,
+                                     "download_bytes": rep.download_bytes}
                     round_rows.append(row)
                 for name in policies:
                     spec = man["plans"][name]
+                    _, _, _, _, _, _, cache, reuse_tasks, cbuf = handles[name]
                     rows.append({
                         "name": name, "layer": layer,
                         "policy": spec["policy"],
@@ -226,12 +258,23 @@ def run(args):
                         "task_count": spec["task_count"],
                         "submit_count": spec["submit_count"],
                         "data_reuse_tasks": spec["data_reuse_tasks"],
+                        "register_data_reuse_tasks": reuse_tasks,
+                        "cache": {k: int(getattr(cache, k)) for k in
+                                  ("nsubmits", "program_cache_requested",
+                                   "program_cache_ready", "command_cache_requested",
+                                   "command_cache_ready", "multi_submit_requested",
+                                   "multi_submit_ready", "multi_submit_cached",
+                                   "program_cache_submit", "program_cache_tasks",
+                                   "command_plan_present", "submit_cache_present",
+                                   "host_bytes", "device_bytes",
+                                   "skipped_budget", "skipped_static")},
+                        "cbuf_decoded": cbuf,
                         "plan_hash": spec["plan_hash"],
                     })
                 rows.append({"name": "rotation", "layer": layer,
                              "rounds": round_rows})
             finally:
-                for _, cp, ws, _, _, _ in handles.values():
+                for _, cp, ws, _, _, _, _, _, _ in handles.values():
                     ws.destroy(); cp.destroy()
     finally:
         try: lib.cdll.rocket_close(fd)
@@ -239,9 +282,11 @@ def run(args):
     result = {"schema_version": 1, "kind": "smollm-gateup-task-order-run",
               "lib_sha256": sha(Path(os.environ["RKNPU_PLAN_LIB"])),
               "manifest_sha256": sha(root / "manifest.json"),
-              "cache_control": {"program_cache": False,
-                                "command_cache": False,
-                                "multi_submit_cache": False},
+              "cache_control": {
+                  "program_cache": os.environ.get("RK_PLAN_PROGRAM_CACHE", "default"),
+                  "command_cache": os.environ.get("RK_PLAN_COMMAND_CACHE", "default"),
+                  "multi_submit_cache": os.environ.get("RK_PLAN_MULTI_SUBMIT_CACHE", "default"),
+                  "production_cache": bool(args.production_cache)},
               "rows": rows}
     Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True) + "\n")
     print(json.dumps({"rows": len(rows)}, indent=1))
@@ -263,6 +308,7 @@ def main(argv=None):
     p.add_argument("--warmup", type=int, default=5)
     p.add_argument("--rounds", type=int, default=20)
     p.add_argument("--only", default="")
+    p.add_argument("--production-cache", action="store_true")
     p.add_argument("--mock", action="store_true")
     p.add_argument("--out", required=True)
     p.set_defaults(func=run)
