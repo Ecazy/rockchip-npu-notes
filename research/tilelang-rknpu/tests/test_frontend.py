@@ -162,15 +162,18 @@ class TileLangFrontendTests(unittest.TestCase):
             self.assertIn(expected, message)
 
     def test_multi_block_grid_without_k_loop_is_rejected(self):
-        # A wider grid is only lowered together with a K loop; a bare
-        # multi-block launch has no proven output coverage.
+        # A scheduled source that narrows only once after the full K reduction
+        # describes a different numerical program than the tiled schedule
+        # (TILELANG-SCHEDULE.md states this as a numeric-contract refusal), and
+        # the legacy single-launch form cannot express a multi-tile grid.
         fixtures = load_fixtures()
         with self.assertRaises(BackendError) as ctx:
             compile_tilelang(fixtures.multi_block_launch(),
                              profile=self.profile,
                              options=CompileOptions(numeric_mode="rk_f16_tiled"))
-        self.assertEqual(ctx.exception.code, RK_E_UNSUPPORTED)
-        self.assertIn("block grid", ctx.exception.diagnostics[0].message)
+        self.assertEqual(ctx.exception.code, RK_E_NUMERIC_CONTRACT)
+        self.assertIn("narrows only after the full K reduction",
+                      ctx.exception.diagnostics[0].message)
 
     def test_clear_accum_is_rejected(self):
         # The zero fill is the only allowed clear; clear_accum=True would change

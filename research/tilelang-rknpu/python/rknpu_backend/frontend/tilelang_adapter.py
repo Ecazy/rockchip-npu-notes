@@ -75,13 +75,17 @@ def _schedule_annotation(prim_func: Any, span: str) -> _ScheduleAnnotation:
     tile size or traversal key cannot disappear between TileLang and RKIR.
     """
     attrs = dict(getattr(prim_func, "attrs", {}) or {})
+    # The whole ``rknpu.*`` namespace is the backend's schedule namespace: a key
+    # there is a request this backend either honours or refuses.  Silently
+    # ignoring one (an older prefix list did that for anything outside
+    # schedule/tile_/mn_/k_/source_) would claim support the runtime never
+    # provides.
     for key in attrs:
-        if key.startswith(("rknpu.schedule", "rknpu.tile_", "rknpu.mn_",
-                           "rknpu.k_", "rknpu.source_")):
-            if key not in SCHEDULE_ATTRS:
-                reject(RK_E_UNSUPPORTED,
-                       f"unsupported TileLang schedule annotation {key!r}",
-                       stage="frontend", source=span)
+        if key.startswith("rknpu.") and key not in SCHEDULE_ATTRS:
+            reject(RK_E_UNSUPPORTED,
+                   f"unsupported TileLang schedule annotation {key!r}",
+                   stage="frontend", source=span,
+                   actual=key, required=sorted(SCHEDULE_ATTRS))
     present = any(key in attrs for key in SCHEDULE_ATTRS
                   if key != SCHEDULE_ROUNDING_ATTR)
     if not present:
@@ -3281,6 +3285,39 @@ def _extract_broadcast_tail(items: list[_Item], params: list[Any], *, tirx: Any,
 #   * the accumulator is zero-filled before the loop and read only after it,
 #   * trips * block_k equals the logical K of the parameter tensors.
 
+PIPELINE_NOT_APPLIED_REASON = (    "no software pipeline is implemented on this target: the K chain is "
+    "emitted as an ordered accumulation of 256-wide tasks, so the request "
+    "is recorded but not applied")
+
+
+def _pipeline_record(annotations):
+    """Record a source pipeline request without claiming it was applied.
+
+    num_stages is the TileLang buffering hint (0 means no pipeline); the
+    software pipeline order/stage lists are the manual form of the hint.
+    """
+    raw = {}
+    for key, value in dict(annotations or {}).items():
+        try:
+            raw[str(key)] = int(value)
+        except (TypeError, ValueError):
+            raw[str(key)] = str(value)
+    stages = 0
+    for value in (raw.get("num_stages"), raw.get("software_pipeline_stages")):
+        try:
+            stages = max(stages, int(value))
+        except (TypeError, ValueError):
+            continue
+    if any(key in raw for key in ("software_pipeline_order",
+                                  "software_pipeline_stage")):
+        stages = max(stages, 1)
+    return {"source_loop_annotations": raw,
+            "source_pipeline_stages": stages,
+            "pipeline_hint_dropped": bool(stages),
+            "pipeline_not_applied_reason":
+                PIPELINE_NOT_APPLIED_REASON if stages else None}
+
+
 K_LOOP_ALLOWED_ANNOTATIONS = ("num_stages", "software_pipeline_order",
                               "software_pipeline_stage", "tl.disable_warp_group_reg_alloc")
 
@@ -3953,9 +3990,8 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
              "source_rounding": source_rounding,
              "rounding_points": ("after_each_k_block" if explicit_rounding
                                  else "final_output_only"),
-             "source_loop_annotations": {},
              "lowering_k_tile": 256,
-             "pipeline_hint_dropped": False,
+             **_pipeline_record(getattr(k_loop, "annotations", {})),
              "narrowing_base": ("explicit FP16 after each K block"
                                 if explicit_rounding else
                                 "every 256 K elements"),
@@ -4617,9 +4653,6 @@ def _extract_staged_two_matmul(items: list[_Item], params: list[Any], *,
             "k_blocks": info["k_blocks"],
             "source_rounding": info["source_rounding"],
             "rounding_points": "after_each_k_block",
-            "source_loop_annotations": {},
-            "lowering_k_tile": 256,
-            "pipeline_hint_dropped": False,
             "narrowing_base": "explicit FP16 after each K block",
             "tail_contract": info["tail_contract"],
         }
@@ -4927,8 +4960,6 @@ def _extract_staged_scheduled_ffn(items: list[_Item], params: list[Any], *,
                  "k_blocks": info["k_blocks"],
                  "source_rounding": info["source_rounding"],
                  "rounding_points": "after_each_k_block",
-                 "source_loop_annotations": {}, "lowering_k_tile": 256,
-                 "pipeline_hint_dropped": False,
                  "narrowing_base": "explicit FP16 after each K block",
                  "tail_contract": info["tail_contract"]}
         return {"b_layout": "kn", "numeric_contract": contract.to_dict(),
@@ -5495,10 +5526,9 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
                            "extent": min(block.block_k,
                                          logical_k - i * block.block_k)}
                           for i in range(block.trips)],
-             "source_loop_annotations": block.annotations,
              "source_loop_span": str(getattr(block.loop_item.node, "span", "") or ""),
              "lowering_k_tile": 256,
-             "pipeline_hint_dropped": bool(block.annotations),
+             **_pipeline_record(getattr(block, "annotations", {})),
              "source_rounding": block.source_rounding,
              "rounding_points": ("after_each_k_block"
                                  if block.explicit_fp16_rounding
@@ -5648,10 +5678,23 @@ def extract(prim_func: Any, *, options: CompileOptions,
                            "block grid loops must step by one", stage="frontend",
                            source=span, actual=repr(step))
                 if k_block is None and _int_imm(block.extent) != 1:
-                    reject(RK_E_UNSUPPORTED,
-                           "a wider block grid is only lowered together with "
-                           "a K loop", stage="frontend", source=span,
-                           actual=_int_imm(block.extent))
+                    # The tiled schedule writes FP16 back after every 256-wide K
+                    # block (the primitive cannot accumulate more K in one task),
+                    # so a source that narrows only at the end cannot be tiled
+                    # truthfully.  The K loop is the form in which that writeback
+                    # is visible and provable; without it the request is refused
+                    # here rather than silently re-rounded later.
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "scheduled source narrows only after the full K "
+                           "reduction; the tiled schedule writes FP16 back at "
+                           "every 256-wide K block, so the two describe "
+                           "different numerical programs (write the K loop, or "
+                           "drop the M/N declaration to stay on the legacy "
+                           "default path)",
+                           stage="frontend", source=span,
+                           actual=_int_imm(block.extent),
+                           required=["explicit_per_k_fp16",
+                                     "single_k_tile_fp16"])
     if k_block is not None:
         if stores:
             reject(RK_E_UNSUPPORTED,
