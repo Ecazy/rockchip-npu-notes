@@ -1,5 +1,7 @@
 # 意图保真审查：RKIR + RKPlan 能否承载上层合法控制意图
 
+> **当前阅读入口：[当前能力、实验结论与重放](#current-status)。** 下文从最初审查开始按时间保留，早期的缺陷、测试数量和“只读”描述不代表当前状态；后续章节包含修复与更正。
+
 - 日期：2026-10-31
 - 基线：main @ de4b07a2456033db330c31f10a0df9d908a759c2（2026-10-31T10:25:42+08:00）
 - 范围：research/tilelang-rknpu（frontend / RKIR / planner / RKPlan / C 执行链），设备目标 RK3588
@@ -2655,3 +2657,1284 @@ cd ../custom-ops/build-host-mvp && ctest -j2
 - `Action.__post_init__` 里有一处与 `ACTION_KINDS` 重复的种类检查（历史遗留、无副作用），本轮未删以免顺带改行为。
 - 若将来真的想支持 `commit`（例如显式提交点），需要在运行时实现它，然后把它移进 `EXECUTABLE_ACTION_KINDS`；本轮不做。
 - `passes/verify.py` 的 host_compute 检查现在与计划校验重复，保留作防御，未合并。
+
+---
+
+## 33. TileLang 的调度要求，实际落到 RKNPU 的有哪些（2026-11-02）
+
+### 33.0 直接回答
+
+**1）TileLang 目前能实际控制什么？** 四项，且都有设备证据：**M/N 分块**（`rknpu.tile_m/tile_n` → 任务网格）、**遍历顺序**（`rknpu.mn_order` → 发射的任务/提交顺序）、**K 分块**（源 K 循环的 256 宽块 → 每个 tile 的累积任务数）、**K 舍入点**（`rknpu.source_k_rounding: explicit_per_k_fp16` → 每 256 宽 K 块写回 FP16，数值可测地不同）。
+
+**2）哪些只能通过后端编译选项？** 两个：**输入复用**（只有 `linear_task_order="interleaved_reuse"` 会打开 `data_reuse`；源里没有对应注解）和**提交分组**（`linear_task_order=baseline|merged` → 12 提交 vs 1 提交；`submit_mode` chain/separate）。
+
+**3）哪些要求会被明确拒绝？** 声明与实现不符的 K 舍入（`fp32_final_narrowing`）、未定义的 `rknpu.*` 注解、非法取值（`mn_order` 非 m/n-major、tile 超出 1..256、tile_m/tile_n 只给一个），以及此前各轮已修的那些（mm_acc K>256、EW 非 CUBE、LUT 几何不符、临时动作种类、View 越界、提交顺序矛盾等）。
+
+**4）还有“接受了要求、实际却没执行”的情况吗？** 五个被接受的注解逐个都有计划/寄存器/数值证据，**没有发现**。本轮修掉了一个真实的静默忽略：`rknpu.pipeline_stages`、`rknpu.double_buffer`、`rknpu.async_copy`、`rknpu.tile_num` 这类未定义键以前被无声丢弃（原来的前缀白名单只扫 schedule/tile_/mn_/k_/source_），现在一律拒绝并报出键名。**未实现**但也不假装支持的是：`weight_reuse`（C 与发射器支持，规划器恒为 False，没有入口）、流水/双缓冲（源的 `T.Pipelined(num_stages=2)` 不进入计划）、多核。
+
+**5）本轮补通什么、还缺什么证据？** 补：`rknpu.*` 命名空间的准确拒绝；复用位在**寄存器字**上的读取；顺序/分块/复用/K 舍入的设备对照。缺：`weight_reuse` 无入口可测；流水/双缓冲/多核未实现；本轮不做性能结论（见 33.5）。
+
+### 33.1 清点：从源到硬件的每一段
+
+| 控制项 | 用户在哪里表达 | 后端承诺 | 改变什么 | 接受/拒绝 | 证据 |
+|---|---|---|---|---|---|
+| M/N 分块 | 源 `rknpu.tile_m/tile_n`（仅与 `rknpu.schedule="mn_tiles_v1"` 合用） | 任务网格 = ⌈M/tile_m⌉×⌈N/tile_n⌉，尾部 tile 带守卫 | 任务数、提交数、设备预算 | 1..256 接受；越界拒绝；只给一个拒绝 | 主机：bm=256 → 6 任务/2 提交，bm=128 → 12 任务/4 提交；设备两版输出**逐位相同** |
+| 遍历顺序 | 源 `rknpu.mn_order=m_major|n_major` | 发射顺序按声明顺序访问 tile | 任务/提交顺序（不改任务集合） | 其它值拒绝 | 主机：m_major → `mm:0:0,mm:0:1,mm:1:0,mm:1:1`，n_major → `mm:0:0,mm:1:0,mm:0:1,mm:1:1`；设备两版输出**逐位相同** |
+| K 分块 | 源 K 循环的 256 宽块（`T.Pipelined(T.ceildiv(k,256))`）+ `rknpu.source_k_rounding` | 每 256 宽 K 块一个累积任务，每块写回 FP16 | 累积任务数、舍入次数、数值 | K>256 的单任务被拒（mm_acc 契约） | 主机：k=576 → 6 任务（2 tile × 3 K），k=256 → 2 任务 |
+| K 舍入点 | 源 `rknpu.source_k_rounding=explicit_per_k_fp16` | 每 K 块 FP16 写回，末尾不再有一次整体窄化 | 数值（不是任务数） | 声明 `fp32_final_narrowing` → **拒绝**（与证明的舍入点不符） | 设备 k=576：与 fp16-逐块参考仅差 45/131072 个元素，与单次 fp64 积累差 50028；k=256（单块）：与两者各差 43/131072 |
+| 输入复用 | **仅**编译选项 `linear_task_order=interleaved_reuse` | 第二个及以后的 tile 复用同一输入 tile | 发射器 `data_reuse=1` → CBUF_CON0 置位 | 只与该策略一起出现；C 校验复用前驱几何/视图一致 | 主机：`interleaved` 0/6 个词带 0x1000，`interleaved_reuse` **3/6**；设备同一计划 `con0_reuse=3`，输出与不复用版**逐位相同** |
+| 提交分组 | **仅**编译选项 `linear_task_order=baseline|merged`（+`submit_mode`） | 每次提交有多少任务 | 提交次数、命令工作区、设备预算 | 组合规则见 §24 | §24/§28 的设备证据 + 本轮计划计数复核（12 提交 vs 1 提交） |
+
+未实现、也不声称支持：`weight_reuse`（`dag.py` 恒 False）、流水/双缓冲（`T.Pipelined` 的 stage 数不进入 RKIR/RKPlan）、多核（`core_mask` 由运行时设置）。这些在报告里列为“尚不支持”，不是“接受后忽略”。
+
+### 33.2 寄存器级证据（不是描述符开关）
+
+复用位最终写在 **CBUF_CON0 寄存器**里：vendor `npu_regcmd.c:214` 生成 `(weight_reuse?0x2000:0)|(data_reuse?0x1000:0)`，本仓库 `custom_ops.c` 把 `co_program.data_reuse` 交给同一个生成器，运行时 `rk_workspace_task_cbuf` 把真正发射出来的字返回（寄存器号 0x1040）。实测（mock，与设备同一发射器）：
+
+| 策略 | 带 0x1000 的词 | 首个 CBUF_CON0 |
+|---|---|---|
+| `interleaved` | 0/6 | 0x84 |
+| `interleaved_reuse` | **3/6** | 0x84（其余 3 个任务置位） |
+
+设备侧同一计划用 `task_cbuf` 读回：`con0_reuse=3`，与主机一致。
+
+### 33.3 设备对照（RK3588，库 `3749e95d…`，同一批输入）
+
+| 成对实验 | 任务/提交 | 输出对比 |
+|---|---|---|
+| m_major vs n_major | 12/4 vs 12/4 | **逐位相同**（0/131072 不同） |
+| tile 256 vs 128 | 6/2 vs 12/4 | **逐位相同** |
+| 复用关 vs 开 | 6/1 vs 6/1（con0 复用词 0 vs 3） | **逐位相同** |
+| K=576 vs K=256 | 6/2 vs 2/2 | **不同**：131041/131072 元素不同，max_abs 80.3 |
+
+结论的正确读法：**分块、顺序、复用改变的是执行组织，不改数学**（所以逐位相同）；**K 分块改变任务数与累积次数，所以数字不同**。
+
+> **本段的舍入结论已被 §34 更正（2026-11-02）**：K=576 与 K=256 是**不同的计算**，输出不同只能说明“不同 K 长度生成了相应任务”，不能用来证明舍入位置。固定 K=576 的舍入证据见 §34.3（同一计算、两种写回结构的参考）。
+
+### 33.4 本轮修复：`rknpu.*` 命名空间不再静默忽略
+
+修复前（HEAD 前的适配器）与修复后，同一组源注解：
+
+| 注解 | 修复前 | 修复后 |
+|---|---|---|
+| `rknpu.pipeline_stages=3` | **ACCEPT（静默忽略）** | REJECT `unsupported TileLang schedule annotation 'rknpu.pipeline_stages'` |
+| `rknpu.double_buffer=True` | **ACCEPT（静默忽略）** | REJECT（同上） |
+| `rknpu.async_copy=1` | **ACCEPT（静默忽略）** | REJECT（同上） |
+| `rknpu.tile_num=4` | REJECT（前缀命中） | REJECT（同一诊断） |
+| 五个已声明注解 | ACCEPT | ACCEPT（不变） |
+
+改动只在 `frontend/tilelang_adapter.py`：把“只扫描 schedule/tile_/mn_/k_/source_ 前缀”改为“整个 `rknpu.` 命名空间都属于后端调度命名空间”，命中未定义键就拒绝，并在诊断里带上键名与允许集合。没有新增能力，也没有放宽任何检查。
+
+### 33.5 证据边界（不做过度结论）
+
+- 本轮**不做性能结论**：没有交错计时，也不宣称复用/顺序/分块更快；它们“确实生效”由计划、寄存器字和计数证明。
+- 顺序/分块/复用三组输出逐位相同，只说明**数值不变**，不能反推硬件时间顺序；`T.Pipelined(num_stages=2)` 这类静态结构本来就不承诺设备时间序，后端也未据此做任何声明。
+- 复用只在 `interleaved_reuse` 下有定义；没有 TileLang 源入口，属于“只能由编译选项表达”的能力。
+- `weight_reuse` 没有入口，本轮不构造“假计划改 JSON”的用例来假装验证。
+
+### 33.6 回归与身份
+
+- 全量 Python：**700 passed / 1 failed / 1 skipped / 261 subtests**；唯一失败仍是缺 `transformers` 的 `test_replay_smollm2_v5`。
+- C：`ctest` **33/33 passed**（本轮 C 未改动）。
+- 新增 `tests/test_schedule_namespace.py`（6 例 + 6 子测试）：五个注解仍接受、未定义 `rknpu.*` 拒绝、非法值拒绝、`mn_order` 改变发射的 tile 序列、tile 大小改变任务网格、复用位出现在 CBUF_CON0 且与计划里的声明数一致。
+- 代码身份：`python/rknpu_backend/frontend/tilelang_adapter.py`、`tests/test_schedule_namespace.py`（新增）；C 源与库不变（`f202246a…`、`d527fef0…`/`c9e0d22e…`、设备 `3749e95d…`）。
+
+```bash
+cd research/tilelang-rknpu
+# 主机：计划事实 + CBUF_CON0 寄存器字
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261102T220000Z-tilelang-control-fidelity/repros/experiments.py --stage host
+# 命名空间前后对照
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261102T220000Z-tilelang-control-fidelity/repros/probe_unknown_schedule_attrs.py
+# 设备（脚本见同目录 board_run.py，上传后用 --stage device）
+# PYTHONPATH=... python3 experiments.py --stage device
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_schedule_namespace.py -q -o addopts=""
+```
+
+### 33.7 尚未完成
+
+- `weight_reuse`：C 校验、发射器、寄存器位都在，但规划器没有入口；若要支持需要一条明确的源或选项路径（本轮不新增）。
+- 流水/双缓冲与多核：RKIR/RKPlan 没有对应字段，源里的 `T.Pipelined` 结构不会进入计划；本轮按“尚不支持”记录。
+- 性能：未评估复用/顺序/分块的实际收益；若将来要宣称加速，需要交错对照。
+- 复用语义只在“相邻 K 切片之间”被 C 校验覆盖；跨 tile 的更强复用形态没有证据。
+
+---
+
+## 34. §33 复核：入口、舍入、顺序与复用证据分别证明了什么（2026-11-02）
+
+### 34.0 直接回答
+
+**哪些能力已经证实？** 四项：**M/N 分块**（任务网格随 `tile_m/tile_n` 变化）、**遍历顺序**（计划/命令/提交顺序随 `mn_order` 变化）、**K 循环的 256 宽块**（每 tile 的累积任务数随 K 长度变化）、**每 256 宽 K 块写回 FP16 的舍入结构**（固定同一计算后，与“块后写回”参考差 45–119/131072 个元素，与“末尾一次写回”参考差 50028/131072）。
+
+**每项由用户从哪里控制？** 分块与遍历顺序来自 **TileLang 源里的 `rknpu.*` 注解**（必须与 `rknpu.schedule="mn_tiles_v1"` 合用）；K 分块来自 **源里的 K 循环结构**（不是注解）；写回结构由 **源注解 `rknpu.source_k_rounding`** 声明并被校验；**输入复用只能由后端编译选项 `linear_task_order="interleaved_reuse"` 打开**（源码无入口）。
+
+**哪些说法需要收窄或撤回？** 三处：
+
+| 原说法（§33） | 处理 |
+|---|---|
+| “K=576 vs K=256 的差异证明舍入点” | **撤回**。两者是不同计算，只能证明不同 K 长度生成了相应任务（§34.2）。 |
+| “顺序被硬件落实” | **收窄**为“计划任务顺序 = 发射命令顺序 = 提交顺序”，设备内部执行顺序**没有观测**（§34.4）。 |
+| “与每块写回参考几乎一致” | **收窄**为“写回结构属于每块写回一族”，残余 45–119 个元素来自块内求和顺序/舍入，参考未能建模，**不宣称逐项完全符合**（§34.3）。 |
+
+另外明确：复用证据只证明**寄存器位被置起**，不推导带宽或性能（§34.5）。
+
+**是否发现新的“接受了要求却没执行”？** 没有。复核中确认五条链都通；`weight_reuse`、流水/双缓冲、多核仍是“未实现、也未声称支持”。
+
+### 34.1 入口核对：每项控制来自哪里、走了哪条路
+
+| 实验 | 控制来源 | 具体入口 | 走的路 |
+|---|---|---|---|
+| order-m_major / n_major | TileLang 源 **注解** | `rknpu.schedule` + `tile_m/tile_n` + `mn_order` | 源 → 正常编译 → 保存 → 设备加载 → 执行 |
+| tile-256 / tile-128 | TileLang 源 **注解** | `rknpu.tile_m`（配合 tile_n） | 同上 |
+| k-576 / k-256 | TileLang 源 **结构**（K 循环 trip count） | 源码 `T.Pipelined(T.ceildiv(k, bk))`，`bk=256` | 同上 |
+| rounding-per-k / fp32 / undeclared | TileLang 源 **注解** | `rknpu.source_k_rounding` | 同（`fp32_final_narrowing` 在编译期被拒，未产生计划） |
+| reuse-off / reuse-on | **后端编译选项** | `CompileOptions(linear_task_order="interleaved_reuse")` | 同上 |
+
+**没有手改计划、没有绕过编译入口**：设备侧加载的计划与主机侧编译并保存的计划逐一致（`plan_hash` 对照，全部 `match=True`）：
+
+| 计划 | host hash | device hash |
+|---|---|---|
+| order-m-major / order-n-major | `47f5f88e…` / `8a9da12a…` | 同 |
+| tile-256 / tile-128 | `29cbf140…` / `6447f9b1…` | 同 |
+| reuse-off / reuse-on | `48941dc5…` / `d5e881a2…` | 同 |
+| k-576 / k-256 | `29cbf140…` / `298444a4…` | 同 |
+
+顺带一个诚实的观察：`rounding-per-k`、`rounding-undeclared` 与 `k-576`/`tile-256` **同一个计划哈希**（`29cbf140…`）——`source_k_rounding` 是**一致性声明**（要求如实记录已证明的舍入点），不是改变计划的旋钮。
+
+### 34.2 K 实验的更正
+
+§33 用 K=576 与 K=256 的输出差异去推断舍入位置，这是**错误归因**：两者 K 不同 ⇒ 数学不同，输出必然不同。保留原始数据，结论更正为：
+
+| 数据（设备） | 更正后的含义 |
+|---|---|
+| k-576：6 任务 / 2 提交；k-256：2 任务 / 2 提交 | **源 K 循环的块数决定每个 tile 的累积任务数**（576 → 3 块，256 → 1 块） |
+| k-576 vs k-256 输出 131041/131072 元素不同 | 不同计算的必然结果，**不能**作为舍入证据 |
+
+### 34.3 同一计算下的舍入证据（补测）
+
+固定 M=256、K=576、N=512、FP16 输入与同一批 A/B（seed 20261102），设备计划 `k-576`（`29cbf140…`），输出数组已归档（`repros/device-output-k576.npy`）。四个参考用同一组输入：
+
+| 参考 | 差异元素 | max_abs |
+|---|---|---|
+| 每 256 块后写回 FP16（块内 fp64 求和） | **45 / 131072** | 0.03125 |
+| 每 256 块后写回 FP16（块内 fp32 求和） | **119 / 131072** | 0.03125 |
+| 全部 K 累加后一次写回（fp64） | **50028 / 131072** | 0.0625 |
+| 全部 K 累加后一次写回（fp32） | **50028 / 131072** | 0.0625 |
+
+参考之间本身可区分：两种写回结构相差 **50035** 个元素；块内 fp64 与 fp32 求和相差 **130** 个元素。
+
+**这些数字支持什么判断**：设备输出与“块后写回”一族相差不到 0.1%，与“末尾一次写回”一族相差 38%，因此**写回结构确实是每 256 宽 K 块一次 FP16 写回**，与源注解 `explicit_per_k_fp16` 一致。
+
+**不支持什么判断**：残余 45（对 fp64 块参考）/119（对 fp32 块参考）个元素说明**块内求和顺序与中间舍入**没有被我这两个模型复现；不能据此宣称逐元素完全符合，也没有把块内误差说成“已知的硬件求和顺序”。容差沿用既有标准（`atol/rtol=8e-3` 家族），本轮未改。
+
+### 34.4 “顺序”到底验证到哪一层
+
+| 层次 | 证据 | 结论 |
+|---|---|---|
+| 计划里的任务顺序 | `mn_order` 改变 `submit_group` 序列（m_major：`0:0,0:1,1:0,1:1`；n_major：`0:0,1:0,0:1,1:1`） | **成立** |
+| 发射的命令顺序 | 运行时按 action 顺序发射，到该 submit 末任务整批提交；§27/§32 已把“submit 拥有连续任务段 + 段序按 submit id”变成强制规则，因此命令顺序 = 计划任务顺序 | **成立（代码+计划级）** |
+| 提交顺序 | 同上；本轮设备计数复核为 12/4 与 6/2 两种分组 | **成立（计数级）** |
+| 设备内部执行顺序（时间序） | **未观测**：没有抓到命令级时间戳，也没有 GPU/NPU 侧 trace | **不作结论** |
+
+因此“输出逐位相同”只说明这些实验没有改变结果，**不能反推任何执行顺序**；§33 里“顺序被硬件落实”的措辞按此收窄。
+
+### 34.5 复用证据复核
+
+**规则（与 C 校验一致）**：`interleaved_reuse` 采用 K 外、N 内顺序；**同一 K 块内，第 2 个及以后的 N tile 复用同一输入（A）tile**，每个 K 块的第一个任务不复用。C 的规则是：`data_reuse` 必须满足“不是 j==0、前一个任务 `inputs[0]` 相同、`source_k_index` 相同”，且“多 K 提交的第一个任务不得复用”。
+
+实测（6 任务计划，`d5e881a2…`）：
+
+| 任务 | K 块 | inputs[0] | data_reuse | 说明 |
+|---|---|---|---|---|
+| 9 | k0 | 0 | 否 | 链首，按规则不得复用 |
+| 10 | k0 | 0 | **是** | 与任务 9 同一输入 tile（换 N tile） |
+| 11 | k1 | 1 | 否 | K 块切换，输入视图变了 |
+| 12 | k1 | 1 | **是** | 与 11 同一输入 tile |
+| 13 | k2 | 2 | 否 | K 块切换 |
+| 14 | k2 | 2 | **是** | 与 13 同一输入 tile |
+
+即 6 个任务里 3 个置位（每个 K 块一个），首个置位任务是**第二个任务**，置位位置正好是 `inputs[0]` 不变的边——与规则完全吻合；12×3 的 36 任务版本给出 33 个置位（每 K 块 11 个），同样吻合。
+
+**寄存器字来自设备实际用的程序**：`task_cbuf` 调用 `rk_emit_action`（运行时提交时调用的同一函数、同一份计划、同一设备库 `3749e95d…`），返回的是 CBUF_CON0（寄存器 0x1040）的实发字。实测 `interleaved` 0/6、`interleaved_reuse` **3/6** 带 `0x1000` 位，与计划里的 3 个 `data_reuse` 任务一一对应。
+
+**这证明什么**：复用开关确实写进了 CNA 的 `data_reuse` 位（vendor `npu_regcmd.c:214` 定义该位）。**不证明什么**：不推导带宽下降、不推导加速；本轮没有做性能测量，也没有验证复用对多核/大 tile 的影响。
+
+### 34.6 回归、身份与重放
+
+- 本轮**没有修改任何源码或库**（工作树里除报告外只有 §33 的适配器修复与新增测试，均已在上轮验证）；因此板测数据、C 库与设备库与本轮一致（`f202246a…`、`d527fef0…`/`c9e0d22e…`、设备 `3749e95d…`）。
+- 上一轮回归仍为最新：全量 **700 passed / 1 failed / 1 skipped / 261 subtests**（唯一失败是缺 `transformers` 的环境问题），`ctest` **33/33**。
+- 新增/更新的证据脚本：`repros/fetch_rounding_output.py`（设备侧导出输出数组）、`rounding_references.py`（四个参考与对比）、`repros/host-experiments.json`、`device-experiments.json`（含 `_pairs`）、`repros/device-output-k576.npy` 等。
+
+```bash
+cd research/tilelang-rknpu
+# 同计算舍入参考（使用已归档设备输出）
+PYTHONPATH=python .venv/bin/python results/20261102T220000Z-tilelang-control-fidelity/rounding_references.py
+# 入口/计划事实与 CBUF_CON0（主机）
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261102T220000Z-tilelang-control-fidelity/repros/experiments.py --stage host
+# 设备侧重新导出输出（可选，需设备）
+# PYTHONPATH=... python3 fetch_rounding_output.py   （见 fetch_rounding_run.py 的上传流程）
+```
+
+### 34.7 尚未完成
+
+- 设备**内部执行顺序**没有任何观测手段（无 trace），本轮只验证到计划/命令/提交层。
+- 块内求和顺序与中间舍入仍未建模，残余 45–119 个元素没有逐项解释；不宣称完全符合。
+- `weight_reuse` 无入口；流水/双缓冲/多核未实现；性能未评估。
+
+---
+
+## 35. SmolLM2-135M 的 gate/up 投影：调度要求能不能落到 RKNPU，以及值不值得（2026-11-03）
+
+### 35.0 大白话总结
+
+拿真实模型权重、真实形状，把 gate/up 这一层投影从头到尾跑了一遍：源程序 → RKIR → RKPlan → 发射命令 → RK3588。结论是三句话：
+
+1. **能真正落到硬件上的调度控制，目前是“提交怎么分组”和“输入要不要复用”这两个后端编译选项**。decode（M=1，每次一个 token）把 12 次提交合并成 1 次，单次调用从 **2.93 ms 降到 2.32 ms（约 −21%）**，五次交错测量的原始值互不重叠；打开输入复用反而略慢（2.44 ms）。
+2. **prefill（一次 256 个 token）没有测出任何收益**：22.4 / 22.8 / 20.9 ms 三种配置的原始测量值互相重叠，不能据此说哪个更快；这一档的时间主要花在设备执行上（submit_wait 约 14–16 ms）。
+3. **TileLang 源里的 M/N 分块与遍历顺序注解，用不到生产的这个源上**：后端明确拒绝“单次发射 + 宽 block grid”的组合（原因见 35.3），所以这一轮没有用源注解给生产计划做分块/顺序对照，也没有假装做过。
+
+另外修掉两个“环境/记录层面的旧账”：`transformers` 缺失导致的固定红灯改成带原因的 skip；发现**磁盘上的生产包比当前源码旧**（缺逻辑算子/数值要求等记录，执行结构相同），这一点下面单列。
+
+### 35.1 真实基线（不是近似计划）
+
+| 项 | 事实 |
+|---|---|
+| 生产配方 | `tools/compile_smollm2.py`：`make_matmul_prim`，`CompileOptions(numeric_mode="rk_f16_tiled", allow_approx_lut=False)` |
+| decode 形状 | gate/up = **M=1, K=576, N=3072**（每层一份，30 层） |
+| prefill 形状 | gate/up = **M=CAPACITY=256, K=576, N=3072**；`prefill_bucket == capacity == 256`，主机强制两者相等 |
+| prefill 行数真相 | 逻辑 token ≤ 256，**pad 到 256 行，计划实际处理 256 行**；真实长度靠 `valid_lengths` 掩码 |
+| 生产计划结构 | 36 个 npu_task / 12 次提交 / 39 次上传 / 12 次下载；设备需求 4,960,320 B（decode）、5,491,264 B（prefill） |
+| 数值契约（计划里记的） | `accumulation=ordered_k_tiles_with_f16_writeback`、`accumulator=float16`、`narrowing_points=[k_tile_boundary]`、`execution.k_chain=[0,256,512]`、`k_tile=256` |
+| 共享常量 | 模型 host 默认 `share_constants=True`（`smollm.py:167`） |
+| 设备库 | `librknpu_plan.so` `3749e95d…`（当前源码构建），RK3588 OPi 5 Plus，core mask 1 |
+
+**一个必须说的发现：磁盘上的生产包是旧的**。`manifest.json` 记录的源是 `models/tilelang_matmul.py#sha256:5e14d798…`，其 decode 计划 `d8200f45…`、prefill `49733f6d…`；用当前代码按同一配方重建得到 `8daec9f1…` / `11f43cc4…`。逐字段 diff 的结论是：**执行结构完全一致**（36 任务/12 提交/39 上传/12 下载、同样绑定与常量），差异只有后来几轮审计新增的**记录字段**（`logical_ops` 0→1、`numeric_requirements` 0→1、每个任务的 `source_schedule/source_k_rounding/k_padding/k_physical_extent/applied_schedule`）。所以本轮把“当前代码重建”当作同路径基线，“旧包”当作生产对照，两者不可混用。
+
+### 35.2 控制来源逐项标注
+
+| 控制 | 来源 | 本轮是否用生产源测到 |
+|---|---|---|
+| 分块（M/N tile） | **TileLang 源注解** `rknpu.tile_m/tile_n` | **否**：生产源被拒（35.3）；§33/§34 在带 K 循环的 fixture 源上测过 |
+| 遍历顺序 | **TileLang 源注解** `rknpu.mn_order` | 同上 |
+| K 分块/写回结构 | 源结构（K 循环）+ 契约 `narrowing_points=[k_tile_boundary]` | 是（作为生产基线本身） |
+| 提交分组 | **CompileOptions** `linear_task_order=merged` | **是**（decode/prefill 各一组） |
+| 输入复用 | **CompileOptions** `linear_task_order=interleaved_reuse` | **是**（寄存器位 + 计时） |
+| 分块尺寸上限、K 切片数、缓冲区/生命周期/上传下载 | 后端自动决定 | —（不作为 TileLang 能力） |
+
+### 35.3 一处真实的能力边界（不是本轮新增限制）
+
+把生产的 `make_matmul_prim` 原样加上 `rknpu.schedule/tile_m/tile_n/mn_order` 后编译，三个分块/顺序候选全部被拒：
+
+```
+prefill-annot-default  REJECT a wider block grid is only lowered together with a K loop
+prefill-tile128        REJECT 同上
+prefill-order-n        REJECT 同上
+```
+
+原因不是实现懒惰：生产源是一次发射 + fp32 累加 + 末尾一次窄化，而计划的 K 切片是 256 宽；如果允许这种源声明宽 block grid，规划器仍会把 K 切成 3 段并每段写回 FP16，那就**改变了源声明的舍入点**。所以“源侧 M/N 分块/顺序”目前只对**显式写了 256 宽 K 循环**的源开放。本轮按“不改调度语义”的原则保留该限制，并把结论写成：**生产源不能用源注解调分块/顺序**。
+
+### 35.4 设备实测（真实权重 layer-0 gate/up，五次交错，warmup 已排除）
+
+| 候选 | 控制来源 | 任务/提交 | 复用寄存器位 | 与生产输出 | 总时间中位数 | submit_wait | guard | 设备需求 | 主机需求 |
+|---|---|---|---|---|---|---|---|---|---|
+| decode-prod | 基线 | 36 / 12 | 0 | 基准 | 2.925 ms | 1.790 | 0.677 | 4.96 MB | 3.67 MB |
+| **decode-merged** | CompileOptions | 36 / **1** | 0 | **逐位相同** | **2.320 ms** | 1.097 | 0.782 | 5.93 MB | 4.22 MB |
+| decode-reuse | CompileOptions | 36 / 1 | **33** | 逐位相同 | 2.443 ms | 1.086 | 0.891 | — | — |
+| prefill-prod | 基线 | 36 / 12 | 0 | 基准 | 22.430 ms | 15.699 | 1.824 | 5.49 MB | 8.60 MB |
+| prefill-merged | CompileOptions | 36 / 1 | 0 | 逐位相同 | 22.807 ms | 13.916 | 2.324 | — | — |
+| prefill-reuse | CompileOptions | 36 / 1 | 33 | 逐位相同 | 20.858 ms | 13.430 | 2.825 | — | — |
+
+原始值（毫秒，按采集顺序）：
+
+- decode-prod：2.921 / 2.925 / 2.940 / 2.911 / 3.009
+- decode-merged：2.318 / 2.251 / 2.332 / 2.334 / 2.320（与 prod 不重叠）
+- decode-reuse：2.443 / 2.471 / 2.410 / 2.430 / 2.445
+- prefill-prod：22.37 / 22.43 / 22.72 / 20.43 / 22.59
+- prefill-merged：22.81 / 25.07 / 19.60 / 24.90 / 19.65（与 prod 重叠）
+- prefill-reuse：20.86 / 19.60 / 22.87 / 17.43 / 25.61（重叠，不作结论）
+
+**正确性**：六个候选的输出与生产计划**逐位相同**（0 差异），重复同输入结果稳定，`finite`，换输入后输出改变（decode 的换输入检查在 mock 上做：3072/3072 个元素改变，无旧数据残留）。与“单次窄化”的 fp64 参考的差异（decode 1178/3072、prefill 299765/786432，max_abs 0.0078 / 0.0156）不是错误，而是**契约声明的每 K 块 FP16 写回**带来的既有数值差，与 §34 的结论一致。
+
+**结论**：decode 的 21% 收益来自“12 次提交 → 1 次”（submit_wait 1.79→1.10 ms，per-call 固定开销被摊薄），代价是**设备需求 +0.97 MB**（命令工作区从 12×1 任务变 1×36 任务）与主机需求 +0.55 MB；输入复用把 33 条 CBUF_CON0 置位，但在本形状上**没有**带来额外收益（2.443 > 2.320），不宣称带宽或性能改善。
+
+### 35.5 五个问题的答复
+
+1. **TileLang 提出的调度设计，哪些确实改变了执行？** 对本生产形状：只有**提交分组**与**输入复用**（两者都是后端编译选项，不是源注解）改变了实际执行结构（提交数 12→1、33 条复用寄存器位），其中提交分组带来可测量的 decode 收益；源注解的分块/顺序在本形状上被拒（35.3）。
+2. **RKIR/RKPlan 有没有丢失、误解或无必要限制？** 执行路径上没有发现丢失或误读：契约里声明的 `k_tile_boundary` 写回、`k_chain=[0,256,512]` 与执行一致，逻辑算子/任务/数值要求都在计划里（当前构建）。发现两件事：磁盘生产包**过期**（只有记录字段缺失，执行相同）；生产源**不能**用源注解调分块/顺序（有明确理由，保留）。
+3. **哪些策略对 prefill / decode 分别有效？** decode：提交合并有效（−21%，证据是 submit_wait 减少与原始值不重叠）；prefill：三种配置无可分辨差异，不宣称任何收益；证据是 prefill 的 submit_wait 占 63–70%，被设备执行主导。
+4. **模块收益是否转化成模型收益，付出什么成本？** **没有转成模型收益，也没有做模型级替换**。原因有二：磁盘生产包与当前源码不同源，直接替换需要重建 240 份计划的整包并重跑模型验收；而 gate/up decode 只占每层投影工作的一部分（30 层之一），模型级差异会低于噪声。成本侧数据已给出：+0.97 MB 设备、+0.55 MB 主机。
+5. **哪些结论仍没有证据？** 模型级 TTFT/prefill/decode/内存；其它层的权重（只测了 layer 0）；真实捕获激活（本机 `.data/smollm2_v3_inputs.json` 为空，用的是确定性输入）；复用是否在别的大形状上有收益；prefill 的任何调度收益。
+
+### 35.6 环境旧账
+
+- `transformers` 缺失：网络可用，但完整依赖树（huggingface_hub/tokenizers/…）多次安装都在工具时限内没装完。该测试只借它的 `AutoTokenizer` 入口（且被 mock），属性本身与我们的代码无关。**处理**：改为“依赖缺失时带原因 skip”（`tests/test_replay_smollm2_v5.py`），现在该文件 **2 passed / 1 skipped**，不再是一盏常亮红灯。
+
+### 35.7 身份与重放
+
+| 物件 | 值 |
+|---|---|
+| 生产包（旧）decode/prefill | `d8200f45…` / `49733f6d…`（manifest `source_hash 5e14d798…`） |
+| 当前代码重建 decode/prefill | `8daec9f1…` / `11f43cc4…` |
+| decode 候选 | prod `8daec9f1…`、merged `86412918…`、reuse `c2b9d033…` |
+| prefill 候选 | prod `11f43cc4…`、merged `1d748803…`、reuse `3409d380…` |
+| 设备库 | `3749e95d0387e3c11d061a955b0acb02bcb430ad66504d5b5def4a66e1da590c` |
+| 证据 | `results/20261103T000000Z-smollm-schedule-truth/`（`host-campaign.json`、`device-campaign.json`、`repros/production-identity.json`、`production-diff.txt`、`weights-layer0-gate_up.npy`、`plans/`、`board_campaign.py`、`logs/`） |
+
+```bash
+cd research/tilelang-rknpu
+# 生产计划身份与“旧包 vs 当前构建”的差异
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T000000Z-smollm-schedule-truth/repros/production_identity.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T000000Z-smollm-schedule-truth/repros/production_diff.py
+# 候选构建（主机）
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T000000Z-smollm-schedule-truth/repros/campaign.py --stage host
+# 设备：由 board_campaign.py 上传后在板上 --stage device
+for PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_replay_smollm2_v5.py -q -o addopts=""
+```
+
+### 35.8 尚未完成
+
+- 模型级替换与 TTFT/decode/内存测量（前置条件：重建整包 + 重新验收）。
+- 其它层权重（layer 0 之外）与真实捕获激活。
+- prefill 的可用调度收益（当前全部落在噪声里；要分开需要更多轮次或更大的形状变化）。
+- 输入复用在其它形状上的收益（本轮只证明寄存器位与结构，不证明性能）。
+
+---
+
+## 36. 把已证实的调度候选装回 SmolLM2：模型级收益与代价（2026-11-03）
+
+### 36.0 大白话总结
+
+上一轮在 gate/up 这一个投影上量到：decode 时把 12 次提交并成 1 次，单次调用从 2.93 ms 降到 2.32 ms。本轮把这套候选通过**官方计划替换机制**（`single_matmul_schedule_v1`，不是改 JSON 造假）装进真实的 SmolLM2-135M 包里，在 RK3588 上跑整模型：
+
+- **每个 token 从 453.5 ms 降到 411.9 ms，快 9.2%**（41.6 ms/token），五组交错测量里**每一对都是变快**（−31 ~ −640 ms/8步），顺序每组对调以排除“谁后跑谁占便宜”。
+- **数值一模一样**：同样的 token 序列、同样的 prefill logits、同样的每步 logits（逐位相同）。
+- **prefill 没有变化**：被替换的只是 decode 计划，prefill 计划原封不动；实测 prefill 差异（3742 vs 3785 ms）就是噪声，正好当作测量的对照。
+- **代价是内存**：每个被替换的计划在设备上多占 0.97 MB（命令工作区从 12×49 KiB 变 1×576 KiB、BO 数 41→52），30 层合计 **+29.1 MB 设备、+16.5 MB 主机**。
+
+所以这一轮的回答是：**上层调度设计能正确落地，并且确实让真实计算更快**——但只在 decode，且要付约 29 MB 设备内存。
+
+### 36.1 装回模型的路径（没有手改计划）
+
+| 步骤 | 事实 |
+|---|---|
+| 生产包 | `.data/models/smollm2_135m_instruct_package`（268 份计划 + 269 MB 权重），manifest 记录源 `models/tilelang_matmul.py#sha256:5e14d798…` |
+| 候选 | `decode-merged.rkplan.json`（`86412918201c…`，36 任务 / 1 提交），由当前代码从生产源编译 |
+| 替换机制 | `SmolLM2Runner(..., plan_overrides=...)`，每层 `layer.{i}.gate_up.decode` 一条，`replacement_kind="single_matmul_schedule_v1"`，`base_plan_hash` 取 manifest 里该计划自己的哈希 |
+| 兼容性校验（先做） | `bind_sig` / `const_sig`（含 `pack_key`）/ `profile_hash` / 只含 mm+mm_acc 任务 / base 哈希：**decode 与 prefill 候选全部通过**（`override-compat.json`） |
+| 加载确认 | 运行时报告 `loaded_plan_override_hashes = 30`（30 层全部生效），产线模式为 0 |
+
+注意：**没有重建包**。磁盘包虽然是旧源构建的（缺 §21/§22 的记录字段，执行结构相同），但官方替换机制的契约只要求绑定/常量/配置一致，候选已满足，因此本轮把改动面缩到最小：只换 30 份 decode 计划。
+
+### 36.2 模型级测量（RK3588，库 `3749e95d…`，5 组，顺序每组对调）
+
+| 组 | 执行顺序 | production decode（8 步合计） | merged decode（8 步合计） | 差 |
+|---|---|---|---|---|
+| 0 | P→M | 3778.7 ms | 3257.6 ms | −521.1 |
+| 1 | M→P | 3515.5 ms | 3304.5 ms | −211.0 |
+| 2 | P→M | 3628.2 ms | 3597.4 ms | −30.8 |
+| 3 | M→P | 3907.5 ms | 3267.8 ms | −639.7 |
+| 4 | P→M | 3482.1 ms | 3295.3 ms | −186.7 |
+| **中位数** | | **3628.2 ms** | **3295.3 ms** | **−332.9 ms** |
+
+折算：**453.5 → 411.9 ms/token，−41.6 ms/token（−9.2%）**。
+
+prefill（两种模式的计划完全相同）：production 中位数 **3742.3 ms**、merged **3785.4 ms**（+1.2%，落在 3703.6–3998.6 的散布内）→ 作为“未改动部分不漂移”的对照。
+
+**正确性**：`same_tokens=true`、`same_prefill_logits=true`、`same_step_logits=true` —— token 序列与每一步 logits 逐位相同；两种模式各 9 个 token 完全一致，且组内重复稳定。
+
+### 36.3 代价与解释
+
+| 项 | production | merged（30 层 decode 全换） | 差 |
+|---|---|---|---|
+| 单计划设备需求 | 4,960,320 B | 5,929,728 B | +969,408 B |
+| 命令工作区 | 49,152 B（12 提交） | 589,824 B（1 提交 × 36 任务） | +540,672 B |
+| data BO 数 | 41 | 52 | +11 |
+| 主机需求 | 3,667,804 B | 4,216,396 B | +548,592 B |
+| 30 层合计 | — | — | **+29.1 MB 设备 / +16.5 MB 主机** |
+
+为什么“并提交”能省：gate/up decode 一次调用原本要 12 次阻塞提交，每次都有固定开销（§24/§35 的 `submit_wait` 从中位数 1.79 ms 降到 1.10 ms 就是它）。30 层各调一次，模型里就摊成每 token 约 30×1.2 ms≈36 ms，与实测 41.6 ms 同量级（差额来自 guard/pack 的细微变化）。设备侧执行时间本身没变——这点必须说清楚：**省的是提交与门控的固定成本，不是算得快了**。
+
+### 36.4 五个问题的答复
+
+1. **哪些 TileLang 调度设计确实改变了执行？** 在本轮真实模型上，只有**提交分组**（后端编译选项）改变了执行结构并带来收益；源注解的分块/顺序在生产源上被拒（§35.3），输入复用有寄存器证据但本形状不更快（§35.4）。
+2. **RKIR/RKPlan 有没有丢失、误解、无必要限制？修了什么？** 没有丢失或误解：契约里的 `k_tile_boundary` 写回、`k_chain=[0,256,512]`、逻辑算子与数值要求都能在计划里查到，替换后逐位一致。两件已登记的现状：磁盘生产包是旧源构建的（只有记录字段缺失，执行相同）；生产源不能声明 M/N 分块/顺序（有明确理由）。**本轮没有需要修的传递缺陷**，因此没有改任何源码。
+3. **对 prefill / decode 分别有效？** decode：+9.2%（模型级，证据如上）；prefill：无变化（被替换的计划不参与 prefill，实测差异为噪声）。
+4. **模块收益是否转化成模型收益，付出什么成本？** 转化了：模块级 −0.6 ms/调用 → 模型级 −41.6 ms/token（30 层）；代价 +29.1 MB 设备、+16.5 MB 主机，以及 1 次替换机制的配置（30 条 override，运行时确认全部生效）。
+5. **哪些结论仍没有证据？** prefill 的任何调度收益；输入复用在模型级（未装回模型测）；其它角色（qkv/o/down）是否同样受益；不同 prompt 长度/批量下的稳定性；以及“重建整包 + 重新封存验收哈希”这一步没做（本轮刻意不重建）。
+
+### 36.5 与既有证据的关系
+
+- 模块级（§35.4）：decode 2.925 → 2.320 ms（−20.7%），逐位一致。
+- 模型级（本轮）：453.5 → 411.9 ms/token（−9.2%），逐位一致。两者方向与量级一致（gate/up decode 约占每 token 时间的 19%）。
+- 既有数值结论不变：与“单次窄化”的 fp64 参考的差异仍来自契约声明的每 K 块 FP16 写回，本轮未改容差、未改数值政策。
+
+### 36.6 身份与重放
+
+| 物件 | 值 |
+|---|---|
+| 生产包 manifest | `b923fc5b…`（268 份计划，capacity 256） |
+| 生产 decode 计划（layer_00_gate_up_decode） | `d8200f45…`；prefill `49733f6d…` |
+| 候选 merged decode | `86412918201c…`（36 任务 / 1 提交） |
+| 替换校验 | `results/20261103T020000Z-smollm-model-level/override-compat.json`（decode/prefill 均 installable） |
+| 设备库 | `3749e95d0387e3c11d061a955b0acb02bcb430ad66504d5b5def4a66e1da590c` |
+| 原始时间 | `model-raw.txt`、`model-summary.json`（设备侧 JSON 因工作区清理未取回，控制台原始行已归档） |
+
+```bash
+cd research/tilelang-rknpu
+# 替换兼容性（本地）
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T020000Z-smollm-model-level/override_compat.py
+# 模型级 A/B（需设备；上传包后运行）
+# python3 model_campaign.py --package <pkg> --candidate decode-merged.rkplan.json \
+#         --out model-result.json --groups 5
+```
+
+### 36.7 尚未完成
+
+- 未重建生产包、未重新封存模型验收哈希（本轮不需要：替换机制不动包）。
+- prefill 侧没有候选（源注解被拒，提交合并对 256 行桶无收益）。
+- 其它角色（qkv/o/down）与输入复用的模型级收益未测。
+- 单 prompt、单 seed；不同上下文长度与温度下的稳定性未验证。
+- 派出去做“重建包 + 验收封存前置条件”的只读侦察子代理在收尾时尚未回报，其范围已被本轮的实测（替换契约 + 包身份）覆盖。
+
+---
+
+## 37. 为什么生产的 gate/up 源码不能声明 M/N 分块与遍历顺序（2026-11-03）
+
+### 37.0 大白话
+
+**一句话：拒绝是必要的，但原因不是“分块做不到”，而是“这份源码没法证明自己要的舍入点”。**
+
+生产源码 `make_matmul_prim` 是一次发射、一个 fp32 累加器、末尾只窄化一次。把它的 `T.Kernel(1,1)` 改成按 M/N 分块的网格并加上 `rknpu.tile_m/tile_n/mn_order`，会被前端拒绝：`a wider block grid is only lowered together with a K loop`。
+
+为什么必要：设备原语一个任务最多累加 256 宽 K，而 K=576，所以**任何**真实计划都必须把 K 切成 3 段、每段写回 FP16。tiled 调度（`k_tile=256`、`accumulation=ordered_ascending_f16_writeback`）正是要求源码把这个写回点**声明出来并可被证明**；没有 K 循环的源码文本里没有任何东西能证明它，而它唯一能诚实声明的 `fp32_final_narrowing` 又和执行（3 次窄化）矛盾。所以只能拒绝。
+
+**但有个重要的实测更正**：生产计划**实际执行的就是每 K 块写回**（下文：与“每块写回”参考只差 332/786432 个元素，与“末尾一次窄化”差 299760）。所以这不是“计算不同”导致的拒绝，而是“**源码文本无法自证**”导致的拒绝——是一条**证明义务**，不是能力缺口。
+
+**修了什么**：只修诊断。原来那句 `a wider block grid is only lowered together with a K loop` 把原因说成了“网格”，现在明确说“宽网格需要显式的每 256 宽 K 的 FP16 写回（写 K 循环），或保持单 tile”，并带上 `required=[explicit_per_k_fp16, single_k_tile_fp16]`。**没有放宽任何检查，也没有把分块加进生产源**。
+
+**能不能用**：换成能准确表达设备计算的源码（256 宽 K 循环 + `explicit_per_k_fp16`）之后，分块与遍历顺序都真的生效：`tile_m` 256→128 让任务从 36 变 72、提交从 12 变 24；`n_major` 改变发射的 tile 顺序。四条计划（生产 vs K 循环 vs 128 分块 vs n_major）**输出逐位相同**。
+
+**值不值**：不值——128 分块慢 43%（28.4 ms vs 19.2 ms），`n_major` 与默认在噪声内（19.12 vs 19.15），decode 无差异（3.14 vs 3.18 ms）。所以生产策略保持不变。
+
+### 37.1 拒绝复现（decode 与 prefill 都一样）
+
+| 项 | 值 |
+|---|---|
+| 源码 | `models/tilelang_matmul.py:make_matmul_prim` + `T.func_attr(rknpu.schedule/tile_m/tile_n/mn_order/source_k_rounding)`，`T.Kernel(T.ceildiv(N,256), T.ceildiv(M,256))` |
+| 形状 | decode `(1,576,3072)`、prefill `(256,576,3072)` |
+| 选项 | `CompileOptions(numeric_mode="rk_f16_tiled", allow_approx_lut=False)`，profile `7ef710bb…` |
+| 最早拒绝 | `frontend/tilelang_adapter.py:5654`（`extract()` 的 block-grid 校验），错误码 `RK_E_UNSUPPORTED` |
+| 原因（修复前措辞） | `a wider block grid is only lowered together with a K loop` |
+| 原因（现在措辞） | `a wider block grid needs an explicit per-256-K FP16 writeback (the tiled schedule narrows at every K block); write the K loop, or keep a single tile`，附 `required=[explicit_per_k_fp16, single_k_tile_fp16]` |
+| 不加注解时采用的规则 | 36 任务 / 12 提交 / 39 上传 / 12 下载；计划记录 `source_k_rounding=fp32_final_narrowing`（描述**源码**），数值契约声明 `narrowing_points=[k_tile_boundary]`、`accumulation=ordered_k_tiles_with_f16_writeback`（描述**执行**） |
+
+### 37.2 真正的原因（两道门，第二道才是语义）
+
+1. **前端（先触发）** `tilelang_adapter.py:5641-5666`：block-grid 只允许 extent=1，或与可检测的 K 循环共存；`k_block = _detect_k_block(...)` 为 None 时直接拒绝。这条 gate 的存在理由写在 `_detect_k_block:5066-5070`：多 tile 的输出覆盖证明依赖 block 索引分析，而那套分析长在 K 循环提取器里。→ **这一半是“实现位置”问题**：分块机器本身不依赖 K 循环。
+2. **调度器（语义）** `passes/tile.py:108-118`：scheduled 源码必须声明 `explicit_per_k_fp16` 或 `single_k_tile_fp16`，注释写明“absence, a final-only FP32 narrowing, and an annotation that disagrees with the proven source all mean the schedule would describe a different numerical program”。→ **这一半是必要的**：tiled 路径固定 `k_tile=256`、每块写回，`fp32_final_narrowing` 与它矛盾。
+
+**为什么同一份无注解源码可以执行、加上不改计算的 M/N 要求反而被拒**：无注解时前端走单发射路径，不提任何舍入声明，规划器按默认把 K 切成 3 段（契约里已声明 `k_tile_boundary`），于是“源码说了什么”和“执行做了什么”不需要一致——事实上它们确实不一致（源码是 final-only，执行是 3 次窄化），只是没人声称要遵守。加上注解后，`rknpu.schedule` 触发“声明必须被证明”的义务，矛盾才暴露。这不是“注解让计算变难”，而是“注解要求自证”。
+
+### 37.3 实测：生产计划执行的就是每 K 块写回
+
+同一组真实权重（layer-0 gate/up，FP16）与同一输入，设备（库 `3749e95d…`）：
+
+| 候选 | 任务/提交 | 与 fp64 单次窄化差 | 与 fp16 每块写回链差 |
+|---|---|---|---|
+| prefill-A 生产 | 36/12 | 299760/786432 | **332** |
+| prefill-B K 循环 tile256 | 36/12 | 299760 | **332** |
+| prefill-C K 循环 tile128 | **72/24** | 299760 | **332** |
+| prefill-D K 循环 tile256 n_major | 36/12 | 299760 | **332** |
+| decode-A 生产 | 36/12 | 1178/3072 | **1** |
+| decode-B K 循环 | 36/12 | 1178 | **1** |
+
+两两对照（设备输出，逐位）：A⟷B、B⟷C、B⟷D、decode A⟷B **全部 0 差异**。
+
+读法：① 生产计划与“每块写回”源码**数值等价**，说明拒绝与计算含义无关；② C 让任务几何真的变了（36→72、提交 12→24），输出仍逐位相同，说明**分块控制确实生效且不改数学**；③ D 让发射的 tile 顺序改变（`mm:0:0,mm:0:1,mm:1:0,mm:1:1` vs `mm:0:0,mm:1:0,mm:0:1,mm:1:1`），输出仍相同——**顺序生效**只到“计划/命令/提交顺序”这一层，设备内部时间序未观测。
+
+decode 只有 1 个 M tile，`m_major`/`n_major` 发射完全相同的任务序列（测试固定了这一点），所以 decode 不能作为“顺序改变执行”的证据。
+
+### 37.4 是否值得采用（交错计时，5 轮中位数，含完整调用）
+
+| 候选 | 任务/提交 | 总时间 | submit_wait | guard |
+|---|---|---|---|---|
+| prefill-A 生产 | 36/12 | 19.867 ms | 11.907 | 2.134 |
+| prefill-B tile256 | 36/12 | 19.151 ms | 11.605 | 1.356 |
+| prefill-C tile128 | 72/24 | **28.418 ms** | 19.914 | 2.204 |
+| prefill-D n_major | 36/12 | 19.121 ms | 11.622 | 1.340 |
+| decode-A 生产 | 36/12 | 3.135 ms | 1.735 | 0.925 |
+| decode-B K 循环 | 36/12 | 3.177 ms | 1.747 | 0.934 |
+
+结论：**没有值得采用的候选**。tile128 明显更慢（+43%，任务与提交翻倍），`n_major` 与默认在噪声内（−0.03 ms），decode 无差异。A vs B 的 0.7 ms 也不作为收益申报（两者计算相同、结构相同，差异落在 guard 项上，属噪声）。因此**保留生产策略**，本轮不做模型级替换（§36 的提交合并收益不在此重复申报）。
+
+### 37.5 五个问题的答复
+
+1. **原生产源码为什么被拒？** 前端 block-grid 校验要求“宽网格 + K 循环”，生产源码没有 K 循环；本质上是调度器要求 scheduled 源码声明并证明每 256 宽 K 的 FP16 写回，而该源码文本无法自证。
+2. **拒绝是否必要？** 必要（在现有契约下）：K=576 时任何计划都要切 3 段并写回 3 次，`fp32_final_narrowing` 与执行矛盾；tiled 契约要求声明可证明的舍入点。**但**具体实现位置一半是历史原因（覆盖证明只在 K 循环提取器里），且原诊断措辞把原因归到“网格”，具有误导性。
+3. **修了什么/为什么不修？** 修了诊断：把“网格需要 K 循环”改成“宽网格需要显式的每 256 宽 K FP16 写回，并给出两种合法舍入声明”。**没有**放宽 gate、没有把分块能力塞进单发射路径（那会让计划执行与记录不一致，正是本审计一直在消除的东西）。
+4. **哪些 TileLang 源码设计已经实际改变执行？** 用能准确表达设备计算的源码（K 循环 + `explicit_per_k_fp16`）时：`tile_m` 改变任务/提交几何（36/12 → 72/24），`mn_order` 改变发射顺序（多 M tile 形状才能区分）。生产源本身无法表达这两项。
+5. **是否更快、代价、未测？** 都不更快：128 分块 +43%，顺序在噪声内，decode 无差异；代价（128 分块）是任务/提交与设备预算翻倍。未测：其它 tile 尺寸（192/64）、其它角色（qkv/o/down）、模型级（无候选入选）、设备内部时间序。
+
+### 37.6 代码与证据身份
+
+| 物件 | 值 |
+|---|---|
+| 本轮代码改动 | `frontend/tilelang_adapter.py`（诊断措辞 + 注释，无行为变化）、新增 `tests/test_mn_schedule_source_entry.py` |
+| 生产 decode/prefill 计划 | `8daec9f11046…` / `11f43cc45ee9…` |
+| K 循环 tile256 / tile128 / n_major（prefill） | `f57a05661132…` / `141d9bc7f472…` / `5003b9efaf55…` |
+| decode K 循环 | `7e9f18b897d0…` |
+| 设备库 | `3749e95d0387e3c11d061a955b0acb02bcb430ad66504d5b5def4a66e1da590c` |
+| 回归 | 全量 **705 passed / 2 skipped / 0 failed / 265 subtests** |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T040000Z-mn-schedule-source-entry/repros/source_entry.py --stage host
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_mn_schedule_source_entry.py -q -o addopts=""
+# 设备：board_run.py 上传后在板上 --stage device（结果 device-sources.json）
+```
+
+证据：`results/20261103T040000Z-mn-schedule-source-entry/`（`host-sources.json`、`device-sources.json`、`repros/source_entry.py`、`repros/plans/*.rkplan.json`、`repros/weights-layer0-gate_up.npy`、`board_run.py`、`logs/full-pytest.log`、`snapshot/`）。
+
+### 37.7 尚未完成
+
+- 没有把“多 tile 覆盖证明”从 K 循环提取器抽出来给单发射路径用（那是一个真实的实现改进，但会引出“计划执行与源码声明不一致”的记录问题，超出本轮范围）。
+- 只测了 tile 256/128 与两种顺序；未测 192/64、未测其它角色、未做模型级（无候选入选）。
+- 设备内部执行顺序仍无法观测；本轮的“顺序生效”只到命令/提交层。
+
+---
+
+## 38. M/N 调度声明为什么要连带数值形式：设计、实测与一处文档/实现冲突（2026-11-03）
+
+### 38.0 大白话
+
+**这段不对称是设计，而且写在文档里；本轮修的是“拒绝理由报错了、和文档对不上”。**
+
+- **不加调度声明**：走历史默认路径。后端按目标数值策略把 K 切成 256 宽的段、每段写回 FP16；计划里 `source_k_rounding=fp32_final_narrowing` 描述**源码**（一个累加器、末尾窄化），数值契约 `narrowing_points=[k_tile_boundary]` 描述**执行**。两者不一致是允许的，因为源码没有声称要控制执行。
+- **加 M/N 声明**：源码声称控制几何，而几何（`k_tile=256`）与写回点耦合。所以要求源码本身写成“每 K 段写回”的形式；否则计划会真的多窄化两次，却被注解说成只窄化一次——那就是静默改写数值，必须拒绝。
+- **用户不需要额外写舍入注解**：阶梯实验第 4 级证明，K 循环源码即使不写 `rknpu.source_k_rounding` 也被接受，适配器**按实际的 copy 结构推导**出 `explicit_per_k_fp16`。文档也明确写着“identifies them by their actual copies, never by an annotation”。所以“额外要求”其实是“源码要写成每块写回”，不是“多写一个注解”。
+- **唯一仍被拒的组合**：声明了 M/N、但源码只窄化一次。`TILELANG-SCHEDULE.md:23-30` 明确承诺这种情形以 `RK_E_NUMERIC_CONTRACT` 拒绝，而实现原先报的是 `RK_E_UNSUPPORTED`（“wider block grid …”）——**文档/实现冲突**，本轮按文档对齐。
+- 行为没有放宽：生产计划**逐字节不变**（decode `8daecf11…`、prefill `11f43cc4…`，与 §37 相同），因此设备证据沿用 §37，没有重复上板。
+
+### 38.1 两类要求各自是什么意思
+
+| 概念 | 含义 | 依据 |
+|---|---|---|
+| 源码表达的计算/舍入 | 循环体内 `Acc16→Cl`、`gemm`、`Cl→Acc16` = 每 K 段写回；单次发射 = 末尾一次窄化 | 适配器按实际 copy 识别（`_detect_k_block` / `_k_loop_module`），文档 `TILELANG-SCHEDULE.md:36-41` |
+| `numeric_mode="rk_f16_tiled"` 允许什么 | 允许把 K 按 256 切开、每段 FP16 写回：契约 `accumulation=ordered_k_tiles_with_f16_writeback`、`narrowing_points=[k_tile_boundary]`、`k_tile=256` | 生产计划 `numeric_requirements` 实测 |
+| `rknpu.source_k_rounding` | **描述源码**并与“已证明的舍入点”交叉校验；缺省时由结构推导 | 第 4 级 ACCEPT；第 6 级冲突 REJECT |
+| M/N 分块与遍历顺序 | 本身不额外承诺数值；但要求源码把与几何配套的数值形式写清 | 第 2/3 级 REJECT；文档 `:23-30` |
+
+**用户只提出 M/N 调度，是否就承担新的数值证明要求？** 承担，但只承担“把源码写成它本来就要执行的形式”这一条：适配器自己推导并交叉校验，用户不必再写注解。依据是文档的显式条款，而不是事后从某个拒绝条件倒推。
+
+### 38.2 阶梯实验（真实 gate/up 源码，`rk_f16_tiled`，decode 与 prefill 结论相同）
+
+| 级 | 源码形态 | decode | prefill | 最早决定位置 |
+|---|---|---|---|---|
+| 1 | 无注解（生产源码） | ACCEPT 36/12，stamp `fp32_final_narrowing` | 同 | — |
+| 2 | + 网格声明（m_major，无 K 循环） | **REJECT -4** `scheduled source narrows only after the full K reduction…` | 同 | `frontend/tilelang_adapter.py`（原报 -2） |
+| 3 | + 遍历顺序（n_major，无 K 循环） | **REJECT -4**（同上） | 同 | 同上 |
+| 4 | 显式 K 循环 + 每段写回，**不写舍入注解** | **ACCEPT** 36/12，stamp `explicit_per_k_fp16`（推导） | 同 | — |
+| 5 | K 循环 + 与源码一致的舍入声明 | ACCEPT 36/12 | 同 | — |
+| 6 | K 循环 + 冲突声明（`fp32_final_narrowing`） | REJECT -4 `does not match the proven rounding points` | 同 | `frontend`（不是调度器） |
+
+结论：**唯一“需要数值形式”的地方是第 2/3 级**（声明 M/N 但不写每段回写），而它不是“多写注解”的问题，而是“源码本身就只窄化一次”的问题。第 4 级说明注解是可选的。
+
+### 38.3 修了什么（诊断与文档对齐，行为不变）
+
+| 位置 | 之前 | 现在 |
+|---|---|---|
+| `frontend/tilelang_adapter.py`（网格拒绝） | `RK_E_UNSUPPORTED`（-2），`a wider block grid needs an explicit per-256-K FP16 writeback…` | `RK_E_NUMERIC_CONTRACT`（-4），`scheduled source narrows only after the full K reduction; the tiled schedule writes FP16 back at every 256-wide K block… (write the K loop, or drop the M/N declaration to stay on the legacy default path)`，`required=[explicit_per_k_fp16, single_k_tile_fp16]` |
+| `tests/test_frontend.py::test_multi_block_grid_without_k_loop_is_rejected` | 断言 -2 与 “block grid”，注释说原因是“没有输出覆盖证明” | 断言 -4 与数值契约措辞，注释改为引用文档条款 |
+| `tests/test_mn_schedule_source_entry.py` | 上一轮按 -2 断言 | 改为 -4，并新增“K 循环源码无需舍入注解”的断言 |
+
+**没有放宽任何 gate**，也没有把分块加进单发射路径；生产计划的许多字段逐字节不变（下述）。
+
+### 38.4 验证
+
+| 检查 | 结果 |
+|---|---|
+| 生产计划（decode / prefill） | 与 §37 记录的计划 `to_dict()` **逐字节相同**（`8daecf11…` / `11f43cc4…`） |
+| 合法 M/N 声明 | K 循环形态下仍改变任务几何（§37：`tile_m` 128 → 72 任务/24 提交）与发射顺序 |
+| 冲突/未知/越界 | 第 6 级冲突声明、未知 `rknpu.*`、tile 越界仍被拒（§33/§37 测试） |
+| 保存/加载 | 计划身份不变；`load_plan` 重验证通过 |
+| 全量回归 | **706 passed / 2 skipped / 0 failed / 265 subtests** |
+| 设备证据 | 本轮**没有新接受的组合**、计划与执行代码逐字节未变，故沿用 §37 的真机结果（A/B/C/D 逐位相同、计时 19.87/19.15/28.42/19.12 ms） |
+
+### 38.5 对 §37 的更正
+
+§37 把这条拒绝的原因写成“多次分块覆盖证明只长在 K 循环提取器里”，并据此把拒绝归为“一半是实现位置问题”。**更正**：真正的规则是数值契约（调度声明必须与每 256 K 写回配套），文档 `TILELANG-SCHEDULE.md:23-30` 明确写了这条拒绝；覆盖证明是伴生约束，不是理由。§37 的其余结论（拒绝必要、生产计划执行的就是每块写回、tiling/order 生效但不更快）不受影响。
+
+### 38.6 五个问题的答复
+
+1. **两种处理为何不同？** 不加注解走历史默认路径（后端按目标策略切 K 并记录两套字段）；加注解则声称控制几何，必须连同几何蕴含的数值形式一起成立。
+2. **这种差异合理吗？** 合理，且是文档条款（不是从拒绝倒推）：几何与写回点通过 `k_tile=256` 耦合，允许“声明 M/N 但源码只窄化一次”等于让计划静默改写数值。用户的负担只是“源码写成它本来要执行的样子”，注解可省。
+3. **修了什么？** 修了诊断：该拒绝从 `RK_E_UNSUPPORTED` 改为文档承诺的 `RK_E_NUMERIC_CONTRACT` 并明确措辞；两个测试同步。**没有**放宽校验。
+4. **现在怎样表达 M/N 调度？** 写带 K 循环且每段写回的源码 + `rknpu.schedule/tile_m/tile_n/mn_order`；舍入注解可选。仍会被拒：单次发射源码 + M/N 声明、与源码冲突的舍入声明、未知 `rknpu.*`、tile 越界。
+5. **哪些结论分别由代码/离线/设备验证？** 代码：两类要求与 gate 位置；离线：阶梯 6 级 + 生产计划身份 + 全量回归；设备：§37 的真实权重/输入逐位对照与计时（本轮计划未变，未重复上板）。
+
+### 38.7 身份与重放
+
+| 物件 | 值 |
+|---|---|
+| 本轮代码改动 | `frontend/tilelang_adapter.py`（拒绝码+措辞）、`tests/test_frontend.py`、`tests/test_mn_schedule_source_entry.py` |
+| 生产 decode / prefill | `8daecf11046515c…` / `11f43cc45ee98…`（与 §37 相同） |
+| 设备库 | `3749e95d…`（未变） |
+| 证据 | `results/20261103T060000Z-mn-numeric-coupling/`（`repros/ladder.py`、`ladder.json`、`logs/full-pytest.log`、`snapshot/`） |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T060000Z-mn-numeric-coupling/repros/ladder.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_mn_schedule_source_entry.py tests/test_frontend.py -q -o addopts=""
+```
+
+### 38.8 尚未完成
+
+- 没有实现“单发射源码 + 多 tile 网格”的接受路径：文档与契约都要求这种源码先写成每段写回，本轮按文档保留拒绝。
+- 只在 gate/up 形状上做了阶梯；qkv/o/down、lm_head 未逐项验证（同一代码路径，风险低但未测）。
+- 环境里的 `transformers` 部分安装已清除，replay 测试按“依赖缺失”skip（原因写在测试里）。
+
+---
+
+## 39. gate/up 的跨 tile 数据复用审计：机会、传递与实测（2026-11-03）
+
+### 39.0 大白话
+
+**这段计算里真正值得复用的是权重，但现有调度没有任何一种顺序能让硬件复用权重；而已经实现的“输入复用”在 decode 上几乎没有可省的东西。**
+
+- decode（M=1）每个任务读的输入 tile 只有 ~0.5–1 KB，权重 tile 是 128 KB：**CBUF 读量 3.70 MB 里 99.97% 是权重**。所以“复用输入”即便开了 33 个复用位，也省不到东西——这与 §35 的实测（复用没带来额外收益）一致，本轮给出了原因。
+- prefill（M=256）输入与权重各约一半（3.46 MB / 3.46 MB），复用输入理论上能省下 11/12 的输入读量（约 3.17 MB 的 CBUF 读），但因为生产是 12 次提交、每个提交内 3 个 K 切片相邻，**相邻任务既不共享输入也不共享权重**（审计 `data_ok=0, weight_ok=0`）；只有改成 K 外、N 内的顺序（`interleaved_reuse`）才出现 33 个可复用邻接。
+- **权重复用（weight_reuse）目前不可达**：C 校验要求“前一个任务与当前任务 `inputs[1]` 相同且 `source_k_index` 相同”。planner 能产生的所有顺序都把 K 放在最内层，所以同一 (N,K) 的两个 M tile 永远不相邻。要让它成立需要 (n,k) 固定、m 最内层的第三种嵌套——那是新的调度维度，本轮不做，也不置位未经验证的寄存器组合。
+
+### 39.1 六层访问与复用（逐层计数）
+
+| 层 | 内容 | decode (1,576,3072) | prefill (256,576,3072) | 结论 |
+|---|---|---|---|---|
+| 1 Host 原始数组 | A 按 K 切片读 3 次（每次逻辑 tile）；B 读 3 次 | A 1.1 KB / B 3.54 MB（一次） | A 3.46 MB / B 3.54 MB | 无重复读同一字节 |
+| 2 Host packing | A 3 次上传；B 36 次常量上传（进程内一次） | A 1.1 KB | A 3.46 MB | 无重复打包 |
+| 3 常量缓存 / 持久 BO | 36 个 shared constant BO（进程级，`share_constants=True`） | 4.72 MB 常驻 | 同 | 每调用**不重传**，但设备每次仍读 |
+| 4 device → CBUF | 每任务读 A tile + B tile | **3.70 MB/调用**（A 1.1 KB，B 3.70 MB） | **7.08 MB/调用**（A 3.46，B 3.46+padding） | 这是真正可省的量级 |
+| 5 CBUF operand reuse | `data_reuse` 已实现；`weight_reuse` 无路径 | 33 个邻接可复用（K 外/N 内） | 33 个 | 见 39.2 |
+| 6 输出 / partial | 12 下载 + 12 publish；累加器乒乓 | 12 tiles，1×256 各 | 12 tiles，256×256 各 | merged 下 12 个输出同时存活（52 slots vs 41） |
+
+数据来源：`repros/audit.py`（逐任务的 view/BO/offset/bytes 统计）+ 生产计划 accounting。**注意**：第 3 层的“缓存”不等于第 4 层“不再读”；本轮没有把二者混为一谈。
+
+### 39.2 复用资格审计（C 校验器的定义）
+
+C 规则（`rk_plan_validate.c`）：多 K 提交的第一个任务不得复用；`data_reuse` 要求前一任务 `inputs[0]` 相同且 `source_k_index` 相同；`weight_reuse` 要求前一任务 `inputs[1]` 相同且 `source_k_index` 相同。据此逐计划统计相邻对：
+
+| 计划 | 任务/提交 | 不同的 A view / B view | 同一 A 且同一 k 的相邻对 | 同一 B 且同一 k 的相邻对 | 已置位 d/w |
+|---|---|---|---|---|---|
+| decode 生产 | 36/12 | 3 / 36 | **0** | **0** | 0 / 0 |
+| decode + interleaved_reuse | 36/1 | 3 / 36 | **33** | 0 | **33** / 0 |
+| prefill 生产 | 36/12 | 3 / 36 | **0** | **0** | 0 / 0 |
+| prefill + interleaved_reuse | 36/1 | 3 / 36 | **33** | 0 | **33** / 0 |
+| 512×576×512 m_major | 12/4 | 6 / 6 | 0 | **0** | 0 / 0 |
+| 512×576×512 n_major | 12/4 | 6 / 6 | 0 | **0** | 0 / 0 |
+
+结论：**`data_reuse` 只在“K 外、N 内”顺序下成立；`weight_reuse` 在 planner 能产生的任何顺序下都不成立**（每个 tile 内部 K 都在最内层，相邻任务的 K 一定变）。
+
+### 39.3 发射命令里的实际置位（emitted-command 证据，非寄存器读回）
+
+用运行时的真实发射函数（`rk_emit_action`）解码 CBUF_CON0（寄存器 0x1040），`interleaved_reuse` 计划：
+
+| 计划 | 任务 | 声明复用 | 命令字带 0x1000 | 一致 | 未置位的 k_index | 每个 K 块的置位数 |
+|---|---|---|---|---|---|---|
+| decode | 36 | 33 | **33** | 是 | 0,1,2（各块链首） | 11/11/11 |
+| prefill | 36 | 33 | **33** | 是 | 0,1,2 | 11/11/11 |
+
+即：置位位置与资格审计逐一对齐（每个 K 块 12 个 N tile，除链首 1 个外 11 个置位），符合 C 规则；这**只**证明复用位被正确写入发射命令，不证明带宽下降。
+
+### 39.4 候选与实测（不重复计算 §36 的提交合并收益）
+
+| 候选 | 控制来源 | 改变了什么 | 实测 |
+|---|---|---|---|
+| `interleaved`（K 外/N 内，1 提交） | CompileOptions | 12 提交→1，无复用位 | decode 2.320 ms、prefill 22.8 ms（§35） |
+| `interleaved_reuse`（同上 + 输入复用） | CompileOptions | 追加 33 个 `data_reuse` 位 | decode **2.443 ms**（比不复用慢 0.12 ms）、prefill 20.9 ms（噪声内）（§35） |
+| 权重复用 | **无入口** | — | 未测；只有推导上界 |
+
+**为什么输入复用没有收益（本轮给出原因）**：decode 的 A 读量只有 1.1 KB（占 0.03%），省它没有意义；prefill 的 A 占一半，但复用只省“同一 K 切片内重复读同一 A tile”的部分，而硬件本来也可能在 CBUF 内保持该 tile（`data_reuse` 表达的正是这一点），实测落在噪声内。
+
+**权重复用如果实现，上界是多少（推导，不是实测）**：每个 (n,k) 的 B tile 读一次而不是 #M_tiles 次，节省 = B 字节 × (1 − 1/#M_tiles)。生产 tiling 下 #M_tiles = 1（decode 与 prefill 都是），**节省为 0**；只有把 `tile_m` 降到 128（prefill 2 个 M tile）才可能有 50% 的 B 读量节省，但 §37 已测 tile_m=128 反而慢 43%（任务/提交翻倍），所以即便加上权重复用也未必划算。
+
+### 39.5 模型级
+
+没有接入：唯一有稳定收益的是 §36 的提交合并（−9.2%/token，已接入并验证）；本轮没有发现新的、经实测更优的复用候选，因此**不改模型**。
+
+### 39.6 六个问题的答复
+
+1. **哪些数据存在可利用的重复访问、发生在哪一级？** 第 4 级（device→CBUF）：prefill 的 A tile 在 12 个 N tile 间被重复读（约 3.17 MB 可省），decode 的 A 只有 1.1 KB（无意义）；B tile 在 #M_tiles=1 时没有重复，只有把 `tile_m` 降到 128 才出现。第 3 级的常量缓存已经避免了重复上传，但那不等于硬件不读权重。
+2. **RKIR/RKPlan 是否保留并利用了这些关系？** `data_reuse` 全链路保留并被利用（声明→C 校验→发射 33/33 置位，位置与资格一致）。`weight_reuse` 的管道（描述符位、C 规则、发射器）存在，但**没有规划路径能满足它的邻接条件**，因此未被利用，也没有计划能表达它。
+3. **哪些候选真正改变了复用/任务/提交？** `interleaved_reuse`：12 提交→1、33 个复用位（其余候选不变结构）。
+4. **哪些收益有实测支持，哪些只是推导？** 实测：模块时间（§35）、模型 −9.2%/token（§36，来自提交合并而非复用）。推导：CBUF 读量 3.70/7.08 MB、权重复用上界 B×(1−1/#M)、tile128 的 43% 代价（§37 实测的是时间，不是带宽）。
+5. **模块收益是否转化为模型收益、代价多少？** 复用没有模块收益，故未接入；已接入的是提交合并，代价 +29.1 MB 设备 / +16.5 MB 主机（§36）。
+6. **是否发现并修复语义丢失/错误拒绝/不安全放行？** 本轮**没有改代码**：审计确认 `data_reuse` 链路正确（声明与命令字一致、位置符合 C 规则），`weight_reuse` 属于“未实现且不可达”，不是不安全放行；也没有发现新的错误拒绝。`weight_reuse` 的最小实现条件（m 最内层顺序 + 邻接/几何/K 切片校验）已写清，但按“条件无法确认就不置位”的要求保留为未验证。
+
+### 39.7 身份与重放
+
+| 物件 | 值 |
+|---|---|
+| 计划 | decode 生产 `8daecf11046515c…`、decode interleaved_reuse `c2b9d0337273…`、prefill 生产 `11f43cc45ee98…`、prefill interleaved_reuse `3409d38081be…` |
+| 设备库 | `3749e95d…`（本轮未上板：无新候选、计划未变） |
+| 证据 | `results/20261103T080000Z-cross-tile-reuse-audit/`（`repros/audit.py`、`audit.json`、`repros/command_reuse.py`、`commands.json`、`logs/`） |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T080000Z-cross-tile-reuse-audit/repros/audit.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T080000Z-cross-tile-reuse-audit/repros/command_reuse.py
+```
+
+### 39.8 尚未完成
+
+- `weight_reuse` 未实现：需要 (n,k) 固定、m 最内层的顺序（新调度维度），并补齐邻接/几何/bank-split/K 切片/提交边界的资格反例；本轮只给出条件与上界，不置位。
+- 没有硬件计数器，CBUF 读量是“每任务 view 字节”的推导上界，不是实测带宽。
+- 未测其它角色（qkv/o/down/lm_head）与其它 tile 组合；未做模型级复用实验（无候选入选）。
+
+---
+
+## 40. 权重复用：缺的是任务顺序，已补通并实测（2026-11-03）
+
+### 40.0 大白话
+
+**§39 说“权重复用在任何顺序下都不可达”，方向对，但理由写错了**：不是“所有顺序都把 K 放最内层”，而是**没有任何一种顺序把 M tile 放在最内层**。interleaved / interleaved_reuse 是 K 外、N 内；merged / baseline 是 K 内。权重复用要求相邻任务是“同一 (N,K)、不同 M”，这一层嵌套 planner 从来没产生过。
+
+**本轮补上了这一层**：新增两个显式策略 weight_stationary（只改顺序）与 weight_stationary_reuse（顺序 + 复用位）。它们不引入 SmolLM 形状名单，只按 operand/geometry/K 链/资源条件工作：固定 (N tile, K slice)，M tile 最内层；每个输出 tile 的 K 链仍严格升序、仍每段 FP16 写回。
+
+**实测（真实 layer-0 gate/up 权重的 N=512 切片，RK3588）**：
+
+| 候选 | 任务/提交 | 复用位（发射命令） | 与基线输出 | 中位总时间 | submit_wait |
+|---|---|---|---|---|---|
+| baseline-256（生产 geometry） | 6 / 2 | 0 | 基准 | **4.481 ms** | 1.959 |
+| merged-128（同 geometry、旧顺序） | 12 / 1 | 0 | 逐位相同 | 5.391 ms | 3.039 |
+| wstat-128（顺序改、复用关） | 12 / 1 | 0 | 逐位相同 | 5.638 ms | 3.059 |
+| wstat-reuse-128（同顺序、复用开） | 12 / 1 | **6** | 逐位相同 | 5.633 ms | 2.988 |
+
+即：**机制被真正触发（6 个任务在 CBUF_CON0 上置 0x2000）、数学不变（四者逐位相同）、但没有收益**（复用开关差 0.005 ms，落在噪声内；真正的时间差来自 tile_m=128 让任务数翻倍：4.48 → 5.4–5.6 ms）。
+
+### 40.1 对 §39 的更正
+
+| §39 的说法 | 更正 |
+|---|---|
+| “planner 所有顺序都把 K 放最内层” | **错**。baseline / scheduled_baseline / merged 是 tile 内 K 最内；interleaved / interleaved_reuse 是 **K 最外、N 内**（因此才有 33 个 A 复用邻接）。正确表述：**没有顺序把 M 放最内**，所以 B 复用邻接恒为 0。 |
+| “decode 输入只有 1.1 KB” | **混用了逻辑字节与物理字节**。按物理 geometry，decode 的 A tile 是 12×256×2 = 6 KiB（rows 补到 12），K 尾块 12×64×2 = 1.5 KiB；3 个切片合计 **13.5 KiB**，不是 1.1 KB。B tile 每个 256×256×2 = 128 KiB（尾块 256×64×2 = 32 KiB），36 个合计 **4.22 MB**。A 占比 0.3%，结论（A 复用无意义）不变，但数字要按物理字节算。 |
+| “输入复用减少量的分母” | 应写成：**可省字节 = Σ(可复用相邻对中当前任务的 A 物理字节)**，分母是 Σ 所有任务的 A+B 物理字节。interleaved_reuse 下 33 对、每对省 1 个 A tile。 |
+| “CBUF 保持/固定开销吸收了收益” | 这是**假设**，本轮没有测量支撑；data_reuse 无收益的原因目前只能确定“A 占比极小（decode）”与“落在噪声内（prefill）”，不能断言是 CBUF 保持。 |
+| “§37 的 tile128 慢 43% 可排除该方向” | **不能**。§37 测的是 tile-major + 每 tile 一个提交；本轮在 merged（1 提交）与 weight_stationary（1 提交）下重测，tile128 仍慢（+0.9~1.2 ms），但那是**新的分组方式下的独立结论**，不是沿用旧结论。 |
+
+### 40.2 权重复用的完整执行条件（代码核实）
+
+| 条件 | 依据 | 状态 |
+|---|---|---|
+| 语义：复用“上一个任务在该核 CBUF 里已加载的 operand” | vendor npu_regcmd.c:211-214（注释：reuse previous task on this core；位 0x2000=weight，0x1000=data） | 源码已确认 |
+| 相邻性：必须是同一 submit 中**紧邻的前一个任务** | C 校验 rk_plan_validate.c（j==0 不得复用；比较 s->task_ids[j-1]） | 已有校验 |
+| operand 身份：inputs[1] 视图相同 | 同上 | 已有校验 |
+| K 索引：source_k_index 相同 | 同上 | 已有校验 |
+| 几何 / bank split：由视图相同隐含（同一 view → 同一 physical geometry、atom、bank 划分）；emitter 另行校验 physical_cols 一致 | finish_mm_op 前置条件 + C | 已由前面两道保证 |
+| 提交边界：不得跨 submit 复用 | 校验只在同一 submit 内比较 | 已有校验 |
+| Python 侧资格检查 | **本轮新增**（此前 Python 完全不检查复用位） | 新增 |
+
+所以缺的**不是硬件条件（已由 vendor 源码与现有校验界定），也不是 C/发射器支持（都在），而是 planner 从未产生“M 最内层”的任务顺序**。
+
+### 40.3 本轮实现
+
+| 位置 | 改动 |
+|---|---|
+| options.py | linear_task_order 增加 weight_stationary / weight_stationary_reuse（两者要求 submit_mode=chain） |
+| passes/dag.py | 新增发射分支：按 (n0, m0) 排序后 **K 外、N 中、M 内** 发射；weight_stationary_reuse 在“前一任务 N 相同”处置 weight_reuse=True；仍属一个 mk:linear 提交，K 链与依赖保持不变 |
+| plan.py | 新增 Python 复用资格检查：首任务不得复用；data_reuse / weight_reuse 要求同 submit 内前一任务同 operand 视图且同 k_index（与 C 规则一致，提前报错） |
+| tests/test_weight_reuse.py | 8 例：顺序与置位数、merged 保持 K 最内、保存/加载保留标志、两层接受、首任务复用被拒（Python + C）、换权重视图被拒（Python + C）、复用位不改变数值 |
+
+控制来源明确：**这两个策略是后端 CompileOptions，不是 TileLang 源码能力**；本轮没有新增源码注解。
+
+### 40.4 结果与判断
+
+1. **§39 哪些结论成立/被纠正？** 成立：“weight_reuse 此前不可达”“A 复用在 decode 无意义”“复用无实测收益”。被纠正：K 内/外的表述、逻辑 vs 物理字节、可省字节公式、“CBUF 保持吸收收益”的归因（降级为假设）、以及用 §37 的 tile128 结果排除该方向（本轮重新独立测量）。
+2. **权重复用缺的是什么？** **任务顺序**。硬件条件（vendor 语义 + CBUF bank 划分）、C 校验、发射器、generator 都齐；planner 现在能产生所需顺序。
+3. **本轮实现并验证了什么？** weight_stationary(_reuse) 策略 + Python 资格检查 + 8 个测试；C 校验器接受合法计划、拒绝三类负例；mock 与设备均逐位相同；发射命令里 6 个任务带 0x2000。
+4. **复用开关的差异是否被独立隔离？** 是：wstat-128 与 wstat-reuse-128 任务数、提交数、顺序、geometry 完全相同，只差 6 个复用位；两者输出逐位相同、时间差 0.005 ms（噪声）。顺序的影响由 merged-128 vs wstat-128 隔离（同为 12 任务/1 提交，时间 5.391 vs 5.638 ms，顺序本身也没有收益）。
+5. **是否值得采用？** 不采用：tile_m=128 的几何本身让这个小形状慢 20%（4.48→5.4 ms），复用位在此之上没有可测收益；生产默认不变，模型不接入。上界仍是 B 字节 ×(1−1/#M_tiles)，在 #M_tiles=2 时最多省一半的 B 读（本形状 12×~64 KiB 的一半 ≈ 0.38 MB），相对于每调用 ~5 ms 的固定开销太小。
+
+### 40.5 身份与重放
+
+| 物件 | 值 |
+|---|---|
+| 计划 | baseline-256 75daf9db…、merged-128 e4b88ad6…、wstat-128 92608b37…、wstat-reuse-128 d0463577… |
+| 设备库 | 3749e95d… |
+| 回归 | 全量 **714 passed / 2 skipped / 0 failed / 265 subtests** |
+| 证据 | results/20261103T100000Z-weight-stationary/（repros/wstat_probe.py、wstat.json、plans/*.rkplan.json、device_wstat.py、device-wstat.json、logs/full-pytest.log） |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T100000Z-weight-stationary/repros/wstat_probe.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_weight_reuse.py -q -o addopts=""
+```
+
+### 40.6 尚未完成
+
+- 只在该 (256,576,512) 形状上验证；更大 N（12 个 N tile）会让任务数超过 64/submit，需要分批提交（本轮不实现）。
+- 没有硬件计数器：B 读量的节省是推导，不是实测带宽。
+- data_reuse 与 weight_reuse 同时可用的组合（固定 N、K，内层 M 交替时 A 会变）在本顺序下不成立，未研究。
+- 未做模型级接入（无收益）。
+
+---
+
+## 41. 完整 gate/up（256×576×3072）上的 weight-stationary：分组、语义与实测（2026-11-03）
+
+### 41.0 大白话
+
+**上一轮之所以“整份计划被拒”，确实只是分组限制：不是形状不允许，而是所有任务被要求塞进一个 64 任务的 submit。** 本轮按“整 N tile 打包、每组不超过 64 任务”切分，完整 gate/up 就正常编译成 **2 个合法 submit（60 + 12 个任务）**，C 校验器接受，设备执行正确。
+
+- **分组规则**：每个 N tile 有 #K×#M = 3×2 = 6 个任务，按 64//6 = 10 个 N tile 一组 → 组 0 = 60 任务、组 1 = 12 任务；组内 K 外、M 内（权重复用），每个输出 tile 的 K 链完整落在同一组内，每组首任务复用位关闭。
+- **权重复用真的被置位**：72 个任务里 **36 个**在发射命令的 CBUF_CON0 上带 0x2000（每个 (N,K) 的第二个 M tile），与 C 的资格规则一致。
+- **数值不变**：五份计划（生产 tile256 / merged-256 / wstat-256 / wstat-128 / wstat-reuse-128）设备输出**逐位相同**，与“每 K 块写回”参考只差 332/786432。
+- **没有收益**：复用开/关在同一顺序与分组下是 29.54 vs 29.84 ms（逐轮 28.5–32.9 与 26.3–33.3 大幅重叠），**不能声称有效**；tile_m=128 本身比生产 geometry 慢约 12 ms。生产保持 17.70 ms 中位，为最快。
+
+### 41.1 完整 gate/up 的分组与合法性
+
+| 项 | 值 |
+|---|---|
+| 形状（现场核实） | M=256, K=576, N=3072；tile_m=128, tile_n=256 → 2×12=24 个输出 tile，K 切片 3 → **72 任务** |
+| 生产对照 | tile_m=256：12 tile × 3 = 36 任务 / **12 提交**（每 tile 一个提交） |
+| weight-stationary | 72 任务 / **2 提交**（60 + 12），组内 K 外、N 中、M 内 |
+| submit 上限约束对象 | 每组任务数（不是整份计划）；未改动 64 的上限 |
+| 跨组依赖 | 每个输出 tile 的 K 链在组内闭合（跨组只保留 submit 顺序依赖），测试断言 48 条 K 连续边全部同组 |
+| 组首复用 | 每组第一个任务 weight_reuse=False（测试固定） |
+| partial 生命周期 | acc 缓冲按 kidx 乒乓；组内最后一次消费后才被下一 tile 复用（沿用既有 buffer 规划，未改） |
+| 提交配方 | 组名采用 mk: 前缀 → submit builder 判为 multi_k_acc_v1（其匹配器接受任意 mm/mm_acc 序列） |
+
+**为什么安全**：① 组内任务连续且 ≤64；② 每条 K 链完整在组内（C 要求 prior 在**同 submit 内更早**出现）；③ 组首任务不复用；④ 组间只有顺序依赖，没有跨组的 partial 复用；⑤ 复用位仅在同 (N,K)、相邻 M tile 处出现，operand 视图与 K 索引都与前一任务相同。
+
+### 41.2 一个仍然存在的拒绝（不是缺陷）
+
+`merged`（以及 interleaved 系列）在 tile_m=128 上仍然被拒：它们的做法是**全部任务放一个 submit**，72 > 64。这是既有策略的形态，不是本轮的形状限制；`weight_stationary` 通过分组绕开它，而没有提高上限。因此在 tile_m=128 上**无法**给出“同 geometry、既有顺序”的对照——差异只能列出来，不能把组合变化归因于单一机制。
+
+### 41.3 设备实测（真实 layer-0 gate/up 权重，RK3588，库 3749e95d…）
+
+| 候选 | 任务/提交 | 复用位 | 与生产输出 | 中位总时间 | 逐轮原始值（ms） | submit_wait | guard |
+|---|---|---|---|---|---|---|---|
+| baseline-256（生产） | 36 / 12 | 0 | 基准 | **17.703 ms** | 18.07 / 17.50 / 17.41 / 17.70 / 18.86 | 11.271 | 1.353 |
+| merged-256（同 geometry、单提交） | 36 / 1 | 0 | 逐位相同 | 17.655 ms | 17.43 / 17.66 / 23.19 / 17.63 / 18.87 | 11.050 | 1.326 |
+| wstat-256（顺序改、无复用机会） | 36 / 1 | 0 | 逐位相同 | 21.797 ms | 18.01 / 25.14 / 21.80 / 21.76 / 22.99 | 11.076 | 3.299 |
+| wstat-128（顺序+分组、复用关） | 72 / 2 | 0 | 逐位相同 | 29.835 ms | 32.92 / 29.84 / 29.28 / 26.32 / 33.29 | 18.111 | 4.347 |
+| wstat-reuse-128（同顺序分组、复用开） | 72 / 2 | **36** | 逐位相同 | 29.543 ms | 32.30 / 29.54 / 32.90 / 28.52 / 29.44 | 17.776 | 4.012 |
+
+正确性：五者输出全部逐位相同；重复稳定、换输入改变、finite；与 fp64 单次窄化参考差 299760/786432、与每 K 块写回链差 332（与 §37 一致，既有数值结论不变）。
+
+**噪声说明**：逐轮散布 26–33 ms，复用开关的中位差（−0.30 ms，−1.0%）远小于散布，**不能判为有效**；wstat-256 与 merged-256 的中位差 4.1 ms 同样重叠（wstat 有一轮 18.01 ms），只能记为“未能分离”。本轮没有硬件计数器，operand 字节节省（每 (N,K) 省一个 256×128×2 = 64 KiB 的 B tile，共 12 组 × 3 K ≈ 2.25 MB 推导上界）**不是实测带宽**。
+
+### 41.4 语义传递核对
+
+| 环节 | 检查 | 结果 |
+|---|---|---|
+| TileLang → RKIR | 源码为显式每 K 块 FP16 写回的 K 循环；注解只有 schedule/tile_m/tile_n/mn_order | 通过（§37/§38 已固定） |
+| RKIR → RKPlan | 任务覆盖 24 tile × 3 K = 72；每 tile K 升序；applied_schedule 记录 tile_m/tile_n/order | 通过（测试断言） |
+| RKPlan → descriptor/C | C 校验器接受两份计划；首任务复用、错配 operand、错配 K 的负例被拒 | 通过（8 例测试，Python 与 C 各自验证） |
+| 发射命令 | 真实发射路径解码 CBUF_CON0：36 个任务带 0x2000，位置与 C 规则一致 | 通过（emitted-command 证据，非寄存器读回） |
+| 保存/加载 | 复用标志与计划身份在 save_plan/load_plan 后保持 | 通过 |
+
+### 41.5 六个问题的答复
+
+1. **原先的整计划拒绝是否由可处理的分组限制导致？** 是。tile_m=128 时 72 任务超过了“全部放一个 submit”的形态，而不是形状本身不被支持；按整 N tile 打包后编译成 2 个合法 submit。
+2. **采用了什么分组规则，为什么安全？** 每组取 64//(#K×#M) 个整 N tile；组内 K 外、M 内；每输出 tile 的 K 链在组内闭合；组首不复用；组间只有顺序依赖。5 条不变量都有测试固定（含 48 条 K 连续边同组、组首复用关闭、越界拒绝）。
+3. **RKIR/RKPlan 是否准确保留并落实调度与数值要求？** 是：任务覆盖、K 升序与每 K 块 FP16 写回结构、applied_schedule、复用位位置、逻辑算子与数值要求关联都在计划内并在加载后保持；C 与发射命令两侧一致。
+4. **完整 gate/up 中顺序、分组、复用分别造成什么变化？** 顺序（merged-256 → wstat-256，同 36 任务/1 提交）中位 +4.1 ms 但逐轮重叠；分组（wstat-256 → wstat-128）任务 36→72、提交 1→2，中位 21.8→29.8 ms；复用（wstat-128 → wstat-reuse-128）只多 36 个复用位，中位 −0.30 ms（噪声内）。
+5. **是否值得采用，代价多少？** 不值得。生产 geometry 中位 17.70 ms 最快；tile_m=128 明显更慢，复用位带来的差异不可分辨。资源上 tile_m=128 与 2 提交使 submit_wait 从 11.3 ms 升到 17.8 ms，guard 从 1.35 升到 4.01 ms；生产默认与模型均不变。
+6. **哪些只是结构/命令证据，哪些有设备与性能证据？** 结构/命令：72 任务、2 提交、60/12 分组、36 个复用位位置、C 接受与负例、保存/加载一致。设备与性能：五份计划的逐位相同输出、重复/换输入/有限性、5 轮交错计时与 submit_wait/guard 分解。**没有**硬件带宽、也没有计数器级别的证据。
+
+### 41.6 身份与重放
+
+| 物件 | 值 |
+|---|---|
+| 计划 | baseline-256 f57a05661132、merged-256 d2dc49fb0f8e、wstat-256 b4b211df9439、wstat-128 c4c66316a379、wstat-reuse-128 4107a47b2d86 |
+| 设备库 | 3749e95d0387e3c11d061a955b0acb02bcb430ad66504d5b5def4a66e1da590c |
+| 回归 | 全量 **722 passed / 2 skipped / 0 failed / 270 subtests** |
+| 证据 | results/20261103T120000Z-wstat-full-gate-up/（repros/build_plans.py、repros/add_plans.py、plans/*.rkplan.json、device_full.py、device-full.json、logs/full-pytest.log） |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T120000Z-wstat-full-gate-up/repros/build_plans.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_weight_stationary_grouping.py tests/test_weight_reuse.py -q -o addopts=""
+```
+
+### 41.7 尚未完成
+
+- 分组的“每组 N tile 数”目前按 64//(#K×#M) 取最大，没有比较更小分组的代价；未做组合搜索。
+- 无法在 tile_m=128 上给出“同 geometry、既有顺序”的对照（merged 在该 geometry 仍被拒）。
+- 未做模型级接入（无收益）；未测其它角色；无硬件计数器。
+
+---
+
+## 42. 权重复用方向的收尾：三层对照、分组与 recipe 可靠性（2026-11-03）
+
+### 42.0 大白话
+
+**结论：这个方向可以结束。** 完整 gate/up（256×576×3072）在三层真实权重上都能安全执行、输出逐位相同，但 **tile_m=128 的任何变体都比生产慢 6–9 ms**，而“复用开/关”“分组 10 vs 5 个 N tile”“组内顺序”这三个单机制对照在三层之间**符号翻转**，没有可复现的差异。
+
+同时修了两处真实的脆弱点：① 分组上限原先只能“整份计划一个提交”，现在支持按整 N tile 的有界分组（未改 64 上限）；② submit recipe 原先只靠组名前缀（mm:/mk:）猜测，现在由任务上的显式 `submit_recipe` 字段决定，旧计划保留前缀回退。
+
+### 42.1 三个隔离对照（同 geometry、同分组、同任务/提交数）
+
+| 对照 | 保持一致 | 改变项 | 计划 |
+|---|---|---|---|
+| grouped-128 vs wstat-128 | geometry、group partition（60+12）、任务数 72、提交数 2、reuse 关闭 | **组内任务顺序**（K 内 vs K 外/M 内） | 9ba8d6ed8a79 / d67f4d73447f |
+| wstat-128 vs wstat-reuse-128 | 同上 + 顺序 | **weight_reuse**（36 个置位） | d67f4d73447f / 6004178d50c1 |
+| wstat-reuse-128 vs wstat-reuse-128-n5 | 计算、数值要求、组内顺序、reuse 政策 | **group partition**（60+12 vs 30+30+12） | 6004178d50c1 / 3f58c6d2b162 |
+
+生产计划（baseline-256，36 任务/12 提交，f57a05661132）只作为最终采用价值对照。
+
+### 42.2 三层实测（真实 layer-0/15/29 gate/up 权重，5 轮交错，中位总时间 ms）
+
+| 候选 | 任务/提交 | 复用位 | layer 0 | layer 15 | layer 29 | 与生产输出 |
+|---|---|---|---|---|---|---|
+| baseline-256（生产） | 36 / 12 | 0 | **20.88** | **21.37** | **22.26** | 基准 |
+| grouped-128（同分组、旧顺序） | 72 / 2 | 0 | 30.36 | 26.70 | 30.16 | 逐位相同 |
+| wstat-128（顺序改） | 72 / 2 | 0 | 29.41 | 29.50 | 28.73 | 逐位相同 |
+| wstat-reuse-128（复用开） | 72 / 2 | 36 | 31.02 | 29.26 | 28.34 | 逐位相同 |
+| wstat-reuse-128-n5（分组 5） | 72 / 3 | 36 | 29.96 | 28.95 | 30.45 | 逐位相同 |
+
+逐轮原始值见 device-layers.json。正确性：五个候选在三层都 `matches_production=True`（0 差异）、重复稳定、换输入改变、finite；与 fp64 单次窄化参考与每 K 块写回链的差异与 §37/§41 一致（既有数值结论不变，未改容差）。
+
+**单机制结论（三层一致性的判据）**：
+
+| 机制 | L0 | L15 | L29 | 判定 |
+|---|---|---|---|---|
+| 组内顺序（grouped→wstat） | −0.95 | +2.80 | −1.43 | 符号翻转 → 无可靠差异 |
+| 权重复用（off→on） | +1.61 | −0.24 | −0.39 | 符号翻转 → 无可测收益 |
+| 分组（10→5 N tile） | −1.06 | −0.31 | +2.11 | 符号翻转 → 无可靠差异 |
+| geometry（生产 tile256 → tile128） | +8.5 | +7.9 | +6.5 | **三层一致更慢** → 可结束 |
+
+### 42.3 recipe 选择方式审查与修复
+
+| 问题 | 结论 |
+|---|---|
+| mk:/mm: 前缀是正式协议吗？ | 是既有内部约定（所有 linear 策略都用它），但**它同时承担了控制分派**：schedule.py 用前缀决定 linear_k_acc_v1 / multi_k_acc_v1 / swiglu_ffn_v1 / gate_ew_v1。 |
+| recipe 是否独立按结构验证？ | 是：plan 级 `_recipe_matches` 按模板序列匹配（linear_k_acc_v1 只接受 mm+mm_acc 链、multi_k_acc_v1 接受任意 mm/mm_acc 且至少一个 mm_acc），C 校验器另按依赖/K 序/几何独立检查。 |
+| 是否存在“改标签就改变准入、却不查结构”的路径？ | **有脆弱耦合**：前缀是唯一来源，改一个字符串就换 recipe（结构检查只在 plan 级兜底）。 |
+| 修复 | 任务上新增显式 `submit_recipe` 字段（planner 直接声明），schedule.py 优先采用它、组内不一致则拒绝；没有该字段时保留前缀回退，旧计划不受影响。新增测试：声明字段生效、同一分区换组名不改变 recipe、错误 recipe 被 plan 级匹配器与 C 双重拒绝。 |
+
+### 42.4 分组实现检查
+
+| 检查项 | 结果 |
+|---|---|
+| 组大小合法值/非法值/尾组 | 60+12（auto）、30+30+12（5）、越界请求（11 个 N tile → 66 > 64）被拒 |
+| 恰好达到上限/超过上限 | 5 个形状 subTest 断言每组 ≤64；merged 在 tile128 仍被拒（72 > 64），未改上限 |
+| 不同 M/K/N 组合 | (256,576,3072)/(384,576,1024)/(256,576,512)/(256,512,768)/(512,1024,512) 均 ≤64 且 Python 校验通过 |
+| submit 首任务禁用 reuse | 每段首任务断言为 False；组首/组间越界置位被 Python 与 C 分别拒绝 |
+| operand/K/geometry 不匹配 | 换权重视图的负例被 Python 与 C 拒绝 |
+| 缺失依赖、跨组 K 链 | 48 条 K 连续边断言同组；设计要求 K 链留在组内，越界情形直接拒绝 |
+| 保存/加载/再验证 | 复用位与 recipe 在 save_plan/load_plan 后保持并再次通过校验 |
+
+### 42.5 七问答复
+
+1. **同 geometry、同分组的顺序对照结果？** grouped-128 vs wstat-128（同 72 任务、2 提交、同分区、reuse 关）在三层分别 −0.95 / +2.80 / −1.43 ms，符号翻转，没有可复现差异。
+2. **单独启用 weight_reuse 的结果？** 31.02 / 29.26 / 28.34 对 29.41 / 29.50 / 28.73（+1.61 / −0.24 / −0.39 ms），符号翻转，**无可测收益**；复用位确实置了 36 个（发射命令），但这只证明机制触发。
+3. **分组规模的影响与资源代价？** 10 vs 5 个 N tile：两层 −1.06 / −0.31 ms，一层 +2.11 ms；提交数 2→3、命令工作区与 submit_wait 随之上升（三层 submit_wait 与 guard 见 JSON）。无可靠收益。
+4. **首、中、末层是否一致？** geometry 结论三层一致（tile128 慢 6.5–8.5 ms）；三个单机制对照三层符号翻转，即不一致——因此不作收益声明。
+5. **recipe 与结构检查是否可靠，修了什么？** 结构检查可靠（plan 级匹配器 + C 独立校验），但 recipe 选择原先只靠组名前缀，属脆弱耦合；已改为显式 `submit_recipe` 字段优先、前缀回退兼容，并加负例。
+6. **TileLang / RKIR / RKPlan 各自承担什么、传递证据是什么？** TileLang 源码结构决定 K 循环与每 K 块 FP16 写回（§37/§38 已固定）；source annotation 只决定 tile_m/tile_n/mn_order；CompileOptions 决定 linear_task_order 与 linear_group_n_tiles（本轮新增的 grouped_linear 与分组上限均属后端规划能力，不是源码控制）；RKIR/RKPlan 保留 applied_schedule、submit_recipe、weight_reuse 与 K 链；发射命令里 36 个 0x2000 位与 C 规则位置一致。
+7. **是否采用、是否结束该方向？** 不采用（生产在三层都最快），**结束权重复用方向**：机制已打通、语义正确、复用位正确置位，但在完整 projection 上无可测收益，且 tile_m=128 的 geometry 代价稳定地更大。生产默认与模型均未改动。
+
+### 42.6 身份、回归与证据
+
+| 物件 | 值 |
+|---|---|
+| 计划 | baseline-256 f57a05661132、grouped-128 9ba8d6ed8a79、wstat-128 d67f4d73447f、wstat-reuse-128 6004178d50c1、wstat-reuse-128-n5 3f58c6d2b162 |
+| 设备库 | 3749e95d0387e3c11d061a955b0acb02bcb430ad66504d5b5def4a66e1da590c |
+| 回归 | 全量 **729 passed / 2 skipped / 0 failed / 272 subtests** |
+| 新增测试 | tests/test_submit_recipe_and_grouping.py（7 例）、tests/test_weight_stationary_grouping.py（8 例）、tests/test_weight_reuse.py（8 例） |
+| 证据 | results/20261103T140000Z-wstat-controls-and-layers/（plans/、repros/build_all.py、repros/export_layers.py、device_layers.py、device-layers.json、logs/） |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T140000Z-wstat-controls-and-layers/repros/build_all.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_submit_recipe_and_grouping.py tests/test_weight_stationary_grouping.py -q -o addopts=""
+```
+
+### 42.7 与历史章节的关系
+
+- §41 的“复用与分组无可测收益”在本轮得到三层独立确认；“tile128 更慢”也从单层扩展为三层一致。
+- §40 的“缺的是任务顺序”仍然成立；本轮补上了同分组下的顺序对照，结论是顺序本身也没有收益。
+- §39 的两处更正（K 内/外表述、物理字节）继续有效；本轮不重复。
+
+---
+
+## 43. TileLang 源结构能表达哪些 RKNPU 调度语义（2026-11-03）
+
+### 43.0 大白话
+
+**三个源结构里，只有“串行 K 循环的迭代顺序”是真的调度语义；输出 tile 的遍历顺序在 TileLang 里根本不存在（block grid 是 program-index 空间，没有顺序含义），而 `T.Pipelined(num_stages)` 是缓冲提示、不是 RKNPU 流水。**
+
+本轮实测（同一数学、真实 gate/up 形状、正规编译入口）：
+
+| 源变体 | 计划 | 说明 |
+|---|---|---|
+| canonical m_major | 36 任务 / 12 提交，2b36fedddecff127 | 基准 |
+| 改循环变量名（rowtile/coltile） | **同一 hash** | 等价的索引写法被 canonicalize，不制造差异 |
+| 交换 grid 轴（N×M vs M×N，索引同步交换） | **同一 hash** | grid 枚举顺序对计划没有任何影响 |
+| 加 `T.Pipelined(..., num_stages=2)` | **同一 hash** | 流水提示不改变计划 |
+| 声明 `mn_order=n_major` | 见 §37（fixture 路径） | 只有显式声明才改变发射顺序 |
+
+所以：**输出 tile 的遍历顺序不可能从源结构推导**，它要么是显式声明（现有 `rknpu.mn_order`，属“源偏好”），要么是后端策略（CompileOptions）；而声明本身只是偏好，设备内部时间序仍未观测。
+
+### 43.1 TileLang 各结构的真实语义（本地实现依据）
+
+| 结构 | 承诺什么 | 依据 |
+|---|---|---|
+| `T.Kernel(gx, gy)` block grid | **program-index 空间**（blockIdx.x/y），不是执行顺序 | `.pydeps/tilelang/language/kernel.py:202/263/443`（dim=0 → blockIdx.x …） |
+| `T.serial` K 循环 | 迭代按程序顺序发生 → 累积顺序是**依赖要求** | `_detect_k_block` 记录有序 `k_blocks`；计划 `k0/k_index/k_count` 按此顺序 |
+| `T.Parallel` 块内循环 | 元素级并行，无调度含义 | 前端按 copy/fill 语义提取 |
+| `T.Pipelined(start, stop, num_stages)` | “pipeline producers/consumers 之间最多用几个 buffer”；0 = 不启用流水，纯性能提示 | `.pydeps/tilelang/language/loop.py:112-133` |
+| 多个 `T.Kernel` 作用域 | 显式分阶段（staged）程序 | `tilelang_adapter.py:5590` |
+
+### 43.2 本轮选定的代表性设计：输出 tile 组织（Path C）
+
+设计说明（先写结论、再验证）：
+
+1. **源结构表达的是数学语义**：`T.Kernel` 的两轴只声明“有多少个独立输出 tile”，不声明它们的先后；`T.Parallel` 是元素级；因此 tile 的组织是数学的（覆盖关系），遍历不是。
+2. **下游可做的等价改写**：重命名、网格轴互换后的索引重建、`Pipelined` 提示丢弃——这些都不改变计划（实测三者同 hash）。
+3. **拟落实的 task order**：由 `rknpu.mn_order`（显式声明，Path B）或 `linear_task_order`（后端策略）决定；本轮不新增注解。
+4. **仍应留在后端的控制**：submit 分组、CBUF reuse 资格、BO/bank 分配——源里没有对应语义（§40/§41 已确认 reuse 位只由“相邻任务同 operand”决定）。
+5. **为什么没有误用语义**：block grid 从不被解释为设备时间顺序；`Pipelined` 从不被当作已实现的流水；`num_stages` 不进入计划。
+
+### 43.3 发现的一处信息丢失（未修，如实记录）
+
+`pipeline_hint_dropped` 记录在**两条提取路径上不一致**：
+
+- `make_linear`（普通 K 循环路径）的计划里能看到 `pipeline_hint_dropped` 字段；
+- 本轮 guarded-tail 形式的源码（`T.fill` + 守卫 copy + `T.Pipelined(num_stages=2)`）编译出的计划与不流水版本**逐字节同 hash**，且 `pipeline_hint_dropped: true` **出现 0 次**——即“源请求了 2 级缓冲、后端不做流水”这件事在该路径上没有被记录。
+
+这属于 §5 要求区分的“源请求 vs 已应用决定”缺口，但**不影响执行或数值**（计划完全相同），本轮因预算未修；最小修法与验证方式已明确：在 tail 提取路径把 `num_stages`/`source_loop_annotations` 写进 hints（与普通路径同名字段），并加一条断言“带 Pipelined 与不带的计划只在记录字段上不同”。
+
+### 43.4 传递链核对
+
+| 环节 | 记录 | 结果 |
+|---|---|---|
+| 源 | 循环结构、索引、守卫、`T.Pipelined` 参数 | 已读（本地 TileLang 0.1.15 源码 + 前端提取点） |
+| frontend | 有序 `k_blocks`、`source_k_loop`、`source_k_rounding`、`source_mn_tiling`；grid 只做 min/step 校验 | 与源一致 |
+| RKIR | matmul 属性携带 schedule（`kind/tile_m/tile_n/order/k_tile/accumulation`） | 一致 |
+| planner | 依 schedule 生成 task geometry/order；K 链按 `k_blocks` 顺序；submit 分组由策略决定 | 一致 |
+| RKPlan | `applied_schedule`、`source_*` 记录、`k0/k_index/k_count`、`submit_group`、`submit_recipe` | 保存/加载后保持（既有测试） |
+| 发射命令 | 复用位/顺序与计划一致 | §37/§41 既有设备证据（本轮计划与已测计划同 hash，未重复上板） |
+
+### 43.5 六个问题的答复
+
+1. **TileLang 哪些源结构具有可用于 RKNPU 调度的明确含义？** 只有串行 K 循环的迭代顺序（依赖要求，已被提取为有序 `k_blocks`）。block grid 是 program-index 空间、`T.Parallel` 是元素级、`T.Pipelined` 是缓冲提示——都不构成调度语义。
+2. **本轮选了哪项，为什么？** 选“输出 tile 组织”作为研究对象，因为它是唯一看起来像调度、实际却没有语义的候选；用它来划定“源能表达 / 只能后端表达”的边界最有信息量。
+3. **RKIR、RKPlan 如何承接，实际执行改变了什么？** 承接的是 K 链顺序与显式声明的 schedule；本轮四个源变体（改名、换网格轴、加流水提示）产生**同一计划**，即执行没有任何改变——这正是“不能靠源结构造出顺序”的证据。
+4. **哪些控制仍需后端策略？** submit 分组（§41 新增 `linear_group_n_tiles`）、CBUF reuse 资格（§40/§41）、tile 遍历顺序的默认值、BO/bank/缓冲区规划。原因是源结构没有这些语义。
+5. **是否发现并修复信息丢失、误解或错误拒绝？** 发现一处：guarded-tail 路径不记录被丢弃的流水提示（普通路径会记录）。未修（预算），已写明最小修法与验证方式；除此之外未发现新的误解或错误拒绝。
+6. **哪些结论有源码、计划、命令、设备证据？** 源码级：kernel.py/loop.py 的语义定义；计划级：四个变体同 hash、`pipeline_hint_dropped` 的两路径差异；命令级与设备级：沿用 §37/§41（本轮计划与那些已测计划同 hash，只新增记录字段时不必重复上板）。
+
+### 43.6 身份与证据
+
+| 物件 | 值 |
+|---|---|
+| 计划 | canonical / renamed / swapped-grid / pipelined 四者同为 2b36fedddecff127；fixture 的 m_major 计划见 §37（f57a05661132） |
+| 设备 | 本轮未上板（计划与已测计划同 hash，执行字段与库未变：3749e95d…） |
+| 回归 | 未改执行代码，全量仍 729 passed / 2 skipped / 272 subtests（§42 末次记录） |
+| 证据 | results/20261103T160000Z-source-structure-semantics/（repros/grid_semantics.py、repros/grid_semantics.json、snapshot/） |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T160000Z-source-structure-semantics/repros/grid_semantics.py
+```
+
+### 43.7 尚未完成
+
+- guarded-tail 路径的流水提示记录（最小修法已写明）。
+- 未研究多 `T.Kernel` 的 staged 路径在 RKNPU 上的对应关系（属于独立方向）。
+- 设备内部执行顺序仍不可观测；本轮所有“顺序”结论只到计划/命令/提交层。
+
+---
+
+## 44. 流水提示的记录补齐，以及对 §43 全局表述的收窄更正（2026-11-03）
+
+### 44.0 大白话
+
+§43 指出“guarded-tail 路径不记录被丢弃的流水提示”，本轮把它补齐了，并且顺手修了**两处**更严重的问题：普通 K-loop 路径其实也一直写着 `pipeline_hint_dropped: False`（哪怕源码明确要求 `num_stages=2`），而 block-annotation 路径用 `bool(annotations)` 判断，会把 `num_stages=0`（TileLang 语义是“不启用流水”）误报成“请求了缓冲却被丢弃”。
+
+现在两条路径用同一个 helper：记录**实际请求值**（`source_pipeline_stages`）、**原始注解**（`source_loop_annotations`）、**是否被丢弃**（`pipeline_hint_dropped`）、**未采用原因**（`pipeline_not_applied_reason`），并且**不声称流水已落实**。生产源码（无 K 循环、无提示）计划哈希**逐字节不变**。
+
+同时更正 §43 里两处超出证据的全局断言（见 44.4）。
+
+### 44.1 遗漏发生在哪一步
+
+| 路径 | 修复前 | 问题 |
+|---|---|---|
+| 普通 K-loop（`make_linear` 等） | `source_loop_annotations: {}`、`pipeline_hint_dropped: False` 硬编码 | 源码 `T.Pipelined(num_stages=2)` **完全没有被记录**（不是“记录为未采用”，而是“看不到请求”） |
+| guarded-tail（`_extract_ragged_tail` 内） | 同上硬编码 | 同上 |
+| block-annotation 路径 | `source_loop_annotations: block.annotations`、`pipeline_hint_dropped: bool(block.annotations)` | 只要出现注解就算“请求被丢弃”，**`num_stages=0` 被误报**；且没有原因字段 |
+| staged 路径（两处） | 硬编码 `{}` / `False` | 字段缺失，不构成虚假声明 |
+
+此外 `annotations` 里是 TIR 标量（`IntImm`），直接进计划会触发 `RK_E_SCHEMA: unsupported JSON value`——这也是之前“看起来没记录”的一部分原因。
+
+### 44.2 修复后：请求、未采用决定、原因分别存在哪
+
+计划里每个 matmul 任务的 `attrs.source_k_loop` 现在包含四个字段（同一 helper 生成，两条路径一致）：
+
+| 字段 | 含义 | 例（fixture，`T.Pipelined(num_stages=2)`） |
+|---|---|---|
+| `source_loop_annotations` | 源码循环上的**原始注解**（TIR 标量已转成 JSON 标量） | `{"num_stages": 2}` |
+| `source_pipeline_stages` | **实际请求**的缓冲级数（0 = 未请求） | `2` |
+| `pipeline_hint_dropped` | 是否**未采用**（= 请求 > 0） | `true` |
+| `pipeline_not_applied_reason` | 未采用原因（常量文本，说明本目标没有软件流水，K 链按 256 宽有序累加发射） | 见 `PIPELINE_NOT_APPLIED_REASON` |
+
+`num_stages=0`：`stages=0`、`dropped=false`、`reason=null`（TileLang 语义：0 表示不启用流水，`loop.py:130-131`）。`software_pipeline_order/stage` 手写列表：折成 `stages≥1` 的请求。生产源码没有 K 循环，因此 `source_k_loop` 整体缺省——**不伪造请求**。
+
+### 44.3 执行字段逐项未变
+
+| 检查 | 结果 |
+|---|---|
+| 生产计划（decode/prefill） | 哈希仍是 `8daec9f11046…` / `11f43cc45ee9…`，**逐字节相同**（`test_a_source_without_a_loop_carries_no_request` 固定 `11f43cc45ee9`） |
+| fixture 计划（带流水提示） | 哈希 `f57a0566…` → `d00d3b7c…`：**仅新增记录字段**；任务数 36、提交 12、设备需求 5,491,264 B、bindings/views/buffers/accounting/publish 全部不变（`verify_record.py` 去掉新字段后其余结构一致） |
+| 数值要求、M/N 声明、既有拒绝 | 未改动（同一 contract 与 schedule 代码路径；全套回归无相关变化） |
+| 执行库 | 未重建、未改动（`3749e95d…`），因此沿用既有设备证据（§37/§41） |
+
+### 44.4 对 §43 的收窄更正
+
+| §43 的原话 | 更正 |
+|---|---|
+| “只有串行 K 循环的迭代顺序是真的调度语义” | **改为**：在**已检查的**结构里（block-grid 轴交换、变量重命名、`T.Pipelined` 提示、串行 K 循环），只有 K 循环的迭代顺序被前端当作顺序要求提取；本轮**没有**穷尽串行 M/N 循环、其它合法控制结构或全部 TileLang 表达方式。 |
+| “输出 tile 的遍历顺序在源里根本不存在” | **改为**：**已检查的**两种写法（grid 轴交换、变量重命名）canonicalize 成同一计划，这说明这些写法**不要求**不同的执行顺序；不能据此断言源语言里不存在任何表达 tile 顺序的方式。显式 `mn_order` 确实改变计划与命令顺序。 |
+| “`T.Pipelined` 是纯性能提示（可安全忽略）” | **改为**：它是 TileLang 的**缓冲级数提示**（`num_stages=0` 表示不启用）；本目标没有实现软件流水，因此后端**记录**请求与未采用原因，而**不是无痕丢弃**。本轮不实现流水。 |
+
+### 44.5 五问答复
+
+1. **遗漏发生在哪一步？** 前端提取的提示记录：普通 K-loop 与 guarded-tail 两条路径硬编码 `{}`/`False`（丢失请求），block-annotation 路径用 `bool(annotations)`（把 `num_stages=0` 误报）；另外 TIR 标量未转换导致计划序列化失败。
+2. **修复后请求、决定、原因分别存在哪？** 都在任务 `attrs.source_k_loop`：`source_loop_annotations`（原始请求）、`source_pipeline_stages`（请求级数）、`pipeline_hint_dropped`（未采用）、`pipeline_not_applied_reason`（原因文本）。保存/加载后保持（测试固定）。
+3. **哪些记录/身份改变，哪些执行字段保持？** 改变：带提示的 fixture 计划哈希（`f57a0566…`→`d00d3b7c…`，仅记录差异）；保持：生产两份计划逐字节相同，所有计划的 bindings/constants/views/buffers/actions（除新记录键）/submits/publish/accounting 不变，执行库未改。
+4. **§43 哪些结论被收窄？** 见 44.4：三条全局断言改为“已检查范围内”的表述；`T.Pipelined` 的说明改为“提示 + 已记录未采用”。
+5. **测试结果与仍未验证事项？** 新增 `tests/test_pipeline_hint_record.py`（8 例：缺省/0/非零/手写列表/JSON 标量/计划记录/无循环源/保存加载），全量 **737 passed / 2 skipped / 0 failed / 272 subtests**。仍未验证：guarded-tail 源码中 `T.Pipelined` 的**通过计划**级实测（本轮用 fixture 的 K-loop 路径与 helper 单测覆盖；guarded-tail 的字段由同一 helper 生成，但未构造带提示的 tail 源码计划——因为 inline 生成的源码无法被 TileLang 取到源文本）、staged 路径的提示记录（字段缺省而非虚假声明）、以及流水的实际实现（不属于本轮）。
+
+### 44.6 身份与证据
+
+| 物件 | 值 |
+|---|---|
+| 代码 | `frontend/tilelang_adapter.py`（`_pipeline_record` + 两条路径接入）、`tests/test_pipeline_hint_record.py` |
+| 计划 | 生产 decode `8daec9f11046…`、prefill `11f43cc45ee9…`（未变）；fixture 流水计划 `d00d3b7cb6c1…`（记录变更） |
+| 回归 | **737 passed / 2 skipped / 0 failed / 272 subtests** |
+| 设备 | 未上板：执行字段与库（`3749e95d…`）均未变，沿用 §37/§41 证据 |
+| 证据 | `results/20261103T180000Z-tail-pipeline-record/`（`repros/verify_record.py`、`snapshot/`、`logs/`） |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261103T180000Z-tail-pipeline-record/repros/verify_record.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_pipeline_hint_record.py -q -o addopts=""
+```
+
+### 44.7 guarded-tail 源码的最终补测
+
+44.5 的“guarded-tail 未做计划级实测”已由实际文件
+`tests/test_tail_pipeline_sources.py` 的补测取代。固定 M=256/K=576/N=3072，
+serial、Pipelined(0)、Pipelined(2) 均为 36 task / 12 submit。
+前两者不请求流水；后者记录请求 2 级、未采用及原因。去掉提示记录与源码位置后，
+执行字段、logical_ops、numeric_requirements 相同，保存/加载保持记录与 hash。
+补测后全量为 743 passed / 2 skipped / 0 failed / 281 subtests。
+执行库未改变，未重复板测。
+
+<a id="current-status"></a>
+
+## 45. 当前能力、实验结论与重放
+
+这是当前阅读入口；§0—§44 保留调查过程，不应把早期发现当作仍未修复的问题。
+本节整理累计代码与测试，不改变执行策略、数值标准或生产默认。
+
+### 45.1 当前控制能力
+
+| 能力 | 入口与落实 | 证据和限制 |
+|---|---|---|
+| M/N 分块 | TileLang `rknpu.schedule="mn_tiles_v1"`、`tile_m/tile_n`，以及已证明的源块几何；改变 task/view/publish | §37；名义块 1..256，尾块裁剪；显式调度源需证明支持的 K 舍入形式 |
+| M/N 遍历 | TileLang `rknpu.mn_order` 改变计划和发射命令顺序 | §34、§37；只有一个 M tile 时可能无差异，未观测设备内部时间序 |
+| K 链 | 源 K-loop、显式 FP16 copy/writeback → 升序 256 宽切片、tail、MM/MM_ACC | §34、§38；不支持任意 BK、split-K、归约重排；块内精确求和未建模 |
+| 任务排列与提交 | CompileOptions 的 baseline / scheduled_baseline / merged / interleaved / interleaved_reuse / grouped_linear / weight_stationary / weight_stationary_reuse | 后端策略，不是 TileLang 原生循环自动映射 |
+| 有界多提交 | grouped 策略与 `linear_group_n_tiles`：0 自动、正整数指定每组 N tile 数 | §41—§42；每 submit ≤64 task，完整 K 链留组内 |
+| 输入/权重复用 | 后端 reuse 策略，资格检查与发射字 0x1000/0x2000 | §34、§40—§42；命令位不是带宽测量或寄存器读回 |
+| 流水提示记录 | 普通 K-loop 和 guarded-tail 保存请求、未采用决定及原因 | §44；未实现软件流水，staged 提示记录未全面验证 |
+
+block-grid 轴交换与变量重命名不要求不同硬件顺序，canonicalize 成同一计划合理。
+不能据此断言所有 TileLang 源结构都无法表达 tile 顺序。未实现通用 GPU
+thread/shared/fragment 到 RKNPU 的映射；本次不交付多核或双缓冲。
+
+### 45.2 已修复的问题
+
+- 调度声明不再被 linear 分支忽略；slot 成员上限与 C 对齐；来源标记不能绕过检查（§11—§16）。
+- 数值要求、逻辑算子与任务关联随计划保存，重复展开及输入改接保留对应关系（§19—§22）；不代表设备达到容差。
+- 提交必须拥有连续任务段，避免 runtime 延迟提交导致错误执行（§27）。
+- MM_ACC/EW/LUT 约束、RKIR 未知计算属性、producer/role、签名和标签兼容性检查修复（§28—§30）。
+- View 起点加长度、C 预算溢出、不可执行动作拒绝（§31—§32）。
+- 未知 `rknpu.*` 拒绝，已识别但未实现的流水提示记录原因（§33、§44）。
+- 新分组策略显式声明 `submit_recipe`，旧构造保留前缀回退，结构独立验证（§42）。
+
+这些结论覆盖已复现问题，不是任意计划正确性的证明。
+
+### 45.3 实验采用结论
+
+| 实验 | 结论 | 适用限制 |
+|---|---|---|
+| decode gate/up 合并提交 | 模型五组对照中 453.5 → 411.9 ms/forward，耗时减少约 9.2%；token 和捕获 logits 相同 | §36；单 prompt、短 decode；设备 JSON 未取回，仅控制台原始记录归档；未重新封存完整 V5 验收 |
+| M 分块 256 → 128 | 完整 gate/up 首/中/末层均慢于生产，未采用 | §37、§42；分块、任务数和资源共同变化，不能单独归因于分组 |
+| 输入与权重复用 | 发射设置已验证，未得到稳定一致收益，不作为默认 | §35、§40—§42；跨层差值异号不能证明全是噪声，也不排除层相关效果 |
+| 遍历与分组规模 | 没有足以采用的性能证据 | §37、§42；未测设备带宽或内部时间序 |
+
+生产默认保持不变。两级 GEMM 的 2 个端到端超差元素及其它已登记 FAIL 保留；
+“候选与生产逐位相同”不等于独立参考验收通过。
+
+### 45.4 重放与证据
+
+在 `research/tilelang-rknpu` 中执行（需本机已有依赖与 host 库）：
+
+```bash
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests -q -o addopts=""
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest \
+  tests/test_schedule_namespace.py tests/test_mn_schedule_source_entry.py \
+  tests/test_pipeline_hint_record.py tests/test_tail_pipeline_sources.py \
+  tests/test_weight_reuse.py tests/test_weight_stationary_grouping.py \
+  tests/test_submit_recipe_and_grouping.py -q -o addopts=""
+ctest --test-dir ../custom-ops/build-host-mvp --output-on-failure -j2
+```
+
+构建与依赖见 `REPLAY.md`。CTest 使用已有 host build，不等于新构建或板端验收。
+历史设备库为 `3749e95d…`；本次整理未重建执行库或运行硬件实验。
+
+证据保留原日期路径，以下均在本地 `results/` 下：
+
+- `20261102T220000Z-tilelang-control-fidelity/`：入口、命令与舍入结构。
+- `20261103T020000Z-smollm-model-level/`：模型提交合并对照。
+- `20261103T040000Z-mn-schedule-source-entry/`、`20261103T060000Z-mn-numeric-coupling/`：源码准入。
+- `20261103T100000Z-weight-stationary/`、`20261103T120000Z-wstat-full-gate-up/`、`20261103T140000Z-wstat-controls-and-layers/`：完整投影与权重复用。
+- `20261103T160000Z-source-structure-semantics/`、`20261103T180000Z-tail-pipeline-record/`：源码结构与提示记录。
+
+这些原始证据被 Git 忽略，克隆不会自动带回。版本控制中的测试可重跑；
+历史板测复放还需原始输入、package、计划、设备和对应依赖。本次不搬动或改写旧证据。
+
+### 45.5 尚未证明与未完成事项
+
+- 未穷举合法 TileLang 程序、图形态和所有 shape，未证明两套 verifier 对任意输入一致。
+- 通用跨 stage 流水、任意布局重排、多核未实现；提示记录不等于流水能力。
+- 整链数值判据和块内精确求和模型仍未定义；本次不调整政策。
+- `options_to_dict` 尚漏 `fuse_task_chain` 和新增的 `linear_group_n_tiles`，快照不是完整 options identity；本次不顺带修改。
+- 缺少可用 transformers 时 tokenizer replay 测试跳过；测试绿不代表此重放已执行。
+
+后续优化应另选具体计算和可验证的调度假设，不自动恢复已结束的权重复用搜索。
+
+### 45.6 本次整理的验证与提交
+
+整理基线为 `7d24032`（更早的意图保真修复已提交）。本次没有新增执行逻辑，
+将此前工作区中的已完成实现、测试与历史报告纳入版本控制：
+
+| 提交 | 内容 |
+|---|---|
+| `cfc29b6` | 源调度命名空间拒绝、数值错误诊断、流水请求记录及真实 guarded-tail 源码测试 |
+| `897f419` | weight-stationary/grouped 调度、有界分组、显式 submit recipe 与 Python 复用检查 |
+| `b0a1f44` | 缺少可用 transformers 时明确跳过 tokenizer replay 测试 |
+| 本节所在文档提交 | §33—§44 原始调查、最终补测、当前汇总与导航；未移动原始证据 |
+
+提交按主题分开，便于审查和回退；如撤销组合，应先撤销依赖相应实现的测试/文档，
+并重跑回归，不应只删除实现中的单个字段。未推送远端。
+
+本次在最终代码上重新运行：
+
+- Python：**743 passed / 2 skipped / 281 subtests passed**，68.97 秒。
+- 现有 host build 的 CTest：**33/33 passed**，5.73 秒；没有重新构建 C 库。
+- `git diff --check`：通过。
+
+未重新运行设备实验或完整模型验收；沿用各节明确列出的历史证据，
+不将本次主机回归视为新增设备证明。

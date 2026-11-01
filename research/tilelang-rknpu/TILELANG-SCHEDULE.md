@@ -4,6 +4,11 @@ This milestone makes a **small, explicit scheduling surface** control the RK
 execution plan.  It is not a general autotuner and does not change the numeric
 contract.
 
+Current controls, experimental results and replay commands are summarized in
+[the intent audit](INTENT-FIDELITY-AUDIT.md#current-status). The sections below
+retain the initial milestone contract; backend policy extensions are listed in
+that current summary and are not additional TileLang source annotations.
+
 ## Source mapping and rounding boundary
 
 TileLang's block grid is a launch structure; it does not by itself define a
@@ -86,26 +91,29 @@ the plan.
   rejected rather than treated as compatible.
 - Tile extents are `1..256`.
 - Unknown schedule keys, unknown traversal orders, non-256 K blocks,
-  non-contiguous K partitions and explicit schedules on multi-node dataflow are
-  rejected with a diagnostic.
+  non-contiguous K partitions and explicit schedules on unsupported multi-node
+  dataflow are rejected with a diagnostic. Restricted staged contracts have
+  their own admission rules; this is not arbitrary graph scheduling.
 - No schedule annotation is silently treated as a performance hint and then
   dropped.
 - Where the M/N block decision came from is recorded, not inferred:
   `source_schedule_origin` is `annotated` for a user annotation and `derived`
   when the source itself proved the blocks (a kernel that writes FP16 back after
   every K block), and the report states the adopted grid
-  (`mn_grid_source`: `annotation` / `source_geometry` / `default_grid`).  Plan
-  admission gates only treat `annotated` (or a hand-written direct-RKIR
-  attribute) as a user requirement; a derived record is never reported back to
-  the user as their own explicit scheduling request.
+  (`mn_grid_source`: `annotation` / `source_geometry` / `caller` /
+  `default_grid`). All stored schedules receive the same schema and numerical
+  checks regardless of origin. Origin changes attribution and diagnostics,
+  never permission to skip admission checks.
 - A declared M/N tile is nominal: when it is wider than the remaining
   axis the last tile is clipped to the exact tail, on every policy.  The plan
   keeps the declared block and the report exposes the published rectangles and
   whether they were clipped.
-- A declared M/N tile composes with a linear task policy.  Combinations whose
-  submit grouping would need more than one submit's 64 tasks are rejected with
+- A declared M/N tile composes with a linear task policy. For single-submit
+  policies, combinations exceeding the submit's 64-task limit are rejected with
   the policy, the tile geometry, the required task count and the bound, rather
   than falling back to the default grid or surfacing a generic submit error.
+  Grouped policies can form several bounded submits, keeping each output's
+  complete K chain within one group (see the current summary).
 
 ## Information audit
 
