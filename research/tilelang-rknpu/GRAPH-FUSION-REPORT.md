@@ -742,3 +742,183 @@ decode 仍比生产 Host RoPE 慢约 19~20%，因此不采用。
 - final indexed policy 在全新 prompt-3 上完成独立 acceptance，校准使用 prompt-2；
   旧输入上的重跑只记录为回归，不作为新验收。
 - 旧单步 policy 在连续输入上的失败记录保留；新的连续 policy 明确是独立范围/顺序。
+
+
+## 27. QKV→QK 候选 A：int16 DPU TP writer 的板级失败实验
+
+本轮选择了一个有固定版本依据的候选，而不是只列“接口不存在”：
+
+- 依据：`upstream-components/rocket-userspace/include/npu_dpu.h` 的
+  `tp_org_en` / `tp_precision` transposed writer 字段；
+- 依据：`upstream-components/rocket-userspace/tests/matmul_int16_rocket.c`
+  中 HW 测得的 TP_ORG int16 输出布局和 `rocket_submit_matmul` 路径；
+- 假设：identity int16 权重 + 原始 FP16 位模式按 int16 保存，可保持低 16 位，
+  用 TP writer 产生一个可用于 QK B 的物理排列；
+- 实现：`custom-ops/tools/c/int16_tp_layout_probe.c`，目标
+  `int16_tp_layout_probe`；实际走 `rocket_submit_matmul`，不是 mock，也不是
+  Host pack；中间结果只从设备 BO 读取做布局 oracle。
+
+更精确的 board 实测（K=32、M=16、N=32；上游同一路径）：
+
+- upstream `ROCKET_INT16_TP16`：`PASS`，`ROCKET_SUBMIT=0`；
+- 本项目 raw-pattern probe：`tp_match=512/512`；输入包含 0、符号位、高位、
+  Inf/NaN 位型、subnormal 等原始 16-bit 模式，TP 布局中原样保持；
+- 同一 probe 用 **唯一 label** 做地址排列 oracle：`weight_match=4/512`；
+- 同一 probe 用特殊 bit pattern 做数值位保持 oracle：`label_weight_match=4/512`, `pattern_weight_match=58/512`；
+  58/512 是重复值下的数值巧合，**不能当作地址映射正确率**；
+- M=16,N=16 TP 路径：当前命令配置下 `-110` timeout，**原因未定位**；
+  不能据此写成“该几何不支持”；
+- M=16,N=32 旧 probe 在 K=16 时也失败，说明 K 必须满足其几何/对齐要求。
+
+因此 candidate A 是**部分成功**：
+
+- 它确实提供了一个设备端 16-bit 转置/重排通路；
+- 它的输出是 TP_ORG 布局，不是 QK B/WEIGHT 布局；
+- 它不能直接作为 QK consumer 的 B 操作数；
+- M=16,N=16 几何被硬件/命令路径拒绝。
+
+这不是“所有设备 reorder 不可行”的证明，也不能把 TP 输出直接当 FP16 B。
+下一步若要继续该方向，需要为 TP_ORG 输出设计一个真实可消费的 layout/view，
+或增加一次设备重排，而不是删除 legalize 直接提交。
+
+证据：`int16-tp-layout-board.log`、`custom-ops/tools/c/int16_tp_layout_probe.c`。
+
+## 28. QKV→QK 候选排除表与决策点
+
+本轮进行了真实板级候选实验，而不是只列接口缺失。
+
+### 候选 A：int16 DPU TP_ORG writer
+
+依据：
+
+- `npu_dpu.h` 的 `tp_org_en` / `tp_precision` 字段；
+- upstream `matmul_int16_rocket.c` 的 TP_ORG 输出布局和 `rocket_submit_matmul` 路径；
+- `tools/c/int16_tp_layout_probe.c` 使用 identity int16 + 原始 16-bit 数据。
+
+Board 结果：
+
+| case | command | result |
+|---|---|---|
+| upstream native int16, M=16,K=32,N=16 | `rocket_submit_matmul` | `0`，bit-exact PASS |
+| upstream TP_ORG int16, M=16,K=32,N=16 | `rocket_submit_matmul` + TP env | `-110` timeout |
+| 本项目的 int16 TP layout probe, M=16,K=32,N=16 | 同一路径 | `-110` timeout |
+| 本项目 int16 TP layout probe, M=16,N=32 | 同一路径 | `-32` |
+
+结论：**int16 native 本身正常，失败集中在 TP_ORG transposed writer 路径**；
+当前平台/内核/命令组合下该候选不能作为设备 reorder。
+
+### 候选 B：固定 p0312 组合/offset 搜索
+
+- 单 pass p0312 对目标 QK B 映射有 255/256 个逻辑元素不匹配；
+- 对 2-pass offset 组合做了代数搜索（源/目的 offset 均为 8 元素对齐），没有找到满足全部
+  目标位置的组合；
+- 用 p0312 多 pass + mask 做覆盖搜索，目标 256 项最少需要约 238 个 pass，
+  不具备工程可行性。
+
+结论：**已知 p0312 组合不构成可行候选**；不能宣称所有未知硬件机制不可行。
+
+### 候选 C：单 MM producer 输出组织
+
+地址映射显示 QK B 的每个目标物理地址对应的 CUBE 逻辑行会混入多个 token 行；
+单个 MM 输出行只依赖一个输入 token，无法仅靠列置换/weight 布局调整同时满足。
+该结论是结构性约束，仍需新的行重排/可变 B view 才能绕开。
+
+### 决策点
+
+当前已没有找到**有依据且能上板验证通过**的 QKV→QK 设备 reorder 候选。继续下去需要用户选择：
+
+1. 投入实现新的设备 CUBE→WEIGHT reorder 命令/驱动接口；或
+2. 接受 QKV→QK 继续走 Host pack 的混合边界，不把其列为设备驻留收益；或
+3. 改变 QK consumer 的 contract，允许受支持的 CUBE/其他操作数路径（需要重新定义数值/性能验收）。
+
+在得到其中一项决策前，不继续扩大 RoPE/PV→O 性能实验，也不把 QKV→QK 标为完成。
+
+## 29. TP_ORG 输出消费候选的结果
+
+TP_ORG writer 本身可用：
+
+- M=16,K=32,N=32：upstream TP16 PASS；
+- identity raw-bit probe：`tp_match=512/512`；
+- 但标准 QK B/WEIGHT 视图：`label_weight_match=4/512`, `pattern_weight_match=58/512`；
+- M=16,N=16：`-110` timeout。
+
+进一步尝试的消费方案：
+
+1. TP 输出作为 CUBE [64,16]/[32,32]/[16,64] 视图：可以定义视图，
+   但逻辑元素顺序是 TP 布局的置换，不是 QK A 或 B 所需矩阵；
+2. TP 输出 + p0312：无法把 TP 布局映射到 QK B/WEIGHT；
+3. 第二级 TP（M=64,N=32,K=32 等）：硬件可执行，但输出仍是 TP 布局；
+4. TP 输出 + 第二级 MM 的线性变换：对 W 目标做最小二乘/优化，未得到精确映射。
+
+因此：
+
+- **TP_ORG raw reorder 是一个真实设备能力**；
+- **它尚不能被标准 QK consumer 直接消费**；
+- 要使用它，需要定义新的 TP_ORG-aware consumer/layout ABI，或新增一个专用
+  设备转置命令；继续在现有 WEIGHT contract 下尝试没有找到可上板通过的方案。
+
+这是当前需要产品/架构决策的具体点：是否接受新增 TP_ORG-aware QK consumer
+（新布局 ABI + 独立数值验收），还是放弃 QKV→QK 设备化。
+
+## 30. 当前优化交付（最终收敛）
+
+### 可用执行入口
+
+- **默认冻结路径**
+  - `models/compiled/`
+  - manifest sha256 `16fc690686729cc4c11029b533b1ea95ac5dafc5d5c4e5149c19cc3d03a83869`
+- **FFN 显式候选路径**
+  - `models/compiled_graph_fusion/`
+  - suffix `_deviceffn_fused`
+  - manifest sha256 `657293883cd6d33dfde22be2f4f71c0709a83b6159aff7c1a5677b948082a554`
+- **RoPE/RMSNorm 实验**
+  - `models/compiled_rmsnorm_lut/`
+  - RoPE indexed/32-step 使用 `DeviceRopeRunner` / `run-smollm2.sh device-rope-probe`
+- **能力探针**
+  - `tools/evaluate_rope_device.py`
+  - `tools/evaluate_pv_o_device.py`
+  - `tools/evaluate_pv_o_b8_device.py`
+  - `tools/analyze_tp_org_consumer.py`
+  - `custom-ops/tools/c/int16_tp_layout_probe.c`
+
+### 采用/可选/未采用/未完成
+
+| 项目 | 状态 | 说明 |
+|---|---|---|
+| 默认 Tiny/Smol 路径 | 采用 | 默认 package 未改 |
+| FFN Submit 合并 | 显式可选 | 同数值政策调度收益成立；完整 device FFN 需独立 LUT policy |
+| RoPE indexed 32-step | 实验/未采用 | 模型级验收通过但慢于生产 Host |
+| RMSNorm approx | 实验/未采用 | 独立验收通过，性能/误差不优 |
+| PV→O b1/b8 | 能力实验/未采用 | 设备数据流成立但更慢，未接模型 |
+| QKV→QK 全设备驻留 | **未完成** | 保持 Host pack；不宣称设备驻留 |
+| TP_ORG→标准 QK consumer | **本轮关闭** | raw bit 搬运成立，但没有合法标准 B 读取命令 |
+
+### CPU/NPU 边界（Tiny ViT 默认）
+
+默认 b1/b8 仍为 8 Submit/call；b1 14 task、b8 70 task。Host 边界仍包括：
+
+- patchify/pad；
+- position add；
+- RMSNorm1/2；
+- stable softmax；
+- head merge；
+- residual attention/FFN；
+- mean pool 和 logits export。
+
+QKV→QK 仍为 Host pack；因此**不能说只剩 Softmax 一个边界**。
+
+### 已验证收益
+
+- 同数值调度：old device FFN → fused，b1 median ratio `0.901`（−9.9%），b8 `0.941`（−5.9%）。
+- 合计 default Host FFN → fused：b1 `0.913`（−8.7%），b8 `0.874`（−12.6%）。
+- 合计包含 LUT 数值路径与驻留变化，不能全部归因于调度。
+- fused full 10k：b1/b8 accuracy `0.9821`，top-1 agreement `1.0`。
+- 这些收益是 TinyTransformer 的，不外推到 SmolLM2。
+
+### 剩余限制
+
+- QKV→QK 真实设备 reorder/consumer 未成立；Host pack 保留。
+- TP_ORG 输出真实存在且 raw 16-bit 搬运成立，但标准 QK B/WEIGHT 地址关系不可表达。
+- RoPE decode 系数驻留存在但性能不优。
+- PV→O b8 未接模型。
+- 非标准 consumer/数学分解是后续独立研究，不作为当前阻塞项。

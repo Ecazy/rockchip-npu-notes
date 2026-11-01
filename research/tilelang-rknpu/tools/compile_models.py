@@ -280,6 +280,12 @@ def main() -> int:
             "role": "static-repeat-group",
             "source_plan": f"tiny_vit_b{batch}_qk",
             "repeat": nrepeat,
+            # The derived plan states its own records; the manifest only says
+            # whether the conversion kept them.
+            "logical_ops": len(group.logical_ops),
+            "numeric_requirements": len(group.numeric_requirements),
+            "attributed_requirements": sum(
+                1 for record in group.numeric_requirements if record.tasks),
         })
         # Restricted QKV input mapping: source bindings carry the full
         # [16,192] per-batch QKV block; each per-head upload action selects a
@@ -296,6 +302,10 @@ def main() -> int:
             "source_plan": f"tiny_vit_b{batch}_qk",
             "repeat": nrepeat,
             "input_map_version": 1,
+            "logical_ops": len(qk_mapped.logical_ops),
+            "numeric_requirements": len(qk_mapped.numeric_requirements),
+            "attributed_requirements": sum(
+                1 for record in qk_mapped.numeric_requirements if record.tasks),
         })
         # PV keeps probs as a native [16,16] slice, while V is read directly
         # from the QKV block's V columns (no precomputed v_heads array).
@@ -310,6 +320,10 @@ def main() -> int:
             "role": "mapped-qkv-attn-group",
             "source_plan": f"tiny_vit_b{batch}_qk",
             "repeat": nrepeat,
+            "logical_ops": len(pv_mapped.logical_ops),
+            "numeric_requirements": len(pv_mapped.numeric_requirements),
+            "attributed_requirements": sum(
+                1 for record in pv_mapped.numeric_requirements if record.tasks),
             "input_map_version": 1,
         })
         print("wrote", f"tiny_vit_b{batch}_qk_group", group.plan_hash, flush=True)

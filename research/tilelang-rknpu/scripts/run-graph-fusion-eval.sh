@@ -181,12 +181,38 @@ cmd_pv_o_b8_probe() {
   "${SCP[@]}" "$TARGET:$remote/pv-o-b8-device.rkplan.json" "$out.rkplan.json" >/dev/null || true
 }
 
+cmd_int16_upstream() {
+  local out=${1:?output file required}
+  local mm=${2:-16} kk=${3:-32} nn=${4:-16}
+  [[ -f "$REMOTE_STATE" ]] || { echo 'run setup first' >&2; exit 2; }
+  board_env
+  local remote; remote=$(<"$REMOTE_STATE")
+  "${SSH[@]}" "cd '$remote' && cmake --build build --target upstream_int16_tp_probe -j4 > int16-upstream-build.log 2>&1 && ROCKET_INT16_TP_ORG=1 ROCKET_INT16_TP_PREC=1 ROCKET_INT16_SIZE_E=7 ROCKET_INT16_SURF_MULT=8 ROCKET_INT16_TP16=1 taskset -c $CPU ./build/upstream_int16_tp_probe $mm $kk $nn" 2>&1 | tee "$out.log"
+}
 
+cmd_int16_upstream_normal() {
+  local out=${1:?output file required}
+  local mm=${2:-16} kk=${3:-32} nn=${4:-16}
+  [[ -f "$REMOTE_STATE" ]] || { echo 'run setup first' >&2; exit 2; }
+  board_env
+  local remote; remote=$(<"$REMOTE_STATE")
+  "${SSH[@]}" "cd '$remote' && cmake --build build --target upstream_int16_tp_probe -j4 > int16-upstream-build.log 2>&1 && taskset -c $CPU ./build/upstream_int16_tp_probe $mm $kk $nn" 2>&1 | tee "$out.log"
+}
 
+cmd_int16_probe() {
+  local out=${1:?output file required}
+  [[ -f "$REMOTE_STATE" ]] || { echo 'run setup first' >&2; exit 2; }
+  board_env
+  local remote; remote=$(<"$REMOTE_STATE")
+  "${SSH[@]}" "cd '$remote' && cmake --build build --target int16_tp_layout_probe -j4 2>&1 | tail -20 && taskset -c $CPU ./build/int16_tp_layout_probe" 2>&1 | tee "$out.log"
+}
 
 case "${1:-}" in
   setup) shift; cmd_setup "$@" ;;
   run) shift; cmd_run "$@" ;;
+  int16-probe) shift; cmd_int16_probe "$@" ;;
+  int16-upstream) shift; cmd_int16_upstream "$@" ;;
+  int16-upstream-normal) shift; cmd_int16_upstream_normal "$@" ;;
   rmsnorm-calibrate) shift; cmd_rmsnorm_calibrate "$@" ;;
   rmsnorm-verify) shift; cmd_rmsnorm_verify "$@" ;;
   rope-probe) shift; cmd_rope_probe "$@" ;;

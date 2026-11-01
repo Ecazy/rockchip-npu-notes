@@ -67,9 +67,13 @@ The frontend validates these annotations and writes an RKIR matmul attribute:
 }
 ```
 
-The planner consumes `source_schedule` for the supported single-GEMM path and
-records both `source_schedule` and `applied_schedule` on every emitted matmul
-task.  The source M/N block extents in a real TileLang K-loop source are also
+A declared `source_schedule` is consumed by every single-GEMM path.  When one
+is present the plan records both `source_schedule` and `applied_schedule` on
+every emitted matmul task, and a source whose declaration cannot be applied is
+rejected instead of being planned at the default geometry.  When nothing is
+declared the historical 256x256 M-major geometry and the target numeric policy
+the frontend already stamped are used, and no schedule field is written, so the
+plan identity of an undeclared production source does not move.  The source M/N block extents in a real TileLang K-loop source are also
 carried into the same contract; changing `bm`/`bn` in the TileLang kernel changes
 the plan.
 
@@ -86,6 +90,22 @@ the plan.
   rejected with a diagnostic.
 - No schedule annotation is silently treated as a performance hint and then
   dropped.
+- Where the M/N block decision came from is recorded, not inferred:
+  `source_schedule_origin` is `annotated` for a user annotation and `derived`
+  when the source itself proved the blocks (a kernel that writes FP16 back after
+  every K block), and the report states the adopted grid
+  (`mn_grid_source`: `annotation` / `source_geometry` / `default_grid`).  Plan
+  admission gates only treat `annotated` (or a hand-written direct-RKIR
+  attribute) as a user requirement; a derived record is never reported back to
+  the user as their own explicit scheduling request.
+- A declared M/N tile is nominal: when it is wider than the remaining
+  axis the last tile is clipped to the exact tail, on every policy.  The plan
+  keeps the declared block and the report exposes the published rectangles and
+  whether they were clipped.
+- A declared M/N tile composes with a linear task policy.  Combinations whose
+  submit grouping would need more than one submit's 64 tasks are rejected with
+  the policy, the tile geometry, the required task count and the bound, rather
+  than falling back to the default grid or surfacing a generic submit error.
 
 ## Information audit
 

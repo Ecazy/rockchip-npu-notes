@@ -39,13 +39,67 @@ from ..capabilities import TargetProfile
 from ..errors import RK_E_UNSUPPORTED, reject
 from ..graph import is_compute_graph, missing_graph_attributes
 from ..options import CompileOptions
-from ..passes.dag import build_draft
+from ..passes.dag import attach_plan_records, build_draft
 from ..passes.infer import infer_and_verify
 from ..passes.legalize import legalize
 from ..passes.schedule import build_submits
 from ..passes.storage import assign_storage
 from ..passes.verify import verify_plan
 from ..plan import Plan
+
+
+def _logical_ops_view(plan: Plan) -> list[dict[str, Any]]:
+    """Each recorded logical op, plus what its tasks really read and write.
+
+    The plan stores the read/write region once, on the host actions, so this
+    joins the two rather than keeping a second copy that could drift: a
+    converted plan says the same thing here that its uploads actually pack.
+    """
+    bindings = {binding.id: binding.name for binding in plan.bindings}
+    upload_of_view: dict[int, Any] = {}
+    downloads_of_view: dict[int, list[Any]] = {}
+    for action in plan.actions:
+        if action.kind == "upload":
+            for view_id in action.outputs:
+                upload_of_view[view_id] = action
+        elif action.kind == "download":
+            for view_id in action.inputs:
+                downloads_of_view.setdefault(view_id, []).append(action)
+    actions = {action.id: action for action in plan.actions}
+    out: list[dict[str, Any]] = []
+    for entry in plan.logical_ops:
+        record = entry.to_dict()
+        reads: list[dict[str, Any]] = []
+        writes: list[dict[str, Any]] = []
+        for task in entry.tasks:
+            action = actions[task]
+            for view_id in action.inputs:
+                producer = upload_of_view.get(view_id)
+                if producer is None:
+                    continue
+                source = producer.attrs.get("source_binding")
+                if not isinstance(source, int) or isinstance(source, bool):
+                    continue
+                reads.append({
+                    "task": task,
+                    "binding": bindings.get(source),
+                    "row_offset": producer.attrs.get("src_row_offset"),
+                    "col_offset": producer.attrs.get("src_col_offset"),
+                    "row_stride": producer.attrs.get("src_row_stride"),
+                    "transpose": producer.attrs.get("transpose_source"),
+                    "cache": producer.attrs.get("cache"),
+                })
+            for view_id in action.outputs:
+                for download in downloads_of_view.get(view_id, ()):
+                    target = download.attrs.get("binding_id")
+                    if not isinstance(target, int) or isinstance(target, bool):
+                        continue
+                    writes.append({"task": task,
+                                   "binding": bindings.get(target)})
+        record["reads"] = reads
+        record["writes"] = writes
+        out.append(record)
+    return out
 
 
 def require_compute_graph(obj: Any, *, stage: str = "codegen") -> Any:
@@ -127,6 +181,22 @@ def source_identity(graph: Any, *, options: CompileOptions) -> dict[str, Any]:
         "source_k_loop": attrs.get("source_k_loop"),
         "source_mn_tiling": attrs.get("source_mn_tiling"),
         "source_schedule": attrs.get("source_schedule"),
+        # Where the M/N block decision came from, and which grid the plan will
+        # use because of it: an annotation is a requirement, a proven K-blocked
+        # source is honoured source geometry, and everything else takes the
+        # backend default grid.
+        # "annotated" / "derived" come from the frontend; "caller" means the
+        # attribute was written by the caller (direct RKIR), never a frontend
+        # derivation, so explain never mislabels it.
+        "source_schedule_origin": (
+            attrs.get("source_schedule_origin")
+            or ("caller" if attrs.get("source_schedule") is not None else None)),
+        "mn_grid_source": (
+            "annotation" if attrs.get("source_schedule_origin") == "annotated"
+            else ("source_geometry"
+                  if attrs.get("source_schedule_origin") == "derived"
+                  else ("caller" if attrs.get("source_schedule") is not None
+                        else "default_grid"))),
         "source_k_rounding": attrs.get("source_k_rounding"),
         "source_tail_contract": attrs.get("source_tail_contract"),
     }
@@ -144,6 +214,9 @@ def plan_verified(verified: Any, *, profile: TargetProfile,
     legalized = legalize(verified, profile=profile, options=options)
     draft = build_draft(verified, legalized, profile=profile, options=options)
     submits = build_submits(draft, options=options)
+    # After submit scheduling: host uploads may have been hoisted, so action ids
+    # are only final here.
+    draft = attach_plan_records(verified, draft, options)
     result = assign_storage(draft, profile=profile, options=options,
                             submits=submits)
     return verify_plan(result)
@@ -215,6 +288,27 @@ def normalize_tilelang_native(prim_func: Any, *, profile: TargetProfile,
                               b_is_input=b_is_input)
 
 
+def _effective_geometry(plan: Plan) -> dict[str, Any]:
+    """Declared nominal block versus the rectangles actually published."""
+    rectangles = sorted({(publish.rows, publish.cols) for publish in plan.publish})
+    nominals = {
+        json.dumps(action.attrs.get("applied_schedule"), sort_keys=True)
+        for action in plan.actions
+        if action.kind == "npu_task"
+        and action.attrs.get("applied_schedule") is not None
+    }
+    clipped = False
+    for rendered in nominals:
+        nominal = json.loads(rendered)
+        if any(rows < nominal["tile_m"] or cols < nominal["tile_n"]
+               for rows, cols in rectangles):
+            clipped = True
+    return {
+        "publish_rects": [[rows, cols] for rows, cols in rectangles],
+        "clipped_from_declared": clipped,
+    }
+
+
 def explain_plan(plan: Plan) -> dict[str, Any]:
     """Describe a plan without touching a device.
 
@@ -224,6 +318,16 @@ def explain_plan(plan: Plan) -> dict[str, Any]:
     """
     if not isinstance(plan, Plan):
         reject(RK_E_UNSUPPORTED, "explain_plan expects a Plan", stage="api")
+    declared_schedules = {
+        json.dumps(action.attrs.get("source_schedule"), sort_keys=True)
+        for action in plan.actions
+        if action.kind == "npu_task" and
+        action.attrs.get("source_schedule") is not None}
+    applied_schedules = {
+        json.dumps(action.attrs.get("applied_schedule"), sort_keys=True)
+        for action in plan.actions
+        if action.kind == "npu_task" and
+        action.attrs.get("applied_schedule") is not None}
     slot_payload: dict[int, int] = {}
     slot_buffers: dict[int, list[int]] = {}
     for buffer in plan.buffers:
@@ -267,14 +371,66 @@ def explain_plan(plan: Plan) -> dict[str, Any]:
         "actions": [a.to_dict() for a in plan.actions],
         "submits": [s.to_dict() for s in plan.submits],
         "publish": [p.to_dict() for p in plan.publish],
+        # The source graph the plan restates, so a requirement can be read
+        # against the op it names instead of on its own.
+        "logical": {
+            "stored": bool(plan.logical_ops),
+            "source": "plan" if plan.logical_ops else "not stored",
+            "ops": _logical_ops_view(plan),
+            "without_tasks": [entry.index for entry in plan.logical_ops
+                              if not entry.tasks],
+        },
+        # What the caller asked of each logical op, which tasks implement it, and
+        # what is deliberately NOT claimed: the plan stores requirements, not
+        # evidence that the device met them, and it defines no whole-graph
+        # tolerance.
+        "numeric": {
+            "stored": bool(plan.numeric_requirements),
+            "source": ("plan" if plan.numeric_requirements else "not stored"),
+            "operators": [dict(requirement.to_dict(),
+                             tolerance_source=f"plan:op[{requirement.op_index}]")
+                          for requirement in plan.numeric_requirements],
+            "end_to_end_criterion": "undefined (per-operator requirements only)",
+            "device_satisfaction": "not asserted by the plan",
+        },
         "accounting": plan.accounting.to_dict(),
         "schedule": {
+            # Explicit requirement (what the source asked for), source
+            # geometry, the M/N strategy actually adopted, and the linear task
+            # policy are reported separately: an equivalence rewrite must be
+            # readable, not inferred from a hash.
+            "declared": sorted({
+                json.dumps(action.attrs.get("source_schedule"), sort_keys=True)
+                for action in plan.actions
+                if action.kind == "npu_task" and
+                action.attrs.get("source_schedule") is not None
+            }),
+            "source_geometry": sorted({
+                json.dumps(action.attrs.get("source_mn_tiling"),
+                           sort_keys=True)
+                for action in plan.actions
+                if action.kind == "npu_task" and
+                action.attrs.get("source_mn_tiling") is not None
+            }),
             "applied": sorted({
                 json.dumps(action.attrs.get("applied_schedule"), sort_keys=True)
                 for action in plan.actions
                 if action.kind == "npu_task" and
                 action.attrs.get("applied_schedule") is not None
             }),
+            "linear_task_policy": sorted({
+                str(action.attrs.get("linear_task_policy"))
+                for action in plan.actions
+                if action.kind == "npu_task" and
+                action.attrs.get("linear_task_policy") is not None
+            }),
+            # The declared block is nominal: a tail tile can be smaller.  Both
+            # numbers are reported so a clipped declaration is never silent.
+            "effective": _effective_geometry(plan),
+            # A rewrite is only acceptable when it is readable: was the adopted
+            # M/N strategy the declared one, and if not, what changed.
+            "reblocked": bool(declared_schedules) and
+                         declared_schedules != applied_schedules,
             "k_tile": 256,
             "accumulation": "ordered_ascending_f16_writeback",
         },

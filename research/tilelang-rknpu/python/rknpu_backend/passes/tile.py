@@ -43,6 +43,9 @@ class MNTileSchedule:
 
 
 MN_TILE_ORDERS = {"m_major", "n_major"}
+# Who produced the record: a user annotation, or source geometry the extractor
+# proved.  A missing value means the caller wrote the attribute itself.
+ORIGINS = {"annotated", "derived"}
 SCHEDULE_KEYS = {"kind", "tile_m", "tile_n", "order", "k_tile",
                  "accumulation"}
 
@@ -57,6 +60,12 @@ def mn_schedule_from_attrs(attrs: dict, *, where: str = "matmul") -> MNTileSched
     raw = attrs.get("source_schedule")
     if raw is None:
         return MNTileSchedule()
+    origin = attrs.get("source_schedule_origin")
+    if origin is not None and origin not in ORIGINS:
+        reject(RK_E_UNSUPPORTED,
+               f"{where}.source_schedule_origin must be one of "
+               f"{sorted(ORIGINS)} or omitted for a caller-written schedule",
+               stage="schedule", actual=origin, required=sorted(ORIGINS))
     if not isinstance(raw, dict):
         reject(RK_E_UNSUPPORTED, f"{where}.source_schedule must be an object",
                stage="schedule", actual=type(raw).__name__)

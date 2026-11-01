@@ -14,10 +14,21 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from .errors import RK_E_ALIAS, RK_E_SCHEMA, RK_E_SHAPE, reject
+from .errors import (RK_E_ALIAS, RK_E_SCHEMA, RK_E_SHAPE, RK_E_UNSUPPORTED,
+                     reject)
 from .immutable import freeze, thaw
 from .serialize import sha256_json
 
+# Mirrors RK_MAX_BUFFERS_PER_SLOT in custom-ops/include/rk_plan.h, which is a
+# verifier bookkeeping bound (bounded pairwise alias checks), not a device
+# limit.  The planner keeps every slot below it and plan verification re-checks
+# it, so a plan is never handed on that the device-level verifier must refuse.
+MAX_BUFFERS_PER_SLOT = 64
+
+# One NPU task programs one CUBE K tile; the same bound is enforced by the C
+# verifier (CO_K_TILE) and by the emitter.  Kept here so the plan checker does
+# not depend on the planner-side tile helpers.
+K_TILE_LIMIT = 256
 PLAN_SCHEMA_VERSION = 2
 PLAN_KIND = "rkplan"
 LAYOUT_IDS = {"co.cube.f16.v1", "co.weight.f16.v1", "co.linear.f16.v1"}
@@ -27,8 +38,13 @@ TEMPLATE_IDS = {
     "co.lut.sigmoid.f16.v1", "co.lut.hardsigmoid.f16.v1",
     "co.lut.gelu_gate.f16.v1", "co.lut.rsqrt.f16.v1",
 }
+# The plan schema knows every step a pipeline stage may express, including the
+# transient host steps a draft can carry while it is being built.
 ACTION_KINDS = {"host_pack", "host_expand", "host_check", "upload", "npu_task",
                 "download", "host_compute", "commit"}
+# What the runtime can actually execute, and therefore the only kinds a finished
+# plan may contain.  Kept next to ACTION_KINDS so the two lists stay in view.
+EXECUTABLE_ACTION_KINDS = frozenset({"upload", "npu_task", "download"})
 BINDING_ROLES = {"input", "constant", "output"}
 # A submit's recipe must match the task sequence it actually carries.  This is the
 # plan-level half of the "no arbitrary chain" rule; the C verifier re-checks the
@@ -432,9 +448,23 @@ class View:
         if self.offset_bytes % 16:
             reject(RK_E_SHAPE, "view offset must be 16-byte aligned", stage="shape")
         r0, nr, c0, nc = self.valid_region
-        if min(r0, nr, c0, nc) < 0 or nr > self.tensor.rows or nc > self.tensor.cols:
+        if min(r0, nr, c0, nc) < 0:
+            reject(RK_E_SHAPE, "view valid_region entries must be non-negative",
+                   stage="shape", actual=list(self.valid_region))
+        # Start and length are checked separately *and* together: a small extent
+        # still runs past the end when the region does not start at 0.  This is
+        # the logical tensor bound; the buffer byte bound is the separate
+        # "view exceeds its logical buffer" rule in _validate_plan.
+        if r0 > self.tensor.rows or c0 > self.tensor.cols:
+            reject(RK_E_SHAPE, "view valid_region starts outside the logical tensor",
+                   stage="shape", actual=list(self.valid_region),
+                   required={"rows": self.tensor.rows,
+                             "cols": self.tensor.cols})
+        if r0 + nr > self.tensor.rows or c0 + nc > self.tensor.cols:
             reject(RK_E_SHAPE, "view valid_region is outside the logical tensor",
-                   stage="shape")
+                   stage="shape", actual=list(self.valid_region),
+                   required={"end_row": self.tensor.rows,
+                             "end_col": self.tensor.cols})
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -469,6 +499,13 @@ class Action:
     deps: tuple[int, ...]
     origin: str
     attrs: dict[str, Any] = field(default_factory=dict)
+    # Which logical ops this task implements.  Carried by the planner so the
+    # attribution survives action renumbering (upload hoisting, submit
+    # merging) instead of being re-derived from the origin string afterwards.
+    # Deliberately outside the frozen plan identity: it is excluded from
+    # equality and from serialization, because the plan states the association
+    # once, in Plan.logical_ops.
+    source_ops: tuple[int, ...] = field(default=(), compare=False)
 
     def __post_init__(self) -> None:
         if self.kind not in ACTION_KINDS:
@@ -482,6 +519,11 @@ class Action:
         if self.kind not in {"npu_task", "host_compute", "commit", "host_pack",
                              "host_expand", "host_check", "upload", "download"}:
             reject(RK_E_SCHEMA, "unknown action kind", stage="schema")
+        if not isinstance(self.source_ops, tuple) or not all(
+                isinstance(op, int) and not isinstance(op, bool) and op >= 0
+                for op in self.source_ops):
+            reject(RK_E_SCHEMA, "action source_ops must be logical op indices",
+                   stage="schema", action_id=self.id)
         # ``frozen=True`` only stops attribute assignment.  Two separate aliasing
         # paths remain, and both are closed here:
         #   * the caller keeps the mapping it passed in and edits it later,
@@ -689,6 +731,208 @@ class Accounting:
 
 
 @dataclass(frozen=True)
+class LogicalOp:
+    """The plan's own record of one source-graph op.
+
+    Smaller than RKIR on purpose: index, opcode, value names, the caller's
+    NumericContract (or None), and the device tasks that implement it.  It
+    exists so a numeric requirement can be checked against the graph it claims
+    to describe instead of being self-consistent on its own.  It is a record,
+    not a proof: nothing here says the device met the tolerance, or that the
+    module really came from the source named in source_hash.
+    """
+
+    index: int
+    opcode: str
+    inputs: tuple[str, ...]
+    outputs: tuple[str, ...]
+    contract: dict | None
+    tasks: tuple[int, ...]
+    # True when the op's effect is carried by a view/layout/zero-copy
+    # restructuring rather than by a device task (for example the gate/up half
+    # split of a packed FFN).  Declared by the planner, never inferred.
+    auxiliary: bool = False
+    # Set by a plan-to-plan conversion (repeat expansion) so a copy of one
+    # computation still answers "whose copy am I": the plan it was derived
+    # from and the logical op it came from.  None for a directly compiled op.
+    derived_from: dict | None = None
+
+    def __post_init__(self) -> None:
+        from .ir import NumericContract
+        if not isinstance(self.index, int) or isinstance(self.index, bool) or (
+                self.index < 0):
+            reject(RK_E_SCHEMA, "logical op index must be >= 0", stage="schema")
+        if not isinstance(self.opcode, str) or not self.opcode:
+            reject(RK_E_SCHEMA, "logical op opcode must be non-empty",
+                   stage="schema")
+        for name in ("inputs", "outputs"):
+            values = getattr(self, name)
+            if not isinstance(values, tuple) or not all(
+                    isinstance(v, str) and v for v in values):
+                reject(RK_E_SCHEMA,
+                       f"logical op {name} must be non-empty value names",
+                       stage="schema", actual=name)
+        if not self.inputs:
+            reject(RK_E_SCHEMA, "logical op must list at least one input",
+                   stage="schema", actual=self.index)
+        if not self.outputs:
+            reject(RK_E_SCHEMA, "logical op must list at least one output",
+                   stage="schema", actual=self.index)
+        if self.contract is not None:
+            if not isinstance(self.contract, dict):
+                reject(RK_E_SCHEMA, "logical op contract must be an object",
+                       stage="schema", actual=self.index)
+            NumericContract.from_dict(self.contract)
+        if not isinstance(self.tasks, tuple) or not all(
+                isinstance(task, int) and not isinstance(task, bool) and
+                task >= 0 for task in self.tasks):
+            reject(RK_E_SCHEMA, "logical op tasks must be action ids",
+                   stage="schema", actual=self.index)
+        if not isinstance(self.auxiliary, bool):
+            reject(RK_E_SCHEMA, "logical op auxiliary must be a boolean",
+                   stage="schema", actual=self.index)
+        if self.derived_from is not None:
+            if not isinstance(self.derived_from, dict) or \
+                    set(self.derived_from) != {"plan_hash", "op_index"}:
+                reject(RK_E_SCHEMA,
+                       "logical op derived_from must record plan_hash and "
+                       "op_index", stage="schema", actual=self.index)
+            parent = self.derived_from["plan_hash"]
+            if not isinstance(parent, str) or len(parent) != 64 or \
+                    any(c not in "0123456789abcdef" for c in parent):
+                reject(RK_E_SCHEMA,
+                       "logical op derived_from.plan_hash must be a plan "
+                       "hash", stage="schema", actual=repr(parent)[:80])
+            parent_op = self.derived_from["op_index"]
+            if not isinstance(parent_op, int) or \
+                    isinstance(parent_op, bool) or parent_op < 0:
+                reject(RK_E_SCHEMA,
+                       "logical op derived_from.op_index must be >= 0",
+                       stage="schema", actual=repr(parent_op))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "index": self.index, "opcode": self.opcode,
+            "inputs": list(self.inputs), "outputs": list(self.outputs),
+            "contract": (dict(sorted(self.contract.items()))
+                         if self.contract is not None else None),
+            "tasks": list(self.tasks), "auxiliary": self.auxiliary,
+            # Only emitted when set, so a directly compiled plan is unchanged.
+            **({"derived_from": dict(sorted(self.derived_from.items()))}
+               if self.derived_from is not None else {}),
+        }
+
+    @classmethod
+    def from_dict(cls, obj: Any) -> "LogicalOp":
+        _require(isinstance(obj, dict), RK_E_SCHEMA,
+                 "logical op must be an object", stage="schema")
+        _keys(obj, {"index", "opcode", "inputs", "outputs", "contract",
+                    "tasks", "auxiliary"}, {"derived_from"}, "LogicalOp")
+        derived_from = obj.get("derived_from")
+        if derived_from is not None and not isinstance(derived_from, dict):
+            reject(RK_E_SCHEMA, "logical op derived_from must be an object",
+                   stage="schema")
+        contract = obj["contract"]
+        if contract is not None and not isinstance(contract, dict):
+            reject(RK_E_SCHEMA, "logical op contract must be an object or null",
+                   stage="schema")
+        auxiliary = obj["auxiliary"]
+        if not isinstance(auxiliary, bool):
+            reject(RK_E_SCHEMA, "logical op auxiliary must be a boolean",
+                   stage="schema")
+        return cls(_int(obj["index"], "index", where="LogicalOp"),
+                   _str(obj["opcode"], "opcode", where="LogicalOp"),
+                   tuple(_str(v, "inputs", where="LogicalOp")
+                         for v in obj["inputs"]),
+                   tuple(_str(v, "outputs", where="LogicalOp")
+                         for v in obj["outputs"]),
+                   dict(contract) if contract is not None else None,
+                   tuple(_int(v, "tasks", where="LogicalOp")
+                         for v in obj["tasks"]),
+                   auxiliary,
+                   ({"plan_hash": _str(derived_from["plan_hash"],
+                                      "plan_hash", where="LogicalOp"),
+                     "op_index": _int(derived_from["op_index"],
+                                       "op_index", where="LogicalOp")}
+                    if derived_from is not None else None))
+
+
+@dataclass(frozen=True)
+class NumericRequirement:
+    """What the caller asked of one logical op, and which tasks implement it.
+
+    A requirement record, not evidence that the device met it: the contract says
+    what arithmetic was requested, execution says what the planner emitted, and
+    nothing here claims the tolerance holds.
+    """
+
+    op_index: int
+    opcode: str
+    contract: dict
+    inputs: tuple[str, ...]
+    outputs: tuple[str, ...]
+    tasks: tuple[int, ...]
+    execution: dict
+
+    EXECUTION_KEYS = {"k_chain", "k_tile", "templates", "output_dtypes",
+                      "attributed", "approximated"}
+
+    def __post_init__(self) -> None:
+        from .ir import NumericContract
+        if not isinstance(self.op_index, int) or \
+                isinstance(self.op_index, bool) or self.op_index < 0:
+            reject(RK_E_SCHEMA, "numeric requirement op_index must be >= 0",
+                   stage="schema")
+        if not isinstance(self.opcode, str) or not self.opcode:
+            reject(RK_E_SCHEMA, "numeric requirement opcode must be non-empty",
+                   stage="schema")
+        NumericContract.from_dict(self.contract)
+        for name in ("inputs", "outputs"):
+            values = getattr(self, name)
+            if not values or not all(isinstance(v, str) and v for v in values):
+                reject(RK_E_SCHEMA,
+                       f"numeric requirement {name} must be non-empty names",
+                       stage="schema")
+        if not all(isinstance(task, int) and not isinstance(task, bool)
+                   and task >= 0 for task in self.tasks):
+            reject(RK_E_SCHEMA, "numeric requirement tasks must be action ids",
+                   stage="schema")
+        unknown = sorted(set(self.execution) - self.EXECUTION_KEYS)
+        if unknown:
+            reject(RK_E_SCHEMA,
+                   "numeric requirement execution has unsupported fields",
+                   stage="schema", actual=unknown,
+                   required=sorted(self.EXECUTION_KEYS))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"op_index": self.op_index, "opcode": self.opcode,
+                "contract": dict(sorted(self.contract.items())),
+                "inputs": list(self.inputs), "outputs": list(self.outputs),
+                "tasks": list(self.tasks), "execution": dict(self.execution)}
+
+    @classmethod
+    def from_dict(cls, obj: Any) -> "NumericRequirement":
+        _require(isinstance(obj, dict), RK_E_SCHEMA,
+                 "numeric requirement must be an object", stage="schema")
+        _keys(obj,
+              {"op_index", "opcode", "contract", "inputs", "outputs",
+               "tasks", "execution"},
+              set(), "NumericRequirement")
+        return cls(_int(obj["op_index"], "op_index",
+                        where="NumericRequirement"),
+                   _str(obj["opcode"], "opcode",
+                        where="NumericRequirement"),
+                   dict(obj["contract"]),
+                   tuple(_str(v, "inputs", where="NumericRequirement")
+                         for v in obj["inputs"]),
+                   tuple(_str(v, "outputs", where="NumericRequirement")
+                         for v in obj["outputs"]),
+                   tuple(_int(v, "tasks", where="NumericRequirement")
+                         for v in obj["tasks"]),
+                   dict(obj["execution"]))
+
+
+@dataclass(frozen=True)
 class Plan:
     name: str
     profile_hash: str
@@ -705,6 +949,13 @@ class Plan:
     schema_version: int = PLAN_SCHEMA_VERSION
     kind: str = PLAN_KIND
     budget: PlanBudget | None = None
+    # Empty for plans written before the field existed: the load path then
+    # reports "not stored" instead of inventing a default requirement.
+    numeric_requirements: tuple[NumericRequirement, ...] = ()
+    # The source graph, as far as a plan can restate it.  Also empty for plans
+    # written before the field existed; those load and re-save unchanged and
+    # skip the requirement-vs-graph cross-checks rather than inventing a graph.
+    logical_ops: tuple[LogicalOp, ...] = ()
 
     def __post_init__(self) -> None:
         if self.schema_version != PLAN_SCHEMA_VERSION:
@@ -733,6 +984,12 @@ class Plan:
         }
         if self.budget is not None:
             out["budget_policy"] = self.budget.to_dict()
+        if self.logical_ops:
+            out["logical_ops"] = [op.to_dict() for op in self.logical_ops]
+        if self.numeric_requirements:
+            out["numeric_requirements"] = [requirement.to_dict()
+                                           for requirement in
+                                           self.numeric_requirements]
         if include_hash:
             out["plan_hash"] = self.plan_hash
         return out
@@ -744,7 +1001,9 @@ class Plan:
         required = {"schema_version", "kind", "name", "profile_hash", "source_hash",
                     "bindings", "constants", "buffers", "views", "actions",
                     "submits", "publish", "accounting", "plan_hash"}
-        _keys(obj, required, {"budget_policy"}, where="Plan")
+        _keys(obj, required,
+              {"budget_policy", "numeric_requirements", "logical_ops"},
+              where="Plan")
         plan = cls(
             name=_str(obj["name"], "name", where="Plan"),
             profile_hash=_str(obj["profile_hash"], "profile_hash", where="Plan"),
@@ -761,6 +1020,11 @@ class Plan:
             schema_version=obj["schema_version"], kind=obj["kind"],
             budget=(PlanBudget.from_dict(obj["budget_policy"])
                     if "budget_policy" in obj else None),
+            numeric_requirements=tuple(
+                NumericRequirement.from_dict(item)
+                for item in obj.get("numeric_requirements", ())),
+            logical_ops=tuple(LogicalOp.from_dict(item)
+                              for item in obj.get("logical_ops", ())),
         )
         expected = compute_plan_hash(plan)
         if plan.plan_hash != expected:
@@ -805,6 +1069,27 @@ def _validate_plan(plan: Plan) -> None:
         reject(RK_E_SCHEMA, "duplicate view IDs", stage="schema")
     if len(action_by_id) != len(plan.actions):
         reject(RK_E_SCHEMA, "duplicate action IDs", stage="schema")
+
+    # The runtime executes exactly three action kinds.  The plan schema also knows
+    # the transient planning steps (host_pack/expand/check, host_compute, commit);
+    # they are legal while a draft is being built, but a plan that leaves this
+    # function is the one handed to the runtime, so a transient step here would be
+    # a request nobody can execute.  Refusing it names the step instead of letting
+    # the plan fail later in the verifier.
+    for action in plan.actions:
+        if action.kind in EXECUTABLE_ACTION_KINDS:
+            continue
+        if action.kind == "host_compute":
+            reject(RK_E_UNSUPPORTED,
+                   "MVP forbids hidden host arithmetic actions",
+                   stage="schedule", action_id=action.id,
+                   actual=action.kind,
+                   required=sorted(EXECUTABLE_ACTION_KINDS))
+        reject(RK_E_UNSUPPORTED,
+               f"plan action kind {action.kind!r} is a transient planning "
+               "step, not an executable action",
+               stage="schedule", action_id=action.id, actual=action.kind,
+               required=sorted(EXECUTABLE_ACTION_KINDS))
 
     names = [b.name for b in plan.bindings]
     if len(set(names)) != len(names):
@@ -875,7 +1160,9 @@ def _validate_plan(plan: Plan) -> None:
         if binding.role in {"input", "constant"} and \
                 binding.id not in upload_bindings:
             reject(RK_E_SCHEMA,
-                   f"{binding.role} binding {binding.name!r} has no upload action",
+                   f"{binding.role} binding {binding.name!r} has no upload "
+                   "action: a declared input has to be consumed by at least "
+                   "one upload to become a plan parameter",
                    stage="storage")
         if binding.role == "output" and binding.id not in download_bindings:
             reject(RK_E_SCHEMA,
@@ -925,6 +1212,44 @@ def _validate_plan(plan: Plan) -> None:
     if seen_tasks != npu_ids:
         reject(RK_E_SCHEMA, "every NPU task must be assigned to exactly one submit",
                stage="schedule")
+
+    # The runtime walks actions in ascending order and flushes a submit when it
+    # reaches that submit's last listed task, so the emission order is the
+    # action order.  A submit therefore owns a contiguous run of actions:
+    # ascending task ids, no host action inside the run, no other submit's task
+    # inside the run, and runs that follow the declared submit order.  Without
+    # these three, a plan can claim one execution order while the runtime runs
+    # another (and the flushed batch would not even contain the skipped task).
+    owner_of_task = {task: submit.id for submit in plan.submits
+                     for task in submit.task_ids}
+    previous_last = -1
+    for submit in plan.submits:
+        if list(submit.task_ids) != sorted(submit.task_ids):
+            reject(RK_E_SCHEMA,
+                   "submit tasks must be listed in ascending emission order",
+                   stage="schedule", actual=list(submit.task_ids))
+        first_task, last_task = submit.task_ids[0], submit.task_ids[-1]
+        if first_task <= previous_last:
+            reject(RK_E_SCHEMA,
+                   "submit task runs must appear in submit order",
+                   stage="schedule",
+                   actual={"submit": submit.id, "first_task": first_task,
+                           "previous_last": previous_last})
+        for action_id in range(first_task, last_task + 1):
+            action = action_by_id.get(action_id)
+            if action is None or action.kind != "npu_task":
+                reject(RK_E_SCHEMA,
+                       "a host action is interleaved inside a task group",
+                       stage="schedule", action_id=action_id,
+                       actual=submit.id)
+            if owner_of_task.get(action_id) != submit.id:
+                reject(RK_E_SCHEMA,
+                       "another submit's task is interleaved inside a task "
+                       "group; a submit must own a contiguous run of tasks",
+                       stage="schedule", action_id=action_id,
+                       actual={"submit": submit.id,
+                               "owner": owner_of_task.get(action_id)})
+        previous_last = last_task
 
     published_bindings = {p.binding_id for p in plan.publish}
     output_bindings = {b.id for b in plan.bindings if b.role == "output"}
@@ -1036,6 +1361,279 @@ def _validate_plan(plan: Plan) -> None:
                 reject(RK_E_ALIAS, "mm_acc prior and output must use different BOs",
                        stage="verify", action_id=a.id)
 
+    # The logical op table is the plan's own statement of the graph it came
+    # from.  When present it is closed over the device tasks it claims, so a
+    # requirement can no longer describe a graph the plan does not contain.
+    # When absent the plan predates the field: it loads, re-saves and replays
+    # unchanged, and only the historical requirement checks run.
+    logical_by_index: dict[int, LogicalOp] = {}
+    if plan.logical_ops:
+        previous = -1
+        for logical in plan.logical_ops:
+            if logical.index <= previous:
+                reject(RK_E_SCHEMA,
+                       "logical ops must appear once in ascending index order",
+                       stage="schema", actual=logical.index,
+                       required=previous + 1)
+            previous = logical.index
+            logical_by_index[logical.index] = logical
+            if logical.auxiliary and logical.tasks:
+                reject(RK_E_SCHEMA,
+                       "an auxiliary logical op cannot own device tasks",
+                       stage="schema", actual=list(logical.tasks))
+            for task in logical.tasks:
+                action = action_by_id.get(task)
+                if action is None:
+                    reject(RK_E_SCHEMA,
+                           "logical op references a missing action",
+                           stage="schema", action_id=task,
+                           actual=logical.index)
+                if action.kind != "npu_task":
+                    reject(RK_E_SCHEMA,
+                           "logical op references a non-NPU action",
+                           stage="schema", action_id=task)
+        attributed_tasks: set[int] = set()
+        for logical in plan.logical_ops:
+            attributed_tasks.update(logical.tasks)
+        unclaimed = sorted(action.id for action in plan.actions
+                           if action.kind == "npu_task" and
+                           action.id not in attributed_tasks)
+        if unclaimed:
+            reject(RK_E_SCHEMA,
+                   "device tasks are not attributed to any logical op",
+                   stage="schema", actual=unclaimed)
+
+        # Every name a logical op mentions must exist in this plan: a binding,
+        # or the output of some recorded op.  A conversion that renames
+        # bindings but leaves the description pointing at the old ones is
+        # therefore rejected instead of reading as "the same computation".
+        defined = {binding.name for binding in plan.bindings}
+        for logical in plan.logical_ops:
+            defined.update(logical.outputs)
+        for logical in plan.logical_ops:
+            unknown = sorted(name for name in
+                             tuple(logical.inputs) + tuple(logical.outputs)
+                             if name not in defined)
+            if unknown:
+                reject(RK_E_SCHEMA,
+                       "logical op names a value this plan does not define",
+                       stage="schema",
+                       actual={"op_index": logical.index, "names": unknown})
+
+        # The description must also agree with what the tasks actually read and
+        # write.  Only host uploads identify a binding, and generated identity/
+        # zero constants are hardware plumbing rather than logical inputs, so
+        # those are the two exclusions -- nothing is inferred from names.
+        upload_of_view: dict[int, Action] = {}
+        downloads_of_view: dict[int, list[Action]] = {}
+        for action in plan.actions:
+            if action.kind == "upload":
+                for view_id in action.outputs:
+                    upload_of_view[view_id] = action
+            elif action.kind == "download":
+                for view_id in action.inputs:
+                    downloads_of_view.setdefault(view_id, []).append(action)
+        generated = {spec.binding_id for spec in plan.constants
+                     if spec.generator is not None}
+        claims: dict[int, list[LogicalOp]] = {}
+        for logical in plan.logical_ops:
+            for task in logical.tasks:
+                claims.setdefault(task, []).append(logical)
+        for task, owners in sorted(claims.items()):
+            action = action_by_id[task]
+            # A fused task implements several ops at once, so its inputs and
+            # outputs are the union of the ops that claim it.
+            named_in = sorted({name for owner in owners
+                               for name in owner.inputs})
+            named_out = sorted({name for owner in owners
+                                for name in owner.outputs})
+            op_index = [owner.index for owner in owners]
+            for view_id in action.inputs:
+                producer = upload_of_view.get(view_id)
+                if producer is None:
+                    continue
+                source = producer.attrs.get("source_binding")
+                if not isinstance(source, int) or isinstance(source, bool):
+                    continue
+                binding = binding_by_id.get(source)
+                if binding is None:
+                    reject(RK_E_SCHEMA,
+                           "a task reads a binding this plan does not "
+                           "contain", stage="schema", action_id=task,
+                           actual=source)
+                if source in generated:
+                    continue
+                if binding.name not in named_in:
+                    reject(RK_E_SCHEMA,
+                           "the logical ops claiming a task do not name the "
+                           "input it reads", stage="schema", action_id=task,
+                           actual={"op_index": op_index,
+                                   "binding": binding.name},
+                           required=named_in)
+            for view_id in action.outputs:
+                for download in downloads_of_view.get(view_id, ()):
+                    target = download.attrs.get("binding_id")
+                    if not isinstance(target, int) or isinstance(target, bool):
+                        continue
+                    binding = binding_by_id.get(target)
+                    if binding is None:
+                        continue
+                    if binding.name not in named_out:
+                        reject(RK_E_SCHEMA,
+                               "the logical ops claiming a task do not name "
+                               "the output it publishes", stage="schema",
+                               action_id=task,
+                               actual={"op_index": op_index,
+                                       "binding": binding.name},
+                               required=named_out)
+    elif plan.numeric_requirements:
+        reject(RK_E_SCHEMA,
+               "numeric requirements need the logical op table that makes "
+               "them checkable", stage="schema",
+               actual=len(plan.numeric_requirements))
+
+    # Numeric requirements: the record must point at real tasks, and the facts
+    # it carries must agree with what those tasks actually emit.  This checks
+    # bookkeeping and structure only; it never claims the tolerance is met.
+    claimed_tasks: dict[int, int] = {}
+    seen_ops: set[int] = set()
+    for requirement in plan.numeric_requirements:
+        if requirement.op_index in seen_ops:
+            reject(RK_E_SCHEMA,
+                   "one numeric requirement per logical op",
+                   stage="schema", actual=requirement.op_index)
+        seen_ops.add(requirement.op_index)
+        emitted = [action_by_id[task] for task in requirement.tasks
+                   if task in action_by_id]
+        if len(emitted) != len(requirement.tasks):
+            reject(RK_E_SCHEMA,
+                   "numeric requirement references a missing action",
+                   stage="schema", actual=list(requirement.tasks))
+        for action in emitted:
+            if action.kind != "npu_task":
+                reject(RK_E_SCHEMA,
+                       "numeric requirement references a non-NPU action",
+                       stage="schema", action_id=action.id)
+            # A fused task may implement more than one logical op (one
+            # co.ew_add_relu task serves add and relu).  That is legal exactly
+            # while the plan's own op table declares the shared claim, which
+            # the table cross-check below verifies; without a table the old
+            # exclusive rule still applies.
+            if action.id in claimed_tasks and not plan.logical_ops:
+                reject(RK_E_SCHEMA,
+                       "a task cannot implement two numeric requirements",
+                       stage="schema", action_id=action.id)
+            claimed_tasks.setdefault(action.id, requirement.op_index)
+
+        if plan.logical_ops:
+            owner = logical_by_index.get(requirement.op_index)
+            if owner is None:
+                reject(RK_E_SCHEMA,
+                       "numeric requirement names no logical op of this plan",
+                       stage="schema", actual=requirement.op_index)
+            for name, claimed in (
+                    ("opcode", requirement.opcode),
+                    ("inputs", requirement.inputs),
+                    ("outputs", requirement.outputs),
+                    ("contract", requirement.contract),
+                    ("tasks", requirement.tasks)):
+                declared = getattr(owner, name)
+                if claimed != declared:
+                    reject(RK_E_SCHEMA,
+                           f"numeric requirement {name} disagrees with the "
+                           f"logical op it names", stage="schema",
+                           actual=str(claimed), required=str(declared))
+
+        if set(requirement.inputs) & set(requirement.outputs):
+            reject(RK_E_SCHEMA,
+                   "a numeric requirement must not list a value as both "
+                   "input and output", stage="schema",
+                   actual=sorted(set(requirement.inputs)
+                                 & set(requirement.outputs)))
+        attributed = requirement.execution.get("attributed")
+        if attributed is not None and bool(attributed) != bool(emitted):
+            reject(RK_E_SCHEMA,
+                   "numeric requirement attribution flag disagrees with tasks",
+                   stage="schema", actual=attributed)
+        dtypes = requirement.execution.get("output_dtypes")
+        if dtypes:
+            actual = sorted({view_by_id[action.outputs[0]].tensor.dtype
+                             for action in emitted})
+            if actual != sorted(dtypes):
+                reject(RK_E_SCHEMA,
+                       "numeric requirement output dtype disagrees with tasks",
+                       stage="schema", actual=actual, required=list(dtypes))
+        templates = requirement.execution.get("templates")
+        if templates:
+            actual = sorted({action.template_id for action in emitted})
+            if actual != sorted(templates):
+                reject(RK_E_SCHEMA,
+                       "numeric requirement template list disagrees with tasks",
+                       stage="schema", actual=actual, required=list(templates))
+        chain = requirement.execution.get("k_chain") or []
+        if chain:
+            expected = list(range(0, chain[-1] + 256, 256))
+            if chain != expected:
+                reject(RK_E_SCHEMA,
+                       "numeric requirement K chain must be ascending 256 slices",
+                       stage="schema", actual=list(chain),
+                       required=expected)
+            actual = sorted({action.attrs.get("k0") for action in emitted
+                             if action.attrs.get("k0") is not None})
+            if actual != list(chain):
+                reject(RK_E_SCHEMA,
+                       "numeric requirement K chain disagrees with its tasks",
+                       stage="schema", actual=actual, required=list(chain))
+        contract = requirement.contract
+        # A lookup table is an approximation, so an op lowered through one must
+        # be recorded as approximated.  The contract cannot carry that: the
+        # contract is what the source asked for, while admitting an approximate
+        # lowering is a compile-time decision (allow_approx_lut).  The record
+        # therefore lives in execution, and the two directions are checked: no
+        # LUT task may implement a non-approximate contract unless the plan
+        # records the admitted approximation, and a recorded approximation must
+        # actually be implemented by a lookup table.
+        lut = [action.id for action in emitted
+               if (action.template_id or "").startswith("co.lut.")]
+        approximated = requirement.execution.get("approximated")
+        if approximated is not None and not isinstance(approximated, bool):
+            reject(RK_E_SCHEMA,
+                   "numeric requirement approximation flag must be a boolean",
+                   stage="schema", actual=repr(approximated))
+        if approximated:
+            if not lut:
+                reject(RK_E_SCHEMA,
+                       "a requirement claims an approximated implementation "
+                       "that no lookup-table task implements",
+                       stage="schema", actual=requirement.op_index)
+        elif lut and contract.get("approximate") is False:
+            reject(RK_E_SCHEMA,
+                   "a non-approximate contract cannot be implemented by a "
+                   "lookup-table task unless the plan records the admitted "
+                   "approximation", stage="schema", actual=lut)
+        if contract.get("accumulation") == \
+                "ordered_k_tiles_with_f16_writeback" and len(chain) > 1 and \
+                "k_tile_boundary" not in contract.get("narrowing_points", ()):
+            reject(RK_E_SCHEMA,
+                   "a multi-K contract must declare k_tile_boundary narrowing",
+                   stage="schema",
+                   actual=list(contract.get("narrowing_points", ())))
+    if plan.logical_ops:
+        missing = sorted(entry.index for entry in plan.logical_ops
+                         if entry.contract is not None and
+                         entry.index not in seen_ops)
+        if missing:
+            reject(RK_E_SCHEMA,
+                   "a logical op with a contract has no numeric requirement",
+                   stage="schema", actual=missing)
+        stray = sorted(index for index in seen_ops
+                       if index in logical_by_index and
+                       logical_by_index[index].contract is None)
+        if stray:
+            reject(RK_E_SCHEMA,
+                   "a numeric requirement names a logical op with no contract",
+                   stage="schema", actual=stray)
+
 
 def _validate_action_template(plan: Plan, action: Action, view_by_id: dict[int, View],
                               buffer_by_id: dict[int, Buffer]) -> None:
@@ -1074,6 +1672,28 @@ def _validate_action_template(plan: Plan, action: Action, view_by_id: dict[int, 
                 w.tensor.rows != out.tensor.cols:
             reject(RK_E_SHAPE, "co.mm_acc tensor extents mismatch", stage="verify",
                    action_id=action.id)
+        # One co.mm_acc task programs a single CUBE K tile; the emitter has no
+        # register description for a wider extent, so a plan that claims one is
+        # accepted nowhere in the pipeline.  co.mm above is bounded the same
+        # way, and the K tail (K < 256) stays legal.
+        if x.tensor.cols > K_TILE_LIMIT or w.tensor.cols > K_TILE_LIMIT or \
+                x.tensor.physical_cols > K_TILE_LIMIT or \
+                w.tensor.physical_cols > K_TILE_LIMIT:
+            reject(RK_E_SHAPE,
+                   "co.mm_acc K extent exceeds one 256-wide tile",
+                   stage="verify", action_id=action.id,
+                   actual={"x_cols": x.tensor.cols,
+                           "w_cols": w.tensor.cols,
+                           "x_physical_cols": x.tensor.physical_cols,
+                           "w_physical_cols": w.tensor.physical_cols},
+                   required={"max_k": K_TILE_LIMIT})
+        # The accumulation reads the prior tile back and writes the next one in
+        # the same physical geometry the emitter programs.
+        if x.tensor.physical_rows != out.tensor.physical_rows or \
+                x.tensor.physical_cols != w.tensor.physical_cols or \
+                w.tensor.physical_rows != out.tensor.physical_cols:
+            reject(RK_E_SHAPE, "co.mm_acc physical geometry mismatch",
+                   stage="verify", action_id=action.id)
     elif action.template_id in {"co.ew_add.f16.v1", "co.ew_mul.f16.v1",
                                 "co.ew_max.f16.v1",
                                 "co.ew_add_relu.f16.v1"}:
@@ -1084,11 +1704,26 @@ def _validate_action_template(plan: Plan, action: Action, view_by_id: dict[int, 
         if x.tensor != operand.tensor or x.tensor != out.tensor:
             reject(RK_E_SHAPE, "co.ew requires exact same-shape operands and output",
                    stage="verify", action_id=action.id)
+        # The emitter runs the element-wise unit through the matrix pipe, which
+        # only reads CUBE tiles; a non-CUBE operand has no emit path at all.
+        if x.tensor.layout != "co.cube.f16.v1":
+            reject(RK_E_SHAPE, "co.ew operands and output must be CUBE tiles",
+                   stage="verify", action_id=action.id,
+                   actual={"layout": x.tensor.layout},
+                   required={"layout": "co.cube.f16.v1"})
         pc = x.tensor.physical_cols
         if identity.tensor.layout != "co.weight.f16.v1" or \
                 identity.tensor.rows != pc or identity.tensor.cols != pc:
             reject(RK_E_SHAPE, "co.ew identity weight dimensions mismatch",
                    stage="verify", action_id=action.id)
+        if identity.tensor.physical_rows != pc or \
+                identity.tensor.physical_cols != pc:
+            reject(RK_E_SHAPE,
+                   "co.ew identity weight physical geometry mismatch",
+                   stage="verify", action_id=action.id,
+                   actual={"physical_rows": identity.tensor.physical_rows,
+                           "physical_cols": identity.tensor.physical_cols},
+                   required={"physical": pc})
     elif action.template_id and action.template_id.startswith("co.lut."):
         if len(action.inputs) != 1 or len(action.outputs) != 1:
             reject(RK_E_SHAPE, "LUT requires one input and one output",
@@ -1098,6 +1733,21 @@ def _validate_action_template(plan: Plan, action: Action, view_by_id: dict[int, 
         if x.tensor.bytes != out.tensor.bytes:
             reject(RK_E_SHAPE, "LUT input/output physical sizes must match",
                    stage="verify", action_id=action.id)
+        # Equal byte counts are not enough: the emitter indexes both tiles with
+        # one descriptor (co_emit_lut requires same(x, o)), so a plan whose
+        # input and output share bytes but not geometry would be accepted and
+        # then fail at emit time.
+        if x.tensor != out.tensor:
+            reject(RK_E_SHAPE,
+                   "LUT input and output must be the same tile: layout, "
+                   "logical shape and physical geometry have to match",
+                   stage="verify", action_id=action.id,
+                   actual={"in": [x.tensor.layout, x.tensor.rows,
+                                  x.tensor.cols, x.tensor.physical_rows,
+                                  x.tensor.physical_cols, x.tensor.atom],
+                           "out": [out.tensor.layout, out.tensor.rows,
+                                   out.tensor.cols, out.tensor.physical_rows,
+                                   out.tensor.physical_cols, out.tensor.atom]})
         if x.tensor.layout == "co.linear.f16.v1":
             if out.tensor.layout != "co.linear.f16.v1":
                 reject(RK_E_SHAPE, "linear LUT requires linear output",

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from ..capabilities import TargetProfile
 from ..errors import (RK_E_NUMERIC_CONTRACT, RK_E_SHAPE, RK_E_UNSUPPORTED, reject)
-from ..ir import Module, NumericContract, Op
+from ..ir import Module, NumericContract, Op, same_compute_type
 from ..options import CompileOptions
 
 ACTIVATION_CAPABILITY = {
@@ -209,7 +209,8 @@ def legalize(module: Module, *, profile: TargetProfile,
                    source=binary_op.source, actual=operand.role,
                    alternative="materialise the operand as an input binding")
         produced_value = module.value(produced)
-        if operand.type != produced_value.type or operand.type != result.type:
+        if not same_compute_type(operand.type, produced_value.type) or \
+                not same_compute_type(operand.type, result.type):
             reject(RK_E_UNSUPPORTED,
                    "MVP add/mul requires exact same-shape operands; broadcast is "
                    "rejected", stage="legalize", op=binary_op.opcode,
@@ -435,7 +436,8 @@ def _legalize_static_dataflow(module: Module, *, profile: TargetProfile,
             a = module.value(op.inputs[0])
             b = module.value(op.inputs[1])
             out = module.value(op.outputs[0])
-            if not (a.type == b.type == out.type):
+            if not (same_compute_type(a.type, b.type) and
+                    same_compute_type(b.type, out.type)):
                 constant_side = None
                 tensor_side = None
                 for value, other in ((a, b), (b, a)):
@@ -448,7 +450,7 @@ def _legalize_static_dataflow(module: Module, *, profile: TargetProfile,
                         constant_side, tensor_side = value, other
                 if constant_side is None or tensor_side is None or \
                         tensor_side.type.rank != 2 or \
-                        tensor_side.type != out.type:
+                        not same_compute_type(tensor_side.type, out.type):
                     reject(RK_E_UNSUPPORTED,
                            "static dataflow add/mul accepts same-shape operands "
                            "or one explicit rank-0/rank-1 constant broadcast",

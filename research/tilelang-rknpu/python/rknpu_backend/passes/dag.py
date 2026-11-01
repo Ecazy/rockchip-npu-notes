@@ -11,7 +11,8 @@ from ..errors import RK_E_BUDGET, RK_E_SCHEMA, RK_E_SHAPE, RK_E_UNSUPPORTED, \
     reject
 from ..ir import Module, NumericContract
 from ..options import CompileOptions
-from ..plan import (Action, Binding, ConstantSpec, Publish, TensorLayout, View)
+from ..plan import (Action, Binding, ConstantSpec, LogicalOp,
+                    NumericRequirement, Publish, TensorLayout, View)
 from ..serialize import sha256_json
 from .legalize import LegalizedGraph
 from .tile import K_TILE, MN_TILE_ORDERS, TILE_LIMIT, cube_layout, \
@@ -47,6 +48,8 @@ class DraftPlan:
     views: list[View]
     actions: list[Action]
     publish: list[Publish]
+    numeric_requirements: tuple = ()
+    logical_ops: tuple = ()
 
 
 class _Builder:
@@ -173,10 +176,12 @@ class _Builder:
     def add_action(self, kind: str, *, template_id: str | None = None,
                    inputs: tuple[int, ...] = (), outputs: tuple[int, ...] = (),
                    deps: tuple[int, ...] = (), origin: str = "",
-                   attrs: dict | None = None) -> int:
+                   attrs: dict | None = None,
+                   op_ids: tuple[int, ...] = ()) -> int:
         aid = len(self.actions)
         self.actions.append(Action(aid, kind, template_id, inputs, outputs,
-                                   deps, origin, attrs or {}))
+                                   deps, origin, attrs or {},
+                                   tuple(op_ids)))
         for vid in inputs + outputs:
             self.touch(self.views[vid].buffer_id, aid)
         return aid
@@ -429,7 +434,8 @@ class _Builder:
                            deps: tuple[int, ...], group: str,
                            relu: bool = False,
                            role: str = "workspace",
-                           reuse: bool = True) -> int:
+                           reuse: bool = True,
+                           op_ids: tuple[int, ...] = ()) -> int:
         _, identity_view = self.identity_for(cube_cols)
         identity_upload = self._last_upload_of(identity_view)
         layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols, cube_rows,
@@ -452,7 +458,7 @@ class _Builder:
             deps=deps + ((identity_upload,) if identity_upload is not None else ()),
             origin=("lowering:dataflow:add_relu" if relu
                     else f"lowering:dataflow:{opcode}"),
-            attrs={"submit_group": group})
+            attrs={"submit_group": group}, op_ids=op_ids)
         return out_view
 
     def build_dataflow(self) -> DraftPlan:
@@ -505,6 +511,7 @@ class _Builder:
                     inputs=(x_view, w_view), outputs=(out_view,),
                     deps=self._deps_for(op.inputs),
                     origin=f"lowering:dataflow:matmul:{op.id}",
+                    op_ids=(op.id,),
                     attrs={"submit_group": group,
                            "source_k_loop": op.attrs.get("source_k_loop"),
                            "k0": 0, "kt": self.module.value(op.inputs[0]).type.cols})
@@ -529,7 +536,8 @@ class _Builder:
                     activation=op.opcode, rows=rows, cols=cols,
                     cube_rows=cr, cube_cols=cc, input_view=in_view,
                     input_buffer=self.views[in_view].buffer_id,
-                    deps=self._deps_for(op.inputs), group=group)
+                    deps=self._deps_for(op.inputs), group=group,
+                    op_ids=(op.id,))
                 last = self._last_task_of_group(group)
                 out_buffer = self.views[out_view].buffer_id
                 self.buffers[out_buffer].role = "workspace"
@@ -566,7 +574,8 @@ class _Builder:
                     group=group, relu=True,
                     role=("output" if relu_out in self.module.outputs
                           else "workspace"),
-                    reuse=relu_out not in self.module.outputs)
+                    reuse=relu_out not in self.module.outputs,
+                    op_ids=(op.id, relu_id))
                 last = self._last_task_of_group(group)
                 self.value_views[op.outputs[0]] = out_view
                 self.value_action[op.outputs[0]] = last
@@ -597,7 +606,7 @@ class _Builder:
                     opcode=op.opcode, rows=rows, cols=cols,
                     cube_rows=cr, cube_cols=cc, left_view=left_view,
                     right_view=right_view, deps=self._deps_for(op.inputs),
-                    group=group)
+                    group=group, op_ids=(op.id,))
                 last = self._last_task_of_group(group)
                 out_id = op.outputs[0]
                 self.value_views[out_id] = out_view
@@ -648,10 +657,17 @@ class _Builder:
         for op in self.module.ops:
             if op.opcode == "matmul" and "source_schedule" in op.attrs:
                 reject(RK_E_UNSUPPORTED,
-                       "explicit M/N scheduling is not implemented for "
-                       "multi-node dataflow plans yet; refusing instead of "
-                       "silently ignoring source_schedule", stage="schedule",
-                       op=op.opcode, source=op.source)
+                       ("this source proves M/N blocks that the multi-node "
+                        "dataflow planner cannot honour: it partitions every "
+                        "value on the fixed 256x256 grid.  Annotate blocks the "
+                        "admitted contract supports, or write the kernel on the "
+                        "256 grid instead of leaving its blocks implicit"
+                        if op.attrs.get("source_schedule_origin") == "derived"
+                        else "explicit M/N scheduling is not implemented for "
+                             "multi-node dataflow plans yet; refusing instead of "
+                             "silently ignoring source_schedule"),
+                       stage="schedule", op=op.opcode, source=op.source,
+                       actual=op.attrs.get("source_schedule"))
         external = self._external_layouts()
         broadcast_targets = self._broadcast_targets()
 
@@ -892,6 +908,7 @@ class _Builder:
                                 outputs=(current,), deps=deps,
                                 origin=(f"lowering:dataflow_tiled:matmul:"
                                         f"{op.id}:{kslice.k0}"),
+                                op_ids=(op.id,),
                                 attrs={"submit_group": group,
                                        "k0": kslice.k0,
                                        "kt": kslice.extent,
@@ -907,6 +924,7 @@ class _Builder:
                                 outputs=(other,), deps=deps,
                                 origin=(f"lowering:dataflow_tiled:matmul_acc:"
                                         f"{op.id}:{kslice.k0}"),
+                                op_ids=(op.id,),
                                 attrs={"submit_group": group,
                                        "k0": kslice.k0,
                                        "kt": kslice.extent,
@@ -945,7 +963,7 @@ class _Builder:
                         activation=op.opcode, rows=tile.rows, cols=tile.cols,
                         cube_rows=cr, cube_cols=cc, input_view=in_view,
                         input_buffer=self.views[in_view].buffer_id,
-                        deps=(in_action,), group=group)
+                        deps=(in_action,), group=group, op_ids=(op.id,))
                     last = self._last_task_of_group(group)
                     tile_views[out_id][key] = out_view
                     tile_actions[out_id][key] = last
@@ -989,7 +1007,8 @@ class _Builder:
                         deps=unique(operand_actions), group=group, relu=True,
                         role=("output" if relu_out_id in self.module.outputs
                               else "workspace"),
-                        reuse=relu_out_id not in self.module.outputs)
+                        reuse=relu_out_id not in self.module.outputs,
+                        op_ids=(op.id, relu_id))
                     last = self._last_task_of_group(group)
                     tile_views[add_out_id][key] = out_view
                     tile_actions[add_out_id][key] = last
@@ -1027,7 +1046,8 @@ class _Builder:
                         cube_rows=cr, cube_cols=cc,
                         left_view=operand_views[0],
                         right_view=operand_views[1],
-                        deps=unique(operand_actions), group=group)
+                        deps=unique(operand_actions), group=group,
+                        op_ids=(op.id,))
                     last = self._last_task_of_group(group)
                     tile_views[out_id][key] = out_view
                     tile_actions[out_id][key] = last
@@ -1090,19 +1110,67 @@ class _Builder:
             reject(RK_E_UNSUPPORTED,
                    "linear schedule policy supports only B=[K,N] kn layout",
                    stage="schedule", actual=list(w.type.shape))
-        if m not in (1, 256) or k != 576 or n != 3072:
-            reject(RK_E_UNSUPPORTED,
-                   "linear schedule policy is limited to M=1/256, K=576, N=3072",
-                   stage="schedule", actual={"m": m, "k": k, "n": n})
         policy = self.options.linear_task_order
         if policy not in {"baseline", "scheduled_baseline", "merged",
                           "interleaved", "interleaved_reuse"}:
             reject(RK_E_UNSUPPORTED, f"unknown linear task policy {policy!r}",
                    stage="schedule")
-        tile_m = 1 if m == 1 else 256
-        tiles = output_tiles(m, n, tile_m=tile_m, tile_n=256,
-                             order="m_major")
+        # These policies choose task order and submit grouping; they are not a
+        # shape feature.  What they actually require is checked where the
+        # geometry is decided:
+        #   * one matmul in B=[K,N] kn form -- checked above;
+        #   * a grouped policy needs a real K chain, because it puts every
+        #     tile's slice into one multi_k_acc_v1 submit and that recipe is
+        #     admitted only when a co.mm_acc task exists (plan.py:
+        #     _recipe_matches); a single 256-wide slice has nothing to
+        #     accumulate;
+        #   * every task of the chosen policy must fit one submit (64), checked
+        #     below against the tiles this plan will really emit;
+        #   * the primitive M/N tile stays within 1..TILE_LIMIT, either from the
+        #     declaration (mn_schedule_from_attrs) or from the defaults below.
+        # The previous code additionally pinned M to {1, 256} and K, N to the
+        # SmolLM lm_head shape.  That pin recorded where the first board
+        # evidence came from, not a property of the lowering; the conditions it
+        # stood in for are the ones listed above (INTENT-FIDELITY-AUDIT.md 24).
+        if policy in {"merged", "interleaved", "interleaved_reuse"} and \
+                k <= K_TILE:
+            reject(RK_E_UNSUPPORTED,
+                   "this linear task policy groups a K-accumulation chain, so "
+                   "it needs more than one 256-wide K slice; a single K slice "
+                   "is a plain matmul and is planned by "
+                   "linear_task_order=baseline",
+                   stage="schedule", actual={"k": k, "policy": policy},
+                   required={"k_greater_than": K_TILE})
+        declared_schedule = op.attrs.get("source_schedule")
+        schedule = mn_schedule_from_attrs(op.attrs, where="matmul")
+        if declared_schedule is None:
+            tile_m = 1 if m == 1 else 256
+            tile_n = TILE_LIMIT
+            order = "m_major"
+        else:
+            tile_m, tile_n, order = (schedule.tile_m, schedule.tile_n,
+                                     schedule.order)
+        tiles = output_tiles(m, n, tile_m=tile_m, tile_n=tile_n, order=order)
         ktiles = k_slices(k)
+
+        def _per_submit(name: str) -> int:
+            return (len(ktiles) if name in {"baseline", "scheduled_baseline"}
+                    else len(tiles) * len(ktiles))
+
+        if _per_submit(policy) > 64:
+            fits = [name for name in ("scheduled_baseline", "merged",
+                                      "interleaved", "interleaved_reuse")
+                    if _per_submit(name) <= 64]
+            reject(RK_E_SHAPE,
+                   "declared M/N tiling and this linear task policy need more "
+                   "than one submit's 64-task bound",
+                   stage="schedule",
+                   actual={"policy": policy, "tile_m": tile_m,
+                           "tile_n": tile_n, "output_tiles": len(tiles),
+                           "k_slices": len(ktiles),
+                           "tasks_per_submit": _per_submit(policy)},
+                   required={"max_tasks_per_submit": 64,
+                             "policies_that_fit": fits})
         a_binding = self.binding_by_value[a.id]
         w_binding = self.binding_by_value[w.id]
         y_binding = self.binding_by_value[y.id]
@@ -1194,12 +1262,18 @@ class _Builder:
                      "k_count": len(ktiles),
                      "data_reuse": bool(reuse), "weight_reuse": False,
                      "linear_task_policy": policy}
+            if declared_schedule is not None:
+                attrs["source_schedule"] = declared_schedule
+                attrs["source_k_rounding"] = op.attrs.get("source_k_rounding")
+                attrs["source_mn_tiling"] = op.attrs.get("source_mn_tiling")
+                attrs["applied_schedule"] = schedule.to_dict()
             if prior is None:
                 tid = self.add_action(
                     "npu_task", template_id="co.mm.f16.v1",
                     inputs=(a_views[key][kidx], w_views[key][kidx]),
                     outputs=(out,), deps=deps,
                     origin=f"lowering:linear:{policy}:k{kidx}:n{tile.n0}",
+                    op_ids=(op.id,),
                     attrs=attrs)
             else:
                 tid = self.add_action(
@@ -1207,6 +1281,7 @@ class _Builder:
                     inputs=(a_views[key][kidx], w_views[key][kidx], prior),
                     outputs=(out,), deps=deps,
                     origin=f"lowering:linear:{policy}:k{kidx}:n{tile.n0}",
+                    op_ids=(op.id,),
                     attrs=attrs)
             self._linear_prev[key][kidx] = tid
         self._linear_prev = {(t.m0, t.n0): {} for t in tiles}
@@ -1351,7 +1426,8 @@ class _Builder:
             w_upload_cache[key] = cached
             return cached
 
-        def emit_chain(*, op_id: int, out_value: Any, tile: Any,
+        def emit_chain(*, op_id: int, source_op: Any, out_value: Any,
+                       tile: Any,
                        tile_m: int, tile_n: int, order: str,
                        a_source: str, b_value: Any, b_binding: int,
                        b_stride: int, a_binding: int | None,
@@ -1451,6 +1527,7 @@ class _Builder:
                         inputs=(a_view, w_view), outputs=(current,),
                         deps=deps,
                         origin=f"lowering:staged:stage{op_id}:mm:{kslice.k0}",
+                        op_ids=(source_op.id,),
                         attrs={"submit_group": group,
                                "k0": kslice.k0, "kt": kslice.extent,
                                "k_physical_extent":
@@ -1476,6 +1553,7 @@ class _Builder:
                         outputs=(other,), deps=deps,
                         origin=f"lowering:staged:stage{op_id}:mm_acc:"
                                f"{kslice.k0}",
+                        op_ids=(source_op.id,),
                         attrs={"submit_group": group,
                                "k0": kslice.k0, "kt": kslice.extent,
                                "k_physical_extent":
@@ -1522,7 +1600,8 @@ class _Builder:
         for tile in output_tiles(m, h, tile_m=s0.tile_m,
                                  tile_n=s0.tile_n, order=s0.order):
             final_view, final_action = emit_chain(
-                op_id=0, out_value=z, tile=tile, tile_m=s0.tile_m,
+                op_id=0, source_op=op0, out_value=z, tile=tile,
+                tile_m=s0.tile_m,
                 tile_n=s0.tile_n, order=s0.order, a_source="X",
                 b_value=w1, b_binding=w1_binding, b_stride=h,
                 a_binding=x_binding, a_stride=k, z_map=None, z_stage=None)
@@ -1535,7 +1614,8 @@ class _Builder:
         for tile in output_tiles(m, n, tile_m=s1.tile_m,
                                  tile_n=s1.tile_n, order=s1.order):
             final_view, final_action = emit_chain(
-                op_id=1, out_value=y, tile=tile, tile_m=s1.tile_m,
+                op_id=1, source_op=op1, out_value=y, tile=tile,
+                tile_m=s1.tile_m,
                 tile_n=s1.tile_n, order=s1.order, a_source="Z",
                 b_value=w2, b_binding=w2_binding, b_stride=n,
                 a_binding=None, a_stride=None, z_map=z_map,
@@ -1729,7 +1809,7 @@ class _Builder:
 
         def matmul_chain(tile: Any, a_views: list[int], w_views: list[int],
                          uploads: list[int], ktiles: list[Any], *,
-                         stage: int, group: str,
+                         stage: int, group: str, source_op: Any,
                          deps_extra: tuple[int, ...] = (),
                          extra_attrs: dict | None = None) -> tuple[int, int]:
             cr, cc, cbytes = cube_layout(tile.rows, tile.cols)
@@ -1768,6 +1848,7 @@ class _Builder:
                         inputs=(a_views[index], w_views[index]),
                         outputs=(current,), deps=deps,
                         origin=f"lowering:ffn:stage{stage}:mm:{kslice.k0}",
+                        op_ids=(source_op.id,),
                         attrs=attrs)
                 else:
                     other = acc[index & 1]
@@ -1776,6 +1857,7 @@ class _Builder:
                         inputs=(a_views[index], w_views[index], prior),
                         outputs=(other,), deps=deps,
                         origin=f"lowering:ffn:stage{stage}:mm_acc:{kslice.k0}",
+                        op_ids=(source_op.id,),
                         attrs=attrs)
                     current = other
                 tasks.append(task)
@@ -1823,7 +1905,7 @@ class _Builder:
                         for k in ktiles]
             view, task = matmul_chain(
                 tile, a_views, w_views, uploads, ktiles, stage=0,
-                group=f"mm:s0:{tile.m0}:{tile.n0}")
+                group=f"mm:s0:{tile.m0}:{tile.n0}", source_op=op0)
             z_tiles[(tile.m0, tile.n0)] = view
             z_tasks[(tile.m0, tile.n0)] = task
             self.buffers[self.views[view].buffer_id].role = "workspace"
@@ -1856,6 +1938,7 @@ class _Builder:
                     deps=(z_tasks[(tile.m0, tile.n0)],) if index == 0
                     else (last,),
                     origin=f"lowering:ffn:sigmoid:{index}",
+                    op_ids=(sig.id,),
                     attrs={"submit_group": f"ew:s1:{tile.m0}:{tile.n0}",
                            "source_stage_index": 1, "chunk_index": index,
                            "source_elementwise_schedule": e1,
@@ -1882,6 +1965,7 @@ class _Builder:
                 "npu_task", template_id="co.ew_mul.f16.v1",
                 inputs=(gate, sig_view, identity256), outputs=(silu_view,),
                 deps=deps, origin="lowering:ffn:silu_mul",
+                op_ids=(silu.id,),
                 attrs={"submit_group": f"ew:s2:{tile.m0}:{tile.n0}",
                        "source_stage_index": 2,
                        "source_elementwise_schedule": e2,
@@ -1909,6 +1993,7 @@ class _Builder:
                 "npu_task", template_id="co.ew_mul.f16.v1",
                 inputs=(silu_view, up, identity256), outputs=(act_view,),
                 deps=deps, origin="lowering:ffn:up_mul",
+                op_ids=(act.id,),
                 attrs={"submit_group": f"ew:s3:{tile.m0}:{tile.n0}",
                        "source_stage_index": 3,
                        "source_elementwise_schedule": e3,
@@ -1947,7 +2032,8 @@ class _Builder:
                         for i, k in enumerate(ktiles)]
             view, task = matmul_chain(
                 tile, a_views, w_views, uploads, ktiles, stage=4,
-                group=f"mm:s4:{tile.m0}:{tile.n0}", deps_extra=deps,
+                group=f"mm:s4:{tile.m0}:{tile.n0}", source_op=op4,
+                deps_extra=deps,
                 extra_attrs={"activation_sources": act_meta})
             p_tiles[(tile.m0, tile.n0)] = view
             p_tasks[(tile.m0, tile.n0)] = task
@@ -1965,7 +2051,7 @@ class _Builder:
             resid = self.add_action(
                 "npu_task", template_id="co.ew_add.f16.v1",
                 inputs=(pv, xv, identity_out), outputs=(yv,), deps=deps,
-                origin="lowering:ffn:residual",
+                origin="lowering:ffn:residual", op_ids=(res.id,),
                 attrs={"submit_group": f"ew:s5:{tile.m0}:{tile.n0}",
                        "source_stage_index": 5,
                        "source_elementwise_schedule": e5,
@@ -2058,12 +2144,14 @@ class _Builder:
         gate = self.add_action("npu_task", template_id="co.mm.f16.v1",
                                inputs=(x_view, wg_view), outputs=(gate_view,),
                                deps=uploads, origin="lowering:swiglu:gate",
+                               op_ids=(ffn.matmul_gate.id,),
                                attrs={"submit_group": "swiglu:gate",
                                       "attrs_note": notes})
         _, up_view = cube_tile("accumulator", m, h, hid_phys)
         up = self.add_action("npu_task", template_id="co.mm.f16.v1",
                              inputs=(x_view, wu_view), outputs=(up_view,),
                              deps=uploads, origin="lowering:swiglu:up",
+                             op_ids=(ffn.matmul_up.id,),
                              attrs={"submit_group": "swiglu:up"})
 
         # SiLU gate: chunked LUT then multiply, exactly like the single-matmul path
@@ -2084,6 +2172,7 @@ class _Builder:
                 inputs=(src,), outputs=(dst,),
                 deps=(gate,) if index == 0 else (lut_tasks[-1],),
                 origin=f"lowering:swiglu:lut:{index}",
+                op_ids=(ffn.activation.id,),
                 attrs={"submit_group": "swiglu:silu", "chunk_index": index}))
         _, act_view = cube_tile("accumulator", m, h, hid_phys)
         act = self.add_action(
@@ -2094,6 +2183,7 @@ class _Builder:
             deps=(lut_tasks[-1],) + ((identity_upload,)
                                      if identity_upload is not None else ()),
             origin="lowering:swiglu:silu_mul",
+            op_ids=(ffn.activation.id,),
             attrs={"submit_group": "swiglu:silu"})
         _, gated_view = cube_tile("accumulator", m, h, hid_phys)
         gated = self.add_action(
@@ -2101,7 +2191,7 @@ class _Builder:
             inputs=(act_view, up_view, identity_view), outputs=(gated_view,),
             deps=(act, up) + ((identity_upload,) if identity_upload is not None
                               else ()),
-            origin="lowering:swiglu:up_mul",
+            origin="lowering:swiglu:up_mul", op_ids=(ffn.multiply.id,),
             attrs={"submit_group": "swiglu:mul"})
 
         _, proj_view = cube_tile("accumulator", m, d_out, out_phys)
@@ -2109,6 +2199,7 @@ class _Builder:
                                inputs=(gated_view, wd_view),
                                outputs=(proj_view,), deps=(gated, wd_upload),
                                origin="lowering:swiglu:projection",
+                               op_ids=(ffn.matmul_proj.id,),
                                attrs={"submit_group": "swiglu:proj"})
         _, out_view = cube_tile("output", m, d_out, out_phys)
         # The residual EW works on the output tile, whose physical width differs
@@ -2120,7 +2211,7 @@ class _Builder:
             inputs=(proj_view, x_view, out_identity), outputs=(out_view,),
             deps=(proj, x_upload) + ((out_identity_upload,)
                                      if out_identity_upload is not None else ()),
-            origin="lowering:swiglu:residual",
+            origin="lowering:swiglu:residual", op_ids=(ffn.add.id,),
             attrs={"submit_group": "swiglu:residual"})
         binding_id = self.binding_by_value[ffn.add.outputs[0]]
         self.add_action("download", inputs=(out_view,), deps=(residual,),
@@ -2273,6 +2364,7 @@ class _Builder:
                         inputs=(x_views[index], w_views[index]),
                         outputs=(current,), deps=tuple(tile_upload_ids),
                         origin=f"lowering:matmul:{kslice.k0}",
+                        op_ids=(self.legalized.matmul_op.id,),
                         attrs={"submit_group": group,
                                "k0": kslice.k0, "kt": kslice.extent,
                                "k_physical_extent":
@@ -2296,6 +2388,7 @@ class _Builder:
                         inputs=(x_views[index], w_views[index], prior_view),
                         outputs=(other,), deps=(mm_tasks[-1],),
                         origin=f"lowering:matmul_acc:{kslice.k0}",
+                        op_ids=(self.legalized.matmul_op.id,),
                         attrs={"submit_group": group,
                                "k0": kslice.k0, "kt": kslice.extent,
                                "k_physical_extent":
@@ -2332,7 +2425,8 @@ class _Builder:
                     cube_rows=cube_rows, cube_cols=cube_cols,
                     input_view=final_mm_view,
                     input_buffer=final_mm_buffer,
-                    deps=(mm_tasks[-1],), group=act_group)
+                    deps=(mm_tasks[-1],), group=act_group,
+                    op_ids=(self.legalized.activation_op.id,))
                 self.buffers[self.views[final_view].buffer_id].role = "output"
                 final_task = self._last_task_of_group(act_group)
 
@@ -2341,7 +2435,7 @@ class _Builder:
                     binary=binary, tile=tile, rows=rows, cols=cols,
                     cube_rows=cube_rows, cube_cols=cube_cols,
                     input_view=final_view, deps=(final_task,),
-                    group=f"ew:{tile.mi}:{tile.ni}")
+                    group=f"ew:{tile.mi}:{tile.ni}", op_ids=(binary.id,))
                 self.buffers[self.views[final_view].buffer_id].role = "output"
                 final_task = self._last_task_of_group(f"ew:{tile.mi}:{tile.ni}")
 
@@ -2439,7 +2533,8 @@ class _Builder:
 
     def _emit_binary(self, *, binary, tile, rows: int, cols: int,
                      cube_rows: int, cube_cols: int, input_view: int,
-                     deps: tuple[int, ...], group: str) -> int:
+                     deps: tuple[int, ...], group: str,
+                     op_ids: tuple[int, ...] = ()) -> int:
         """Emit one same-shape add/mul against a host-supplied tensor tile.
 
         The operand is the one *legalization* resolved from the real graph edges,
@@ -2486,13 +2581,13 @@ class _Builder:
                         deps=deps + (upload,) +
                              ((identity_upload,) if identity_upload is not None else ()),
                         origin=f"lowering:{binary.opcode}",
-                        attrs={"submit_group": group})
+                        attrs={"submit_group": group}, op_ids=op_ids)
         return out_view
 
     def _emit_activation(self, *, activation: str, rows: int, cols: int,
                          cube_rows: int, cube_cols: int, input_view: int,
                          input_buffer: int, deps: tuple[int, ...],
-                         group: str) -> int:
+                         group: str, op_ids: tuple[int, ...] = ()) -> int:
         if activation == "relu":
             _, zero_view = self.zero_for(rows, cols)
             zero_upload = self._last_upload_of(zero_view)
@@ -2512,7 +2607,7 @@ class _Builder:
                 inputs=(input_view, zero_view, identity_view),
                 outputs=(out_view,), deps=deps,
                 origin=f"lowering:{activation}",
-                attrs={"submit_group": group})
+                attrs={"submit_group": group}, op_ids=op_ids)
             return out_view
 
         chunks = lut_chunks(cube_rows * cube_cols)
@@ -2554,7 +2649,8 @@ class _Builder:
                                  else "co.lut.gelu_gate.f16.v1"),
                     inputs=(src_view,), outputs=(dst_view,), deps=task_deps,
                     origin=f"lowering:{activation}:lut:{index}",
-                    attrs={"submit_group": group, "chunk_index": index}))
+                    attrs={"submit_group": group, "chunk_index": index},
+                    op_ids=op_ids))
             out_layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols,
                                       cube_rows, cube_cols, 8,
                                       cube_rows * cube_cols * 2)
@@ -2569,7 +2665,7 @@ class _Builder:
                 deps=(lut_tasks[-1],) + ((identity_upload,)
                                          if identity_upload is not None else ()),
                 origin=f"lowering:{activation}:mul",
-                attrs={"submit_group": group})
+                attrs={"submit_group": group}, op_ids=op_ids)
             return out_view
 
         # Direct sigmoid/HardSigmoid: chunked LUT writes are the final result.
@@ -2604,9 +2700,84 @@ class _Builder:
                 "npu_task", template_id=template, inputs=(src_view,),
                 outputs=(dst_view,), deps=task_deps,
                 origin=f"lowering:{activation}:lut:{index}",
-                attrs={"submit_group": group, "chunk_index": index}))
+                attrs={"submit_group": group, "chunk_index": index},
+                op_ids=op_ids))
         return out_cube_view
 
+
+
+
+
+# Ops whose effect the plan carries as a view/layout restructuring instead of
+# a device task.  Stated by opcode, never inferred from "no task found".
+AUXILIARY_OPCODES = frozenset({"view"})
+
+
+def attach_plan_records(module: Module, draft: DraftPlan,
+                        options: CompileOptions) -> DraftPlan:
+    """Record the logical graph and every NumericContract in the plan.
+
+    Attribution is structural: a lowering records the logical ops it implements
+    when it emits the task (Action.source_ops), so nothing here parses an origin
+    string.  This runs after submit scheduling because upload hoisting renumbers
+    action ids -- the ids written here are the final ones.  origin stays as
+    diagnostic text only.
+    """
+    from dataclasses import replace as _replace
+
+    by_op: dict[int, list[int]] = {}
+    for action in draft.actions:
+        if action.kind != "npu_task":
+            continue
+        for op_id in action.source_ops:
+            by_op.setdefault(op_id, []).append(action.id)
+    known = {op.id for op in module.ops}
+    if stray := sorted(set(by_op) - known):
+        reject(RK_E_SCHEMA,
+               "a device task names a logical op the module does not contain",
+               stage="dag", actual=stray)
+
+    logical_ops = []
+    requirements = []
+    for op in module.ops:
+        tasks = tuple(sorted(by_op.get(op.id, ())))
+        inputs = tuple(module.value(value_id).name for value_id in op.inputs)
+        outputs = tuple(module.value(value_id).name for value_id in op.outputs)
+        contract = op.attrs.get("numeric_contract")
+        logical_ops.append(LogicalOp(
+            index=op.id, opcode=op.opcode, inputs=inputs, outputs=outputs,
+            contract=dict(contract) if contract is not None else None,
+            tasks=tasks, auxiliary=op.opcode in AUXILIARY_OPCODES))
+        if contract is None:
+            continue
+        emitters = [draft.actions[task] for task in tasks]
+        # Whether this op's implementation uses a lookup-table approximation
+        # that the compile admitted.  The contract cannot state this:
+        # approximate-ness is a compile-time admission (allow_approx_lut), the
+        # contract is what the source asked for.
+        uses_lut = any((action.template_id or "").startswith("co.lut.")
+                       for action in emitters)
+        k_chain = sorted({action.attrs.get("k0") for action in emitters
+                          if action.attrs.get("k0") is not None})
+        k_extents = sorted({action.attrs.get("kt") for action in emitters
+                            if action.attrs.get("kt") is not None})
+        requirements.append(NumericRequirement(
+            op_index=op.id, opcode=op.opcode, contract=dict(contract),
+            inputs=inputs, outputs=outputs, tasks=tasks,
+            execution={
+                "k_chain": k_chain,
+                "k_tile": (k_extents[0] if len(k_extents) == 1 else
+                           (max(k_extents) if k_extents else 0)),
+                "templates": sorted({action.template_id
+                                     for action in emitters}),
+                "output_dtypes": sorted({draft.views[action.outputs[0]]
+                                             .tensor.dtype
+                                         for action in emitters}),
+                "attributed": bool(tasks),
+                "approximated": bool(uses_lut and
+                                     options.allow_approx_lut)}))
+    return _replace(draft, numeric_requirements=tuple(requirements),
+                    logical_ops=tuple(logical_ops))
 
 
 def build_draft(module: Module, legalized: LegalizedGraph, *,
@@ -2636,11 +2807,20 @@ def build_draft(module: Module, legalized: LegalizedGraph, *,
             "matmul", "add"]
         if scheduled and not ((two_stage or ffn_scheduled) and
                              len(scheduled) == 2):
+            first = scheduled[0]
+            if first.attrs.get("source_schedule_origin") == "derived":
+                reject(RK_E_UNSUPPORTED,
+                       "this source proves M/N blocks that no admitted "
+                       "multi-node contract can honour: only the restricted "
+                       "two-stage X->W1->Z->W2->Y graph consumes a schedule.  "
+                       "Annotate a schedule the supported contract admits, or "
+                       "write the kernels on the fixed 256x256 grid",
+                       stage="schedule", op=first.opcode, source=first.source,
+                       actual=first.attrs.get("source_schedule"))
             reject(RK_E_UNSUPPORTED,
                    "explicit M/N scheduling is admitted only for the "
                    "restricted two-stage X->W1->Z->W2->Y contract",
-                   stage="schedule", op=scheduled[0].opcode,
-                   source=scheduled[0].source)
+                   stage="schedule", op=first.opcode, source=first.source)
     if (options.linear_task_order != "baseline" and
             len(module.ops) == 1 and module.ops[0].opcode == "matmul"):
         draft = builder.build_scheduled_linear()

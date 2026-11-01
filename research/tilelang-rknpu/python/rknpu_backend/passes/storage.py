@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from ..capabilities import TargetProfile, check_budgets
 from ..errors import RK_E_BUDGET, RK_E_SHAPE, reject
 from ..options import CompileOptions
-from ..plan import Accounting, Buffer, Plan, PlanBudget, Submit, with_plan_hash
+from ..plan import (MAX_BUFFERS_PER_SLOT, Accounting, Buffer, Plan,
+                    PlanBudget, Submit, with_plan_hash)
 from .dag import DraftBuffer, DraftPlan
 
 CO_SLACK = 32768
@@ -25,6 +26,7 @@ class _Slot:
     capacity: int
     last: int
     reusable: bool = True
+    members: int = 0
 
 
 def assign_storage(draft: DraftPlan, *, profile: TargetProfile,
@@ -39,7 +41,8 @@ def assign_storage(draft: DraftPlan, *, profile: TargetProfile,
             candidates = [
                 slot for slot in slots
                 if slot.reusable and slot.last < buf.first and
-                slot.capacity >= buf.capacity
+                slot.capacity >= buf.capacity and
+                slot.members < MAX_BUFFERS_PER_SLOT
             ]
             candidates.sort(key=lambda slot: (slot.capacity, slot.id))
             if candidates:
@@ -51,6 +54,7 @@ def assign_storage(draft: DraftPlan, *, profile: TargetProfile,
             chosen.capacity = max(chosen.capacity, buf.capacity)
             chosen.last = max(chosen.last, buf.last)
             chosen.reusable = chosen.reusable and buf.reuse
+        chosen.members += 1
         slot_by_buffer[buf.id] = chosen.id
 
     # The C verifier must not have to rediscover this invariant.  Explicitly mark
@@ -131,6 +135,8 @@ def assign_storage(draft: DraftPlan, *, profile: TargetProfile,
         views=tuple(draft.views), actions=tuple(draft.actions),
         submits=tuple(submits), publish=tuple(draft.publish),
         accounting=accounting,
+        numeric_requirements=getattr(draft, "numeric_requirements", ()),
+        logical_ops=getattr(draft, "logical_ops", ()),
         budget=PlanBudget(device_budget_bytes=options.device_budget_bytes,
                           host_budget_bytes=options.host_budget_bytes),
     )

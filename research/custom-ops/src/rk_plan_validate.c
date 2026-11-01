@@ -86,6 +86,19 @@ static int tensor_valid(const rk_tensor_desc *t) {
     return 1;
 }
 
+/* The emitter indexes two views with one descriptor only when every tensor
+ * property agrees (co_emit_lut / co_emit_ew / co_emit_mm_acc all call the
+ * same() helper).  The verifier has to demand the same thing, otherwise a plan
+ * with equal byte counts but different geometry is accepted here and refused
+ * at emit time. */
+static int same_tensor(const rk_tensor_desc *a, const rk_tensor_desc *b) {
+    return a->dtype == b->dtype && a->layout == b->layout &&
+           a->rows == b->rows && a->cols == b->cols &&
+           a->physical_rows == b->physical_rows &&
+           a->physical_cols == b->physical_cols &&
+           a->atom == b->atom && a->bytes == b->bytes;
+}
+
 /* Two views address a buffer identically only when the producer's packing
  * function (co_index) and the reader's use the same physical shape. */
 static int same_addressing(const rk_tensor_desc *a, const rk_tensor_desc *b) {
@@ -320,13 +333,24 @@ static int validate_template(const rk_plan_desc *desc, const rk_action_desc *a, 
             p->tensor.layout != RK_LAYOUT_CUBE_F16 ||
             o->tensor.layout != RK_LAYOUT_CUBE_F16)
             return fail(diag, RK_E_SHAPE, "validate", "mm_acc layout mismatch");
-        if (p->tensor.rows != o->tensor.rows || p->tensor.cols != o->tensor.cols ||
-            p->tensor.physical_rows != o->tensor.physical_rows ||
-            p->tensor.physical_cols != o->tensor.physical_cols)
+        if (!same_tensor(&p->tensor, &o->tensor))
             return fail(diag, RK_E_SHAPE, "validate", "mm_acc prior/output tensors differ");
         if (x->tensor.rows != o->tensor.rows || x->tensor.cols != w->tensor.cols ||
             w->tensor.rows != o->tensor.cols)
             return fail(diag, RK_E_SHAPE, "validate", "mm_acc extents mismatch");
+        /* One task programs a single CUBE K tile: the emitter refuses a wider
+         * K extent, so the verifier must refuse it too (the mm branch above is
+         * bounded the same way, and a K tail below 256 stays legal). */
+        if (x->tensor.cols > CO_K_TILE || w->tensor.cols > CO_K_TILE ||
+            x->tensor.physical_cols > CO_K_TILE ||
+            w->tensor.physical_cols > CO_K_TILE)
+            return fail(diag, RK_E_SHAPE, "validate",
+                        "mm_acc K extent exceeds one 256-wide tile");
+        if (x->tensor.physical_rows != o->tensor.physical_rows ||
+            x->tensor.physical_cols != w->tensor.physical_cols ||
+            w->tensor.physical_rows != o->tensor.physical_cols)
+            return fail(diag, RK_E_SHAPE, "validate",
+                        "mm_acc physical geometry mismatch");
         if (p->buffer_id == o->buffer_id)
             return fail(diag, RK_E_ALIAS, "validate", "mm_acc prior/output alias");
         const rk_buffer_desc *pb = buffer_at(desc, p->buffer_id);
@@ -356,10 +380,26 @@ static int validate_template(const rk_plan_desc *desc, const rk_action_desc *a, 
             x->tensor.physical_rows != o->tensor.physical_rows ||
             x->tensor.physical_cols != o->tensor.physical_cols)
             return fail(diag, RK_E_SHAPE, "validate", "EW requires exact shapes");
+        /* The emitter drives the element-wise unit through the matrix pipe,
+         * which only reads CUBE tiles. */
+        if (x->tensor.layout != RK_LAYOUT_CUBE_F16 ||
+            y->tensor.layout != RK_LAYOUT_CUBE_F16 ||
+            o->tensor.layout != RK_LAYOUT_CUBE_F16)
+            return fail(diag, RK_E_SHAPE, "validate",
+                        "EW operands and output must be CUBE tiles");
+        if (x->tensor.atom != y->tensor.atom || x->tensor.atom != o->tensor.atom ||
+            x->tensor.bytes != y->tensor.bytes ||
+            x->tensor.bytes != o->tensor.bytes)
+            return fail(diag, RK_E_SHAPE, "validate",
+                        "EW operands and output must be the same tile");
         if (id->tensor.layout != RK_LAYOUT_WEIGHT_F16 ||
             id->tensor.rows != x->tensor.physical_cols ||
             id->tensor.cols != x->tensor.physical_cols)
             return fail(diag, RK_E_SHAPE, "validate", "EW identity weight geometry mismatch");
+        if (id->tensor.physical_rows != x->tensor.physical_cols ||
+            id->tensor.physical_cols != x->tensor.physical_cols)
+            return fail(diag, RK_E_SHAPE, "validate",
+                        "EW identity weight physical geometry mismatch");
         if (x->buffer_id == o->buffer_id || y->buffer_id == o->buffer_id)
             return fail(diag, RK_E_ALIAS, "validate", "EW output aliases an operand");
     } else if (a->template_id == RK_TEMPLATE_LUT_SIGMOID_F16 ||
@@ -373,6 +413,12 @@ static int validate_template(const rk_plan_desc *desc, const rk_action_desc *a, 
         if (!tensor_valid(&x->tensor) || !tensor_valid(&o->tensor) ||
             x->tensor.bytes != o->tensor.bytes)
             return fail(diag, RK_E_SHAPE, "validate", "LUT physical sizes mismatch");
+        /* Equal bytes are not enough: the emitter wraps both tiles in one
+         * descriptor, so layout, logical shape and physical geometry have to
+         * agree as well. */
+        if (!same_tensor(&x->tensor, &o->tensor))
+            return fail(diag, RK_E_SHAPE, "validate",
+                        "LUT input and output must be the same tile");
         if (x->buffer_id == o->buffer_id)
             return fail(diag, RK_E_ALIAS, "validate", "LUT input/output alias");
         if (x->tensor.layout == RK_LAYOUT_CUBE_F16) {
@@ -460,16 +506,29 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
     }
 
     /* 1. The runtime walks actions in ascending id order and flushes one
-     *    blocking submit per task group, so the emission order is the action
-     *    order.  A submit therefore has to own a *strictly increasing* run of
-     *    NPU task ids (its task list is in emission order), and no other submit's
-     *    task may sit between them.  Contiguity of the ids is not required: a
-     *    static-repeat group plan interleaves each task with its own uploads so
-     *    that every read's nearest producer is a declared dependency, and the
-     *    runtime indexes its emission array through ws->emit_index. */
+     *    blocking submit when it reaches that submit's last listed task, so the
+     *    emission order is the action order and a submit's batch is filled by
+     *    the tasks it meets on the way.  Declared order is therefore only
+     *    honest when a submit owns a *strictly increasing, contiguous* run of
+     *    NPU tasks:
+     *      (a) its task list is ascending;
+     *      (b) every action between its first and last task is one of *its*
+     *          tasks (a host action there is a hidden boundary, another
+     *          submit's task there would run earlier than declared and would
+     *          not even be part of the flushed batch);
+     *      (c) the runs appear in submit-id order, otherwise the runtime
+     *          flushes a later group first and every declared submit
+     *          dependency is broken.
+     *    Uploads may still sit outside a run: a static-repeat group plan emits
+     *    each task with its own uploads before the task run, and the runtime
+     *    indexes its emission array through ws->emit_index. */
     for (uint32_t i = 0; i < nactions; i++) seq[i] = i;
     for (uint32_t s = 0; s < desc->nsubmits; s++) {
         const rk_submit_desc *sub = &desc->submits[s];
+        if (!sub->ntask_ids || !sub->task_ids) {
+            rc = fail(diag, RK_E_SHAPE, "validate", "submit has no task list");
+            goto done;
+        }
         for (uint32_t t = 1; t < sub->ntask_ids; t++)
             if (sub->task_ids[t] <= sub->task_ids[t - 1]) {
                 rc = fail(diag, RK_E_SCHEMA, "validate",
@@ -480,6 +539,30 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
             if (id >= nactions || desc->actions[id].kind != RK_ACTION_NPU_TASK) {
                 rc = fail(diag, RK_E_SCHEMA, "validate",
                           "a host action is interleaved inside a task group");
+                goto done;
+            }
+        }
+        /* (b) The run between the first and last task must be exactly this
+         *     submit's task list. */
+        {
+            uint32_t cursor = 0;
+            for (uint32_t id = sub->task_ids[0];
+                 id <= sub->task_ids[sub->ntask_ids - 1]; id++, cursor++) {
+                if (cursor >= sub->ntask_ids || sub->task_ids[cursor] != id) {
+                    rc = fail(diag, RK_E_SCHEMA, "validate",
+                              "another submit's task is interleaved inside a "
+                              "task group; a submit must own a contiguous run "
+                              "of tasks");
+                    goto done;
+                }
+            }
+        }
+        /* (c) Runs follow the submit order the plan declares. */
+        if (s > 0) {
+            const rk_submit_desc *prev = &desc->submits[s - 1];
+            if (sub->task_ids[0] <= prev->task_ids[prev->ntask_ids - 1]) {
+                rc = fail(diag, RK_E_SCHEMA, "validate",
+                          "submit task runs must appear in submit order");
                 goto done;
             }
         }
@@ -1525,23 +1608,31 @@ int rk_plan_validate_desc(const rk_plan_desc *desc, rk_diag *diag) {
     if (!slot_cap) return fail(diag, RK_E_NOMEM, "validate", "out of memory");
     for (uint32_t i = 0; i < desc->nbuffers; i++) {
         const rk_buffer_desc *b = &desc->buffers[i];
+        /* The end offset is the addend every later total is built from. */
+        if (b->capacity > UINT64_MAX - b->offset) {
+            free(slot_cap);
+            return fail(diag, RK_E_BUDGET, "validate", "buffer range overflow");
+        }
         uint64_t end = b->offset + b->capacity;
         if (end > slot_cap[b->slot_id]) slot_cap[b->slot_id] = end;
     }
     uint64_t reserved = 0, slots = 0;
     for (uint32_t i = 0; i < desc->nbuffers; i++) {
-        if (slot_cap[i]) {
-            slots++;
-            if (slot_cap[i] > UINT64_MAX - CO_SLACK - CO_GUARD) {
-                free(slot_cap);
-                return fail(diag, RK_E_BUDGET, "validate", "slot capacity overflow");
-            }
-            reserved += slot_cap[i] + CO_SLACK + CO_GUARD;
-            if (reserved < slot_cap[i]) {
-                free(slot_cap);
-                return fail(diag, RK_E_BUDGET, "validate", "reserved capacity overflow");
-            }
+        if (!slot_cap[i]) continue;
+        slots++;
+        /* Both additions are checked before they are performed.  Comparing the
+         * running total *after* adding cannot detect a wrap: the wrapped value
+         * can still be larger than the slot capacity just added. */
+        if (slot_cap[i] > UINT64_MAX - CO_SLACK - CO_GUARD) {
+            free(slot_cap);
+            return fail(diag, RK_E_BUDGET, "validate", "slot capacity overflow");
         }
+        uint64_t amount = slot_cap[i] + CO_SLACK + CO_GUARD;
+        if (reserved > UINT64_MAX - amount) {
+            free(slot_cap);
+            return fail(diag, RK_E_BUDGET, "validate", "reserved capacity overflow");
+        }
+        reserved += amount;
     }
     free(slot_cap);
     uint32_t max_tasks = 0;

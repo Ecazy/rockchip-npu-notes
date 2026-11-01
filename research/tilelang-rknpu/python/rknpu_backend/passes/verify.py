@@ -2,8 +2,8 @@
 """Final plan-level verification before serialization."""
 from __future__ import annotations
 
-from ..errors import RK_E_SHAPE, reject
-from ..plan import Plan
+from ..errors import RK_E_SCHEMA, RK_E_SHAPE, reject
+from ..plan import MAX_BUFFERS_PER_SLOT, Plan
 
 
 def verify_plan(plan: Plan) -> Plan:
@@ -17,6 +17,18 @@ def verify_plan(plan: Plan) -> Plan:
         reject(RK_E_SHAPE, "accounting task_count is stale", stage="verify")
     if plan.accounting.submit_count != len(plan.submits):
         reject(RK_E_SHAPE, "accounting submit_count is stale", stage="verify")
+    # The C verifier refuses a plan whose slot carries more buffers than its
+    # bookkeeping bound.  Re-checking it here keeps "Python verified" honest.
+    per_slot: dict[int, int] = {}
+    for buffer in plan.buffers:
+        count = per_slot.get(buffer.slot_id, 0) + 1
+        per_slot[buffer.slot_id] = count
+        if count > MAX_BUFFERS_PER_SLOT:
+            reject(RK_E_SCHEMA, "too many buffers share one slot",
+                   stage="verify",
+                   actual={"slot_id": buffer.slot_id,
+                           "buffers_in_slot": count},
+                   required={"max_buffers_per_slot": MAX_BUFFERS_PER_SLOT})
     for action in plan.actions:
         if action.kind == "host_compute":
             reject(RK_E_SHAPE, "MVP forbids hidden host arithmetic actions",

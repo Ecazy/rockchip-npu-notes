@@ -125,13 +125,15 @@ class MultiNodeDataflowTests(unittest.TestCase):
 
     def test_consumed_external_value_must_have_a_binding_role(self):
         module = projection_module()
-        values = list(module.values)
-        values[1] = replace(values[1], role="temporary")
-        broken = replace(module, values=tuple(values))
         with self.assertRaises(BackendError) as ctx:
+            values = list(module.values)
+            values[1] = replace(values[1], role="temporary")
+            broken = replace(module, values=tuple(values))
             compile_rkir(broken, profile=PROFILE, options=options())
-        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_UNSUPPORTED)
-        self.assertIn("device producer",
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_SHAPE)
+        # The module-level producer/role rule refuses this earlier and names the
+        # contradiction directly: a temporary with no producing op.
+        self.assertIn("has no producing operation",
                       ctx.exception.diagnostics[0].message)
 
     def test_output_role_outside_module_outputs_is_rejected(self):
@@ -175,8 +177,26 @@ class DataflowTests(unittest.TestCase):
         reversed_inputs = with_last_op_inputs(silu, (4, 3))
         backward = compile_rkir(reversed_inputs, profile=PROFILE,
                                 options=options())
-        # Same graph up to commutative operand order => same plan.
-        self.assertEqual(forward.plan.plan_hash, backward.plan.plan_hash)
+        # Same graph up to commutative operand order => the same execution.
+        # The plan also restates the source graph it came from, so the two
+        # plans differ exactly in that recorded operand order and nowhere else:
+        # nothing the device runs may depend on which side the caller wrote.
+        for name in ("bindings", "constants", "buffers", "views", "actions",
+                     "submits", "publish", "accounting"):
+            self.assertEqual(getattr(forward.plan, name),
+                             getattr(backward.plan, name), name)
+        left = [op.to_dict() for op in forward.plan.logical_ops]
+        right = [op.to_dict() for op in backward.plan.logical_ops]
+        self.assertEqual(len(left), len(right))
+        differing = [index for index, (a, b) in enumerate(zip(left, right))
+                     if a != b]
+        self.assertEqual(len(differing), 1)
+        index = differing[0]
+        self.assertEqual(left[index]["opcode"], right[index]["opcode"])
+        self.assertEqual(set(left[index]["inputs"]),
+                         set(right[index]["inputs"]))
+        self.assertNotEqual(left[index]["inputs"], right[index]["inputs"])
+        self.assertNotEqual(forward.plan.plan_hash, backward.plan.plan_hash)
 
     def test_binary_must_consume_the_produced_value(self):
         silu, _ = chain_modules()

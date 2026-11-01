@@ -26,9 +26,11 @@ from __future__ import annotations
 from dataclasses import replace
 
 from .storage import CO_GUARD, CO_MAX_WORDS, CO_PROGRAM_BYTES, CO_SLACK
-from ..errors import RK_E_BUDGET, RK_E_SHAPE, RK_E_UNSUPPORTED, reject
-from ..plan import (Accounting, Action, Binding, Buffer, ConstantSpec, Plan,
-                    Publish, Submit, View, with_plan_hash)
+from ..errors import (RK_E_BUDGET, RK_E_SCHEMA, RK_E_SHAPE,
+                       RK_E_UNSUPPORTED, reject)
+from ..plan import (Accounting, Action, Binding, Buffer, ConstantSpec,
+                    LogicalOp, NumericRequirement, Plan, Publish, Submit,
+                    View, with_plan_hash)
 
 GROUP_RECIPE = "independent_mm_v1"
 GROUP_TEMPLATE = "co.mm.f16.v1"
@@ -126,6 +128,112 @@ def _admit(plan: Plan) -> tuple[Action, list[Action]]:
     return task, uploads
 
 
+def _admit_records(plan: Plan, task: Action) -> tuple[LogicalOp | None,
+                                                    NumericRequirement | None]:
+    """Return the parent's single logical op and its requirement, or refuse.
+
+    A plan that carries the logical table must be converted, not silently
+    downgraded to "no records stored".  The admitted shape has exactly one
+    device task, so a convertible plan must record exactly that op and, when it
+    records a contract, exactly the one requirement that names it.
+    """
+    if not plan.logical_ops:
+        if plan.numeric_requirements:
+            reject(RK_E_SCHEMA,
+                   "a plan cannot record numeric requirements without the "
+                   "logical op table they are checked against",
+                   stage="repeat_expand")
+        return None, None
+    if len(plan.logical_ops) != 1:
+        reject(RK_E_UNSUPPORTED,
+               "repeat expansion converts a one-op plan; this plan records "
+               "several logical ops and has no defined conversion",
+               stage="repeat_expand", actual=len(plan.logical_ops))
+    parent = plan.logical_ops[0]
+    if parent.auxiliary or parent.tasks != (task.id,):
+        reject(RK_E_UNSUPPORTED,
+               "the recorded logical op does not name this plan's only "
+               "device task", stage="repeat_expand",
+               actual={"op_tasks": list(parent.tasks), "task": task.id,
+                       "auxiliary": parent.auxiliary})
+    if not plan.plan_hash:
+        reject(RK_E_SCHEMA,
+               "repeat expansion records which plan each copy came from, so "
+               "the parent plan must be hashed first",
+               stage="repeat_expand")
+    if parent.contract is None:
+        if plan.numeric_requirements:
+            reject(RK_E_UNSUPPORTED,
+                   "the parent records requirements for an op without a "
+                   "contract", stage="repeat_expand")
+        return parent, None
+    if len(plan.numeric_requirements) != 1:
+        reject(RK_E_UNSUPPORTED,
+               "the parent's contracted op needs exactly one numeric "
+               "requirement to copy", stage="repeat_expand",
+               actual=len(plan.numeric_requirements))
+    requirement = plan.numeric_requirements[0]
+    if requirement.op_index != parent.index or \
+            requirement.tasks != parent.tasks or \
+            requirement.contract != parent.contract:
+        reject(RK_E_UNSUPPORTED,
+               "the parent's numeric requirement does not describe the "
+               "logical op it must be copied with", stage="repeat_expand",
+               actual={"op_index": requirement.op_index,
+                       "tasks": list(requirement.tasks)})
+    return parent, requirement
+
+
+def _execution_of(action: Action, view: View) -> dict:
+    """Describe what one device task actually emits, from its own record."""
+    k0 = action.attrs.get("k0")
+    kt = action.attrs.get("kt")
+    return {"k_chain": [int(k0)] if k0 is not None else [],
+            "k_tile": int(kt) if kt is not None else 0,
+            "templates": ([action.template_id] if action.template_id else []),
+            "output_dtypes": [view.tensor.dtype],
+            "attributed": True,
+            "approximated": False}
+
+
+def _convert_records(plan: Plan, parent: LogicalOp | None,
+                     requirement: NumericRequirement | None, *, nrepeat: int,
+                     first_task: int, bindings: list[Binding],
+                     views: list[View], actions: list[Action],
+                     ) -> tuple[tuple[LogicalOp, ...],
+                                tuple[NumericRequirement, ...]]:
+    """Give every copy its own logical op and its own numeric requirement.
+
+    One copy is one logical op with exactly one task, so a renumbered task id
+    cannot be attributed to the wrong copy.  Each entry names the plan it was
+    derived from and the parent op index, which is the only way a reader can
+    tell two copies apart after the parent is gone.
+    """
+    if parent is None:
+        return (), ()
+    logical_ops: list[LogicalOp] = []
+    requirements: list[NumericRequirement] = []
+    for i in range(nrepeat):
+        names_in = (bindings[3 * i].name, bindings[3 * i + 1].name)
+        names_out = (bindings[3 * i + 2].name,)
+        task_id = first_task + i
+        contract = (dict(parent.contract)
+                    if parent.contract is not None else None)
+        logical_ops.append(LogicalOp(
+            index=i, opcode=parent.opcode, inputs=names_in,
+            outputs=names_out, contract=contract, tasks=(task_id,),
+            auxiliary=False,
+            derived_from={"plan_hash": plan.plan_hash,
+                          "op_index": parent.index}))
+        if requirement is None:
+            continue
+        requirements.append(NumericRequirement(
+            op_index=i, opcode=parent.opcode, contract=dict(contract),
+            inputs=names_in, outputs=names_out, tasks=(task_id,),
+            execution=_execution_of(actions[task_id], views[3 * i + 2])))
+    return tuple(logical_ops), tuple(requirements)
+
+
 def expand_static_repeat(plan: Plan, nrepeat: int, *,
                          shared_bo: bool = False) -> Plan:
     """Return a ``GROUP_RECIPE`` plan with ``nrepeat`` independent instances.
@@ -149,6 +257,7 @@ def expand_static_repeat(plan: Plan, nrepeat: int, *,
         return plan
 
     task, uploads = _admit(plan)
+    parent_op, parent_requirement = _admit_records(plan, task)
     in_a, in_b, out_y = plan.bindings
     buf_a, buf_w, buf_y = plan.buffers
     view_a, view_w, view_y = plan.views
@@ -309,6 +418,10 @@ def expand_static_repeat(plan: Plan, nrepeat: int, *,
         command_workspace_bytes=command_workspace, host_bytes=host_bytes,
         task_count=nrepeat, submit_count=1, transfers=3 * nrepeat)
 
+    logical_ops, requirements = _convert_records(
+        plan, parent_op, parent_requirement, nrepeat=nrepeat,
+        first_task=first_task, bindings=bindings, views=views,
+        actions=actions)
     return with_plan_hash(Plan(
         name=f"{plan.name}+repeat{nrepeat}" + ("+shared" if shared_bo else ""),
         profile_hash=plan.profile_hash,
@@ -316,7 +429,8 @@ def expand_static_repeat(plan: Plan, nrepeat: int, *,
         bindings=tuple(bindings), constants=tuple(),
         buffers=tuple(buffers), views=tuple(views), actions=tuple(actions),
         submits=submits, publish=publish, accounting=accounting,
-        budget=plan.budget))
+        budget=plan.budget, logical_ops=logical_ops,
+        numeric_requirements=requirements))
 
 
 def remap_group_inputs(group: Plan, nrepeat: int, specs: list[dict]) -> Plan:

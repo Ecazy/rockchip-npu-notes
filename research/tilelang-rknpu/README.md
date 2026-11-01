@@ -31,6 +31,7 @@
 | 理解 BO、fd、并发与失败处理 | [运行时契约](RUNTIME-LIFECYCLE.md) |
 | 构建、恢复依赖、重放、上板 | [REPLAY.md](REPLAY.md) |
 | 查看 MVP 与完整模型验收 | [ACCEPTANCE.md](ACCEPTANCE.md) |
+| 审查 RKIR/RKPlan 是否阻断或丢失上层意图 | [INTENT-FIDELITY-AUDIT.md](INTENT-FIDELITY-AUDIT.md) |
 | 查看当前优化结论与外部对照 | [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md) |
 | 使用模型包与数值政策 | [models/README.md](models/README.md)、[数值验收](models/NUMERIC-ACCEPTANCE.md) |
 | 找原始 campaign 和日志 | [results/README.md](results/README.md) |

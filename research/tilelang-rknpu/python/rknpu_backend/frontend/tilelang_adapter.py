@@ -3965,6 +3965,8 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
                  "coverage": "ragged_tail",
                  "m_tail": m_tail, "n_tail": n_tail}
     ann = _schedule_annotation(prim_func, span)
+    # Guarded-tail sources keep the documented target-policy fallback, so only an
+    # annotation turns the block geometry into a requirement.
     source_schedule = (_source_schedule(
         prim_func, tile_m=gm, tile_n=gn, span=span) if ann.present else None)
     matmul_attrs = {
@@ -3978,6 +3980,7 @@ def _extract_ragged_tail(items: list[_Item], params: list[Any], *, tirx: Any,
     }
     if source_schedule is not None:
         matmul_attrs["source_schedule"] = source_schedule
+        matmul_attrs["source_schedule_origin"] = "annotated"
     values = (
         _value(0, _buffer_name(a_param), TensorType("float16",
                                                    (logical_m, logical_k)),
@@ -5508,9 +5511,14 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
                  "coverage": "exact_once"}
     _check_source_rounding_annotation(prim_func, block.source_rounding, span)
     ann = _schedule_annotation(prim_func, span)
+    # The source block geometry is honoured when this kernel also writes FP16 back
+    # after every K block (a K-blocked kernel whose rounding matches the target)
+    # or when the user annotated a schedule.  Otherwise the backend target policy
+    # and the default grid apply; the origin records which of the three this is.
     source_schedule = (_source_schedule(
         prim_func, tile_m=block.rows, tile_n=block.cols, span=span)
         if (block.explicit_fp16_rounding or ann.present) else None)
+    source_schedule_origin = "annotated" if ann.present else "derived"
     values = [
         _value(0, "A", TensorType("float16", (logical_m, logical_k)), None,
               "input"),
@@ -5526,7 +5534,8 @@ def _k_loop_module(block: _KBlock, *, prim_func: Any, span: str,
                "source_k_rounding": block.source_rounding,
                "source_k_loop": hints,
                "source_mn_tiling": mn_tiling,
-               **({"source_schedule": source_schedule}
+               **({"source_schedule": source_schedule,
+                   "source_schedule_origin": source_schedule_origin}
                   if source_schedule is not None else {})}, span)]
     return _finish(name=f"tilelang:{_symbol_name(prim_func)}", values=tuple(values),
                   ops=tuple(ops), inputs=(0,), outputs=(2,),
@@ -5908,6 +5917,7 @@ def extract(prim_func: Any, *, options: CompileOptions,
     }
     if source_schedule is not None:
         matmul_attrs["source_schedule"] = source_schedule
+        matmul_attrs["source_schedule_origin"] = "annotated"
     values = [
         _value(0, "A", TensorType("float16", (gm, gk)), None, "input"),
         _value(1, "B", TensorType("float16", (gk, gn)), None, b_role),

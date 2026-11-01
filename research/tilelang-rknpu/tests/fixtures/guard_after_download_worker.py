@@ -51,6 +51,21 @@ def interleaved_plan():
         replace(plan.submits[0], id=0, task_ids=(3,), deps=()),
         replace(plan.submits[1], id=1, task_ids=(5,), deps=(0,)),
     )
+    # old[4] and old[5] swapped ids, so the records that name task ids move
+    # with them; a plan may not keep a stale attribution after renumbering.
+    moved = {0: 0, 1: 1, 2: 2, 3: 3, 4: 5, 5: 4, 6: 6}
+    by_id = {action.id: action for action in actions}
+    logical_ops = tuple(replace(entry,
+                               tasks=tuple(moved[task] for task in entry.tasks))
+                        for entry in plan.logical_ops)
+    numeric = tuple(
+        replace(requirement,
+                tasks=tuple(moved[task] for task in requirement.tasks),
+                execution=dict(
+                    requirement.execution,
+                    templates=sorted({by_id[moved[task]].template_id
+                                      for task in requirement.tasks})))
+        for requirement in plan.numeric_requirements)
     buffers = (
         replace(plan.buffers[0], lifetime=(0, 5)),
         replace(plan.buffers[1], lifetime=(1, 4)),
@@ -59,7 +74,9 @@ def interleaved_plan():
         replace(plan.buffers[4], lifetime=(5, 6)),
     )
     return with_plan_hash(replace(
-        plan, actions=actions, submits=submits, buffers=buffers, plan_hash=""))
+        plan, actions=actions, submits=submits, buffers=buffers,
+        logical_ops=logical_ops, numeric_requirements=numeric,
+        plan_hash=""))
 
 
 def main() -> int:

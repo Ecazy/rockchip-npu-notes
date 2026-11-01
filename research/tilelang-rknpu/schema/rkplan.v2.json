@@ -1,366 +1,606 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://rockchip-npu-notes.local/schema/rkplan.v2.json",
-  "title": "RKPlan v2",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "kind",
-    "name",
-    "profile_hash",
-    "source_hash",
-    "bindings",
-    "constants",
-    "buffers",
-    "views",
-    "actions",
-    "submits",
-    "publish",
-    "accounting",
-    "plan_hash"
-  ],
-  "properties": {
-    "schema_version": {
-      "const": 2
-    },
-    "kind": {
-      "const": "rkplan"
-    },
-    "name": {
-      "type": "string",
-      "minLength": 1
-    },
-    "profile_hash": {
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://rockchip-npu-notes.local/schema/rkplan.v2.json",
+ "title": "RKPlan v2",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "kind",
+  "name",
+  "profile_hash",
+  "source_hash",
+  "bindings",
+  "constants",
+  "buffers",
+  "views",
+  "actions",
+  "submits",
+  "publish",
+  "accounting",
+  "plan_hash"
+ ],
+ "properties": {
+  "schema_version": {
+   "const": 2
+  },
+  "kind": {
+   "const": "rkplan"
+  },
+  "name": {
+   "type": "string",
+   "minLength": 1
+  },
+  "profile_hash": {
+   "type": "string"
+  },
+  "source_hash": {
+   "type": "string"
+  },
+  "plan_hash": {
+   "type": "string",
+   "pattern": "^[0-9a-f]{64}$"
+  },
+  "bindings": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "name",
+     "role",
+     "dtype",
+     "shape"
+    ],
+    "properties": {
+     "id": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "name": {
       "type": "string"
-    },
-    "source_hash": {
+     },
+     "role": {
+      "enum": [
+       "input",
+       "constant",
+       "output"
+      ]
+     },
+     "dtype": {
+      "const": "float16"
+     },
+     "shape": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 2,
+      "items": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 4096
+      }
+     }
+    }
+   }
+  },
+  "constants": {
+   "type": "array",
+   "items": {
+    "type": "object"
+   }
+  },
+  "buffers": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "role",
+     "slot_id",
+     "offset",
+     "capacity",
+     "alignment",
+     "layout_id",
+     "lifetime",
+     "padding_state",
+     "must_not_share_bo"
+    ],
+    "properties": {
+     "id": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "role": {
       "type": "string"
-    },
-    "plan_hash": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
-    },
-    "bindings": {
+     },
+     "slot_id": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "offset": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "capacity": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "alignment": {
+      "type": "integer",
+      "minimum": 16
+     },
+     "layout_id": {
+      "enum": [
+       "co.cube.f16.v1",
+       "co.weight.f16.v1",
+       "co.linear.f16.v1"
+      ]
+     },
+     "lifetime": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+       "type": "integer",
+       "minimum": 0
+      }
+     },
+     "padding_state": {
+      "enum": [
+       "zero",
+       "finite",
+       "unknown",
+       "valid_only"
+      ]
+     },
+     "must_not_share_bo": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "name",
-          "role",
-          "dtype",
-          "shape"
-        ],
-        "properties": {
-          "id": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "name": {
-            "type": "string"
-          },
-          "role": {
-            "enum": [
-              "input",
-              "constant",
-              "output"
-            ]
-          },
-          "dtype": {
-            "const": "float16"
-          },
-          "shape": {
-            "type": "array",
-            "minItems": 0,
-            "maxItems": 2,
-            "items": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 4096
-            }
-          }
-        }
+       "type": "integer",
+       "minimum": 0
       }
-    },
-    "constants": {
+     }
+    }
+   }
+  },
+  "views": {
+   "type": "array",
+   "items": {
+    "type": "object"
+   }
+  },
+  "actions": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "kind",
+     "template_id",
+     "inputs",
+     "outputs",
+     "deps",
+     "origin",
+     "attrs"
+    ],
+    "properties": {
+     "id": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "kind": {
+      "enum": [
+       "host_pack",
+       "host_expand",
+       "host_check",
+       "upload",
+       "npu_task",
+       "download",
+       "host_compute",
+       "commit"
+      ]
+     },
+     "template_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "inputs": {
       "type": "array",
       "items": {
-        "type": "object"
+       "type": "integer",
+       "minimum": 0
       }
-    },
-    "buffers": {
+     },
+     "outputs": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "role",
-          "slot_id",
-          "offset",
-          "capacity",
-          "alignment",
-          "layout_id",
-          "lifetime",
-          "padding_state",
-          "must_not_share_bo"
-        ],
-        "properties": {
-          "id": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "role": {
-            "type": "string"
-          },
-          "slot_id": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "capacity": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "alignment": {
-            "type": "integer",
-            "minimum": 16
-          },
-          "layout_id": {
-            "enum": [
-              "co.cube.f16.v1",
-              "co.weight.f16.v1",
-              "co.linear.f16.v1"
-            ]
-          },
-          "lifetime": {
-            "type": "array",
-            "minItems": 2,
-            "maxItems": 2,
-            "items": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "padding_state": {
-            "enum": [
-              "zero",
-              "finite",
-              "unknown",
-              "valid_only"
-            ]
-          },
-          "must_not_share_bo": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        }
+       "type": "integer",
+       "minimum": 0
       }
-    },
-    "views": {
+     },
+     "deps": {
       "type": "array",
       "items": {
-        "type": "object"
+       "type": "integer",
+       "minimum": 0
       }
-    },
-    "actions": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "kind",
-          "template_id",
-          "inputs",
-          "outputs",
-          "deps",
-          "origin",
-          "attrs"
-        ],
-        "properties": {
-          "id": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "kind": {
-            "enum": [
-              "host_pack",
-              "host_expand",
-              "host_check",
-              "upload",
-              "npu_task",
-              "download",
-              "host_compute",
-              "commit"
-            ]
-          },
-          "template_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "inputs": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "outputs": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "deps": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "origin": {
-            "type": "string"
-          },
-          "attrs": {
-            "type": "object"
-          }
-        }
-      }
-    },
-    "submits": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "task_ids",
-          "recipe_id",
-          "mode",
-          "core_policy",
-          "deps"
-        ],
-        "properties": {
-          "id": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "task_ids": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 64,
-            "items": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "recipe_id": {
-            "type": "string"
-          },
-          "mode": {
-            "enum": [
-              "chain",
-              "separate"
-            ]
-          },
-          "core_policy": {
-            "enum": [
-              "single_core_per_submit",
-              "auto"
-            ]
-          },
-          "deps": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        }
-      }
-    },
-    "publish": {
+     },
+     "origin": {
+      "type": "string"
+     },
+     "attrs": {
+      "type": "object"
+     }
+    }
+   }
+  },
+  "submits": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "task_ids",
+     "recipe_id",
+     "mode",
+     "core_policy",
+     "deps"
+    ],
+    "properties": {
+     "id": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "task_ids": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 64,
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "name",
-          "binding_id",
-          "view_id",
-          "dst_row",
-          "dst_col",
-          "rows",
-          "cols"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "binding_id": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "view_id": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "dst_row": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "dst_col": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "rows": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "cols": {
-            "type": "integer",
-            "minimum": 1
-          }
-        }
+       "type": "integer",
+       "minimum": 0
       }
+     },
+     "recipe_id": {
+      "type": "string"
+     },
+     "mode": {
+      "enum": [
+       "chain",
+       "separate"
+      ]
+     },
+     "core_policy": {
+      "enum": [
+       "single_core_per_submit",
+       "auto"
+      ]
+     },
+     "deps": {
+      "type": "array",
+      "items": {
+       "type": "integer",
+       "minimum": 0
+      }
+     }
+    }
+   }
+  },
+  "publish": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "name",
+     "binding_id",
+     "view_id",
+     "dst_row",
+     "dst_col",
+     "rows",
+     "cols"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "binding_id": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "view_id": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "dst_row": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "dst_col": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "rows": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "cols": {
+      "type": "integer",
+      "minimum": 1
+     }
+    }
+   }
+  },
+  "accounting": {
+   "type": "object"
+  },
+  "budget_policy": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "schema_version",
+    "device_budget_bytes",
+    "host_budget_bytes"
+   ],
+   "properties": {
+    "schema_version": {
+     "const": 1
     },
-    "accounting": {
-      "type": "object"
+    "device_budget_bytes": {
+     "type": "integer",
+     "minimum": 1
     },
-    "budget_policy": {
+    "host_budget_bytes": {
+     "type": "integer",
+     "minimum": 1
+    }
+   }
+  },
+  "numeric_requirements": {
+   "type": "array",
+   "description": "Per logical op: the NumericContract the caller asked for and the hardware tasks that implement it.  Absent in plans written before the field existed; a missing array means no requirement was stored, never a default.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "op_index",
+     "opcode",
+     "contract",
+     "inputs",
+     "outputs",
+     "tasks",
+     "execution"
+    ],
+    "properties": {
+     "op_index": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "opcode": {
+      "type": "string",
+      "minLength": 1
+     },
+     "contract": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "schema_version",
-        "device_budget_bytes",
-        "host_budget_bytes"
+       "input_dtype",
+       "output_dtype",
+       "accumulator_dtype",
+       "accumulation",
+       "narrowing_points",
+       "approximate",
+       "tolerance"
       ],
       "properties": {
-        "schema_version": {
-          "const": 1
-        },
-        "device_budget_bytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "host_budget_bytes": {
-          "type": "integer",
-          "minimum": 1
+       "input_dtype": {
+        "type": "string"
+       },
+       "output_dtype": {
+        "type": "string"
+       },
+       "accumulator_dtype": {
+        "enum": [
+         "float16",
+         "float32"
+        ]
+       },
+       "accumulation": {
+        "enum": [
+         "strict_unspecified",
+         "ordered_k_tiles_with_f16_writeback"
+        ]
+       },
+       "narrowing_points": {
+        "type": "array",
+        "items": {
+         "type": "string"
         }
+       },
+       "approximate": {
+        "type": "boolean"
+       },
+       "tolerance": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "number",
+         "minimum": 0
+        }
+       }
       }
+     },
+     "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "tasks": {
+      "type": "array",
+      "items": {
+       "type": "integer",
+       "minimum": 0
+      }
+     },
+     "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "attributed"
+      ],
+      "properties": {
+       "k_chain": {
+        "type": "array",
+        "items": {
+         "type": "integer",
+         "minimum": 0
+        }
+       },
+       "k_tile": {
+        "type": "integer",
+        "minimum": 0
+       },
+       "templates": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "output_dtypes": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "attributed": {
+        "type": "boolean"
+       },
+       "approximated": {
+        "type": "boolean"
+       }
+      }
+     }
     }
+   }
+  },
+  "logical_ops": {
+   "type": "array",
+   "description": "The source graph as far as the plan can restate it: one entry per logical op, with the caller NumericContract (or null) and the device tasks that implement it.  Absent in plans written before the field existed; those load, re-save and replay unchanged.  A plan that stores numeric_requirements must store this table too, because every requirement is checked against it.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "index",
+     "opcode",
+     "inputs",
+     "outputs",
+     "contract",
+     "tasks",
+     "auxiliary"
+    ],
+    "properties": {
+     "index": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "opcode": {
+      "type": "string",
+      "minLength": 1
+     },
+     "inputs": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "outputs": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     },
+     "contract": {
+      "type": [
+       "object",
+       "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+       "input_dtype",
+       "output_dtype",
+       "accumulator_dtype",
+       "accumulation",
+       "narrowing_points",
+       "approximate",
+       "tolerance"
+      ],
+      "properties": {
+       "input_dtype": {
+        "type": "string"
+       },
+       "output_dtype": {
+        "type": "string"
+       },
+       "accumulator_dtype": {
+        "enum": [
+         "float16",
+         "float32"
+        ]
+       },
+       "accumulation": {
+        "enum": [
+         "strict_unspecified",
+         "ordered_k_tiles_with_f16_writeback"
+        ]
+       },
+       "narrowing_points": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "approximate": {
+        "type": "boolean"
+       },
+       "tolerance": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "number",
+         "minimum": 0
+        }
+       }
+      }
+     },
+     "tasks": {
+      "type": "array",
+      "items": {
+       "type": "integer",
+       "minimum": 0
+      }
+     },
+     "auxiliary": {
+      "type": "boolean"
+     }
+    }
+   }
   }
+ }
 }

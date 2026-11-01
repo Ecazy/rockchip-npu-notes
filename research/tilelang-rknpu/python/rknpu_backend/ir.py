@@ -8,11 +8,12 @@ else is rejected before any lowering or device work.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field, replace
 from typing import Any, Iterable
 
-from .errors import (RK_E_INVALID, RK_E_SCHEMA, RK_E_SHAPE,
-                     RK_E_UNSUPPORTED, reject)
+from .errors import (RK_E_INVALID, RK_E_NUMERIC_CONTRACT, RK_E_SCHEMA,
+                     RK_E_SHAPE, RK_E_UNSUPPORTED, reject)
 from .immutable import freeze, thaw
 
 SCHEMA_VERSION = 1
@@ -87,6 +88,30 @@ class TensorType:
             reject(RK_E_SCHEMA,
                    "axes must contain one non-empty string per tensor rank",
                    stage="schema", actual=list(self.axes))
+        # axes are labels, never an axis order: every lowering step reads
+        # position 0 as rows (or the broadcast source) and position 1 as cols.
+        # A label therefore never renames a position, and custom labels may be
+        # mixed with the default ones.  What stays constrained is the meaning of
+        # the default names themselves: "row" only describes rank-2 position 0
+        # and "col" only rank-2 position 1 (or the rank-1 broadcast source), so a
+        # label can never claim the orientation the lowering does not implement.
+        if len(set(self.axes)) != len(self.axes):
+            reject(RK_E_SCHEMA, "axes must be unique per tensor",
+                   stage="schema", actual=list(self.axes))
+        for index, label in enumerate(self.axes):
+            if label == "row" and not (len(self.shape) == 2 and index == 0):
+                reject(RK_E_UNSUPPORTED,
+                       "the row label describes rank-2 position 0 only; any "
+                       "other position needs a custom label",
+                       stage="infer", actual=list(self.axes),
+                       required={"rank": 2, "position": 0})
+            if label == "col" and not ((len(self.shape) == 2 and index == 1) or
+                                       (len(self.shape) == 1 and index == 0)):
+                reject(RK_E_UNSUPPORTED,
+                       "the col label describes rank-2 position 1 or the "
+                       "rank-1 broadcast position only",
+                       stage="infer", actual=list(self.axes),
+                       required={"rank": len(self.shape), "position": 1})
         if self.stride is not None:
             if len(self.stride) != len(self.shape) or \
                     any(not _is_int(v) for v in self.stride):
@@ -162,6 +187,36 @@ class TensorType:
         )
 
 
+def same_compute_type(a: TensorType, b: TensorType) -> bool:
+    """Can two descriptors feed the same element-wise computation?
+
+    Compares everything that decides which elements are read and how they are
+    stored: dtype, logical shape, declared stride, index map and the finite
+    requirement.  The axis *labels* are excluded: they are names for the shape
+    positions, so a relabel cannot change a computation.  Exact
+    ``TensorType`` equality stays in place for identity, hashing and
+    serialisation, where the full description is the point.  A real difference
+    (dtype, shape, stride, index map, finite) still fails this comparison.
+    """
+    return (a.dtype == b.dtype and a.shape == b.shape and
+            _effective_stride(a) == _effective_stride(b) and
+            a.index_map == b.index_map and a.finite == b.finite)
+
+
+def _effective_stride(tensor_type: TensorType) -> tuple[int, ...]:
+    """The stride a descriptor really uses: an omitted one means dense.
+
+    Rank-2 tensors are dense row-major (``(cols, 1)``) and broadcast sources are
+    contiguous (all ones), so leaving ``stride`` out and spelling it out are the
+    same storage claim.
+    """
+    if tensor_type.stride is not None:
+        return tuple(tensor_type.stride)
+    if len(tensor_type.shape) == 2:
+        return (tensor_type.shape[1], 1)
+    return tuple(1 for _ in tensor_type.shape)
+
+
 @dataclass(frozen=True)
 class NumericContract:
     """Requested arithmetic semantics, not a promise made by the hardware."""
@@ -188,10 +243,14 @@ class NumericContract:
             reject(RK_E_NUMERIC_CONTRACT,
                    f"unknown accumulation policy {self.accumulation!r}", stage="infer")
         for key, value in self.tolerance.items():
-            if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
                 reject(RK_E_NUMERIC_CONTRACT,
                        "tolerance values must be non-negative finite numbers",
-                       stage="infer")
+                       stage="infer", actual={key: repr(value)})
+            if not math.isfinite(float(value)) or value < 0:
+                reject(RK_E_NUMERIC_CONTRACT,
+                       "tolerance values must be non-negative finite numbers",
+                       stage="infer", actual={key: repr(value)})
 
     @property
     def allows_f16_tiled_path(self) -> bool:
@@ -274,6 +333,40 @@ class Value:
                    obj["producer"], obj["role"])
 
 
+# Attributes the lowering really reads from a matmul op: the operand layout,
+# the numeric contract, and the schedule/source metadata the TileLang adapter
+# stamps (``tilelang_adapter.matmul_attrs``).  Anything else - ``transpose_a``,
+# ``k_pad``, a typo - has no consumer in the pipeline, so accepting it would
+# silently drop a requirement the writer believed in.
+# Two families are recognized on a matmul op:
+#  * ``b_layout``/``numeric_contract`` - the only attributes the lowering reads;
+#  * source metadata the adapters stamp for attribution and for the
+#    source-schedule checks (tile hints, narrowing points, the declared
+#    schedule).  They never change the emitted math; they are carried so
+#    explain/audit can name where a plan came from.
+# Every other key is refused: that is what keeps ``transpose_a``, ``k_pad`` or a
+# typo from being silently dropped as if it were a harmless comment.
+MATMUL_COMPUTE_ATTRS = frozenset({"b_layout", "numeric_contract"})
+MATMUL_SOURCE_META = frozenset({
+    "source_accumulator_dtype", "source_narrowing_points",
+    "source_k_rounding", "source_k_loop", "source_mn_tiling",
+    "source_tail_contract", "source_schedule", "source_schedule_origin",
+    "source_stage_index", "source_stage_count", "source_stage_boundary",
+    "source_stage_schedule_contract",
+    "source_k_index", "source_k_count", "source_k0",
+    "source_geometry", "source_loop_annotations", "source_loop_span",
+    "source_rounding", "source_ops",
+    "tile_m", "tile_n", "tile_k",
+})
+MATMUL_ATTRS = MATMUL_COMPUTE_ATTRS | MATMUL_SOURCE_META
+
+# Keys that request a transposition the lowering does not implement.  They are
+# still rejected through the allowlist; naming them only makes the diagnostic
+# actionable.
+MATMUL_TRANSPOSE_ATTRS = frozenset({"transpose_a", "transpose_b",
+                                    "a_layout", "transposed_a",
+                                    "transposed_b"})
+
 ELEMENTWISE_SCHEDULE_META = {
     "source_stage_index", "source_stage_count", "source_stage_boundary",
     "source_elementwise_schedule", "source_mn_tiling", "source_rounding",
@@ -323,6 +416,20 @@ class Op:
             if b_layout not in {"kn", "nk"}:
                 reject(RK_E_UNSUPPORTED, "matmul b_layout must be 'kn' or 'nk'",
                        stage="infer", op=self.opcode, source=self.source)
+            unknown = sorted(set(self.attrs) - MATMUL_ATTRS)
+            if unknown:
+                transposing = sorted(set(unknown) & MATMUL_TRANSPOSE_ATTRS)
+                if transposing:
+                    reject(RK_E_UNSUPPORTED,
+                           "matmul does not transpose an operand: the lowering "
+                           "reads A as [M,K] and B through b_layout only",
+                           stage="infer", op=self.opcode, source=self.source,
+                           actual=transposing,
+                           required=sorted(MATMUL_ATTRS))
+                reject(RK_E_UNSUPPORTED,
+                       "matmul attribute is not read by the lowering",
+                       stage="infer", op=self.opcode, source=self.source,
+                       actual=unknown, required=sorted(MATMUL_ATTRS))
         elif self.opcode in UNARY_OPS:
             if len(self.inputs) != 1:
                 reject(RK_E_SHAPE, f"{self.opcode} needs exactly one input",
@@ -482,7 +589,62 @@ class Module:
                 reject(RK_E_SHAPE,
                        f"module output value {vid} has no producer operation",
                        stage="infer")
+        # role and producer have to agree in both directions.  A produced input
+        # or an unproduced temporary is exactly how an undeclared external read
+        # or a phantom value enters the plan, so both are refused here instead of
+        # being left to whichever lowering path notices first.
+        declared_inputs = set(self.inputs)
+        for value in self.values:
+            if value.role in {"input", "constant"}:
+                if value.producer is not None:
+                    reject(RK_E_SHAPE,
+                           f"{value.role} value {value.id} must not claim an op "
+                           "as its producer",
+                           stage="infer",
+                           actual={"value": value.id, "role": value.role,
+                                   "producer": value.producer},
+                           required={"producer": None})
+                if value.role == "input" and value.id not in declared_inputs:
+                    reject(RK_E_SHAPE,
+                           f"input value {value.id} ({value.name!r}) is not "
+                           "declared in Module.inputs; every external input "
+                           "has to be part of the function signature",
+                           stage="infer",
+                           actual={"value": value.id, "name": value.name,
+                                   "declared": list(self.inputs)},
+                           required={"declares": value.id})
+                continue
+            if value.producer is None:
+                reject(RK_E_SHAPE,
+                       f"{value.role} value {value.id} ({value.name!r}) has no "
+                       "producing operation",
+                       stage="infer",
+                       actual={"value": value.id, "role": value.role},
+                       required={"producer": "an op id"})
+        for value in self.values:
+            if value.producer is None:
+                continue
+            if value.producer >= len(self.ops):
+                reject(RK_E_SHAPE,
+                       f"value {value.id} claims producer {value.producer}, "
+                       "which does not exist", stage="infer",
+                       actual={"value": value.id, "producer": value.producer},
+                       required={"producer": f"< {len(self.ops)}"})
+            if value.id not in self.ops[value.producer].outputs:
+                reject(RK_E_SHAPE,
+                       f"value {value.id} claims producer {value.producer}, "
+                       "but that operation does not list it as a result",
+                       stage="infer",
+                       actual={"value": value.id, "producer": value.producer,
+                               "results": list(self.ops[value.producer].outputs)})
         for op in self.ops:
+            seen_results: set[int] = set()
+            for vid in op.outputs:
+                if vid in seen_results:
+                    reject(RK_E_SHAPE,
+                           f"op {op.id} lists value {vid} twice",
+                           stage="infer", op=op.opcode, source=op.source)
+                seen_results.add(vid)
             for vid in op.inputs:
                 val = by_id.get(vid)
                 if val is None:
@@ -569,12 +731,13 @@ class Module:
                            stage="infer", op=op.opcode, source=op.source)
             elif op.opcode in UNARY_OPS:
                 x = by_id[op.inputs[0]]
-                if x.type != out.type:
+                if not same_compute_type(x.type, out.type):
                     reject(RK_E_SHAPE, f"{op.opcode} requires identical input/output type",
                            stage="infer", op=op.opcode, source=op.source)
             elif op.opcode in BINARY_OPS:
                 a, b = by_id[op.inputs[0]], by_id[op.inputs[1]]
-                if a.type == b.type == out.type:
+                if same_compute_type(a.type, b.type) and \
+                        same_compute_type(b.type, out.type):
                     continue
                 # Compile-time broadcast is allowed only when exactly one
                 # operand is a constant rank-0 scalar or rank-1 [N] channel
@@ -590,7 +753,8 @@ class Module:
                                    op=op.opcode, source=op.source)
                         constant_side, tensor_side = value, other
                 if constant_side is None or tensor_side is None or \
-                        tensor_side.type.rank != 2 or tensor_side.type != out.type:
+                        tensor_side.type.rank != 2 or \
+                        not same_compute_type(tensor_side.type, out.type):
                     reject(RK_E_UNSUPPORTED,
                            "MVP binary ops accept exact same-shape operands or "
                            "one explicit rank-0/rank-1 constant broadcast",

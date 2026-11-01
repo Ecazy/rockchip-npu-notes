@@ -534,14 +534,18 @@
  "qkv_qk_candidate_table": {
   "int16_tp_org": {
    "evidence": [
-    "int16-upstream-normal-k32-board.log",
     "int16-upstream-tp-k32-board.log",
-    "int16-tp-layout-board.log"
+    "int16-tp-layout-board-v2.log"
    ],
-   "native_int16": "PASS",
-   "status": "excluded_on_board",
-   "tp_org_m16n32_rc": -32,
-   "tp_org_submit_rc": -110
+   "identity_probe_tp_match": "label 512/512; pattern 512/512",
+   "identity_probe_weight_match": {
+    "label_address": "4/512",
+    "pattern_bits": "58/512"
+   },
+   "m16n16_tp_submit_rc": -110,
+   "m16n16_tp_submit_rc_note": "timeout cause unlocated",
+   "status": "partial_device_success_not_qk_consumable",
+   "upstream_tp_org_m16n32k32": "PASS"
   },
   "p0312": {
    "multi_pass_search": "no two-pass offset solution; mask cover ~238 passes",
@@ -559,6 +563,22 @@
   "m16n32_submit_rc": -32,
   "source": "custom-ops/tools/c/int16_tp_layout_probe.c",
   "status": "board_failure"
+ },
+ "qkv_qk_tp_org_consumer": {
+  "consumer_candidates": [
+   "cube_view",
+   "p0312",
+   "second_tp",
+   "second_mm"
+  ],
+  "decision_needed": [
+   "new_tp_org_aware_qk_consumer",
+   "accept_host_pack_boundary"
+  ],
+  "m16n16_tp_rc": -110,
+  "status": "no_existing_layout_consumer_found",
+  "tp_raw_match": "512/512",
+  "weight_match": "4/512"
  },
  "rmsnorm_2_round": {
   "1": {
@@ -2798,12 +2818,12 @@
    "two_step_rmsnorm_acceptance",
    "pv_o_b8_multi_submit_capability_probe",
    "cube_weight_existing_mechanism_survey",
-   "int16_tp_writer_candidate_board_failure"
+   "int16_tp_writer_candidate_board_failure",
+   "int16_tp_raw_reorder_partial_success_weight_layout_fail"
   ],
   "decision_needed": [
-   "new_device_reorder_command",
-   "accept_host_pack_boundary",
-   "change_qk_consumer_contract"
+   "new_tp_org_aware_qk_consumer",
+   "accept_host_pack_boundary"
   ],
   "default_path_changed": false,
   "evidence_root": "results/20261028T113459Z-graph-fusion",
@@ -2813,6 +2833,6 @@
    "qkv_to_qk_single_head_then_multihead_validation",
    "pv_o_b8_model_integration_and_performance_adoption"
   ],
-  "status": "awaiting_user_decision_qkv_qk"
+  "status": "awaiting_decision_tp_org_consumer"
  }
 }
