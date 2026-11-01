@@ -17,6 +17,16 @@ if str(ROOT / "tools") not in sys.path:
 
 import replay_smollm2_v5 as replay
 
+# The request-set replay test drives the HuggingFace tokenizer entry point (it
+# mocks it, but importing transformers is still required).  The property it
+# checks is about our replay manifest, not about the tokenizer, so a machine
+# without the optional dependency skips instead of reporting a red suite.
+try:
+    import transformers  # noqa: F401
+    HAS_TRANSFORMERS = True
+except Exception:  # noqa: BLE001
+    HAS_TRANSFORMERS = False
+
 
 def write_json(path: Path, obj) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -44,6 +54,9 @@ class ReplayIdentityTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 replay.check_spec_identity(spec, record)
 
+    @unittest.skipUnless(HAS_TRANSFORMERS,
+                         "transformers is not installed; this test drives its "
+                         "AutoTokenizer entry point")
     def test_build_request_set_preserves_required_order_and_identities(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
