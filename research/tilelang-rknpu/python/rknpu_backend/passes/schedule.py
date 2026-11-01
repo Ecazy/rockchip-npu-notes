@@ -345,7 +345,18 @@ def build_submits(draft: DraftPlan, *, options: CompileOptions) -> list[Submit]:
         tasks = by_group[group]
         if len(tasks) > 64:
             reject(RK_E_SHAPE, "submit group exceeds 64 tasks", stage="schedule")
-        if group.startswith("mm:"):
+        declared = {draft.actions[t].attrs.get("submit_recipe") for t in tasks}
+        declared.discard(None)
+        if len(declared) > 1:
+            reject(RK_E_SCHEMA,
+                   "a submit group mixes several declared submit recipes",
+                   stage="schedule",
+                   actual={"group": group, "recipes": sorted(declared)})
+        if declared:
+            # The planner states the recipe on the task itself; the group name is
+            # only a label and no longer decides admission.
+            recipe = declared.pop()
+        elif group.startswith("mm:"):
             recipe = "linear_k_acc_v1"
         elif group.startswith("mk:"):
             recipe = "multi_k_acc_v1"

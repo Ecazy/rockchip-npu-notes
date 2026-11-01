@@ -1112,7 +1112,9 @@ class _Builder:
                    stage="schedule", actual=list(w.type.shape))
         policy = self.options.linear_task_order
         if policy not in {"baseline", "scheduled_baseline", "merged",
-                          "interleaved", "interleaved_reuse"}:
+                          "interleaved", "interleaved_reuse",
+                          "weight_stationary", "weight_stationary_reuse",
+                          "grouped_linear"}:
             reject(RK_E_UNSUPPORTED, f"unknown linear task policy {policy!r}",
                    stage="schedule")
         # These policies choose task order and submit grouping; they are not a
@@ -1132,7 +1134,9 @@ class _Builder:
         # SmolLM lm_head shape.  That pin recorded where the first board
         # evidence came from, not a property of the lowering; the conditions it
         # stood in for are the ones listed above (INTENT-FIDELITY-AUDIT.md 24).
-        if policy in {"merged", "interleaved", "interleaved_reuse"} and \
+        if policy in {"merged", "interleaved", "interleaved_reuse",
+                      "weight_stationary", "weight_stationary_reuse",
+                      "grouped_linear"} and \
                 k <= K_TILE:
             reject(RK_E_UNSUPPORTED,
                    "this linear task policy groups a K-accumulation chain, so "
@@ -1153,7 +1157,28 @@ class _Builder:
         tiles = output_tiles(m, n, tile_m=tile_m, tile_n=tile_n, order=order)
         ktiles = k_slices(k)
 
+        n_m_tiles = len({tile.m0 for tile in tiles})
+        ws_per_n = len(ktiles) * n_m_tiles
+        # Weight-stationary runs are grouped by N tile, and whole N tiles are
+        # packed into one submit as long as the group stays inside the 64-task
+        # bound.  The chain of an output tile never leaves its group.
+        ws_n_per_submit = max(1, 64 // ws_per_n) if ws_per_n <= 64 else 0
+        if self.options.linear_group_n_tiles:
+            requested = self.options.linear_group_n_tiles
+            if requested * ws_per_n > 64:
+                reject(RK_E_SHAPE,
+                       "linear_group_n_tiles would exceed the 64-task submit "
+                       "bound",
+                       stage="schedule",
+                       actual={"n_tiles": requested,
+                               "tasks_per_n_tile": ws_per_n},
+                       required={"max_tasks_per_submit": 64})
+            ws_n_per_submit = requested
+
         def _per_submit(name: str) -> int:
+            if name in {"weight_stationary", "weight_stationary_reuse",
+                        "grouped_linear"}:
+                return (ws_per_n * ws_n_per_submit) if ws_n_per_submit else ws_per_n
             return (len(ktiles) if name in {"baseline", "scheduled_baseline"}
                     else len(tiles) * len(ktiles))
 
@@ -1242,7 +1267,7 @@ class _Builder:
         group = (f"mm:{tiles[0].m0}:{tiles[0].n0}"
                  if policy in {"baseline", "scheduled_baseline"}
                  else "mk:linear")
-        def emit(tile, kidx):
+        def emit(tile, kidx, weight_reuse=False, group=None):
             ks = ktiles[kidx]
             key = (tile.m0, tile.n0)
             prior = None if kidx == 0 else accs[key][(kidx - 1) & 1]
@@ -1256,11 +1281,17 @@ class _Builder:
                      tile is not tiles[0])
             submit = (f"mm:{tile.m0}:{tile.n0}"
                       if policy in {"baseline", "scheduled_baseline"}
-                      else "mk:linear")
-            attrs = {"submit_group": submit,
+                      else ("mk:linear" if group is None else group))
+            # Explicit recipe requirement: the submit builder reads this field
+            # instead of guessing from the human readable group name.
+            recipe = ("linear_k_acc_v1"
+                      if policy in {"baseline", "scheduled_baseline"}
+                      else "multi_k_acc_v1")
+            attrs = {"submit_group": submit, "submit_recipe": recipe,
                      "k0": ks.k0, "k_index": kidx,
                      "k_count": len(ktiles),
-                     "data_reuse": bool(reuse), "weight_reuse": False,
+                     "data_reuse": bool(reuse),
+                     "weight_reuse": bool(weight_reuse),
                      "linear_task_policy": policy}
             if declared_schedule is not None:
                 attrs["source_schedule"] = declared_schedule
@@ -1292,6 +1323,48 @@ class _Builder:
                          else "mk:linear")
                 for kidx in range(len(ktiles)):
                     emit(tile, kidx)
+        elif policy == "grouped_linear":
+            # Same group partition as the weight-stationary policies, but the
+            # historical intra-group order (tile major, K innermost).  This is
+            # the control that isolates the intra-group task order.
+            ordered = sorted(tiles, key=lambda t: (t.n0, t.m0))
+            n_values = sorted({tile.n0 for tile in ordered})
+            chunk = ws_n_per_submit or 1
+            for start in range(0, len(n_values), chunk):
+                block = set(n_values[start:start + chunk])
+                group = f"mk:grp:{start // chunk}"
+                for tile in ordered:
+                    if tile.n0 not in block:
+                        continue
+                    for kidx in range(len(ktiles)):
+                        emit(tile, kidx, group=group)
+        elif policy in {"weight_stationary", "weight_stationary_reuse"}:
+            # Fixed (N tile, K slice), iterating the M tiles: the weight view of
+            # the previous task is then the same operand at the same K index,
+            # which is exactly the condition the verifier attaches to the CBUF
+            # weight-reuse bit ("reuse the previous task's weight on this
+            # core").  Whole N tiles are packed into one submit up to the
+            # 64-task bound, so an output tile's K chain never crosses a submit
+            # and the first task of every submit starts with reuse off.
+            ordered = sorted(tiles, key=lambda t: (t.n0, t.m0))
+            n_values = sorted({tile.n0 for tile in ordered})
+            chunk = ws_n_per_submit or 1
+            for start in range(0, len(n_values), chunk):
+                block = set(n_values[start:start + chunk])
+                # The mk: prefix makes the submit builder treat the group as a
+                # multi-K accumulation run (its matcher accepts any mm/mm_acc
+                # sequence), which is what this order is.
+                group = f"mk:ws:{start // chunk}"
+                for kidx in range(len(ktiles)):
+                    previous = None
+                    for tile in ordered:
+                        if tile.n0 not in block:
+                            continue
+                        reuse = (policy == "weight_stationary_reuse" and
+                                 previous is not None and
+                                 previous.n0 == tile.n0)
+                        emit(tile, kidx, weight_reuse=reuse, group=group)
+                        previous = tile
         else:
             for kidx in range(len(ktiles)):
                 for tile in tiles:

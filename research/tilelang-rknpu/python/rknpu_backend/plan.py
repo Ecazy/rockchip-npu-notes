@@ -1251,6 +1251,48 @@ def _validate_plan(plan: Plan) -> None:
                                "owner": owner_of_task.get(action_id)})
         previous_last = last_task
 
+    # CBUF operand reuse: the bit means "the previous task on this core already
+    # loaded this operand", so a plan may only set it where the previous task of
+    # the same submit carries the same operand view at the same K index, and
+    # never on the first task of a submit.  The C verifier enforces the same
+    # rule; checking it here reports it before a descriptor exists.
+    for submit in plan.submits:
+        previous = None
+        for task_id in submit.task_ids:
+            action = action_by_id[task_id]
+            wants_data = bool(action.attrs.get("data_reuse"))
+            wants_weight = bool(action.attrs.get("weight_reuse"))
+            if not wants_data and not wants_weight:
+                previous = action
+                continue
+            if previous is None:
+                reject(RK_E_SCHEMA,
+                       "the first task of a submit cannot reuse CBUF operands",
+                       stage="schedule", action_id=action.id,
+                       actual=submit.id)
+            same_k = (previous.attrs.get("k_index")
+                      == action.attrs.get("k_index"))
+            if wants_data and (not same_k or previous.inputs[0] != action.inputs[0]):
+                reject(RK_E_SCHEMA,
+                       "data_reuse must follow the same input view at the same "
+                       "K index in the same submit",
+                       stage="schedule", action_id=action.id,
+                       actual={"previous": previous.inputs[0],
+                               "current": action.inputs[0],
+                               "k_index": [previous.attrs.get("k_index"),
+                                           action.attrs.get("k_index")]})
+            if wants_weight and (not same_k or
+                                 previous.inputs[1] != action.inputs[1]):
+                reject(RK_E_SCHEMA,
+                       "weight_reuse must follow the same weight view at the same "
+                       "K index in the same submit",
+                       stage="schedule", action_id=action.id,
+                       actual={"previous": previous.inputs[1],
+                               "current": action.inputs[1],
+                               "k_index": [previous.attrs.get("k_index"),
+                                           action.attrs.get("k_index")]})
+            previous = action
+
     published_bindings = {p.binding_id for p in plan.publish}
     output_bindings = {b.id for b in plan.bindings if b.role == "output"}
     if published_bindings != output_bindings:

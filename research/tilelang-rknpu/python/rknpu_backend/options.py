@@ -42,6 +42,10 @@ class CompileOptions:
     # graph in every case; this only selects task order, submit grouping and
     # proven CBUF input reuse.
     linear_task_order: str = "baseline"
+    # How many whole N tiles one submit may hold for the grouped linear
+    # policies.  0 keeps the automatic choice (the largest count that stays
+    # inside the 64-task bound); any other value is honoured and validated.
+    linear_group_n_tiles: int = 0
 
     def __post_init__(self) -> None:
         if self.numeric_mode not in {"strict", "rk_f16_tiled"}:
@@ -56,14 +60,26 @@ class CompileOptions:
                    "rule and is not part of this minimal path",
                    stage="options")
         if self.linear_task_order not in {"baseline", "scheduled_baseline", "merged",
-                                          "interleaved", "interleaved_reuse"}:
+                                          "interleaved", "interleaved_reuse",
+                                          "weight_stationary",
+                                          "weight_stationary_reuse",
+                                          "grouped_linear"}:
             reject(RK_E_UNSUPPORTED,
                    f"unknown linear_task_order {self.linear_task_order!r}",
                    stage="options")
-        if self.linear_task_order == "interleaved_reuse" and                 self.submit_mode != "chain":
+        if self.linear_task_order in {"interleaved_reuse", "weight_stationary",
+                                      "weight_stationary_reuse",
+                                      "grouped_linear"} and \
+                self.submit_mode != "chain":
             reject(RK_E_UNSUPPORTED,
-                   "interleaved_reuse requires submit_mode='chain'",
+                   f"{self.linear_task_order} requires submit_mode='chain'",
                    stage="options")
+        if not isinstance(self.linear_group_n_tiles, int) or \
+                isinstance(self.linear_group_n_tiles, bool) or \
+                self.linear_group_n_tiles < 0:
+            reject(RK_E_UNSUPPORTED,
+                   "linear_group_n_tiles must be a non-negative integer",
+                   stage="options", actual=self.linear_group_n_tiles)
         if self.submit_mode not in {"chain", "separate"}:
             reject(RK_E_UNSUPPORTED, f"unknown submit mode {self.submit_mode!r}",
                    stage="options")
