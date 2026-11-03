@@ -91,3 +91,36 @@ runtime 消费已完成规划的产物，不临时猜测新的调度、融合或
 - 没有借重构引入未验收能力，也没有留下两套长期并行的生产实现。
 
 具体交付、验收与记录方法全部见 [refactor-specific.md](refactor-specific.md)。
+
+## 正式 pass 编译试点（opt-in，2026-11-05）
+
+`frontend/rknpu_pass.py` 提供 `compile_guarded_tail`：上游规范化 -> 局部 tile op 证明与改写 -> 任务实例化 -> 既有 planner 组装。详见 refactor-specific.md 同名章节与主报告第 60 节。
+旧入口 `compile_tilelang` 与生产默认不变。
+
+## 块坐标证明与注册后端（2026-11-06）
+
+第 65 轮复核暴露的两条错误接受路径，根因不是缺一条检查，而是两个阶段各自证明了一半：
+
+- 操作数副本只证明"索引 = 某个 tile 变量 × extent + local"，没有把该变量与输出块坐标连起来；
+  后续改写仍按默认 M/N grid 变量生成任务，于是"证明过的局部公式"被默认假设替换。
+- 输出证明使用无循环域绑定的算术分析器，"冗余"永远证不出来；某轴没有 guard 时放行，
+  访问安全与覆盖都没有逐轴证明。
+
+现在的统一规则（三条规则写在 rknpu_pass.py 顶部与各证明函数的 docstring）：
+
+1. **真实迭代域**：所有被消费的 grid/K/copy/epilogue 循环只经 `_loop_domain` 取域，
+   分析与展开共用同一函数；min 必须为 0、step 必须为 1、extent 必须已知，否则在证明前拒绝。
+2. **完整路径映射**：每个轴用 `_prove_tile_index` 求"块部分 = 某循环 × tile"，并返回该表达式；
+   输入侧与输出侧的表达式必须在同一循环域上可证相等，K 轴必须等于 K 循环变量。
+   相等是三个不同源码位置之间的义务，不是对一个位置单独成立即可。
+3. **逐轴输出证明**：每个轴独立决定——guard 被消费为轴界（且必须等于逻辑长度），
+   或在域上被证明冗余；没有消费 guard 的轴必须被 grid 精确覆盖（解引用安全与覆盖是同一条件）；
+   坐标必须由该轴真实循环索引，折零仅在单块时接受。
+
+计划侧接缝不变：证明后的块坐标进入 `rk_gemm` extern 调用参数，静态展开后读回为任务序列，
+`instances_from_tasks` 归一成 m_major/升序 K 的实例（因此整体交换 grid 轴的程序给出逐字节相同的计划），
+planner 仍只做存储、submit、publish、accounting。
+
+注册接入见 `frontend/tilelang_backend.py`：显式调用 `register_rknpu_backend()` 才注册
+（本构建没有 rknpu target kind，注册落在 TVM 的 ext_dev + `rknpu` target key 上），
+lowering 只调用 `compile_guarded_tail` 一次，无回退分支，设备 codegen 明确拒绝。

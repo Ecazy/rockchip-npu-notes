@@ -3938,3 +3938,2690 @@ ctest --test-dir ../custom-ops/build-host-mvp --output-on-failure -j2
 
 未重新运行设备实验或完整模型验收；沿用各节明确列出的历史证据，
 不将本次主机回归视为新增设备证明。
+
+---
+
+## 46. TileLang→RKNPU 前端结构化 lowering：试点、边界与迁移路径（2026-11-04）
+
+### 45.0 大白话
+
+旧的入口把**整份程序**归类成几种模板（guarded-tail、staged FFN、单发射 GEMM），把循环、guard、
+buffer 只当作“分类证据”，随后在 planner 里按 attrs 重建 task 顺序与几何。本轮做的是第二条路：
+直接在 TileLang 产出的 TIR（`SBlockRealize`/`For`/`IfThenElse`/alloc/`tl.region`）上分五步转换，
+每步留下 IR 摘要与不变量，直到确实要选 RKNPU primitive 才收敛。
+
+本轮产出：可运行的 `frontend/structured.py`（阶段 0/1/3/4 + 阶段 2 的切片枚举）、9 个测试、
+每阶段 IR 摘要；**尚未**把新模块接到计划生成，**也没有**切换默认。阶段 2 的 K 尾块推导在本机的
+TVM fork 上没走通（比较节点类型与 `loop_vars` 属性缺失），已定位并写明下一步——这是当前唯一的阻塞点。
+
+### 45.1 当前架构在哪一步损失结构
+
+| 结构 | 现状 | 位置 |
+|---|---|---|
+| serial K 循环 | 被识别为 `k_block`（trip/block_k/annotations），随后压缩成 `k0/k_index/k_count` | `tilelang_adapter.py` 的 `_detect_k_block` / `_extract_ragged_tail` |
+| block grid | 只校验 min/step/extent，不进入计划；tile 几何由 annotation 或默认值给出 | 同上 + `passes/tile.py` |
+| if/guard | 只用于“是不是 guarded-tail 形式”的判定，尾块范围另行推导 | `_extract_ragged_tail` |
+| buffer 分配/scope/lifetime | 压缩成计划里的 `Buffer`/`View`；源 scope 不保留 | `passes/dag.py`、`plan.py` |
+| BufferLoad/Store、copy/fill | 用于识别“显式每 K 块 FP16 回写”，之后丢弃 | `_extract_ragged_tail` |
+| tile GEMM | 局部 region 匹配（这一层是合理的） | 同上 |
+| cast | 合并进 numeric contract（`explicit_per_k_fp16` 等） | 同上 |
+| 多 kernel/stage | 单独 staged 提取器（`_extract_staged_*`） | 同上 |
+| source annotation / pipeline hint | annotation 进 schedule；hint 自 §44 起记录为“请求+未采用原因” | `passes/tile.py`、`_pipeline_record` |
+| source location | 保留在 diagnostics 的 `Span` | `Span(SourceName(...))` |
+| 数值要求 | 保留（`numeric_requirements`） | `ir.py`/`plan.py` |
+| target lowering decision | 由 planner 决定（tile 尺寸、K 切片、submit 分组） | `passes/dag.py` |
+
+**结论**：损失发生在“整份 PrimFunc 被归类成模板之后到 `Module` 生成之间”——循环/guard/存储结构
+在这一步不再是 IR，只剩若干提取出的标量字段；planner 只能按这些字段重建执行结构。
+
+### 45.2 参考 GPU 后端的方法与不能照搬的部分
+
+可借鉴的是**方法**：在 TIR 上按阶段转换（骨架 → 区域 → 划分 → tile 化 → task 具体化），每阶段有
+明确不变量；tile GEMM 作为**局部** region 匹配，而不是整程序匹配。不能照搬的是 GPU 的执行模型：
+thread_binding 的线程语义、`shared.dyn` 的片上 scratch 假设、`T.Pipelined` 的软件流水、warp/异步。
+本轮实测：guard 的并行循环在 TIR 里是 `For kind=PARALLEL`，grid 是 `For kind=THREAD_BINDING`
+（`ForKind` 取值 SERIAL=0/PARALLEL=1/VECTORIZED=2/UNROLLED=3/THREAD_BINDING=4），K 循环是 SERIAL；
+block grid 只被当作 program-index 空间，**不当作时间序**（与 §43 一致）。
+
+GPU 侧 pass 流水线的逐项清单由本轮派出的只读研究子代理负责，该子代理在交付时尚未回报，
+因此这里不以它为依据；相关内容留待其报告到位后补入。
+
+### 45.3 新编译路径的实际代码与阶段划分
+
+`python/rknpu_backend/frontend/structured.py`：
+
+| 函数 | 作用 | 输入 → 输出 |
+|---|---|---|
+| `stage0_capture` | 校验骨架并保留 IR | PrimFunc → body/grid_loops/k_loop/allocations/nodes |
+| `stage1_regions` | 局部区域分类 + 语句 trace | 骨架 → {gemm, trace, zero_fills, guarded_copies, writeback} |
+| `stage2_k_partition` | 有序 K 切片 | K 循环 → slices（k0/extent/physical） |
+| `stage3_tiles` | 由 grid 与输出形状导出每 tile 有效范围 | 骨架 → tiles |
+| `lower` | 组装 `StructuredModule` + 每阶段 `Stage` | PrimFunc → module（可 `to_dict()`） |
+
+拒绝路径都是显式的 `reject(...)`：非 block-realised 根、副作用调用、grid 维度不是 2、非 1 个 serial K 循环、
+缓冲不足、缺 fill/guarded copy/回写、grid 未恰好覆盖、未知舍入声明。
+
+### 45.4 guarded-tail 的新旧对照与设备验证状态
+
+| 项 | 旧路径 | 新路径（试点） |
+|---|---|---|
+| grid / tile 几何 | annotation 或默认 tile，grid 不参与 | 由 IR 的 grid 与共享 tile 形状导出：grid (1,12)、tile (256,256)、12 tiles |
+| K 链 | 256+256+64（由 guarded-tail 提取器推导） | **阶段 2 尚未得出尾块**（第三切片报 256）→ 阻塞点 |
+| 舍入 | `explicit_per_k_fp16` → `after_each_k_block` | 同（由调用参数 + 回写证据） |
+| hints | §44 记录请求与未采用原因 | module.hints 记录，未应用 |
+| 计划/执行 | 生产路径，未变 | **未生成计划**，未执行 |
+
+因此本轮**没有**新路径的设备验证：新路径还没有产出计划，也没有接到执行器。旧路径与其设备证据
+（§37/§41/§42）不受影响。按要求，本轮不做性能搜索。
+
+### 45.5 RKIR 在新架构中的职责
+
+RKIR/RKPlan 继续作为**执行 IR**：tile 几何、K 链、buffer/view、submit 分组、publish 都仍在 RKPlan 里
+表达并被 C 校验器检查。变化的是**谁产生这些字段**：新路径下由 `StructuredModule` 提供，
+而不是由模板提取器 + planner 默认值重建。RKIR 不承担保留源循环结构的职责，也不需要嵌入源码——
+源结构在 frontend 阶段就被转换成 module，module 是显式的数据结构，可审查、可序列化。
+
+### 45.6 迁移步骤与默认切换条件
+
+1. 修好阶段 2 的尾块推导（定位：该 fork 的比较节点类型与 `loop_vars`；改用 `prim_func.script()` 或 `tvm.arith`）。
+2. 增加 `plan_from_module(module)`：由 module 产生 buffer/view/action/submit（复用现有 `Plan` 数据结构与 C 校验），
+   与旧路径逐字段对照（task 几何、K 链、buffers、依赖、submits、publish、数值记录、输出）。
+3. 覆盖更多 guarded-tail 变体（不同 tile 几何、M/N 尾块、swap grid、变量重命名），把“能局部处理/必须拒绝”写进测试。
+4. mock/C 通过后再做板端对照；仅当新旧执行结构逐字段一致且设备输出一致时，才允许把新入口设为 opt-in 默认。
+5. 只有在一条完整算子族（gate/up 的 prefill+decode）上都切换后，才讨论删除旧 extractor。
+
+**退出条件**：新路径对某类结构无法在 TIR 层承载时，必须定位到具体结构与限制并给出最小设计，
+不得以“保留旧 adapter”作为结论。
+
+### 45.7 已知限制与未完成项
+
+- 阶段 2 尾块推导未通过（唯一阻塞点，已定位；在此之前不生成计划）。
+- 尚未实现 `plan_from_module`，因此新路径没有计划、没有 C 校验、没有板测。
+- 只有 guarded-tail 一类源结构；staged FFN、单发射 GEMM 未纳入试点。
+- GPU 后端 pass 清单的逐项对照依赖已派出的研究子代理报告，未到位。
+- 架构说明已写入 `refactor-specific.md` 的新章节（不改写历史章节）。
+
+---
+
+## 47. 参考实现核实后的架构修正：走 TileLang 的 backend/pipeline 缝，而不是自建 stage 模块（2026-11-04）
+
+### 46.0 大白话
+
+§46 的方案把 RKNPU 的结构化 lowering 写成了一个自建的五阶段模块。核实本机 TileLang（0.1.15，commit da4eeab）之后，
+结论要修正：**这套分阶段转换 TileLang 自己就有，并且已经有一个不用线程的后端（CPU）在同一条主链上跑**。
+所以正确的接入点是注册一个 `rknpu` BackendModule + PassPipeline，复用通用主链，只在三个槽位插入 RKNPU 特有的东西；
+我那个 `structured.py` 只应作为过渡期的结构事实提取器，不应成为最终架构。
+
+### 46.1 已独立核实的关键事实
+
+| 事实 | 证据（本地，本会话亲自 grep） |
+|---|---|
+| 无线程主链已存在 | `.pydeps/tilelang/cpu/pipeline.py:17` `MaterializeKernelLaunch(lower_thread_binding=False, unsupported_annotations=["cluster_dims"])`；`:81` 注释说明 CPU 因线程绑定未 lowering 而跳过 `LowerThreadAllreduce` |
+| 后端是可注册的数据清单 | `.pydeps/tilelang/backend/module.py:29` `class BackendModule`、`:238` `register_backend`、`:112` `lower` |
+| tile op 有按 target 解析的实现注册表 | `.pydeps/tilelang/tileop/gemm/registry.py:23` `register_gemm_impl`、`:38` `resolve_gemm_impl` |
+
+（GPU 主链的逐 pass 清单、哪些 pass 带 GPU 假设，由本轮只读研究子代理给出并附 file:line；上述三条是我自己复核的部分，
+其余引用其报告，未逐条复核。）
+
+### 46.2 修正后的架构
+
+```
+TileLang TIR (block/loop/alloc/region 完整)
+   |  rknpu BackendModule.register_backend()
+   v
+PassPipeline("rknpu")  =  通用主链（thread-free）
+   BindTarget -> MaterializeKernelLaunch(lower_thread_binding=False)
+   -> Simplify -> LayoutInference -> LowerTileOp  <-- 槽位 (ii)：RKNPU tile-op 实现
+   -> LowerOpaqueBlock -> FlattenBuffer -> VectorizeLoop -> StorageRewrite
+   -> SplitHostDevice / MakePackedAPI -> 设备侧 RKPlan 发射  <-- 槽位 (iii)
+```
+
+| 槽位 | 内容 | 为什么在这里 |
+|---|---|---|
+| (i) launch 物化 | `lower_thread_binding=False`；grid 只作为 program-index 空间 | 与 CPU 后端一致；不把 block grid 当时间序 |
+| (ii) op lowering | 注册 RKNPU 的 gemm/copy/fill 实现（`register_*_impl`），在 `LowerTileOp` 的语句级匹配里被调用 | 匹配单元是单条 `Evaluate(Call)`，局部 region 自带边界；这正是 RKPlan task 该产生的位置 |
+| (iii) tail | 由 RKPlan 发射 descriptor/命令；RKIR 仍是执行 IR | 复用既有 `Plan`/C 校验/runtime，不引入第二套执行器 |
+
+**这解释了 §45 的阻塞点为什么不该用自建 walker 去解决**：`LowerOpaqueBlock` + `FlattenBuffer` 之后索引已经规范化，
+尾块范围与 guard 变成可以直接读取的仿射表达式，比在本机 fork 的原始比较节点上猜类型可靠得多。
+也就是说，阶段 2 的正确实现方式是**在通用主链之后**分析，而不是在原始 TIR 上手写 visitor。
+
+### 46.3 与 §46 试点代码的关系（不删除，降级定位）
+
+| §46 阶段 | 在全链架构里的对应 | 后续处置 |
+|---|---|---|
+| 0 capture | `BindTarget` + `MaterializeKernelLaunch` 之后的结构事实 | 保留为**审查/诊断用**的结构摘要，不承担 lowering |
+| 1 regions | `LowerTileOp` 的语句级匹配（上游已实现） | 删除自建分类，改用上游匹配 + 我们的 impl |
+| 2 k-partition | 上游 `FlattenBuffer`/规范化后的仿射分析 | 重写在前者之后；当前实现在尾块处仍不正确，已标记阻塞 |
+| 3 tiles | SBlock 迭代 + 输出覆盖 | 保留为断言（coverage 检查） |
+| 4 module | RKPlan 组装 | 保留，作为 slot (ii)/(iii) 的输出契约 |
+
+### 46.4 修正后的迁移清单
+
+1. 定义 `rknpu` BackendModule（target kind 先复用 `c`/自定义 kind 之一）+ `PassPipeline`，只放通用主链，`lower_thread_binding=False`。
+2. 注册最小 tile-op 实现（gemm/copy/fill），先只做**记录**：把 region、索引、K 块、guard 写成 `StructuredModule`（复用 §45 的 dataclass）。
+3. 在 slot (iii) 把 `StructuredModule` 变成 RKPlan（`plan_from_module`），与旧路径逐字段对照：task 几何、K 链、buffer、依赖、submits、publish、数值记录、输出。
+4. mock + C 校验 → 板端对照；仅当新旧逐字段一致且设备输出一致，才把该入口设为 opt-in 默认。
+5. 覆盖第二种源结构（单发射 GEMM）后再谈第三类；一条算子族全绿后才讨论删除旧 extractor。
+
+**退出条件不变**：若某类结构在上游 TIR 层无法承载，必须定位到具体 pass 与限制并给出最小设计，不得以“保留旧 adapter”收尾。
+
+### 46.5 尚未验证
+
+- 本机 TileLang 的 `rknpu` 自定义 target kind 是否需要在 TVM 侧注册（CPU 复用 `c`/`llvm`，我们可能需要自己的 kind）。
+- 通用主链中 `LayoutInference`/`LowerThreadAllreduce`/`ThreadSync` 在无线程目标上的行为：CPU 跳过 allreduce，我们是否也需要跳过并替换（待读 pass 体确认）。
+- 设备侧 codegen 与 execution backend 的接口（`DeviceCodegen`/`ExecutionBackend`）能否只发 RKPlan 而不生成 C 源码。
+
+---
+
+## 48. 缝已跑通（2026-11-04）
+
+实测：绑定 c target 后执行 BindTarget（tvm.tirx.transform）+ MaterializeKernelLaunch(lower_thread_binding=False) + Simplify（tilelang.transform），pilot 源码的 2 个 blockIdx 线程绑定循环变成普通 serial 循环，
+For kind 序列由 [4,4,0,1,1,1,1,1] 变为 [0,0,0,1,1,1,1,1]，IR 中 blockIdx/thread_binding 出现 0 次（39 行 IR）。
+证据：results/20261104T000000Z-structured-lowering/logs/thread-free-spine.txt 与 repros/run_spine.py。
+含义：RKNPU 可以像 CPU 后端一样复用上游 thread-free 主链，§46 自建 walker 的定位收敛为 StructuredModule 契约与审查摘要；
+§46 的 K 尾块阻塞点应改在 FlattenBuffer/Simplify 之后的规范化仿射式上解决。
+未验证：rknpu 自己的 target kind / device codegen / execution backend，以及 FlattenBuffer 之后的尾块仿射式形态。
+
+---
+
+## 49. 结构化 lowering 试点收官：新路径生成有效计划并在设备上执行（2026-11-04）
+
+### 49.0 大白话
+
+新前端（TileLang TIR → StructuredModule）现在能**自己生成一份有效 RKPlan**，并且这份计划与旧 extractor 产出的计划
+**逐字段相同**（任务、提交、publish、绑定、常量、设备/主机字节、BO 数、逻辑算子、数值要求全等），
+两份都通过独立 C 校验器，mock 输出逐位相同，**真机执行输出也逐位相同**（36 任务 / 12 提交；旧 22.809 ms、新 22.804 ms 中位）。
+旧入口与生产默认未改动。
+
+### 49.1 沿上游转换路径：在哪一层分析、为什么不提前 FlattenBuffer
+
+| 决策 | 依据 |
+|---|---|
+| 在**原始 TIR**（SBlock/For/alloc/region）上提取几何、guard、舍入 | 这一层还保留 2-D tile 形状、guard 谓词与 FP16 回写的 copy 结构 |
+| **不**提前 FlattenBuffer | 它把 2-D 缓冲压成一维、tile 形状与 guard 的矩形结构随之消失；本路径的 tile 有效范围、K 尾块、覆盖证明都依赖这些信息 |
+| 逻辑维度取自参数缓冲（A 为 MxK、B 为 KxN），不是从 trip 数推 | trip 数只说明 ceildiv(K,256) 段数，K 的尾块量必须来自真实 K；这正是此前 [256,256,256] 错误的根因 |
+| 线程绑定只用于确认 grid 形状，不当作时间序 | §43 已确认 grid 是 program-index 空间 |
+| 上游 thread-free 主链（§48）作为**迁移目标**而非本试点依赖 | 试点保持库级 API，不改变任何默认 |
+
+### 49.2 K 切片修复与尾块测试
+
+| 用例 | 结果 |
+|---|---|
+| K=576（真实 gate/up） | `[(0,256), (256,256), (512,64)]` |
+| K=257 | `[(0,256), (256,1)]` |
+| M=257 尾块 | grid `(2,1)`，每 tile `valid_rows = [256, 1]` |
+| 覆盖检查 | 由 `grid × tile == 输出` 改为 `grid == ceildiv(M, tile)`，允许 M/N 尾块 |
+
+错误结果不再能被包装成可用模块：`stage2_k_partition` 断言切片覆盖 logical K，`stage3_tiles` 断言 grid 恰好覆盖输出。
+
+### 49.3 plan_from_module：不调用旧 extractor
+
+```
+StructuredModule  --ir.matmul_module(构造助手)-->  RKIR Module
+                  --把 source_schedule / source_k_rounding / source_mn_tiling / source_k_loop 写回 op attrs-->
+                  --compile_rkir(profile, options)-->  legalize -> planner -> submits -> RKPlan
+```
+
+- 只复用 **RKIR 容器、planner、RKPlan、C 校验器、runtime**；`tilelang_adapter.extract()` 完全没有参与。
+- 计划里记录了这批推导：`source_schedule`（tile_m/tile_n/order/k_tile/accumulation）、`source_k_rounding`、
+  `source_mn_tiling`（含 coverage=ragged_tail）、`source_k_loop`（logical_k 与有序 k_blocks）、`source_loop_annotations`（流水提示）。
+
+### 49.4 新旧对照（同一源码、同一 geometry、同一选项）
+
+| 检查 | 旧 extractor 路径 | 新结构化路径 |
+|---|---|---|
+| 任务 / 提交 | 36 / 12 | 36 / 12 |
+| 任务行（模板、inputs、outputs、k_index、k0、k_count、submit_group、deps 数） | — | **逐项相同** |
+| submit（大小、recipe、mode、core_policy） | — | **逐项相同** |
+| publish / 绑定 / 常量（含 pack_key） | — | **逐项相同** |
+| 设备字节 / 主机字节 / BO 数 | 5,491,264 / … / … | 相同 |
+| 逻辑算子 / 数值要求 | 1 / 1 | 相同 |
+| 字段差异集合 | — | **空** |
+| C 校验器 | ACCEPT | ACCEPT |
+| mock 输出 | 与 fp64 参考差 298566 | 与旧逐位相同 |
+| **设备执行** | 22.809 ms（5 轮中位），diff_ref 299760，diff_chain 332 | **22.804 ms**，diff_ref 299760，diff_chain 332 |
+| 设备输出 | — | **与旧逐位相同**；重复稳定、换输入改变、finite |
+
+plan_hash 不同（`b569f125…` vs `1064a6f6854d`），差异来自 `name` 与 `source_hash`（构造助手 vs span 摘要）；
+执行相关的每一个字段都相同，因此不是回归。
+
+### 49.5 RKIR 与 RKPlan 的职责（不再合称“执行 IR”）
+
+| 层 | 职责 | 本试点中的角色 |
+|---|---|---|
+| RKIR（`ir.Module`） | **语义层**：值/算子/角色、数值契约、来源元数据；与 target 无关，可离线构造、可 JSON 往返、可被 mock | 新路径的输出契约：`matmul_module` 构造，schedule/rounding/k_loop 作为 op attrs |
+| planner（`passes/*`） | **决策层**：tile 几何、K 链、buffer/view/BO 规划、submit 分组、publish 切分 | 原样复用，不感知源结构 |
+| RKPlan（`Plan`） | **执行契约层**：绑定、缓冲、视图、动作、依赖、提交、publish、accounting、数值要求 | 新路径与旧路径在此**逐字段相同** |
+| runtime / descriptor / C 校验 | **执行与验证**：descriptor 生成、命令发射、独立 C 校验 | 原样复用；C 校验对新旧计划都 ACCEPT |
+
+### 49.6 关于“CPU 主链适用性”的边界
+
+§48 只证明了一件事：`BindTarget` + `MaterializeKernelLaunch(lower_thread_binding=False)` 能把 block grid 变成普通循环。
+它**不**证明整条 CPU 编译链适合 RKNPU。仍未验证：
+
+- RKNPU 自己的 target kind、device codegen 与 execution backend（是否只发 RKPlan、不生成 C 源码）；
+- `StorageRewrite` / `ThreadSync` / `InferFragment` 在无线程、无 `shared`/`local.fragment` 语义目标上的行为；
+- tile-op 实现注册（`register_gemm_impl` 等）是否足以表达 RKNPU 的 descriptor/命令发射；
+- 本试点仍是库级 API，默认入口与生产路径未切换。
+
+### 49.7 章节编号更正
+
+此前新增的三节与历史 §45 撞号：现将其改为 **§46（结构化 lowering 试点）**、**§47（backend/pipeline 架构修正）**、
+**§48（thread-free 主链跑通）**，并修正节内交叉引用；历史 §45（当前能力、实验结论与重放）保持原样。本节为 §49。
+
+### 49.8 证据
+
+| 物件 | 值 |
+|---|---|
+| 代码 | `python/rknpu_backend/frontend/structured.py`（五阶段 + `plan_from_module`）、`tests/test_structured_lowering.py`（14 例） |
+| 计划 | 旧 `b569f1254b1e…`、新 `1064a6f6854d…`（`plans/old-extractor.rkplan.json`、`plans/new-structured.rkplan.json`） |
+| 设备 | `device-new-vs-old.json`（逐轮时间、diff、逐位一致性）、库 `3749e95d…` |
+| 脚本 | `repros/run_structured.py`、`repros/compare_new_old.py`、`repros/save_plans.py`、`device_run.py`、`board_run.py`、`repros/run_spine.py` |
+| 日志 | `logs/tir-structure.txt`、`logs/thread-free-spine.txt`、`logs/module.json`、`logs/new-vs-old.json` |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261104T000000Z-structured-lowering/repros/compare_new_old.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_structured_lowering.py -q -o addopts=""
+```
+
+### 49.9 尚未完成
+
+- 只有 guarded-tail 一类源结构；单发射 GEMM 与 staged FFN 未纳入新路径。
+- 新路径尚未接入任何 CLI/生产入口（opt-in 库 API），默认未切换。
+- 未在 RKNPU 自己的 backend/pipeline 缝上注册（§47 的迁移第 1 步），仍是库级实现。
+
+---
+
+## 50. 结构化 lowering v2：语义靠证明，计划靠一致性闸门（2026-11-04）
+
+### 50.0 大白话
+
+上一版的结构化模块虽然能生成与旧路径逐字段相同的计划，但它的“语义判断”本身是从整体计数猜的（几个 shared、几个 fragment、
+有没有含 FP16 的 copy），舍入还是调用者传进来的。本轮把它换成**逐语句证明**：每条 guard 的合取项、每次 fill 的值与覆盖、
+回写的方向/类型/位置、操作数与参数的索引轴关系，全部从 TIR 节点推出来；舍入由计算推导，外部声明只做一致性检查。
+`plan_from_module` 之后加了一道**一致性闸门**：planner 重建出的任务数、每个提交的 K 链、数值要求里的 K 链、tile 覆盖必须与
+模块证明的一致，否则拒绝。
+
+设备验证（真实 layer-0 gate/up 权重）：旧 22.755 ms、新 23.377 ms（5 轮中位），都是 36 任务 / 12 提交，**输出逐位相同**。
+
+### 50.1 对 §1 所列问题的结论（逐项）
+
+| 疑点 | 结论 | 现在的做法 |
+|---|---|---|
+| 用 shared BufferStore 数量判 guarded copy | 确认是缺陷 | 改为逐语句：在并行循环内找 `IfThenElse`，要求其合取项全为常量上界，记录 target/indexes/bounds/source；无 guard 的 shared store 直接拒绝 |
+| 用“含 FP16 accumulator 的 copy”判回写 | 确认是缺陷 | 要求 `copy(fp32 fragment → fp16 fragment)`、**位置在 gemm 之后**、且存在 `copy(fp16 → fp32)` 在 gemm 之前；否则分别拒绝 |
+| fill 数量不证明清零与覆盖 | 确认是缺陷 | 每个 shared tile 恰好 1 次 fill，值必须为 0，region extents 必须等于 buffer shape |
+| `lower(source_rounding=...)` 接受调用者描述 | 确认是缺陷 | 签名改为 `declared_rounding`，仅用于交叉检查；舍入由“循环内有 FP16 回写”推出 |
+| K 用参数形状启发式 | 确认是缺陷 | 由**索引关系**推导：哪个 operand 的哪个轴被 K 循环变量索引，那个轴就是 K，另一轴给 M 或 N |
+| grid coverage 只比 extent | 确认不足 | 仍用 ceildiv 覆盖 + 每 tile 有效范围，但 M/N 来自上面的索引角色推导，输出参数由 `shape == [m, n]` 定位 |
+| plan_from_module 重新构造 matmul graph | **属实** | 仍复用 `ir.matmul_module` + planner，但输出必须通过 `verify_plan` 一致性闸门；不一致即拒绝（新增 `PlanConformanceTests`） |
+
+### 50.2 语义负例（离线，全部不送设备）
+
+| 负例 | 结果 |
+|---|---|
+| 缺 A 的 guard | 拒绝：`a shared tile store inside the K loop needs a guarded copy` |
+| 缺 B 的 zero fill | 拒绝：`each shared tile must be zero filled exactly once per K block` |
+| 删除 FP32→FP16 回写 | 拒绝：`no FP32 to FP16 writeback into the running accumulator` |
+| K 循环内出现未被消费的 guard store（写 Y） | 拒绝：`met a statement it does not consume` |
+| 声明 `fp32_final_narrowing` 而计算是每块回写 | 拒绝：`declared source rounding disagrees with the proven rounding` |
+| 变量重命名 | 接受，模块与未重命名一致 |
+| 交换 grid 轴（索引同步交换） | 接受，grid/tile/slices/rounding 与未交换一致 |
+
+### 50.3 结构转换的落点：谁消费了什么
+
+| 结构 | 消费者 | 转换规则 | 转换后由谁承接语义 |
+|---|---|---|---|
+| 串行 K 循环 | `stage1_prove` + `stage2_k_partition` | 静态展开为有序切片（`k0/extent/physical`），因为 trip 数与 K 都是常量 | 计划的 `k0/k_index/k_count` 与数值要求的 `k_chain`（经一致性闸门核对） |
+| 并行循环 + guard | `stage1_prove` | 作为“tile 级 guarded copy”的证明条件；循环本身不进入计划 | 任务的 `k_padding/k_physical_extent` 与 runtime 的零填充 |
+| fill | `stage1_prove` | 证明“整块清零”后由 target 的零常量/零填充承接 | 计划的 padding 政策（既有） |
+| copy（cast） | `stage1_prove` | 证明回写位置/方向后，由上/下载与 K 链承接 | `numeric_requirements` 的 `narrowing_points=k_tile_boundary` |
+| buffer 分配 | `stage0_capture` 记录 scope/shape；规划器决定 RKNPU 存储 | 不机械映射 shared/fragment | 计划的 buffer/view/BO（证据不足的用法仍拒绝：见 50.5） |
+
+### 50.4 计划一致性闸门（新增）
+
+`verify_plan(module, plan)` 检查：任务数 = tiles × slices；每个提交的 `k_index` 集合 = 证明出的切片索引；
+数值要求的 `k_chain` 长度与切片数一致；tile 有效面积之和 = M×N（恰好覆盖一次）。任何一条不满足即 `RK_E_*` 拒绝，
+而不是“planner 怎么排就怎么算”。
+
+### 50.5 真的换掉了什么、还依赖旧路径什么
+
+| 项 | 状态 |
+|---|---|
+| guarded-tail GEMM 的**语义分析**（guard/清零/回写/舍入/操作数角色/K 链/tile 几何） | **已由新路径承担**（旧 extractor 不参与） |
+| 计划的**组装**（buffer/view/BO/submit/publish/accounting） | 仍由现有 planner 承担，但受一致性闸门约束；本轮没有自己发射 buffer 与 submit |
+| 其它形状（单发射 GEMM、staged FFN、含残差/激活） | 仍走旧 extractor |
+| 未被消费的结构（例：K 循环内的其它 store、非矩形 guard、带副作用的调用） | 明确拒绝，不静默忽略 |
+| RKIR / RKPlan 职责 | 保持区分：RKIR 是语义契约（值/算子/数值契约/来源），RKPlan 是执行契约（绑定/视图/动作/提交/publish/accounting）；planner 是决策层 |
+
+### 50.6 验证与设备证据
+
+| 检查 | 结果 |
+|---|---|
+| 结构化单测 | `tests/test_structured_lowering.py` 12 例全绿（证明、负例、合法变体、K=257、M 尾、计划一致性、C 校验） |
+| 全量回归 | **755 passed / 2 skipped / 0 failed / 281 subtests** |
+| 新旧计划签名 | 任务行、提交、publish、常量、设备/主机字节、BO 数逐项相同 |
+| 独立 C 校验 | 新旧计划都 ACCEPT |
+| 设备（真实权重，5 轮中位） | 旧 22.755 ms、新 23.377 ms；输出**逐位相同**；diff_ref 299760、diff_chain 332 两者一致 |
+
+### 50.7 独立审查五问
+
+1. **是否仍是第二套整程序模板提取器？** 不是形态上的模板匹配：判定依据是逐语句证明（guard 合取项、fill 值/覆盖、回写方向与位置、索引轴关系），
+   且程序里出现未被消费的语句会拒绝。但**主要执行结构仍由 planner 组装**，所以只能称“语义分析已替换，计划组装未替换”。
+2. **guard/索引/清零/回写的证明是否真实成立？** 成立且可复现：见 50.2 的五类拒绝与 50.1 的实现方式；
+   guard 的合取项被逐条记录（expr/limit），fill 要求值 0 且 extents 等于 shape，回写要求 fp32→fp16 且在 gemm 之后。
+3. **是否存在接受源码后忽略其计算的路径？** 不允许：K 循环体出现非 Fill/Copy/GEMM/guarded-store 的语句，或 guard store 落在非 shared buffer，都会拒绝。
+4. **后续执行是否实际消费了新路径保留的信息？** 是，但**经 planner**：几何与 K 链来自证明，`verify_plan` 核对计划的 K 链/任务数/覆盖与证明一致；buffer/BO/submit 仍由 planner 决定。
+5. **结构化转换在哪些地方已落地、哪些只是计划？** 已落地：guard/清零/回写/舍入/角色/K 链/tile 几何 + 计划一致性闸门；仍是计划：自建 buffer/BO/submit 发射、在 TileLang backend/pipeline 缝上注册、其它算子族。
+
+### 50.8 证据与重放
+
+| 物件 | 值 |
+|---|---|
+| 代码 | `python/rknpu_backend/frontend/structured.py`（v2，含 `verify_plan`）、`tests/test_structured_lowering.py`（12 例） |
+| 计划 | 旧 `eefe49912249…`、新 `1064a6f6854d…` |
+| 设备 | `device-new-vs-old.json`；库 `3749e95d…` |
+| 脚本 | `repros/{probe_nodes,run_v2,save_plans}.py`、`device_run.py`、`board_run.py` |
+| 日志 | `logs/module-v2.json` |
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_structured_lowering.py -q -o addopts=""
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261104T020000Z-structured-semantics/repros/save_plans.py
+```
+
+### 50.9 尚未完成
+
+- 自建 buffer/BO/submit 发射（当前 fork 到 planner，靠一致性闸门兜底）。
+- 在 TileLang backend/pipeline 缝上注册（§47 迁移第 1 步）与 RKNPU device codegen/execution backend。
+- 其它源结构（单发射 GEMM、staged FFN、带激活/残差）仍走旧 extractor。
+
+---
+
+## 51. 对 §50「语义已证明」的复核与诚实更正（2026-11-04）
+
+### 51.1 用户指出的四点，逐项核实结论
+
+| 指出的缺口 | 复核结论 | 本轮处置 |
+|---|---|---|
+| 用索引文本里有没有 ko 判 K 轴 | **属实**，属变量名依赖 | 已改为**变量身份**判断：`tvm.tirx.stmt_functor.post_order_visit` 收集自由变量，用 `Var.same_as` 与 K 循环变量比较；不再做文本匹配 |
+| 守卫只记录数量，未证明它保护的是实际读取范围 | **属实** | 新增 `_prove_read_range`：对每个 operand 的每个轴证明 (i) 该轴恰有一个 `<` 合取项，(ii) 其上限等于 operand 该轴长度，(iii) 读取索引 == `tile_var * tile_extent + 局部索引`（用 `tvm.arith.Analyzer.can_prove` 逐条证明），(iv) 守卫不得含多余条件 |
+| 计划检查只比任务数/K 序号，抓不到索引算错 | **属实** | 已实现更强的 operand extent 对照，但**未启用**：本树里 `plan.views[*].tensor` 返回的是 buffer extent 而非切片后的 view extent，无法在不猜测的前提下区分两者（见 51.3）。现有闸门仍是任务数、每提交 K 链、数值要求 K 链、tile 覆盖 |
+| 独立审查不能由自我审查替代 | **属实** | 已派出独立只读审查子代理（见 51.4）；其报告在本次交付时尚未返回，本轮**不声称**已完成独立审查 |
+
+### 51.2 本轮实际改动的效果
+
+- 反例（改名 K 变量、错轴索引、越界守卫）现在会在证明阶段被拒：守卫上限必须等于 operand 轴长，读取索引必须等于 `tile_var*tile_extent+局部索引`。
+- 单元测试 **9/12 通过**（证明、负例、合法变体、K=257、M 尾）；**3 个计划一致性测试仍红**——原因是本轮新增的计划 extent 对照无法读取 view 的切片范围，已按 51.1 处置为“暂不启用”，因此测试未恢复。全量回归 **752 passed / 3 failed**，其中 3 个失败即上述计划测试，属未完成项，不是被掩盖的通过。
+
+### 51.3 未完成项与下一步（具体）
+
+1. 计划侧索引对照：需先确认本树 `plan.views[v].tensor` 的正确形状字段（`TensorLayout` 无 `.shape`），再把 `(tiles × slices)` 与每个任务的 operand extent 逐项比对；在此之前不声称计划检查能发现索引错误。
+2. 独立审查：等待子代理报告，按其发现修复；不得以自我审查代替。
+3. 因为 1 未完成，“错误源码被悄悄编译成普通 GEMM”这一风险**尚未被排除**，§50 中“语义已证明”的表述在此**收窄为**：guard/清零/回写/舍入/操作数角色/索引仿射关系已在源码侧证明，但计划侧尚未能独立复核索引映射。
+
+### 51.4 独立审查派发记录
+
+- 子代理 id：`3aab4ebf-0b4c-4b44-b6ab-cba950ebebb2`，只读，任务为按五个问题审查 `structured.py` 与测试，并列出“今天能溜过去的三种源码改动”。
+- 交付时未返回；报告返回后需据其结论继续修复。
+
+---
+
+## 52. 独立审查结论与本轮修补：能证明什么、不能证明什么（2026-11-04）
+
+### 52.0 独立审查的结论（原文要点，审查对象是 md5 9b8b1c1c 的 878 行版本）
+
+审查判定：**partially sound**。真实成立的只有一项证明——共享 tile 拷贝的逐轴 guard/仿射证明（按变量身份，不按名字）。
+决定“这是哪一个程序”的东西（operand→tile 绑定、全局回写、语句顺序、跨 operand 的 K 一致）当时仍由计数、集合与分配顺序决定；
+三个语义不同的程序编译出**逐字节相同的计划**；因此“错误源码不会被静默编译成普通 GEMM”这一说法在当时**为假**。
+
+其列举并复现的缺口（包含修复建议）：
+
+| # | 缺口 | 当时后果 |
+|---|---|---|
+| 1 | 零填充只查数量/值/覆盖，未记录**位置** | fill 移到 guarded copy 之后（tile 全零）仍被接受 |
+| 2 | `if unguarded_shared and not stopped` | 同一 `T.Parallel` 内追加无 guard 的 `As[i,j]=0` 仍被接受 |
+| 3 | 回写只要求“gemm 后有某个 copy”，extent 解析后被丢弃 | 只写回一半累加器仍被接受 |
+| 4 | 只在 K 循环体内取证，**循环外完全不看** | 删除/转置/清零 epilogue、crosswire `As←B,Bs←A` 全部被接受 |
+| 5 | `_operand_roles` 的 `roles["k"]` 被逐个 operand 覆盖，无一致性检查 | `A.k=576` 配 `B.k=512` 被接受，产生 extent=0 的切片 |
+| 6 | tile 形状对所有 operand/所有轴只有一个 | 正确的 BM=128/BN=256 被误拒；`extra[0]` 未证明是该轴的 grid var |
+| 7 | `verify_plan` 只比任务数、k_index 多重集、k_chain 长度、面积和 | 接受 tile 列表倒置、tile 索引整体偏移、`order=n_major` 对 m_major 计划 |
+| 8 | 记录但从不使用的事实 | `satisfied`、`entry["axes"]`、`read_range`（最强证明被丢弃） |
+| 9 | 测试把“与旧路径逐字段相同”当作验收标准 | 反向固化了上述缺口 |
+
+### 52.1 本轮已修（并保留在同一文件中）
+
+| 项 | 现状 |
+|---|---|
+| K 轴判定 | 纯**变量身份**（`stmt_functor.post_order_visit` + `Var.same_as`），无任何名字匹配 |
+| guard ↔ 读取范围 | 逐 operand、逐轴证明：该轴恰有一个 `<` 合取项、上限等于 operand 该轴长度、读取索引 == `tile_var*tile_extent + 局部索引`（`Analyzer.can_prove`），多余合取项拒绝 |
+| tile 形状 | 改为**按 operand 的轴**从它被填入的那个 tile 推导，两个 operand 若不一致则拒绝（修正缺口 6 的一半） |
+| 无 guard 的 shared store | 一律拒绝（修缺口 2） |
+| copy 覆盖 | 每次累加器 copy 的 region extents 必须等于整个 fragment，否则拒绝（修缺口 3） |
+| 语句顺序 | K 迭代体内必须**恰好**是：每个 tile 的 fill → 该 tile 的 guarded copy → `Acc→Cl` → gemm → `Cl→Acc`，各一次；fill 晚于 copy、load 晚于 gemm、回写早于 gemm 均拒绝 |
+| operand↔tile 绑定 | gemm 的第 0 个操作数必须由 K 轴为 1 的 operand 填入，第 1 个由 K 轴为 0 的填入；两个 operand 的 K 长度必须相等（修缺口 5） |
+| 证明进入模块 | `read_range`、`gemm_args`、`epilogue` 现在随 `StructuredModule.proofs` 一并保存（修缺口 8 的一半） |
+
+### 52.2 仍未解决（明确开放项，未用注释冒充已完成）
+
+| 项 | 状态 | 原因 |
+|---|---|---|
+| 整程序闭合（epilogue 证明） | **已实现但禁用**，代码内 NOTE 指明 | 本 TVM tree 的 launch nest 未把 K 循环暴露成任何被访问序列的直接语句，遍历不到“循环外语句集合”；禁用而不是伪造 |
+| 计划侧索引映射复核 | **已实现但禁用** | `plan.views[v].tensor` 返回 buffer extent 而非切片后 extent，无法在不猜测的前提下区分 |
+| `extra[0]` 是否该轴的 grid var | 未证明（缺口 6 的另一半） | 需要把 grid var 与该轴的对应关系也纳入证明；当前只要求“恰好一个非局部变量” |
+| `_operand_roles` 的轴语义 | 仍带位置约定（K 在轴 1 ⇒ M×K） | 与 gemm 绑定证明互补，但尚未合成单一证明 |
+| 测试反向固化 | 仍保留“与旧路径逐字段相同”的测试 | 该测试作为**回归**有价值，但不应作为语义验收；已在报告中降级为回归项 |
+
+### 52.3 因此可以说什么、不可以说什么
+
+- **可以说**：源码侧对“guarded copy 的 guard 与读取范围一致、零填充完整且为 0、累加器链顺序与覆盖完整、回写方向与位置正确、operand 与 tile 的绑定正确、两 operand 的 K 一致”给出了逐条证明；改名 K 变量被正确接受，错轴/偏移/越界守卫被拒绝。
+- **不可以说**：结构化 lowering 已能可靠替换旧适配器。因为整程序闭合（输出是否被正确写回）与计划侧索引映射都还没有被证明，
+  “语义不同的源码得到同一计划”这一风险在上述两点上仍然成立。
+- 设备证据沿用 §50（旧 22.755 ms / 新 23.377 ms，输出逐位相同）——它证明的只是“这一个正确样例能跑对”，不构成上述证明的替代。
+
+### 52.4 下一步（按价值排序，不需要再询问）
+
+1. 解决“循环外语句枚举”：从 `SBlock.body`/`SeqStmt` 的实际结构入手（打印一次真实节点树即可定位），接上已写好的 epilogue 证明。
+2. 解决 view extent 读取：确认 `TensorLayout` 的正确字段或改用 `plan.publish`/`views[v].to_dict()`，接上计划侧索引映射复核。
+3. 把 grid var ↔ 轴的对应关系纳入 `_prove_read_range`。
+4. 补负例：epilogue 删除/转置、crosswire、fill 后移、部分回写、K 不一致、非方 tile。
+
+---
+
+## 53. 闭环证明启用、计划侧对应检查、审查反例入测（2026-11-04）
+
+### 53.1 循环外闭合：已启用，且无法枚举时拒绝
+
+| 项 | 实现 |
+|---|---|
+| 循环外语句枚举 | 改为**结构化归属**（`tvm.ir.structural_equal` 判断哪个序列持有 K 循环），不再依赖 TVM wrapper 的对象 id（每次访问都会新建 wrapper，id 不可靠） |
+| 无法枚举 | 直接拒绝（`cannot enumerate the statements outside the K loop; refusing to skip the closure check`）——按要求**拒绝而非跳过** |
+| 初始化证明 | 循环外必须恰有一次针对运行累加器的 fill，值必须为 0、extents 必须等于整个 fragment |
+| 最终写回证明 | 循环外必须恰有一次对**全局参数**的 guarded store；其值必须读运行累加器；guard 必须是两轴常量上界；store 索引必须等于 `tile_var * tile_extent + 累加器局部索引`（`Analyzer.can_prove`） |
+| 网格轴同一性 | store 的 M/N 轴所用 block 变量必须与读取该轴时所用变量**相同**（身份比较），否则拒绝 |
+| 其余语句 | 一律拒绝（`a statement outside the K loop is not consumed`） |
+
+实测证明结果（真实 pilot 源码）：`[{"axis":0,"bound":256,"tile_var":"im"},{"axis":1,"bound":3072,"tile_var":"inn"}]`，与读取轴一致。
+
+### 53.2 计划侧对应检查（新增）
+
+`verify_plan` 现在核对：每个任务的 `k_index`/`k0` 必须对应证明出的切片；`kt`（如存在）必须等于该切片 extent；`plan.publish` 的 `(dst_row, dst_col, rows, cols)` 集合必须**逐个等于**证明出的 tile 集合。任一项不符即拒绝。
+仍无法核对的是“视图的切片 extent”（`plan.views[v].tensor` 返回 buffer extent），该点保持为开放项。
+
+### 53.3 独立审查的反例已入正式测试
+
+`tests/test_structured_lowering.py` 从 12 例扩到 **17 例**，新增 5 个反例（全部来自上一轮独立审查）：
+
+| 反例 | 实测 |
+|---|---|
+| 删除 epilogue（Y 从不写） | 拒绝：`must write the output parameter exactly once` |
+| epilogue 转置（`Y[inn*BN+j, im*BM+i]`） | 拒绝（索引映射证明失败） |
+| fill 移到 guarded copy 之后 | 拒绝：`filled after the copy` |
+| 部分回写（`Cl[0:128]` → `Acc[0:128]`） | 拒绝：`must cover the whole fragment` |
+| crosswire 操作数（`Bs <- A`） | 拒绝：`GEMM operands do not match the tile` |
+
+回归：`tests/test_structured_lowering.py` **17 passed**；全量 **760 passed / 2 skipped / 0 failed / 281 subtests**。
+
+### 53.4 仍未开放的事项
+
+- 计划侧“视图切片 extent”核对（`TensorLayout` 形状字段）；
+- `extra` 变量是否为该轴 grid var 的独立证明（目前通过 store 与 read 的轴变量身份一致性间接覆盖）；
+- 其它源结构（单发射 GEMM、staged FFN）仍走旧 extractor。
+
+### 53.5 独立复核状态
+
+已就**当前版本**（`structured.py` `48d58c9f…`、测试 `25755b18…`）重新派发独立只读审查（子代理 `24d1b084-d0cd-4a06-a34d-3a9bdab477d5`），逐条对应上一轮的七项 findings。**交付时尚未返回**，因此本轮不引用旧结论、也不宣称复核通过。
+
+---
+
+## 54. 二次独立复核的结论与本轮实际落地情况（2026-11-04）
+
+### 54.1 复核结论（针对 `structured.py` md5 26f139b3、测试 4d10a192）
+
+复核判定：**结论仍然为假**——它有 **8 个语义错误的程序**编译出**逐字节相同**的计划
+（`plan.to_dict()` 摘要 `cc6410c4ef6a5cb4`、`plan_hash 1064a6f6…`、连 `source_hash` 都相同，递归 diff 为 0 条路径）。
+
+| 旧 finding | 复核后的状态 |
+|---|---|
+| 1 整程序闭合 | **部分修复**：store 数量/取值/索引映射/网格轴同一性已证明，删除与转置 epilogue 已被拒；但清零与 store **没有位置**，"清零在循环后""epilogue 在循环前"仍被接受 |
+| 2 operand↔tile 绑定 | **已修复**（arg 交换、K 不一致均被拒）；残余：guarded copy 可位于 GEMM 之后 |
+| 3 语句顺序与 copy 覆盖 | **部分修复**：copy 覆盖与三条循环内前驱关系已证明；copy 与 GEMM 的相对顺序、根级顺序未证明 |
+| 4 无 guard 的 shared store | **部分修复**：只统计到第一个 guarded 语句为止，else 分支不可见 |
+| 5 operand 间 K 不一致 | **已修复** |
+| 6 计划侧只做计数 | **部分修复**：`k0`/`kt`/publish 已真正参与，per-task operand extent 仍禁用 |
+| 7 不同程序同一计划 | **仍成立**，且从 3 个增加到 8 个程序、0 条差异路径 |
+
+其给出的三条最高价值缺口：G1（epilogue guard 上限被收集但从未使用）、G2（根级顺序未证明）、G3（store 可见性：else/兄弟 store、copy 与 GEMM 顺序）。
+
+### 54.2 本轮据此落地的检查（代码已改）
+
+| 检查 | 位置 | 是否会拒绝复核给出的反例 |
+|---|---|---|
+| guarded copy 必须先于 GEMM | `stage1_prove` 的位置表 | 应拒绝（copy 后置） |
+| guarded copy 不得有 else 分支 | `stage1_prove` 的并行循环分支 | 应拒绝（else 垃圾写） |
+| 根级顺序：清零 < K 循环 < 输出 store | `stage1_prove` 用 `root_full` + `loop_position` | 应拒绝（清零后置、epilogue 前置） |
+| 输出 guard 上限必须等于逻辑 M/N | `lower()` 用 `derived["logical_m"/"logical_n"]` 校验 | 应拒绝（宽松 guard） |
+| 单次全局 store 必须写输出参数 | `lower()` 比对 `proofs["epilogue_target"]` 与 `[m,n]` 参数名 | 应拒绝（写 Z） |
+
+### 54.3 但覆盖没有跟上（按用户要求如实交代）
+
+我为上述 5 项写了 6 个正式反例（清零后置、epilogue 前置、宽松 guard、GEMM 前置、else 分支、额外无 guard 输出写），
+为此改动 `_kernel` 工厂加入 6 个变体分支。**该工厂改动破坏了基线内核**（18 例失败），说明变体分支在 TileLang eager 构建下不能这样插入。
+我已把测试文件**回退到 17 例的稳定版本**（全绿），没有把失败测试留在树上、也没有把新检查改成永不触发。
+
+因此本轮状态必须这样描述：**module 侧新增了 5 条检查（在 17 例基线上不误报），但没有任何测试证明它们真的会拒绝复核给出的反例**。
+按“代码改了而测试没改，全绿不算修复”的标准，G1/G2/G3 只能记为**已实现、未验证**。
+
+### 54.4 下一步（最小、具体）
+
+1. 用**独立源文件**（不是工厂分支）为 6 个反例各写一个 kernel，放进测试；这是唯一可靠的扩展方式。
+2. 用复核留在 `/tmp/rkprobe/probe{1..6}.py` 的探针逐条验证新检查确实拒绝，并把这些探针固化为测试。
+3. 之后再谈计划侧指纹（让计划携带 guard/顺序摘要，使不同源码无法哈希到同一计划）。
+
+### 54.5 验证现状
+
+- `tests/test_structured_lowering.py`：**17 passed**（与复核基线一致，未新增覆盖）。
+- 全量：**760 passed / 2 skipped / 0 failed / 281 subtests**。
+- 计划摘要与 `plan_hash` 仍与复核报告一致（`1064a6f6…`），即计划侧未引入新信息。
+
+---
+
+## 55. 复核反例入测、可见性修复与第三轮独立复核（2026-11-04）
+
+### 55.1 上一轮遗留的覆盖缺口已补：独立源文件形式的反例
+
+新增 `tests/test_structured_negatives.py`（**11 例**）：每个反例都是一份完整的 TileLang 程序，而不是工厂分支——
+因为 eager 构建器需要从源码文本解析内核，工厂变体会破坏基线内核（上一轮已实际踩到并回退）。
+
+| 反例（独立源文件） | 期望 | 实测 |
+|---|---|---|
+| `reference`（基线） | 接受 | 接受；切片 `[(0,256),(256,256),(512,64)]`，grid `(1,1)` |
+| `non_square`（BM=128/BN=256） | **接受**（修复核 finding D 的误拒） | 接受；`tile_shape=(128,256)`、grid `(2,1)`、两个 tile `valid_rows=128` |
+| `clear_after_loop` | 拒绝 | `cleared before the K loop` |
+| `epilogue_first` | 拒绝 | `output store must follow` |
+| `loose_guard`（`<1024/<4096`） | 拒绝 | `not the logical extent` |
+| `gemm_first`（gemm 在两个 guarded copy 之前） | 拒绝 | `must precede the tile GEMM` |
+| `else_branch`（guarded copy 带 else） | 拒绝 | `else branch` |
+| `extra_output_store`（额外无 guard 的 `Y=0` 循环） | 拒绝 | 根级未 guard 的输出写 |
+| `write_to_z`（写第 4 个参数 Z，Y 未写） | 拒绝 | 输出参数不唯一/不匹配 |
+| `guard_on_loop_vars`（guard 只绑循环变量、无 tile 偏移） | 拒绝 | `does not bound the axis it stores` |
+| `sibling_shared_store`（guarded copy 后追加无 guard 的 `As=0`） | 拒绝 | `exactly one guarded copy` |
+
+### 55.2 为使上述反例成立而修的实现
+
+| 修复 | 说明 |
+|---|---|
+| `_walk` 补全 | 现在也下降 `a`/`b`（算术操作数），不再因表达式嵌套而看不见节点 |
+| 并行循环内的 store 可见性 | 改为显式 `scan(current, inside_guard)` 递归：**逐个**判断 store 是否在 guard 内，删除“遇到第一个 guard 就停”的截断；`else` 分支直接拒绝；`guarded != 1` 或 `unguarded > 0` 即拒绝 |
+| 根级 store 可见性 | 根级每个 `For` 统计全部 BufferStore 与 guarded store，数目不等即拒绝（此前只收集 guarded 的，其余静默忽略） |
+| 根级顺序 | 记录 `root_full` 与 `loop_position`，要求 `清零 < K 循环 < 输出 store` |
+| 输出 guard 上限 | 必须等于 `derived["logical_m"/"logical_n"]`，且 guard 左式必须与 store 索引同式（`Analyzer.can_prove`） |
+| 输出参数唯一性 | `[m,n]` 形状的参数必须唯一，且 store 目标必须等于它 |
+| 每 operand 的 tile 几何 | 不再把所有 operand/轴合并成一个 tile_shape；`tile_m` 取自 m×k operand 的 tile 行、`tile_n` 取自 k×n operand 的 tile 列、`block_k` 两侧必须一致——这才让 BM≠BN 通过（修 finding D） |
+
+### 55.3 仍未解决（按复核 finding 编号）
+
+| finding | 状态 |
+|---|---|
+| A1/A2（清零与 store 无位置） | **已修**（根级顺序证明 + 反例） |
+| A3（guard 上限未用） | **已修**（上限必须等于逻辑 M/N，反例覆盖宽松 guard） |
+| A4（根级无 guard store、else、输出目标未绑定） | **已修**（三者各有反例） |
+| B1（guarded copy 可晚于 GEMM） | **已修**（位置表要求 copy < gemm，反例覆盖） |
+| B2（`_walk` 不下降算术） | **已修** |
+| D（非方 tile 误拒） | **已修**（`non_square` 接受） |
+| **C1（`verify_plan` 无法区分两个不同源码）** | **仍未修**：计划里不携带 guard/顺序事实，因此两份不同源码仍可得到同一计划。这是下一步的主要工作（给计划加 guard/顺序指纹） |
+
+### 55.4 验证
+
+- `tests/test_structured_lowering.py`：17 passed（未改动语义断言，仅放宽一条诊断匹配）
+- `tests/test_structured_negatives.py`：**11 passed**（新增）
+- 全量：**771 passed / 2 skipped / 0 failed / 281 subtests**
+
+### 55.5 第三轮独立复核
+
+已就当前版本重新派发独立只读审查（子代理 `62d851bb-6c29-4d85-85fe-07091b174b72`），任务为逐条判定 A1–D 是否已修、
+指出仍能通过的变异、并给出“错误源码能否被静默编译成同一 GEMM”的结论。**交付时尚未返回**，故本轮不引用其结论。
+
+---
+
+## 56. 值同一性、迭代覆盖、可见性与计划来源标识（2026-11-04）
+
+### 56.0 大白话
+
+第三轮复核证明了一件必须承认的事：**计划哈希相同不等于源码相同**——它在旧版本上让 8 个语义不同的程序编译出同一份计划。
+本轮按它给出的优先级修了四类"能溜过去"的问题，并给计划加了**源码摘要标识**，使不同源码不再共享 plan_hash。
+
+### 56.1 复核 U1–U6（不安全放行）→ 已修并各有反例
+
+| 复核缺口 | 旧行为 | 现在 |
+|---|---|---|
+| U1 operand copy 值做算术（`A[...]+1`） | 接受 | 拒绝：`must store exactly the operand read`（`_structurally_equal(then.value, load)`） |
+| U2 operand copy 读两次（`A[...]+A[...]`） | 接受 | 同上拒绝 |
+| U3 输出值做算术（`Acc*2`/`Acc*0.5`） | 接受 | 拒绝：`must store the accumulator value itself`（要求 `store.value` 恰为 BufferLoad） |
+| U4 guarded copy 只迭代部分 tile（半 K 列） | 接受 | 拒绝：`must iterate the whole tile`（并行循环 nest 的 extent 必须等于目标 tile 形状） |
+| U5 epilogue 只迭代部分 tile（128/256 行） | 接受 | 拒绝：`epilogue must iterate the whole tile` |
+| U6 K 循环内 local scope 的兄弟 store | 接受 | 拒绝：`every non-global store inside the K loop must be the one guarded copy of a tile`（统计所有非 global scope，不再只看 shared） |
+
+### 56.2 复核 F1–F4（误拒）→ 已修
+
+| 缺口 | 修复 |
+|---|---|
+| F1 epilogue guard 合取项顺序不同（M≠N 时误拒） | 轴→上限的映射改为"用与 store 索引同式的那个合取项"（`Analyzer.can_prove(guard_lhs == store.indices[axis])`），不再按位置取；删除原来的 no-op |
+| F2 `Bs` 先于 `As` 声明（BN≠BK 时误拒） | `stage2`/`stage3` 改用 `_prove_read_range` 证明出的 `block_k` 与 `tile_shape`，不再按 `shared[0]/shared[1]` 的分配顺序取值（原先证明结果被丢弃） |
+| F3 恰好覆盖时无 guard 的 epilogue 误拒 | 允许无 guard epilogue，但必须满足 `grid × tile == logical`（严格覆盖），并照常证明索引映射 |
+| F4 根级 else 分支的诊断误导 | 根级 `IfThenElse` 带 else 时给出专属消息 `the output store must not have an else branch` |
+
+### 56.3 计划来源标识（C1 的收窄）
+
+`plan_from_module` 现在把**源码摘要**写进计划名：`structured-linear:<source_digest>`；`verify_plan` 校验该摘要必须出现在 `plan.name` 中。
+因此两份不同源码（摘要不同）**不再共享 plan_hash**——这是"计划哈希相同"这一具体症状的直接修复。
+计划仍只是**骨架**：它携带已证明的几何、K 链与源码摘要，但不携带语句级证明；值同一性与迭代覆盖在**建计划之前**强制，不依赖 `verify_plan`。该限制已写入 `verify_plan` 的 docstring。
+
+### 56.4 测试（独立源文件，逐个变异）
+
+`tests/test_structured_negatives.py` 现有 **23 例**，覆盖：
+
+- 反例：`clear_after_loop`、`epilogue_first`、`loose_guard`、`gemm_first`、`else_branch`、`extra_output_store`、`write_to_z`、`guard_on_loop_vars`、`sibling_shared_store`、`copy_value_plus_one`、`copy_value_twice`、`output_value_doubled`、`partial_operand_copy`、`partial_epilogue`、`local_sibling_store`、`store_into_a`、`root_else_branch`；
+- 正例：`reference`、`non_square`（BM=128/BN=256）、`reordered_guard`（M≠N、合取项换序）、`bs_first`（Bs 先声明）、`unguarded_epilogue`（恰好覆盖）；
+- 来源：两份不同源码产生不同 `plan_hash`，且 `plan.name` 含源码摘要。
+
+### 56.5 验证与身份
+
+| 项 | 值 |
+|---|---|
+| `tests/test_structured_negatives.py` | **23 passed** |
+| `tests/test_structured_lowering.py` | 17 passed |
+| 全量 | **783 passed / 2 skipped / 0 failed / 281 subtests** |
+| `structured.py` | `81406b39…` |
+| `test_structured_lowering.py` | `a59da77d…` |
+| `test_structured_negatives.py` | `15c28d56…` |
+
+### 56.6 仍未关闭
+
+- 第四轮独立复核已派发（子代理 `114e958f-fbc0-40bb-b68b-1dee9cc9a8cc`），**交付时尚未返回**，故不引用其结论。
+- 计划仍不携带语句级证明（值/覆盖在计划前强制）；若要"计划自证源码"，需要把证明摘要纳入 RKIR 允许的 attrs 并让 planner 透传，属独立改动。
+- 单发射 GEMM、staged FFN 仍走旧 extractor。
+
+---
+
+## 57. 零长切片、无 guard epilogue 的覆盖证明，以及第四轮复核失败后的重派（2026-11-04）
+
+### 57.0 交代：第四轮独立复核未完成
+
+子代理 `114e958f-fbc0-40bb-b68b-1dee9cc9a8cc` **在返回结论前失败，没有留下任何报告**。
+因此本轮**不引用**它的任何结论，也不把“已复核”写进记录；随后重新派发了一个范围更窄、预算更小的第五轮复核（`18c47929-1c4c-451d-9f0d-d00f3216be12`，六个问题 + 每个问题一次探针）。
+
+### 57.1 本轮新增/加强的检查
+
+| 检查 | 说明 |
+|---|---|
+| 零长 K 切片 | `stage2_k_partition` 现在拒绝 `extent <= 0` 的切片。此前一个 `T.Pipelined(T.ceildiv(1024,256))`（4 trips）配 K=576 会得到 `(768, 0)` 这种零长切片并被接受 |
+| 无 guard epilogue 的严格覆盖 | `grid × tile == logical M/N` 才允许无 guard 的输出写；否则拒绝（`an unguarded epilogue needs an exactly covered grid`） |
+| 输出轴交换（方阵情形） | 新增反例 `swapped_axes_square`（M=N 时索引轴交换，形状检查失效），由“store 索引必须是 tile 坐标 + 局部索引”拒绝 |
+
+### 57.2 测试规模
+
+| 文件 | 例数 |
+|---|---|
+| `tests/test_structured_lowering.py` | 17 |
+| `tests/test_structured_negatives.py` | **25**（反例 19、正例 5、来源 1） |
+| 全量 | **785 passed / 2 skipped / 0 failed / 281 subtests** |
+
+新增反例：`extra_k_trip`（多一次 K 迭代 → 零长切片）、`swapped_axes_square`（方阵下交换输出轴）。
+
+### 57.3 我自查的其余残留类别（均已被现有证明拒绝，理由列在括号里）
+
+| 变异 | 结果 | 依据 |
+|---|---|---|
+| 输出写进某个输入参数 | 拒绝 | 输出参数唯一性 + store 目标绑定（`does not write the output parameter`） |
+| 两个根级 For 各写一次输出 | 拒绝 | 根级 store 计数必须为 1 |
+| 回写目标换成另一个 fp16 fragment | 拒绝 | 恰好一个 fp16 累加器（`len(fp16) != 1` 即拒） |
+| gemm 的两个操作数 tile 交叉 | 拒绝 | `tile_source[gemm_args[i]]` 的 K 轴必须分别为 1/0 |
+| A 的读用错 block 变量 | 拒绝 | store 轴变量必须出现在该轴的读变量集合里（grid axis identity） |
+| epilogue 读 `Acc[j,i]`（局部索引反序） | 拒绝 | `store.indices[axis] == tile_var*tile + stored_value.indices[axis]` 无法证明 |
+
+### 57.4 仍未关闭
+
+- 第五轮独立复核**尚未返回**；返回后按其结论继续。
+- 计划仍是骨架（值/覆盖在计划前强制），`verify_plan` docstring 已写明这一点。
+- 单发射 GEMM、staged FFN 仍走旧 extractor。
+
+---
+
+## 58. 第五轮独立复核通过项与当前代码的设备验证（2026-11-05）
+
+### 58.0 大白话
+
+第五轮独立复核（只问六个问题）没有找到任何能改变计算却被接受的源码变异，并逐条确认了检查成立。
+随后用当前代码重新生成真实 gate/up 形状（256×576×3072）的两份计划并在 RK3588 上跑通：新旧输出逐位相同。
+
+### 58.1 六问结论
+
+- 操作数拷贝存别的值（A+1、A+A）：不能，结构相等检查拒绝，两例均在测试中。
+- 输出存 Acc*2：不能，要求输出值恰为裸 BufferLoad。
+- 拷贝循环或 epilogue 只迭代部分 tile：不能，nest 必须等于 tile 形状，守卫上限必须等于逻辑范围。
+- K 循环内其它局部 store：不能，逐 For 统计非 global store，恰一个 guarded、零个 unguarded。
+- 两份不同源码共享 plan_hash：不能，计划名嵌入 source_digest，verify_plan 强制校验，三份探针哈希互异。
+- 仍能通过且改变计算的变异：未发现（其另有 6 个额外探针全部被拒）。
+
+**必须记录的语义边界**：值同一性用的是常量折叠后的结构相等，所以 A[...] + 0 被接受——TVM 已把它折叠成裸读，计算本身相同，源码摘要仍然不同因此计划哈希可区分。这不是漏洞，而是证明计算而非文本的正确行为。
+### 58.2 当前代码的设备验证（真实 layer-0 gate/up 权重，5 轮交错，库 3749e95d）
+
+- 旧 extractor：计划名 tilelang:gate_up，36 任务 / 12 提交，中位总时间 8.364 ms。
+- 结构化路径：计划名 structured-linear:904df70bc63bdfa3，36 任务 / 12 提交，中位总时间 8.546 ms。
+- 两条路径的输出**逐位相同**（差异 0），与 fp64 参考差 298668、与每 K 块写回链差 330，两侧完全一致；重复稳定、换输入改变、finite 均通过。
+- 计划哈希：旧 acd9e04d1d38…、新 20a0096095c7…，差异来自计划名里的源码摘要，执行字段相同。
+- 绝对耗时应与本轮内对照比较（两路径相差约 2.2%），不与历史会话的绝对值混用。
+
+### 58.3 结论：哪些已替换、哪些仍依赖旧路径
+
+- guarded-tail GEMM 家族的语义判定（guard、清零、回写、舍入、操作数角色、K 链、tile 几何、值同一性、迭代覆盖、根级顺序、输出目标）：**已由新路径证明并强制**，旧 extractor 不参与。
+- 计划组装（buffer、view、BO、submit、publish、accounting）：**仍由旧 planner 承担**；新路径提供已证明的骨架，verify_plan 核对任务数、K 链与偏移、publish tile 与源码摘要。
+- 计划来源身份：新路径计划名携带源码摘要，两份源码不再共享 plan_hash。
+- 其它源结构（单发射 GEMM、staged FFN、带激活或残差）：仍走旧 extractor。
+- 生产入口：未切换，新路径是库级 opt-in API，尚未在 RKNPU backend/pipeline 缝上注册。
+
+**判断**：就「用结构化 lowering 替换整程序模板提取」而言，**在一个算子家族上已经落地**，并经三轮独立复核逐步逼近到「未发现可改变计算的通过项」；
+但**整体替换未完成**：计划组装仍是旧的，覆盖面仍是一个家族，且未进入生产路径。verify_plan 只能核对骨架，值/覆盖类证明在计划之前完成，
+因此「计划自证源码」仍需把证明摘要纳入 RKIR 允许的 attrs 并透传（独立改动）。
+### 58.4 身份与证据
+
+- structured.py：b38bf36d（本轮未再改动）。
+- tests/test_structured_lowering.py：a59da77d；tests/test_structured_negatives.py：e51ce217。
+- 计划：clans/old-extractor.rkplan.json 与 plans/new-structured.rkplan.json（旧 acd9e04d、新 20a0096095c7）。
+- 设备：device-current.json（逐轮时间、逐位一致性、diff 统计）。
+- 脚本：repros/gate_up_plans.py、device_run.py、board_run.py。
+- 回归：785 passed / 2 skipped / 0 failed / 281 subtests。
+
+---
+
+## 59. 架构验收：当前新路径还不是逐步编译（2026-11-05）
+
+### 59.0 先纠正我上一轮的两处说法
+
+1. **源码摘要进入计划名只增加身份区分，不证明计算传递正确。** 不同的源码本来就可以合法地产生同一个执行计划；
+   真正要证明的是"计算是否被正确保留"，而这一点由计划之前的证明负责，计划哈希既不证明也不否定它。上一轮把两者混在一起表述，是错的。
+2. **复用旧 planner 不是重构未完成的原因。** 复用完全可以是对的；问题在于新路径**是否仍然先识别一种完整程序形态、抽取参数、再重建 GEMM**。
+   如果答案是"是"，那么即使检查再严密，架构上仍不是逐步编译。这一节专门回答这个问题。
+
+### 59.1 验收方法与证据
+
+按三条标准检查 `frontend/structured.py`：(a) 程序结构如何被逐步转换；(b) 什么信息真正驱动计划生成；(c) 新路径如何接入 TileLang 正式编译流程。
+
+#### (a) 结构如何被转换 —— 结论：一次性识别 + 丢弃结构
+
+| 阶段 | 实际做的事 | 结构去哪了 |
+|---|---|---|
+| `stage0_capture` | 在**整份 PrimFunc** 上判定：恰好 2 维 block grid、恰好 1 个 serial 循环且其子树含 tile op、至少 4 个内核内分配 | 循环/guard 被读成"骨架对象"，未形成 IR 表示 |
+| `stage1_prove` | 要求恰好 2 shared + 2 fragment（1 fp16/1 fp32）、恰好 1 个 gemm、2 个 guarded copy、1 条累加器链 | 语句树只作为**证明的证据**，证明完即丢弃；模块只保留标量与摘要 |
+| `stage2_k_partition` | 由证明出的 K 与 `block_k` 生成有序切片 | K 循环被静态展开为数字表 |
+| `stage3_tiles` | 由 grid 与 tile 形状生成每 tile 有效范围 | 输出覆盖被压成 tile 列表 |
+| `plan_from_module` | `ir.matmul_module(m, k, n)` **重建一个 matmul 算子** + 写回 schedule attrs，交 planner | 程序重新变成一个单算子图 |
+
+即：**当前架构 = 整程序形态识别 + 参数抽取 + 单 GEMM 重建**，只是把"猜"换成了"证明"。这不是逐步编译。
+
+#### (b) 什么信息驱动计划生成 —— 结论：数字，不是结构
+
+`plan_from_module` 传给 planner 的全部信息是：`logical_m/k/n`、`tile_shape`、`order`、`rounding`、`slices`、`k_blocks`、`hints`。
+语句顺序、guard、缓冲生命周期、值同一性、迭代覆盖这些**证明对象**都不进入计划；它们在计划之前被当作硬性前置条件（拒绝或通过），而不是被转换成执行结构。
+
+#### (c) 与 TileLang 正式流程的关系 —— 结论：在流程之外
+
+- 没有注册 `BackendModule`/`PassPipeline`；`lower()` 直接吃 PrimFunc，用自写 visitor 遍历，**不经过任何上游 pass**。
+- 实测（真实 gate/up 形状，`BindTarget` + `MaterializeKernelLaunch(lower_thread_binding=False)`）：
+  - **不加 `Simplify`**：新路径**接受**，并证明出与源码形态一致的事实——tile (256,256)、grid (1,12)、切片 256/256/64；
+  - **加 `Simplify`**：新路径**拒绝**（`guarded copy indexes and bounds disagree`），因为 `bx*256+i < 256` 在 grid 维为 1 时被折叠为恒真而删除，
+    而 2 维并行循环仍在，于是"每轴一个 guard 合取项"的前提不成立。
+- 结论：**当前证明所依赖的事实只存在于折叠之前的那种形态里**；一旦进入上游流程的第一步规范化，这些事实就消失了。
+  这既说明"新路径尚未接入流程"，也说明接入时**必须先决定它站在哪一步之后**。
+### 59.2 验收判定
+
+| 标准 | 判定 |
+|---|---|
+| 是否逐步转换程序结构 | **否**：一次性识别整程序形态，随后把结构丢弃，只留标量与摘要 |
+| 结构是否参与后续转换 | **否**：后续转换的输入是 `StructuredModule`（数字 + 摘要），不是 IR |
+| 是否接入正式编译流程 | **否**：未注册 backend/pipeline，未走任何上游 pass |
+| 证明是否真实 | **是**：四轮独立复核，最后一轮未发现可改变计算的通过项；该部分是可保留的资产 |
+| 是否可继续扩展算子覆盖 | **暂不**：先把架构方向定下来，否则每扩一个算子都在重复"识别 + 重建"的模式 |
+
+### 59.3 方向（能力最小、可验证）
+
+1. **把证明变成 pass，而不是前置门槛**：注册 `rknpu` 的 `BackendModule` + `PassPipeline`（线程无关主链），让程序结构由上游 pass 保留；
+   我们的分析以 pass 形式运行，输入是**上游 pass 之后的 IR**，输出仍是 IR（例如把 `tl.tileop.*` 调用降低为带已证明属性的 RKNPU tile op），而不是跳过流程直接产出 dataclass。
+2. **证明义务要跟着形态走**：折叠之后 guard 可能消失，因此"每轴一个 guard 合取项"必须改成可选项——
+   当该轴 grid 维为 1 且 `tile == 逻辑长度` 时，用**网格覆盖**（`grid × tile == M/N`，可 `Analyzer` 证明）替代 guard 证明。本轮实测已给出这条规则的触发条件。
+3. **让结构而不是数字驱动计划**：计划的任务应由"tile op 区域 + 已证明属性"生成，而不是由一个重建的 matmul 算子推出；
+   这可以在现有 planner 之上做（把证明结果写成 tile op 的属性，由 planner 消费），不需要新写计划组装器。
+4. **验收门槛**（下一轮）：同一份源码在"上游 pass 之后"被接受、证明不变，并且执行计划的任务几何/K 链/覆盖与证明一致；
+   届时才谈扩大算子覆盖。
+
+### 59.4 本轮实际改动（唯一一处，服务于方向 1 的第 0 步）
+
+`stage0_capture` 不再要求"2 个 thread_binding 循环"，改为**在 IR 上按深度优先栈识别**：K 循环 = 子树含 tile op 的最内层 serial 循环，其祖先即 block grid。
+因此同一份分析**既能吃原始 eager 形态，也能吃 `MaterializeKernelLaunch(lower_thread_binding=False)` 之后的形态**（实测后者被接受并证明出同样的事实）。
+这是把分析挪进流程的前提；本轮**没有**注册 backend、没有改 planner、没有新增计划字段。
+
+### 59.5 验证与证据
+
+- 回归：`tests/test_structured_lowering.py` 17 + `tests/test_structured_negatives.py` 25 = **42 passed**；全量见本节末次记录。
+- 证据：`results/20261105T020000Z-architecture-acceptance/`（`normalised-raw.tir.txt`、`normalised-simplified.tir.txt`、`repros/pipeline_probe.py`、`repros/gate_up_kernel.py`、`normalised.tir.txt`）。
+- 该目录记录了两个关键事实：不折叠时新路径接受；折叠后拒绝，且拒绝原因可精确归因到 guard 消失。
+
+---
+
+## 60. 正式 pass 编译试点：guarded-tail GEMM 经 pass 链生成计划并在设备上执行（2026-11-05）
+
+### 60.0 大白话
+
+这一轮把原型换成了**真正的 pass 链**：程序先经上游 pass 规范化，然后由 `pass_localise` 把每个 `tl.tileop.*`
+调用改写成 RKNPU 的 `rk_gemm/rk_copy/rk_fill` 调用（参数是已证明的事实），再由 `pass_instantiate` 静态展开 grid 与 K 循环、
+在迭代域上判定 guard 后得到一条**任务序列 IR**；计划由这条序列读回的 tile/K 实例驱动。
+旧的 TileLang extractor 和结构化原型都没有参与。
+
+实测：原始 PrimFunc、`MaterializeKernelLaunch(lower_thread_binding=False)` 之后、以及再经 `Simplify` 之后，
+**三种输入形式经同一套 pass 得到同一份计划**（`f3eb162f…`，36 任务 / 12 提交）；计划与 `scheduled_baseline` 参考构建器**逐字段相同**；
+真机上两条路径输出**逐位相同**（旧 12.298 ms、新 12.332 ms 中位，真实 layer-0 gate/up 权重）。
+
+### 60.1 链与各阶段 IR
+
+| 阶段 | 类型 | 输入 → 输出 | 证据 |
+|---|---|---|---|
+| `bind-target` | 上游 transform | PrimFunc → 带 target 的 IR | `stage-0-upstream.tir.txt` 前段 |
+| `materialize-kernel-launch` | 上游 transform | block grid 物化为 `T.grid` 串行循环 | `stage-0-upstream.tir.txt`（37 行） |
+| `pass_localise` | **改写** | 每个 tile op → `rk_gemm/rk_copy/rk_fill` extern 调用 | `stage-1-localise.tir.txt`（37 行，1:1 替换） |
+| `pass_instantiate` | **改写** | 循环静态展开 + guard 判定 → 单一 SeqStmt | `stage-2-instantiate.tir.txt`（200 行、192 个 rk 调用） |
+| `tasks_from_module` | 读取 | 从 IR 读回任务记录（kind/operands/m0/n0/rows/cols/k0/kt） | `repros/dump_stage_ir.py` 输出 |
+| `instances_from_tasks` | 读取 | 按程序顺序取 tile 与 K 切片实例（尾部按逻辑范围裁剪） | 同上 |
+| `compile_from_tasks` | 组装 | 既有 `_Builder` + submits + 存储 + verifier → RKPlan | `repros/save_plans.py` |
+
+`pass_localise` 不是"包装分析函数"：它通过 `stmt_functor.ir_transform` 真实替换 IR 节点，
+例如 `T.call_extern("void", "rk_fill", "Acc", 0)` 替换原来的 `T.fill(T.region(Acc...), 0)`。
+`pass_instantiate` 的 guard 判定在**迭代域**上做：能证明为真则删除该 guard，能证明为假则删除语句，两者都不能则拒绝。
+
+### 60.2 规范化前后：guard 被折叠也能证明
+
+旧原型在 `Simplify` 之后拒绝（`bx*256+i < 256` 在 grid 维为 1 时被折叠为恒真而删除）。新 chain 用**迭代域 + 路径条件**证明访问合法：
+
+- 对每个逐元素访问，断言 `0 <= index` 且 `index + 1 <= 操作数该轴长度`；
+- 把该访问所在 guard 的合取项作为路径条件，用 `Or(Not(cond), claim)` 交给算术分析器；
+- 同时用 `Analyzer.bind` 绑定所在循环的真实 domian（grid、K、并行循环）。
+
+因此 guard 存在时用 guard，guard 被折叠后用循环 domain，两者都能证明；不能证明则拒绝（不会补一个源码没有的 guard）。
+### 60.3 证明资产如何被后续转换消费
+
+| 证明 | 消费点 |
+|---|---|
+| operand→shared tile→GEMM operand 绑定（K 轴由变量身份判定） | `rk_gemm` 的参数顺序与 `facts.operand_a/b`；plan 的 binding 角色 |
+| guarded copy 的索引与覆盖（nest == tile 形状、值同一性） | 决定任务读取区域与 K 切片宽度（`kt`） |
+| 零填充值/覆盖/位置 | 计划前的硬门槛；任务的 `k_padding`/零常量沿用既有组装 |
+| 累加器 load/GEMM/writeback 的顺序、方向、完整覆盖 | 任务链（`k_index` 0..2 的 mm→mm_acc）与 narrowing 记录 |
+| 输出 store 的索引映射与 guard 上限（或恰好覆盖） | `publish` 的 tile 矩形（由 `instances_from_tasks` 的 rows/cols 决定） |
+| K 尾部（logical K 与切片宽度的最小值） | `kt` 与视图 extent，以及 C 校验的 upload 范围 |
+
+注意：`instances_from_tasks` 里 tile 的 rows/cols 与 K 的 extent 都按**逻辑范围裁剪**，这是 C 校验器能接受 upload 范围的原因。
+
+### 60.4 测试与负例矩阵
+
+`tests/test_rknpu_pass_pipeline.py`（10 例）覆盖：三种规范化输入同计划、阶段列表与任务序列、与参考构建器逐字段对照、
+保存/加载、非方 tile、声明顺序交换、guard 合取项换序、恰好覆盖的无 guard epilogue，以及 **19 个语义变异全部被拒**。
+
+负例矩阵（全部走 pass 入口）：
+
+- 拒绝：`clear_after_loop`（清零位置）、`epilogue_first`（store 位置）、`loose_guard`（guard 上限）、`guard_on_loop_vars`（guard 未绑 store 索引）、
+  `gemm_first`（copy 晚于 GEMM）、`else_branch`/`root_else_branch`（else 分支）、`extra_output_store`（第二次输出写）、
+  `write_to_z`（输出参数不唯一）、`store_into_a`（store 目标不是输出参数）、`sibling_shared_store`/`local_sibling_store`（未消费 store）、
+  `copy_value_plus_one`/`copy_value_twice`（值同一性）、`output_value_doubled`（输出值算术）、`partial_operand_copy`/`partial_epilogue`（覆盖）、
+  `swapped_axes_square`（输出轴交换）、`extra_k_trip`（零长 K 切片）。
+- 接受：`reference`、`non_square`(128×256)、`bs_first`、`reordered_guard`(M≠N)、`unguarded_epilogue`（恰好覆盖）。
+
+### 60.5 计划对照与设备验证
+
+| 检查 | 结果 |
+|---|---|
+| 与 `scheduled_baseline` 参考构建器 | 任务行（模板/inputs/outputs/k_index/k0/k_count/submit_group）、提交、publish、设备/主机字节、BO 数、逻辑算子、数值要求、K 链**逐项相同** |
+| 独立 C 校验器 | 三种输入形式的计划全部 ACCEPT |
+| mock 执行 | 三种形式输出逐位相同，与 fp64 参考差 299506 |
+| **真机（真实 layer-0 gate/up）** | 旧 12.298 ms / 新 12.332 ms 中位（5 轮交错），均 36 任务 / 12 提交，**输出逐位相同**；`diff_ref` 298668、`diff_chain` 330 两侧一致 |
+
+### 60.6 与旧路径、生产默认的关系
+
+- 旧入口 `compile_tilelang`（TileLang extractor）与 `structured.compile_guarded_tail`（原型）都保留，未改默认。
+- 本轮新增的是 opt-in 入口 `rknpu_pass.compile_guarded_tail(prim_func, profile=..., options=...)`。
+- 计划组装复用既有 `_Builder`/`build_submits`/`assign_storage`/verifier/runtime；只新增"由实例驱动"的入口 `build_from_tasks`，没有第二套缓冲或提交系统。
+### 60.7 仍未做到（准确列出）
+
+| 项 | 状态 |
+|---|---|
+| 注册 TileLang `BackendModule`/`PassPipeline` | **未做**：链由 `rknpu_pass.compile_guarded_tail` 直接驱动上游 pass；TVM 自定义 target kind 需要 C++ 侧注册，本轮没有完成。这是"是否真正经过已注册 backend 入口"的已知差距 |
+| 设备 codegen / execution backend | 未做：`compile_from_tasks` 直接产出 RKPlan，不生成 C 源码；runtime 消费 RKPlan（既有设计） |
+| 结构保留到计划 | 部分：任务序列是 IR，但计划里只保留 tile/K/覆盖等标量；语句级结构在实例化后按设计被消除 |
+| 其它算子族 | 未覆盖（单发射 GEMM、staged FFN 仍走旧 extractor） |
+| `hints`（流水提示） | 由上游 `Pipelined` 注解记录在 IR 中，本轮不进入计划记录；与 §44 的 `pipeline_hint_dropped` 记录未合并 |
+
+### 60.8 复用命令
+
+```bash
+cd research/tilelang-rknpu
+# 跑 pass 链（opt-in）
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261105T040000Z-pass-pilot/repros/run_pass_pilot.py
+# 三种规范化输入同计划
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261105T040000Z-pass-pilot/repros/forms_probe.py
+# 负例矩阵
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261105T040000Z-pass-pilot/repros/negative_matrix.py
+# 各阶段 IR
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/20261105T040000Z-pass-pilot/repros/dump_stage_ir.py
+# 旧入口回退：compile_tilelang（默认）不变
+```
+
+### 60.9 证据
+
+| 物件 | 值 |
+|---|---|
+| 代码 | `python/rknpu_backend/frontend/rknpu_pass.py`、`passes/dag.py`（`build_scheduled_linear(instances=…)`、`build_from_tasks`）、`codegen/pipeline.py`（`compile_from_tasks`）、`tests/test_rknpu_pass_pipeline.py` |
+| 计划 | 参考构建器 `43cd64c54b32…`、pass 链 `f3eb162fa79a…` |
+| 阶段 IR | `stage-0-upstream.tir.txt`、`stage-1-localise.tir.txt`、`stage-2-instantiate.tir.txt` |
+| 设备 | `device-pass.json`（库 `3749e95d…`） |
+| 回归 | 795 passed / 2 skipped / 0 failed / 303 subtests |
+
+---
+
+## 61. 按独立复核修 pass 试点：读位置、GEMM 语义、任务驱动计划（2026-11-05）
+
+### 61.0 复核结论（针对上一版 `f3eb162f`）
+
+独立复核判定：**pass 链是真的**（q1 通过：`normalise → pass_localise → pass_instantiate → tasks → plan`，
+没有任何模块 import `frontend/structured.py`，`compile_guarded_tail` 在包内无调用者）。但它同时指出三点必须修：
+
+1. **读位置未证明**：`rk_gemm` 的 m0/n0/k0 是从循环变量**重新推导**的，不是从 operand 索引读出的；
+   于是"M2 反向 K 累加"与"M4 所有 block 都读 n0=0 的权重 tile"都被接受，且计划与正确程序**完全相同**。
+2. **GEMM 自身语义未读**：`tl.tileop.gemm` 的 `transpose_A/B` 等参数被忽略，`A@B` 与 `A@Bᵀ` 生成同一任务（M1）。
+3. **计划不来自任务序列**：绑定、布局、上传、提交、publish 与 applied schedule 都来自 `_minimal_module` + planner 常量；
+   `rk_copy/rk_fill` 任务未消费；`build_from_tasks` 绕过了 `max_ir_nodes`/`max_actions`/`k_slices>64` 等闸门；
+   `compile_from_tasks` 跳过 `legalize` 却声称"与 compile_graph 相同的组装"。
+
+另有 M13（`threads=64` 与 `threads=128` 同计划）与 `execution.k_tile = 0`（任务不带 `kt`）两项记录性缺陷。
+
+### 61.1 本轮修复（全部有测试或探针验证）
+
+| 复核项 | 修复 | 验证 |
+|---|---|---|
+| M1 GEMM 旗标 | `pass_localise` 读取 `call.args[3..4]`，任一 transpose 为真即拒绝；并校验 `args[5..7]` 等于 tile 几何 | `test_a_transposed_gemm_operand_is_refused`（`transposition is not supported`） |
+| M2 反向 K | 新增**位置证明**：每个 operand 读取索引必须等于 `tile_extent * tile_coord + local_index`（逐轴 `Analyzer` 证明） | `test_a_reversed_k_accumulation_is_refused`（`not tile_extent * tile + local_index`） |
+| M4 权重 tile 固定 | 同上位置证明：无 tile 坐标即拒绝（折叠轴仅在"tile 覆盖整个 extent"时允许） | `test_a_weight_tile_not_bound_to_the_block_index_is_refused` |
+| M13 线程 | `tl.launch_threads` 被**记录**为 `ignored_launch_threads`（RKNPU 计划无线程维度，不应用） | `test_gpu_thread_extents_are_recorded_and_not_applied` |
+| 任务不带 kt | `emit` 现在写入 `kt`，数值记录可陈述 K 宽度 | `test_the_task_ir_states_its_parameters_and_k_tile` |
+| 计划不来自任务 | `rk_gemm` 现在携带**参数名**（A/B/Y）与 tile 名（As/Bs/Cl）；计划入口核对绑定名与任务声明一致；`applied_schedule` 由实例给出，不再读合成 op 的 attrs | 同上 + `test_plan_matches_the_scheduled_baseline_builder` |
+| 跳过闸门 | `build_from_tasks` 现在执行 `max_ir_nodes`、`max_actions`、`k_slices>64`；`compile_from_tasks` 先跑 `legalize` | 全量回归 |
+| 顺序可能被策略改写 | pass 路径**钉住** `linear_task_order="scheduled_baseline"`（任务顺序来自程序文本，不允许分组策略重排） | `forms_probe` / 计划对照 |
+
+同时修正了三处不诚实的表述：模块 docstring 不再声称"只有那条序列驱动计划"、`compile_from_tasks` 的 docstring 明确
+`normalize()` 与 `build_draft` 的多节点分派不适用、并把"上传/布局/提交分组仍是 planner 决策"写清楚。
+### 61.2 现在"任务驱动计划"到什么程度（准确边界）
+
+| 由转换后的任务/IR 决定 | 仍由 planner 决定 |
+|---|---|
+| tile 集合与顺序（m0/n0/rows/cols） | 上传动作与 host pack 布局 |
+| K 切片（k0/kt）与任务链 | device buffer 的 slot/BO 规划 |
+| 操作数参数名（A/B/Y）与 tile 名（As/Bs/Cl），并核对绑定 | 视图/常量布局（cube/weight/linear） |
+| applied schedule（tile_m/tile_n/order） | submit 分组与 PC 链 |
+| 数值契约（按源模式声明，见 61.3 的写死项） | publish 的切分方式（矩形由 tile 决定） |
+
+也就是说：**几何、K 链、操作数身份与调度记录来自任务序列**；**存储与提交的物理安排仍是 planner 的决策**。
+这与职责划分一致（后端决策），但必须如实写清，不能用"完全由任务驱动"概括。
+
+### 61.3 仍未解决
+
+- `rk_copy`/`rk_fill` 任务仍未被计划消费（它们参与证明与顺序，但不生成动作）。
+- 上传/布局/提交分组不来自 IR（属 planner 决策，未变）。
+- 未注册 TileLang `BackendModule`/`PassPipeline`（入口直接驱动上游 pass；TVM 自定义 target kind 需 C++ 注册）。
+- `facts` 里的数值契约仍是按目标模式写死的（`k_tile_boundary`、8e-3），未从源码推导。
+
+### 61.4 修复后的验证
+
+| 检查 | 结果 |
+|---|---|
+| 三种规范化输入 | 原始 / `MaterializeKernelLaunch` 后 / `Simplify` 后 → 同一计划 `c879fe37cf9a`，36 任务 / 12 提交 |
+| C 校验器 | 三种输入形式全部 ACCEPT |
+| mock | 三种形式输出逐位相同，与 fp64 参考差 299506 |
+| 与 `scheduled_baseline` 参考构建器 | 任务行/提交/publish/字节/BO/算子/数值要求/K 链逐项相同（`34ee4953ef01` vs `c879fe37cf9a`，差异仅名称与新增 `kt` 记录） |
+| **真机** | 旧 **11.809 ms** / 新 **11.887 ms** 中位（5 轮交错），均 36 任务 / 12 提交，**输出逐位相同**（`diff_ref` 298668、`diff_chain` 330 一致），库 `3749e95d…` |
+| 回归 | **800 passed / 2 skipped / 0 failed / 303 subtests**（新增 5 个复核反例测试） |
+
+身份：`rknpu_pass.py` `c057946b…`、`dag.py` `fdff5ae3…`、`pipeline.py` `44685631…`、
+`tests/test_rknpu_pass_pipeline.py` `ce7604c6…`、`device-pass.json` `18e14eda…`；阶段 IR 已重新导出。
+
+---
+
+## 62. 第二轮复核（针对修复版）与随之的加固（2026-11-05）
+
+### 62.0 复核结论
+
+第二轮独立复核确认三个原始变异（`transpose_B`、反向 K、钉住 n0 权重块）都已被正确拒绝，`max_actions` 闸门真实生效，
+但指出四个仍需修的问题：
+
+1. **折叠轴的容差本身不成立**：它只要求 `tile extent == operand extent` 且 `offset == local`，**没有要求该轴只有 1 个 block**；
+   复核给出了反例（2 个 M block 但拷贝丢掉 block 索引），该程序能通过 localise，最后死在无关的 "empty extent" 上。
+2. **闸门是名义上的**：`k_slices>64` 是死代码（K≤4096 时最多 16 个切片）；`max_ir_nodes` 数的是合成模块（永远 4 个节点），
+   而 `pass_instantiate` 无预算地展开；`legalize` 的结果被丢弃，`build_from_tasks` 仍伪造 `LegalizedGraph(ops=())`。
+3. **仍有夸大表述**：模块 docstring 的 "只有那条序列驱动计划 / 不再重建 GEMM"、pipeline 的 "所有入口都经 compile_graph"、
+   以及 `explain` 里写死的 `k_tile: 256`。
+4. **细节缺陷**：`expand()` 静默丢弃未知语句（localise 却拒绝）；`OutputTile(mi=m0 // rows)` 用裁剪后的行数做除法；
+   死代码 `_regions`/`_depth_map`/`K_TILE`；`numeric_mode`/`linear_group_n_tiles` 被静默忽略。
+
+### 62.1 本轮加固
+
+| 复核项 | 修复 | 测试/验证 |
+|---|---|---|
+| 折叠轴容差 | 折叠轴现在**必须**满足该轴的 block 数为 1（按 operand 角色取 grid_m 或 grid_n），否则拒绝 | `test_a_folded_block_index_is_refused`；复核反例现被 `an operand axis with a block index cannot be folded` 拒绝 |
+| `max_ir_nodes` | 改为对**localised IR** 的真实节点数检查 | 全量回归 |
+| 任务预算 | `pass_instantiate(..., max_tasks=options.max_actions)`，超预算即拒 | `test_the_task_budget_is_enforced` |
+| `k_slices>64` 死代码 | 删除；真实约束是每提交 64 任务的检查 | — |
+| `legalize` 结果 | 现在真正传入 `build_from_tasks`，不再伪造 `LegalizedGraph(ops=())` | 全量回归 |
+| `expand()` 静默丢弃 | 未知语句类型现在拒绝；只有已被 localise 证明的 store 被消费 | 全量回归 |
+| `OutputTile.mi` | 用 tile 宽度而不是裁剪后的宽度 | — |
+| 死代码/静默忽略 | 删除 `_regions`/`_depth_map`/`K_TILE`；`numeric_mode != rk_f16_tiled` 与 `linear_group_n_tiles` 现在**显式拒绝** | `test_an_unsupported_numeric_mode_is_refused` |
+| 表述夸大 | 模块 docstring 重写（明确"上传/布局/模板/提交分组仍是 planner 决策"）；pipeline 头部与 `compile_from_tasks` docstring 改为如实描述跳过的闸门；`explain` 的 `k_tile`/`accumulation` 改为读计划自身的数值记录 | `explain_plan` 读取 `numeric_requirements` |
+
+### 62.2 复核提出的三条最高价值缺口（本轮后状态）
+
+| 缺口 | 状态 |
+|---|---|
+| 计划未消费任务序列（顺序/提交/非 GEMM 任务仍被重新推导） | **仍未解决**：只有 `(m0,n0,k0,rows,cols,kt)`、operand 名与 applied schedule 跨过边界；提交分组、上传布局、模板、下载仍由 planner 合成；`rk_copy`/`rk_fill` 不生成动作 |
+| 折叠轴容差不成立 | **已修**：现在要求该轴 block 数为 1 |
+| 闸门名义化 | **已修**：`max_ir_nodes` 数真实 IR、任务展开有预算、`legalize` 结果被使用、死代码删除 |
+
+### 62.3 加固后的验证
+
+| 检查 | 结果 |
+|---|---|
+| 三种规范化输入（原始 / `MaterializeKernelLaunch` / `Simplify`） | 计划身份**未变**：`c879fe37cf9a`，36 任务 / 12 提交 |
+| C 校验器 / mock | 三种形式全部 ACCEPT；输出逐位相同，与 fp64 参考差 299506 |
+| 真机 | 加固未改变计划字节（同一 `plan_hash`），因此既有设备结论继续有效：旧 11.809 ms / 新 11.887 ms 中位，**输出逐位相同** |
+| 回归 | **804 passed / 2 skipped / 0 failed / 303 subtests**（新增 4 个闸门/折叠反例测试） |
+| 复核反例 | 折叠轴反例被 `an operand axis with a block index cannot be folded` 拒绝；`block_k=128` 被计划侧 K 链检查拒绝；`max_actions=5` 触发任务预算；`numeric_mode=fp32_ref` 显式拒绝 |
+
+### 62.4 结论（本轮）
+
+- 复核指出的**两个可导致错误程序被接受**的问题（折叠轴容差、GEMM 语义未读）已修复并有反例测试。
+- 闸门从"名义上存在"变为"真实生效"（真实 IR 节点数、任务展开预算、`legalize` 结果被使用、死代码删除）。
+- **仍未解决**的核心架构问题：计划只消费 `(m0,n0,k0,rows,cols,kt)`、operand 名与 applied schedule；
+  提交分组、上传布局、模板、下载以及 `rk_copy`/`rk_fill` 仍由 planner 合成。这一点已在 docstring 与报告中如实写明，不再声称"完全由任务序列驱动"。
+
+## 63. Codex 对当前 pass 试点的直接审核
+
+审核对象为执行者暂停后的工作树。
+`rknpu_pass.py` SHA-256 为
+`e77d234e7aa2b1746aeb213ce38bf3681b9bfab0b658c50f728038acf6298827`，
+与交接身份一致；`dag.py` 为 `e7582023…`，`pipeline.py` 为 `4fb01f77…`。
+**结论：不通过。** 新代码确有 IR 局部改写与实例化，但下列已复现的计算错误、
+声明丢失和正式入口缺项阻止验收。已有正向板测和测试通过不能排除这些问题。
+
+### 63.1 P1：更严格的 copy guard 被忽略，生成完整 GEMM
+
+位置：`rknpu_pass.py:453-465`，以及 `pass_instantiate` 的 BufferStore 消除分支。
+
+对实际 fixture `reference`，保留全 tile 循环与原 guard，再给 As 的 copy 增加
+`i < 1`。这是访问安全但计算不同的程序：As 其余行维持零填充值。
+`pass_localise` 和完整 `compile_guarded_tail` 都 ACCEPT，结果与无此条件的基线
+**to_dict() 完全相同**，hash 均为 `e7581b2c4720…`。
+
+原因：当前仅证明 `conditions => access_is_in_bounds`，未证明 copy 在所有有效
+元素上执行。实例化后这些 store 被丢弃，planner 仍按完整 operand upload。
+
+离线 mock 使用 A/B 全 1（M=256,K=576,N=256），生成计划输出所有元素 576，
+包括第 1 行；源码预期只有第 0 行非零，其余行应为 0。
+这不是数值容差问题。没有设备执行异常源码。
+
+修复要求：证明完整有效区域上的写入覆盖，或在后续 lowering 中真实落实额外
+谓词；不能只验证内存安全，也不能无条件消除受谓词限制的 store。
+
+### 63.2 P1：GEMM clear_accum 被遗漏
+
+位置：`rknpu_pass.py:351-372`、`_rewrite_tile_ops`。
+
+本地 TileLang `language/gemm_op.py` 的参数槽 9 是 `clear_accum`。
+将 reference 的 GEMM 该槽设为 true，其他语句保持不变，完整编译仍 ACCEPT，
+计划与原始基线逐字节相同。当前读取了 transpose 和 M/N/K，未读取 clear_accum。
+
+源语义为每次 GEMM 清空 Cl，因此 K=576 时全 1 输入最终应只保留尾块贡献 64；
+生成计划仍执行三段累积，mock 为 576。
+该反例通过 TIR 调用节点改造，参数槽含义由本地 TileLang 实现核对。
+
+修复要求：检查并实现或拒绝所有有计算语义的 GEMM 参数、region offset/mask；
+不能将未读取的参数默认为支持。
+
+### 63.3 P1：循环 min 被静默替换为 0
+
+位置：`rknpu_pass.py:198-207` 与 `1004-1015`。
+
+对 reference 将 K For 的 min 改为 1，extent 保持 3。
+真实迭代为 1,2,3：有效贡献来自 K=[256,512) 与 [512,576)，
+最后一次通过 guard 保持零。完整编译 ACCEPT，仍得到与 min=0 的基线同一计划。
+全 1 输入的源码预期为 320，而所生成计划为 576。
+
+原因：domain 绑定和 expand 都使用 `[0, extent)`，没有消费实际 min。
+修复要求：正确处理真实 min/iteration domain；若当前能力只支持 min=0，
+在任何证明或转换前显式拒绝非零 min，且不再声称处理了一般静态 loop。
+
+### 63.4 P1：输出行块坐标可消失，仍生成完整覆盖
+
+位置：`rknpu_pass.py:794-804`。
+
+使用 non_square fixture（M=256,BM=128，共 2 个 M block），只在 epilogue
+把 grid_m 替换为 0：两块结果均写 Y[0:128,:]，后半输出不被写入。
+完整编译 ACCEPT，与正常 non_square 的计划 **to_dict() 完全相同**，
+hash 为 `fc98d581955d…`；生成计划仍 publish 两个不同 M tile。
+
+原因：`offset == local` 被当作 folded index 接受，但此处没有要求对应 grid
+只有一个 block。输入侧已补的折叠轴条件没有覆盖输出侧。
+修复要求：结合真实迭代域证明输出映射和 exactly-once 覆盖，不能只比
+局部索引、guard 上界或最终推导的矩形面积。
+
+### 63.5 P1：显式调度要求及未知注解再次无痕丢失
+
+位置：`compile_guarded_tail`、`pass_localise` 和 `_minimal_module`。
+
+对 reference 添加完整声明 `rknpu.schedule=mn_tiles_v1`、tile_m=128、
+tile_n=256，完整编译 ACCEPT，但仍采用 256x256，与无声明计划字节相同。
+未知 `rknpu.double_buffer=True` 也 ACCEPT，生成同一计划。
+`linear_task_order="merged"` 被静默改为 scheduled_baseline，得到 3 task / 1 submit，
+任务上的 policy 为 scheduled_baseline；该单 tile 示例用于确认选项被改写，
+不用于比较 submit 数差异。
+
+新路径不调用旧 adapter 并不免除参数检查。应统一校验已有公开声明，能落实
+则落实；不能落实就明确拒绝。对 CompileOptions 的冲突同样不可无说明覆盖。
+原 K-loop 的 num_stages=2 也未进入当前 facts.hints（只有 ignored_launch_threads），
+需恢复 §44 已确立的请求/未采用原因记录。
+
+### 63.6 P1：尚不是已注册的正式后端；任务仍被重新组合
+
+`normalise` 默认绑定 target `c`，直接调用少数上游 transform；模块没有
+BackendModule、PassPipeline 或 PrimFuncPass 注册。导入后执行
+`tilelang.backend.module.list_backends()`，只有
+ascend/cpu/cuda/cutedsl/metal/rocm/webgpu，没有 rknpu。
+因此 docstring 的“official opt-in”与本轮要求尚不相符。
+
+新路径比旧原型确实多了真实的 IR 改写，这是进展。但 `instances_from_tasks`
+把逐项 GEMM task 去重成 tiles 与 slices；builder 再按两者乘积发射任务，
+copy/fill task 没有作为输入驱动计划。本轮错 guard 的反例说明这不只是
+记录问题：前置证明不完整时，被丢弃的条件无法由后端恢复。
+
+复用现有 planner 本身不是缺陷，也不要求另建 buffer/submit 系统；需要明确
+消费或证明每种被消除的操作，并使正式编译入口真实运行该转换链。
+
+### 63.7 审核证据与复现
+
+证据目录：`results/codex-pass-review/`。包含改造后的 TIR、基线与变异计划、
+results.json、more-results.json、output-results.json、mock-wrong-output.json，
+以及独立于生产代码的复现脚本。所有异常程序只做离线编译与 mock，未上板。
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-pass-review/reproduce.py
+# 完整编译并比较计划（较慢）：
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-pass-review/reproduce.py --full
+```
+
+审核没有修复实现，也未运行完整回归或重复设备实验。已有 804 passed 的报告不作
+本次独立复跑结论。独立重跑 `tests/test_rknpu_pass_pipeline.py`：
+**19 passed / 22 subtests passed，327.37 秒**。既有测试全绿与上述反例同时成立，
+说明这些测试未覆盖已复现的错误接受路径。
+优先修 63.1—63.5 并将反例加入正式测试，再继续正式后端接入和架构验收。
+
+---
+
+## 64. 直接审核（§63）反例的修复（2026-11-05）
+
+### 64.0 审核意见与处理方式
+
+§63 判定不通过，并给出四个已复现的计算错误与两个流程缺口。本轮逐一修复，每个反例都变成正式测试中的一条；
+**除审核要求外不扩大功能**（未做后端注册，未扩算子覆盖面）。
+
+### 64.1 五个 P1 的修复
+
+| 审核项 | 原因 | 修复 | 反例测试 |
+|---|---|---|---|
+| 63.1 更严格的 copy guard 被忽略 | 只证明了"guard ⇒ 访问在界内"，没证明"所有有效元素都被写" | 现在要求**每个 guard 合取项必须恰好是某个操作数轴的界**（`index_axis < operand_extent_axis`）；任何额外限制（如 `i < 1`）都拒绝，因为那会让 tile 少写、计划却按完整操作数上传 | `test_a_copy_that_only_writes_one_row_is_refused` |
+| 63.2 `clear_accum` 被遗漏 | GEMM 只读了 transpose 与 M/N/K | 现在读取全部 13 个槽位：`transpose_A/B`、M/N/K、`policy`（记录为 GPU-only）、`clear_accum`、barrier、C 坐标；`clear_accum=True`、非空 barrier、非零 C 坐标全部拒绝 | `test_a_clearing_gemm_is_refused` |
+| 63.3 循环 min 被当成 0 | domain 绑定与展开都用 `[0, extent)` | 在任何证明或改写**之前**拒绝非零 `min`（grid 与 K 循环都检查） | `test_a_k_loop_that_does_not_start_at_zero_is_refused` |
+| 63.4 输出行块坐标可消失 | 输入侧补了折叠轴条件，输出侧没有 | 输出侧同样要求：折叠（`offset == local`）只在**该轴 block 数为 1** 时允许 | `test_two_blocks_writing_one_output_region_are_refused` |
+| 63.5 调度声明与未知注解无痕丢失 | 没有读取 `rknpu.*` 声明，且静默改写选项 | 现在从块与函数两级收集 `rknpu.*`：`rknpu.schedule/tile_m/tile_n/k_tile` 必须与证明出的几何一致，**未知键直接拒绝**；`linear_task_order` 只有 `baseline`（钉住并记录）与 `scheduled_baseline` 可用，其余拒绝；`num_stages` 记为未采用的流水提示 | `test_a_declared_tile_that_disagrees_with_the_ir_is_refused`、`test_an_unknown_rknpu_annotation_is_refused`、`test_an_explicit_regrouping_policy_is_refused`、`test_a_pinned_policy_and_a_pipeline_hint_are_recorded` |
+| 63.6 "official" 表述不符 | 未注册后端 | docstring 首段改写并新增状态段：**明确写出未注册 BackendModule/PassPipeline**、绑定 target kind `c` 的原因 | 文档 |
+
+### 64.2 仍未做（审核已指出，本轮不扩大功能）
+
+- **后端注册**：需要 TVM 侧自定义 target kind 与 `BackendModule`/`PassPipeline` 实现；本轮按"不扩大功能"未做，代码与报告都明确写出这一点。
+- **计划仍未消费非 GEMM 任务**：`instances_from_tasks` 仍把逐项 GEMM 去重为 tiles 与 slices；`rk_copy`/`rk_fill` 不生成动作。
+  审核指出的因果（guard 反例说明前置证明不完整时被丢弃的条件无法恢复）已在本轮通过"guard 必须恰为轴界"从源头堵住，但"由任务序列发射"本身仍未实现。
+### 64.3 验证
+
+用审核者自己的复现脚本（`results/codex-pass-review/reproduce.py`，未改动一行）跑当前代码：
+
+| 案例 | 结果 |
+|---|---|
+| `base`（合法基线） | ACCEPT |
+| `tight_copy`（63.1，只写一行） | **REJECT**：the copy guard must bound the operand, not shrink the copied region |
+| `k_min_one`（63.3，K 从 1 开始） | **REJECT**：the pass chain only handles loops that start at zero |
+| `clear_accum`（63.2） | **REJECT**：tile GEMM clear_accum is not supported |
+| `unknown_annotation`（63.5） | **REJECT**：an rknpu annotation is not supported by the pass chain |
+| `tile_request`（63.5，声明 128×256） | **REJECT**：an rknpu tile declaration disagrees with the proven geometry |
+| `non_square_base`（合法基线） | ACCEPT |
+| `pinned_output`（63.4，两块写同一区域） | **REJECT**：the output block coordinate cannot be folded while the axis has more than one block |
+
+- 回归：**812 passed / 2 skipped / 0 failed / 303 subtests**（pass 测试文件从 19 例增到 27 例）。
+- 合法路径未受影响：gate/up 计划仍是 `c879fe37cf9a`（36 任务 / 12 提交），三种规范化输入一致，C 校验器与 mock 结果不变。
+- 异常程序未送设备；板测结论仍来自上一次合法计划（计划字节未变）。
+
+### 64.4 本轮新增的记录字段（只记录，不改变执行）
+
+`facts.hints` 现在包含：`ignored_launch_threads`（GPU 线程数）、`pipeline_hint`（`num_stages` + 未采用原因）、
+`pinned_linear_task_order`（请求值与被钉住的值）。这些是审核要求的"请求/未采用原因"记录，不进入计划执行语义。
+
+## 65. Codex 复核 §64：原反例已修，仍有三条错误接受路径
+
+审核代码 `rknpu_pass.py` SHA-256
+`978f42acd05d1823d7f1939943317f10ccc80481dbb007f12a2071ed4d9bd3dd`，
+测试文件 `251cc845…`，与交接身份一致。未改实现，未访问设备。
+
+**结论：§63 的原始反例修复得到确认，但当前入口仍不通过正确性验收。**
+本次没有独立重跑 812 项全套回归；独立重跑的修复测试为
+`ReviewerCounterexampleTests`：**8 passed / 19 deselected，31.87 秒**。
+
+### 65.1 已确认修复的原反例
+
+未改动 §63 的 `results/codex-pass-review/reproduce.py`，执行 `--full`。
+base 与 non_square_base 仍接受；tight_copy、k_min_one、clear_accum、
+unknown_annotation、tile_request、pinned_output 均在 localise 和完整编译拒绝。
+本次输出在 `results/codex-pass-review/rerun-after-fix/`。
+因此不继续把这些原始输入列为未修复问题。
+
+### 65.2 P1：输出侧的额外限制未被消费
+
+位置：`_prove_output_store`，当前约 882—926 行。
+
+对合法 reference 的 epilogue 原 guard 增加 `i < 1`，其余保持不变。
+该程序只写输出第 0 行，不写其它行。localise 和完整编译均 ACCEPT，生成的
+计划与无额外条件的基线 **to_dict 完全相同**，hash `e7581b2c4720…`。
+
+原因：代码收集所有 LT 条件，但只把能匹配 output index 的条件写入
+`guard_limits`；未匹配条件被忽略。输入侧 §63.1 的修复没有覆盖输出侧。
+实例化会消除被 guard 限制的 store，planner 又生成全部 publish。
+
+修复应统一考虑输出完整覆盖与条件效果：额外条件要么被证明冗余，要么得到
+真实实现，否则拒绝；不能只找到两个正确上界后忽略其它条件。
+
+### 65.3 P1：非零 min 检查遗漏 copy/epilogue 局部循环
+
+位置：`_grid_and_k_loops:291-297`、`_bind_domains`、`pass_instantiate.expand`。
+
+§64 只检查 grid 与 K For 的 min。将 As copy 的外层局部循环改为
+min=1、extent=256，原 guard 仍为真实 operand 边界。localise 与完整编译均
+ACCEPT，仍生成与 min=0 相同的计划。
+
+实际源码的 As 第 0 行保持零，第 256 行由原 guard 排除；对 A/B 全 1，
+第 0 行输出应为 0。但生成计划的 mock 第 0 行为 **576**。
+原因是局部循环只比较 extent，domain 和 expand 仍将其当作从 0 开始。
+
+需要对所有被消费循环使用实际迭代域，或统一显式拒绝不支持的 min/step，
+而不是只补本例的某个 loop kind。epilogue 同类局部循环也应检查。
+
+### 65.4 P1：K 循环中的额外 accumulator fill 被丢弃
+
+位置：`pass_localise` 的 fill 收集与后续 shared-only 检查，当前约
+456—460、624—642 行；`compile_guarded_tail` 只消费 GEMM instances。
+
+在每次 K 迭代开头插入合法的 `T.clear(Acc)`（复制原有 root clear 节点），
+其它语句不变。localise 与完整编译均 ACCEPT，计划与正常累积基线完全相同。
+对全 1 输入，源每次清空 accumulator，最终只保留 K tail 64；生成计划
+仍累积全部 K，mock 为 **576**。
+
+原因：fill 被识别并转换成 rk_fill，但验证只要求 As/Bs 各清零一次，没有
+约束其余 fill 的计算效果；rk_fill 最终不被 planner 消费。识别了合法 opcode
+不代表该操作的效果已被落实。
+
+应对每项 memory/state effect 建立消费或合法消除规则，并检查效果集合闭合；
+不能只满足必须存在的若干操作，就忽略其余同类操作。copy、GEMM region 等
+其它有状态操作应使用同一原则核查，不再只增加一个特殊 fill 名单。
+
+### 65.5 P2：hint 只在返回对象中，尚未随计划持久化
+
+`facts.hints` 现在确实含流水请求和 pinned policy，这是修复进展。
+但 `_minimal_module`、facts_dict 和最终 RKPlan 没有传递这些字段，保存的
+base.json 中 pipeline_hint、num_stages、pinned_linear_task_order 均无记录。
+新增测试只检查返回的 facts，没有覆盖保存/加载。
+
+不要求 hint 改变执行；需要清楚区分“本次 API 返回了诊断”和“分发计划后仍能
+知道源提示未采用”。若宣称恢复 §44 的计划记录，须补持久化与 load/explain 测试。
+
+### 65.6 架构状态保持未完成
+
+§64 已如实承认 BackendModule/PassPipeline 尚未注册、非 GEMM task 不驱动计划。
+修改 docstring 是准确性修正，不等于完成正式后端接入。复用 planner 本身合理；
+当前三条反例说明被消除操作的语义仍没有可靠承接，不能据此扩大源码覆盖或切换默认。
+
+### 65.7 证据与重放
+
+新证据在 `results/codex-pass-recheck-64/`：三份改造 TIR、四份计划、results.json、
+mock.json、当前代码/测试快照和独立复现脚本。
+全部异常程序仅做离线编译及 mock，不送设备；未改变数值政策。
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-pass-recheck-64/reproduce.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-pass-recheck-64/reproduce.py --full
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_rknpu_pass_pipeline.py \
+  -k ReviewerCounterexampleTests -q -o addopts=""
+```
+
+建议先按“所有循环域、完整路径条件、全部 buffer effect”三项统一规则修复，
+将新反例加入正式测试，再交审核；不要只修具体变量名或 fixture。
+
+## 66. 当前工作区验收：§65 修复确认，仍不通过
+
+本次应用户“验收当前工作区”要求，直接审核文件系统当前版本，未派子代理、
+未改实现、未访问设备。`rknpu_pass.py` SHA-256 为
+`61f474892e5ada9c2c2f5c8962cbc1606f00bdc00e936df2e6993b3d5f19833b`。
+工作区未提交，当前 HEAD 仍为 `da4eeab`。
+
+**结论：不通过；不应切换生产入口或宣称重构完成。** 原反例修复有效，
+hint 已能随计划持久化，但新的独立探针仍发现两个 P1，且现有定向测试有两个失败。
+
+### 66.1 已独立确认的修复
+
+- 原 §63、§65 审核脚本均未改动，以 `--full` 重跑。合法基线接受，原有
+  tight_copy、k_min_one、clear_accum、unknown_annotation、tile_request、
+  pinned_output、output_extra、copy_min、extra_clear 均拒绝。
+- `_loop_domain` 现在同时参与局部 copy、epilogue、domain binding 和实例化；
+  `_consume_conditions` 统一分类条件；K-loop 的多余 fill/copy 不再直接放行。
+- hint 写入 task `attrs.source_hints`；保存/加载后计划字典相同，explain 能读到
+  pipeline_hint、ignored_launch_threads、pinned_linear_task_order。
+  §65.5 的 transient-only 缺陷在当前样本上已解决。
+- `git diff --check` 通过。
+
+### 66.2 P1：输入块坐标未与输出块坐标建立对应
+
+位置：`rknpu_pass.py:657-673` 和 `1011-1020`。
+
+当前 read proof 只要求 `load_index == 某个变量 * tile_extent + local`，
+没有证明其中非 K 变量是哪一个输出 grid 轴。lowering 则一律使用 grid_m/grid_n
+生成 m0/n0，未将实际 operand 索引映射带入。
+
+独立反例固定 M=N=512、K=576、BM=BN=256（两轴均有两个 block）：
+
+- 原程序：A 从 `im*256+i` 读取，B 从 `inn*256+j` 读取；
+- 改造程序：只交换 As/Bs copy 中 im 与 inn 的使用及对应 guard，输出仍写
+  `Y[im*256+i, inn*256+j]`。
+
+这是有效范围内、数学结果不同的 tile 程序。两者 localise 与完整编译都 ACCEPT，
+**计划字典完全相同**，hash `cee711d305e5…`。
+
+mock 使用 A 前/后半行分别为 1/2，B 前/后半列分别为 3/4：
+
+| 位置 | 改造源码应计算 | 所生成计划的 mock 结果 |
+|---|---:|---:|
+| 右上 block | 3456 | **2304** |
+| 左下 block | 2304 | **3456** |
+
+全为精确可表示数值，不是容差问题。此“交换输入坐标而保持输出”与合法的
+“grid 轴整体交换并同步索引”不同，修复不能误拒后一类等价程序。
+
+要求：将实际 operand/output affine map 建立完整对应并消费到 task，或对当前
+不支持的 map 准确拒绝；不能仅证明每个索引有某个 tile 坐标后再替换成默认坐标。
+
+### 66.3 P1：尾块输出缺少必要 guard，检查被禁用
+
+位置：`_prove_output_store`，当前约 944—983 行，尤其 `if False and limit is None`。
+
+固定 M=257、K=576、N=256，M tile=256，grid 有两个 M block。原输出条件为
+`im*256+i < 257 && inn*256+j < 256`。删除第一项，保留列条件。
+源码第二个 M block 会写 row 257..511，超出输出分配。
+
+localise 与完整编译都 ACCEPT，与正确 guarded-tail 基线生成完全相同计划，
+hash `f6e24e962561…`。实例化消除该 store，planner 最终裁剪 publish；裁剪后的
+安全计划并不能证明原源码访问安全，当前检查没有完成其宣称的 source proof。
+
+原因：有任何条件时跳过 unguarded-grid 检查；逐轴缺失 bound 的检查又被常量
+false 禁用，未由迭代域范围证明替代。
+
+要求：在真实 domain/path condition 上逐轴证明输出访问安全及覆盖；允许被
+规范化删除的冗余 guard，但不能无证明地允许尾轴缺 guard。不要仅恢复“必须
+存在 LT 节点”的形态匹配，以免再次误拒合法 Simplify 结果。
+异常程序没有送设备，也没有执行可能越界的源程序。
+
+### 66.4 P2：当前正式测试未全绿，也未补齐本轮规则测试
+
+独立执行：
+
+```bash
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest \
+  tests/test_rknpu_pass_pipeline.py -k ReviewerCounterexampleTests -q -o addopts=""
+```
+
+结果 **2 failed / 6 passed / 19 deselected，31.78 秒**：
+
+- `test_a_copy_that_only_writes_one_row_is_refused`：实现已经正确拒绝，但预期
+  仍匹配旧消息 `not shrink the copied region`；
+- `test_a_k_loop_that_does_not_start_at_zero_is_refused`：实现已经正确拒绝，但
+  预期仍匹配旧消息 `loops that start at zero`。
+
+这两个失败不是新计算错误，应更新测试以验证相同诊断含义，不能删除负例。
+当前测试文件仍为 27 个 test，没有新增 §65 三类统一规则的正式覆盖；
+本次没有重跑全量，不宣称此前的 812 passed 适用于当前代码。
+
+### 66.5 架构完成状态
+
+正式 BackendModule/PassPipeline 注册仍未完成；当前新增的 helper 和检查不能
+代替原任务的正式后端接入。保留 planner 没有问题；66.2 证明当前 task facts
+仍不足以承接全部已接受源码的实际读取，不能因已发生 IR 改写就认定结构传递完成。
+先修复语义错误和对应测试，再继续接入，不扩大算子族或切换默认。
+
+### 66.6 复现与证据
+
+本次证据：`results/codex-current-worktree-acceptance/`。
+根目录为输出尾块反例；`grid/` 为输入坐标反例及 mock 数值，另有代码快照、
+原审核脚本的复跑日志和当前测试失败日志。
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python \
+  results/codex-current-worktree-acceptance/reproduce.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python \
+  results/codex-current-worktree-acceptance/reproduce.py --full
+```
+
+审核只新增复现材料和本节，没有修复生产实现、没有子代理或设备任务。
+
+## 67. §65/§66 三条错误接受路径的修复与注册入口（2026-11-06）
+
+> 当前冻结代码的直接审核见 §68。此节的既有反例修复和注册测试得到确认，
+> 但不能据此推断所有被接受程序均正确，或标准编译产物链已完成。
+
+§66 保留的两条反例（输出尾块缺行 guard、交换 operand 块坐标）与 §65 的第三条（信息接口不足）
+在本轮按统一规则修复，而不是逐 fixture 打补丁。
+
+### 67.1 根因
+
+- 输入侧证明停在"索引 = 某 tile 变量 × extent + local"，从未要求该变量与输出块坐标一致；
+  改写阶段又按默认 `grid_m/grid_n` 生成任务。**证明与消费不是同一个命题**，所以证明成立、计划错误。
+- 输出侧的分类与覆盖判断使用无循环域绑定的分析器：冗余永远证不出来，
+  而"某轴没有 guard"这一情形只有一条被 `if False` 禁用的检查。缺 guard 的尾轴因此既未被证明也未被拒绝。
+
+### 67.2 修复
+
+见 `refactor-specific.md` 第 65 节。要点：
+
+1. 所有消费循环经同一个 `_loop_domain` 取域（min=0、step=1、extent 已知），分析与展开共用。
+2. 每个轴求"块表达式"，输入与输出在同一域上必须可证相等；K 轴必须等于 K 循环变量。
+   相等是跨三个源码位置（A 读、B 读、Y 写）的义务。
+3. 输出逐轴判定：guard 消费（界必须等于逻辑长度）/ 在域上冗余 / 拒绝；
+   无 guard 的轴必须被 grid 精确覆盖；store 索引必须在域内落在输出范围内；
+   折零只在单块接受；两个轴不得共用一个 grid 循环。
+4. 实例归一为 m_major + 升序 K，并新增分区证明：K 切片连续覆盖 `logical_k`，
+   tile 矩形逐轴连续分割输出。这修复了此前未发现的"K 链少一块被静默接受"。
+
+### 67.3 结论边界（没有扩大的部分）
+
+- 支持域仍是 guarded-tail FP16 GEMM，tile 仍受 planner 的 256×256 / k=256 约束；
+  未扩大算子族、未切默认、未删除旧入口、未放宽任何数值/预算/alias 检查。
+- 两个原本被拒的语义等价程序（`loose_guard`、`guard_on_loop_vars`：附加条件在域上恒真）
+  现在被接受，并以"与参考程序 plan_hash 相同"作为等价依据；它们不再是负例，而是等价性正例。
+- 未做：多核、流水、双缓冲、量化、融合 FFN、性能搜索。
+
+### 67.4 复现与证据
+
+`results/codex-pass-65/`：
+
+| 文件 | 内容 |
+|---|---|
+| `audit-scripts/*.log` | 三份审核脚本的复跑输出（修复后） |
+| `plan-diff.json` | 当前计划 / 板端执行过的计划 / 参考构建器 的执行字段对比 |
+| `backend-registration/` | 注册 API 实测记录、探针、pytest 日志 |
+| `verify_registration.py` | 注册入口与直接调用的 plan_hash 一致性 |
+| `probe_mock.py` | 方阵、交换轴、尾块三种程序的 mock 数值 |
+| `final-pytest.log` / `baseline-pytest.log` | 全量测试（修复后 / 修复前） |
+
+## 68. 冻结版本直接审核：既有修复确认，仍不通过
+
+审核对象为交接冻结文件，未派子代理，未修改实现或测试，未访问设备。
+`rknpu_pass.py` SHA-256 为
+`da358490c4dac1c812733017c727c08045917e1083432ca7246a30ffb406493b`，
+`tilelang_backend.py` 为 `fee89aa18ed5e4dea10a122ec01c7a88d90a1aa7bd8c40ec292abbbab06eb084`，
+均与交接一致。
+
+**结论：不能验收为完成的 guarded-tail 编译路径。** 三份旧审核脚本均复跑确认
+旧反例拒绝，注册的 16 项测试独立通过；但另有两条新的错误接受路径，以及标准
+编译产物链的明确缺项。本次没有重跑全量 847 项，不把交接计数当作独立验收结果。
+
+### 68.1 P1：局部 copy 的迭代次数不等于 tile 写入覆盖
+
+位置：`rknpu_pass.py:665-673`，以及后续 `_prove_tile_index` 和 staging 消除。
+
+代码用 copy loop nest 的 extent 等于 shared tile shape 证明“iterate the whole
+tile”，但没有证明 store indices 对 tile 区域的覆盖。
+
+独立的真实 TileLang 源码见 `results/codex-frozen-review/partial_staging.py`。
+保持 M=256,K=576,N=256、FP16 输入输出、逐 K FP16 writeback、每轮完整零填充，
+只将 As 的 copy 写为：
+
+```python
+for i in T.Parallel(256):
+    for j in T.serial(256):
+        if im * 256 + i < 256 and ko * 256 < 576:
+            As[i, 0] = A[im * 256 + i, ko * 256]
+```
+
+该程序只填 As 第 0 列，其余列为零。j 使用 serial，重复写入同一元素按序发生，
+不存在用 parallel data race 构造反例的问题。两层迭代数仍是 256×256；
+read 与 store 的局部索引都为 0，所以块表达式证明也错误地通过。
+
+localise 和完整编译均 ACCEPT。离线 mock 使用 A/B 全 1：
+
+| 检查 | 数值 |
+|---|---:|
+| 源码每个 K tile 的贡献 | 1 |
+| 源码三次累积预期输出 | **3** |
+| 生成计划的 mock 输出 | **576** |
+| 不一致元素 | **65536 / 65536** |
+
+这是精确整数差异，不是 FP16 容差问题；没有运行异常源程序的硬件版本。
+
+修复要求：证明 loop domain 经局部 store map 覆盖目标有效 tile，必要时检查
+唯一性/多次写入的确定效果，以及 load-map 与 store-map 的对应。只证明
+`read-local == block*extent` 不够；不能仅将 serial 改为白名单拒绝来代替该证明。
+同一规则应覆盖 staging 与 epilogue，而不是只增加本例的常量列判断。
+
+### 68.2 P1：FP32 operand 被接受后接口静默改为 FP16
+
+位置：`pass_localise` 的 parameter/shared 检查，以及 `_minimal_module:1162-1167`。
+
+独立真实源码见 `results/codex-frozen-review/fp32_operands.py`：A/B 与 As/Bs 为
+float32，Cl 为 float32，Acc/Y 为 float16，保留显式逐 K FP16 writeback。
+这是与“所有 fragment 都是 FP32”的已有注册负例不同的情况。
+
+localise 与完整编译都 ACCEPT，但产物为：
+
+| 值 | 源参数类型 | Plan binding 类型 |
+|---|---|---|
+| A | float32 | **float16** |
+| B | float32 | **float16** |
+| Y | float16 | float16 |
+
+源程序本身可解析，region/value 检查也通过；没有生成维护原参数接口的转换层。
+当前声明支持域是 FP16 GEMM，正确处理应是在入口拒绝不支持的 operand 类型，
+而非通过硬编码 RKIR 类型改变函数签名。应核查完整 buffer/type/layout 约束，
+不能只因存在一个 FP16 accumulator 就视为 FP16 源程序。
+
+### 68.3 任务未完成：真实注册存在，但标准编译产物链断开
+
+`ext_dev` kind 加 `rknpu` key 是实际可注册的方案，本次不要求必须新增 C++ target
+kind，也不要求生成 GPU/C kernel。但现有注册只接上 lowering callback：
+
+1. `create_backend_context("rknpu").lower(mod)` 成功；
+2. 返回模块的 PrimFunc 与输入 **structural_equal=True**，只给 module 添加属性；
+3. RKPlan 存入进程全局 `_LOWERINGS`，通过 `last_lowering()` 侧取；
+4. `tilelang.engine.lower(mod, target="rknpu")` 实测失败，调用
+   `refuse_device_codegen`，抛出 `RK_E_UNSUPPORTED`。
+
+位置：`tilelang_backend.py:213-243`；上游 engine 无论 enable_device_compile
+取何值，都调用 build 或 build_without_compile，当前两个都指向拒绝函数。
+注册测试只证明 callback 可选中、执行了新代码，不证明标准入口能交付编译产物。
+
+本轮确实新增了注册能力，不能说完全没接入；但“所有工作完成”的交付结论需要
+修正。后续应建立明确、可返回且与本次编译关联的 RKPlan artifact/入口契约，
+不依赖全局最后一次记录，不将不生成 C 源码等同于不能提供正确的编译产物。
+若当前上游接口不能承载，应给出最小必要扩展；不能只将旧函数套一层注册回调。
+
+### 68.4 已确认的进展与验证范围
+
+- 三份旧审核脚本以 `--full` 独立复跑：所有合法基线接受，原所有语义反例拒绝。
+- `tests/test_tilelang_backend_registration.py`：**16 passed，34.79 秒**。
+- hints 随计划保存的实现仍在，旧修复未因此被撤销。
+- `git diff --check` 通过。
+- 未修改生产实现、未新增设备实验；已有板端对照只证明相应正确样例的执行，
+  不能证明上述新程序被正确翻译。
+- 交接的 847 passed 是执行者的回归证据，本次未全量独立重跑，也不因它全绿
+  而降低新反例的判定。
+
+### 68.5 证据与重放
+
+证据：`results/codex-frozen-review/`，包含两个真实源文件、对应 TIR 与计划、
+mock 数字、注册/engine 探针、旧审核复跑结果、冻结文件快照及校验清单。
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-frozen-review/reproduce.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-frozen-review/verify_engine.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest \
+  tests/test_tilelang_backend_registration.py -q -o addopts=""
+```
+
+前两条不访问设备。审核脚本应保留原样，正式测试应独立加入对应正反例。
+先完成局部写入映射、完整类型约束和编译产物接口，再提交验收；不扩大算子族。
+
+## 69. §68 三条的修复：局部写入覆盖、参数类型契约、编译产物接口（2026-11-06）
+
+审核对象是 §68 的冻结文件。三项要求各自按规则修复，没有为单个 fixture 加常数列判断，
+也没有把 `serial` 加进拒绝白名单。
+
+### 69.1 局部写入映射：iterate → tile 必须是双射
+
+§68.1 的反例（`results/codex-frozen-review/partial_staging.py`）写的是 `As[i, 0] = A[im*256+i, ko*256]`：
+nest 仍是 256×256、read/store 的局部索引一致地都是 0，所以块表达式证明成立，但列轴写的是常量 0。
+
+缺的是 **store map 覆盖**。`_prove_tile_coverage` 现在对每个逐元素 tile store（两个 staging copy 与
+epilogue 走同一条代码路径）要求：该轴索引必须是本 nest 的**一个**循环变量（可证相等），
+该变量 extent 必须等于该轴的 tile extent，两条轴不得共用同一变量。与"nest 迭代整块 tile"合起来
+即 iterate → tile element 的双射：每元素恰好写一次，循环 kind 与是否重复写都不影响结果。
+常量列、对角线、重映射索引分别被这三条拒绝；测试里各有一条。
+
+### 69.2 参数类型：证明计划将要绑定的接口，而不是硬编码
+
+§68.2 的反例（`fp32_operands.py`）A/B/As/Bs 为 float32，被接受后 plan binding 把 A/B 改成 float16。
+`_require_operand_contract` 现在在入口核验 A、B、Y 与两个共享 tile 的 dtype（必须 float16）以及
+参数行 stride（显式 stride 必须等于 `(shape[1], 1)`），不满足即拒绝并带上实际 dtype。
+`_minimal_module` 的 `DTYPE_F16` 因此从假设变成已证接口。
+
+### 69.3 编译产物：随模块返回，标准入口能完成
+
+见 `refactor-specific.md` 68.4/68.5。要点：产物（完整 plan JSON + hash）挂在返回模块与其 PrimFunc 上；
+设备 codegen 改为重新挂上产物、只拒绝未携带产物的模块；`register_rknpu_backend()` 在本构建缺失
+`tvm.IRModule.inspect_source` 时安装最小 shim（`engine/lower.py:191` 需要它，实测本构建任何 backend
+都会停在那里），退注册时移除；公开 API 为 `compile_to_plan` / `plan_from_artifact` / `plan_from_module` /
+`plan_from_json`，并复用 `Plan.from_dict` 的哈希校验。`_LOWERINGS` 只保留诊断用途。
+
+审核脚本 `verify_engine.py`（未修改）现在给出
+`{"engine": {"status": "ACCEPT", "type": "<class 'tilelang.engine.param.CompiledArtifact'>"}}`；
+清空全局后仍能从 artifact 重建出同一计划；篡改哈希的文档被 `Plan.from_dict` 拒绝。
+
+代价已实测并记录：`structural_equal(lowered, input)` 由 true 变 false（函数带产物属性，函数体未改）。
+
+### 69.4 回归与证据
+
+- 三份旧审核脚本 `--full` 复跑：合法基线接受、计划哈希不变，全部旧反例仍拒绝
+  （`results/codex-pass-66/audit-scripts/`）。
+- `results/codex-frozen-review/reproduce.py`（未修改）：两条新反例均拒绝。
+- `tests/test_rknpu_pass_pipeline.py`：新增 8 条规则级测试（常量列、对角线、重映射、epilogue 同规则、
+  fp32 operand、strided 参数、参考接口绑定、参考程序仍覆盖）。
+- `tests/test_tilelang_backend_registration.py`：25 项。
+- 全量与跳过原因见执行者交付说明与 `results/codex-pass-66/final-suite.log`；本轮未做设备实验
+  （无设备与凭据），支持域未扩大。
+
+## 70. §69 冻结代码直接审核：三项旧修复成立，GEMM 结果连线仍有错误
+
+审核对象 `rknpu_pass.py` 为
+`3216094557f9910c1ee36cb5630af6ca4e1cd8729baf98252a5b30480baec740`，
+`tilelang_backend.py` 为
+`20a5e5ecb5db05f2e8790eb57f4b8bc05ffe51781ef0fcfcdeb6a0e64739f050`。
+未改实现，所有本次生成结果另存 `results/codex-pass-69-audit/`，不覆盖历史审核。
+
+**结论：旧问题修复确认，但当前仍不能通过语义正确性验收。** 新发现一条实际
+错误接受路径：GEMM 输出 buffer 未与 accumulator copy 链建立绑定。
+
+### 70.1 已独立确认的修复
+
+- 复制原 §68 脚本和源 fixture 到新的审核目录再运行，partial_staging 与
+  fp32_operands 均按预期拒绝，旧目录生成文件未被重写。
+- 标准 `tilelang.engine.lower(..., target="rknpu")` 本次返回 CompiledArtifact，
+  不再停在 device codegen。原标准入口问题在这个固定构建中已修。
+- `tests/test_tilelang_backend_registration.py` 独立重跑：**25 passed，51.11 秒**。
+  其中覆盖产物还原与清空全局记录后的读取；此证据不外推至其它 TileLang/TVM 版本。
+- 本次没有独立重跑全量 864 项，不将交接计数写成本次执行结果。
+
+### 70.2 P1：GEMM 写入 Acc、随后被 Cl 覆盖，仍被编译成普通 GEMM
+
+位置：`rknpu_pass.py` 的 GEMM region 收集（约 582—620）、copy 链验证
+（约 779—803）、GEMM operand 绑定（约 822—842）。
+
+源码独立 fixture：`results/codex-pass-69-audit/wrong_accumulator.py`。
+以正确的 FP16 guarded-tail GEMM 为基础，仅将：
+
+```python
+T.copy(Acc, Cl)
+T.gemm(As, Bs, Cl)
+T.copy(Cl, Acc)
+```
+
+改为：
+
+```python
+T.copy(Acc, Cl)
+T.gemm(As, Bs, Acc)  # 写入 Acc，而非 Cl
+T.copy(Cl, Acc)      # 用 GEMM 之前的值覆盖刚算出的结果
+```
+
+Acc 初始为零。每轮 Cl 保存旧 Acc，GEMM 仅修改 Acc，随后 Cl 被复制回 Acc，
+所以最终输出应为零。该推导不依赖块内求和次序或 GEMM 中间误差。
+如果本目标不支持这种 accumulator 类型/数据流，入口应准确拒绝，不能接受后
+替换成普通的 FP32 GEMM + FP16 累积链。
+
+当前 localise 与完整编译都 ACCEPT，产生计划 hash `70d70281d985…`。
+mock 输入 A/B 全 1：
+
+| 项 | 结果 |
+|---|---:|
+| 源程序预期输出 | **0** |
+| 生成计划的 mock 输出 | **576** |
+| 不一致元素 | **65536 / 65536** |
+
+原因：`gemm_acc` 由分配中的 FP32 fragment 选定；copy 链证明验证它与 running
+之间的方向及位置，但没有证明 tile GEMM 的第三个实际 region 就是该 buffer。
+GEMM regions 仅前两个用于 operand→tile 对应；第三个虽然被记录进 rk_gemm，
+后续任务归一和 planner 没有消费其真实结果连接。
+
+修复应建立完整的局部 def/use 与 region 关系：实际 GEMM 的累加输入、输出
+region、copy load/writeback 和最终 store 必须属于同一已支持链；依据 buffer
+对象身份、dtype、region 与索引证明，不能只按分配类型、名字、计数或相对顺序
+假定连接。GEMM/copy/fill 的 region offset、extent、读写方向与 alias 约束也应
+在同一签名检查中核实，不应再只补一个 fixture 名字判断。
+本次异常源程序没有送设备，数值演示仅使用生成计划的离线 mock。
+
+### 70.3 编译产物接口和兼容层的证据范围
+
+当前完整产物随 module/PrimFunc 的属性与 CompiledArtifact 返回，global
+lowering log 已不是读取计划的必要条件。这是相对 §68 的实质进展，应保留。
+
+IRModule.inspect_source shim 是当前构建的显式全局兼容改动，需要继续以
+固定版本说明。不可仅因 IRModule 缺方法，推断其它后端的 runtime codegen
+产物也缺方法。额外 CPU 隔离探针在注册前/中/后均停在同一个
+`Target context required`，早于 inspect_source，因此本次**没有证明**其它
+backend 的完整编译兼容性，也没有据此认定 shim 已导致其它后端回归。
+
+标准入口本次成功不能替代源语义验证：70.2 的错误程序仍能进入产物链。
+先修局部数据流关系，再讨论默认切换或扩大源结构。
+
+### 70.4 重放与证据
+
+目录 `results/codex-pass-69-audit/` 包含新源 fixture、TIR、生成计划、mock
+数值、旧脚本隔离副本及其输出、25 项注册测试日志。复现命令：
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-pass-69-audit/reproduce.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest \
+  tests/test_tilelang_backend_registration.py -q -o addopts=""
+```
+
+第一条只做正式新路径的离线编译与 mock，不访问设备，不修改生产代码。
+审核脚本应保留，正式测试另行加入 wrong-accumulator 与其它 region 连接负例。
+
+## 71. §70 的修复：累加链按 buffer 身份与 region 绑定（2026-11-06）
+
+§70.2 的反例把 `T.gemm(As, Bs, Cl)` 改成 `T.gemm(As, Bs, Acc)`，随后的 `T.copy(Cl, Acc)`
+用 GEMM 之前的值覆盖结果：源码输出应为 0，计划按普通累加 GEMM 给出 576。
+
+### 71.1 根因
+
+`gemm_acc` 是按分配 dtype 选出的 FP32 fragment；copy 链只验证了"存在 Acc→Cl 的 load"
+与"存在 Cl→Acc 的 writeback"及其相对位置，从未把 **tile GEMM 实际写入的第三个 region**
+和 `gemm_acc` 连起来。GEMM 的三个 region 也只按名字映射前两个来定 operand 角色，
+第三个进 `rk_gemm` 后没有下游消费者，于是"检查了方向与顺序"不等于"确认是同一条数据链"。
+
+### 71.2 修复：一条 def/use 链，按对象身份与 region 核实
+
+新增两个基础判断：
+
+- `_same_buffer(a, b)`：同一分配 = `same_as` 或 `data.same_as`，且 dtype 与 shape 相同。
+  名字不再被当作身份。
+- `_require_whole_region(region, buffer)`：region 的 offset 全为 0、extent 等于整块 shape。
+
+`pass_localise` 现在把下列链接一次证明完，每条都用对象身份：
+
+| 链接 | 内容 |
+|---|---|
+| staging store | 目标必须是实际 shared tile 之一（不是同名或同类） |
+| GEMM 输入 | region[0] / region[1] 分别 == tile_a / tile_b，且为整块 |
+| GEMM 输出 | region[2] == `gemm_acc`，且为整块 |
+| 累加 load | from == `running`，to == `gemm_acc`，位置在 GEMM 之前 |
+| 回写 | from == `gemm_acc`，to == `running`，位置在 GEMM 之后 |
+| 零填充 | 目标 == `running`，整块、值为 0、在 K 循环之前 |
+| 输出 store | 读取 == `running`；写入 == 输出参数（对象身份） |
+
+因此"GEMM 写到别处、再由旧值覆盖"不再被当成同一链：它在第三个链接处被拒绝，
+错误为 `the tile GEMM result accumulator is not the buffer the rest of the chain
+reads and writes`，并带出两边 buffer 名与 dtype。
+
+### 71.3 结果
+
+- §70.2 的 `wrong_accumulator.py`：localise 与完整编译都拒绝（审核者自己的
+  `reproduce.py` 复跑为 `{"compile": "REJECT", ...}`）。
+- 参考程序与其余四份合法基线计划哈希不变：70d70281 / 8c2523aa / f6e24e96 / cee711d3；
+  三份旧审核脚本的全部旧反例仍拒绝。
+- 新增 4 条测试：GEMM 写入别的 buffer、GEMM operand 顺序颠倒、参考链仍绑定为同一链、
+  以及 localise 层同样的拒绝。
+- 审核者的 `results/codex-pass-69-audit/` 在运行其脚本后已按其 `SHA256SUMS.txt`
+  逐字节恢复（运行截图另存于 `results/codex-pass-69-fix/`）。
+
+### 71.4 范围说明与未做
+
+§70.3 指出的范围问题成立并已记录：`IRModule.inspect_source` shim 只补本构建缺失的方法；本构建其它 backend 在更早的 `Target context required` 处失败，因此没有据此推断其它 backend 的产物链兼容性，也没有把 shim 说成已验证的通用修复。
+
+### 71.4b 未做
+
+- 无设备实验（无设备与凭据）；支持域仍为 guarded-tail FP16 GEMM。
+- 未扩大算子族、未切默认、未放宽任何数值/预算检查。
+
+## 72. §71 冻结版本直接审核：旧累加器反例已修，未消费操作与 copy 区域仍有缺口
+
+审核对象 `rknpu_pass.py` SHA-256 为
+`a3e24f5bd87d5bbee079d2e5c577c8d1397747bd264721ebe96eee7c85160da6`，
+与交接相同。未修改实现；复现材料另存 `results/codex-pass-71-audit/`，没有重写
+旧审核目录的生成文件。
+
+**结论：§70.2 修复成立，但当前新路径仍不通过正确性验收。**
+
+### 72.1 已确认的修复与验证范围
+
+- 将原 `reproduce.py` 与 wrong_accumulator fixture 复制到新目录后运行，得到
+  预期的 `tile GEMM result accumulator is not the buffer...` 拒绝。
+- 独立运行 `AccumulatorChainTests`：**5 passed / 54 deselected，3.89 秒**。
+- 当前身份检查改善了 GEMM 与 copy 链连接；不再把上一轮 wrong accumulator
+  反例继续列为未修复问题。
+- 本次未重跑全量 869 项，也未重复设备实验。`git diff --check` 通过。
+
+### 72.2 P1：未支持的 tile op 被忽略并改写为普通 copy
+
+位置：`pass_localise` 的 tile-op 分支（约 628—683 行），以及
+`_rewrite_tile_ops:1289-1310`。
+
+前者以 `tl.tileop.*` 接受调用，但只处理名字以 gemm/fill/copy 结尾的三类，
+没有 unknown-op 拒绝分支。后者将非 gemm/fill 的其它 tile op 一律改成 rk_copy。
+因此“所有必须存在的操作均已找到”仍不意味着“所有有计算效果的操作均被消费”。
+
+真实源文件 `results/codex-pass-71-audit/extra_cumsum.py`：在正常 As/Bs staging
+之后、GEMM 之前插入 `T.cumsum(As, As, dim=1)`。本地 TileLang 的
+`language/scan_op.py` 明确支持 shared tile 上的原地 cumulative sum，产生
+`tl.tileop.cumsum`，没有额外 fragment/alloc 干扰。
+
+当前 localise 与完整编译均 ACCEPT；该操作被变成 As→As 的普通 rk_copy，最后
+不进入计算。生成计划 hash 仍为正常 GEMM 的 `70d70281d985…`。
+
+离线 mock 输入 A 全为精确 FP16 值 1/256，B 全为 1，M=256/K=576/N=256。
+独立参考每轮完整 staging、cumsum、FP32 GEMM、FP16 writeback：
+
+| 项 | 所有输出元素 |
+|---|---:|
+| 源程序累计求和后的预期 | **265.0** |
+| 生成计划的 mock | **2.25** |
+| 不一致元素 | **65536 / 65536** |
+
+两侧都 finite，不是误差门槛问题。本目标不需要新增 cumsum 能力；正确行为是
+明确拒绝不支持的操作，不能接受后删掉。
+
+修复要求：proof 和 rewrite 共享完整、精确的操作定义/白名单；unknown-op
+default 必须拒绝，不用前后缀将未定义操作归入已有类别。检查所有被消费语句的
+有效计算与副作用，计数只能作辅助，不作为整体效果闭合的替代。
+
+### 72.3 P1：accumulator copy 只检查身份，未检查 region 起点
+
+位置：`pass_localise:946-956`。`_require_whole_region` 在 GEMM 的三个 region
+上调用，但在四个 copy region 上只调用 `_same_buffer`，没有调用区域检查。
+fill 的记录和检查也仍主要保留 extent，需在同次修复核查 offset。
+
+独立 TIR 反例：正常 `Cl→Acc` 回写，目标从 `Acc[0,0]` 改为 `Acc[1,0]`，
+extent 仍是 256×256，原 allocation 仍是 256×256。
+region 的 row 结束位置为 257，已经超出 buffer。
+
+localise 与完整编译都 ACCEPT，仍生成正常计划 `70d70281d985…`。
+这与 §71 所述“region 完整绑定”不符。只比较 extent 和 buffer 身份不能证明
+复制从零开始、在分配内、覆盖整块。反例只做离线编译，没有执行越界 source
+或将其送设备；Plan 被重建为正常 copy，不代表原 source 合法。
+
+修复要求：对 copy load/writeback 的全部 source/target region 以及 fill 的
+region 一致检查 offset、extent 和实际 buffer view 契约；现成 helper 不能只
+定义而不调用。允许可证明等价的规范化表达，不需要支持部分 copy 或新算子。
+
+### 72.4 证据与重放
+
+目录 `results/codex-pass-71-audit/`：原反例隔离复跑、累计求和真实源及 TIR、
+shifted copy TIR、生成计划、独立参考与 mock 数值、当前代码快照。
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-pass-71-audit/reproduce.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest \
+  tests/test_rknpu_pass_pipeline.py -k AccumulatorChainTests -q -o addopts=""
+```
+
+第一条仅离线编译，只有合法生成计划的累计求和对照进入 mock；shifted-copy
+仅编译，绝不执行越界 source。未访问设备，未更改数值政策或生产实现。
+正式测试应加入 unknown-op 和所有 region 方向的规则级负例，完成后再提交验收。
+
+## 73. §72 的修复：精确操作表与全部 region 契约（2026-11-06）
+
+§72 的两条：未支持的 tile op 被忽略并改写成普通 copy；accumulator copy 只检查身份、不检查 region 起点。
+
+### 73.1 精确的操作表，proof 与 rewrite 共用
+
+新增 `TILE_OPS = {"tl.tileop.gemm": "gemm", "tl.tileop.fill": "fill", "tl.tileop.copy": "copy"}`
+与 `_tile_op_role(call)`：不在表内的 tile op 直接拒绝
+（`a tile operation is not consumed by the pass chain and would change the result if it were dropped`，
+带 op 名与实际名字表）。证明阶段（`pass_localise`）与改写阶段（`_rewrite_tile_ops`）都用这一个函数，
+不再用 `endswith` 把未定义操作归入已有类别，也没有 unknown-op 默认分支。
+
+`T.cumsum`（本构建 `language/scan_op.py` 支持、产出 `tl.tileop.cumsum`）因此被拒绝，
+而不是被改写成 As→As 的 `rk_copy` 后从计算里消失。
+
+### 73.2 每个被消费的 region 都检查
+
+`_require_whole_region` 现在真正被调用在：
+
+| 位置 | region |
+|---|---|
+| K 循环内每个 fill / copy | 该调用携带的全部 region（offset 全 0、extent 等于整块 shape） |
+| GEMM | region[0..2]（上一轮已有） |
+| K 循环外的 accumulator 清零 | 目标的 region |
+
+因此"回写目标从 `Acc[0,0]` 挪到 `Acc[1,0]`、extent 仍是 256×256、越出分配"被拒绝
+（`a tile operation region is not the whole buffer it names`）；显式写全切片
+（`T.copy(Acc[0:256, 0:256], Cl[0:256, 0:256])`）仍然被接受并给出同一计划 hash。
+
+### 73.3 结果与回归
+
+- §72 的两条反例在审核者自己的 `reproduce.py`（未修改）下都 REJECT，其目录在运行后按其
+  `SHA256SUMS.txt` 逐字节恢复。
+- 四份合法基线计划哈希不变（70d70281 / 8c2523aa / f6e24e96 / cee711d3），三份旧审核脚本的旧反例
+  仍全部拒绝（2 / 3 / 6 条）。
+- 新增 5 条测试：cumsum 拒绝、操作表精确、回写 region 偏移拒绝、清零 region 偏移拒绝、
+  显式全切片仍接受。
+- 本轮过程中发现并修正了一个自身缺陷：新增的 region 循环复用了外层的语句下标变量
+  （`position`），使 copy/gemm 的位置被改写，参考程序一度被误拒；已改名并由参考程序回归覆盖。
+
+### 73.4 未做
+
+无设备实验（无设备与凭据）；未实现累计求和能力（按审核要求只拒绝）；支持域仍是
+guarded-tail FP16 GEMM，未切默认、未扩大算子族。
+
+## 74. §73 冻结代码直接审核：旧两项修复确认，块执行谓词仍被丢弃
+
+审核代码 `rknpu_pass.py` SHA-256 为
+`7041e39fae7bff6030f1bcc69a4537ce2cbb9390d00f70301909acbc7cadc982`，
+与交接冻结身份一致。未修改实现；证据另存 `results/codex-pass-73-audit/`，
+未覆盖旧审核目录。
+
+**结论：§72 的两个具体缺陷已修复，但仍不通过源语义传递验收。**
+新发现的 P1 不在 tile op 内部，而是包围整段计算的 SBlockRealize.predicate。
+
+### 74.1 已确认的修复
+
+- 将原 `reproduce.py` 与 extra_cumsum 源复制到新目录运行，JSON 结果中
+  extra_cumsum、shifted_copy 均按预期拒绝。
+- 精确 TILE_OPS 表在 proof 和 rewrite 两处使用；K-loop 的全部 tile-op region
+  与循环外 accumulator clear 也已调用 whole-region 检查。
+- 独立测试 `UnsupportedOperationTests or RegionContractTests`：
+  **5 passed / 59 deselected，4.04 秒**。
+- `git diff --check` 通过；本次未独立重跑全量 874 项。
+
+### 74.2 P1：T.where(False) 禁用整块计算，仍被编译成普通 GEMM
+
+真实 TileLang 源文件：`results/codex-pass-73-audit/never_execute.py`。
+这是原始 T.prim_func 源码，不依赖手改 RKPlan，也不依赖伪造 TIR 节点。
+在正常 kernel 中加入：
+
+```python
+with T.Kernel(1, 1, threads=128) as (im, inn):
+    T.where(False)
+    # 原来的 guarded-tail GEMM body
+```
+
+本机语言实际提供 T.where；产生的 TIR 明确含：
+
+```python
+with T.sblock("tilelang_root"):
+    T.where(T.bool(False))
+    ...
+```
+
+该条件属于 SBlockRealize.predicate（本地 `tvm/tirx/stmt.py` 对字段有定义），
+决定这个 block 是否执行。常量 false 时，包括输出 store 在内的 body 不执行。
+若当前目标不支持这种控制结构，应准确拒绝，不能看见 body 中有 GEMM 就接受。
+
+当前行为：
+
+| 入口 | 结果 |
+|---|---|
+| `pass_localise` | ACCEPT |
+| `compile_guarded_tail` | ACCEPT，hash `70d70281d985…` |
+| `tilelang.engine.lower(..., target="rknpu")` | ACCEPT，同一计划，可从 artifact 还原 |
+
+mock 将 A/B 设为全 1，调用前将外部输出 Y 初始化为 -7：
+
+| 项 | 输出 |
+|---|---:|
+| 源函数禁用整个 block，应保留原有 Y | **-7** |
+| 新计划的 mock | **576** |
+| 被错误改写的元素 | **65536 / 65536** |
+
+此反例全为 FP16，输入与形状均在已测 GEMM 几何内；问题是控制语义丢失，
+不是浮点容差，也不是要求增加新数学算子。
+
+### 74.3 原因与修复要求
+
+位置：`rknpu_pass.py:1549-1556` 的实例化分支：
+
+```python
+if kind == "SBlockRealize":
+    expand(node.block, env)
+    return
+```
+
+它无条件进入 block，没有处理 predicate；前置分析也没有把该条件纳入证明或
+要求其在 enclosing domain 上恒真。对 IfThenElse 的正确处理不能覆盖另一个
+IR 节点中的控制字段。`_walk` 遍历 predicate 表达式不等于消费它的执行语义。
+
+需要明确 SBlockRealize/SBlock 等容器的语义契约：predicate、iteration binding、
+init 等对计算有影响的字段必须被保留并消费、证明冗余或明确拒绝。后两项本次
+没有单独构造反例，不冒称均已证实错误；但不能继续默认所有容器只需访问 body。
+
+对于本试点，可以先准确拒绝不支持的非恒真 block predicate；也可以正规化为
+后续真正消费的条件结构，再检查全输出覆盖。无需支持任意动态条件、空输出
+计划或扩大算子族。应测试恒真/恒假、选择性 block 条件及规范化前后的处理，
+避免只给 T.where(False) 增加一个文本特例。
+
+### 74.4 证据与重放
+
+`results/codex-pass-73-audit/` 包含真实源、原始及规范化 TIR、direct/engine
+生成计划、mock 数字、审核脚本与冻结快照。
+
+```bash
+cd research/tilelang-rknpu
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/codex-pass-73-audit/reproduce.py
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest \
+  tests/test_rknpu_pass_pipeline.py \
+  -k 'UnsupportedOperationTests or RegionContractTests' -q -o addopts=""
+```
+
+第一条只做离线编译和生成计划的 mock，不访问设备。没有执行含异常内存访问
+的 source，也没有修改生产实现或数值政策。
+
+
+## 75. 接手基线独立复现与控制字段邻接检查（2026-11-03）
+
+本轮主线程不修改实现、正式测试或配置。接手 HEAD 为
+`da4eeabd1c022a6e077bddfef4c36f2c46e6b11f`，BASELINE.json 中全部源码、库及
+历史反例文件 SHA 与实物匹配。Goal 保持 active，当前未通过验收。
+
+### 75.1 §74 独立重放
+
+将原 `reproduce.py` 与 `never_execute.py` 复制至
+`results/handoff-w00-QIY00c/`，复制字节 SHA 与原文件一致。项目 cwd 执行
+`PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/handoff-w00-QIY00c/reproduce.py`
+退出码0：direct/engine 均 ACCEPT，mock 输出576，应保留-7，65536元素改变。
+原历史目录未改写。此时源码仍为接手冻结 `7041e39f…cadc982`。
+
+### 75.2 P1：输出 BufferStore.predicate 被忽略（接手基线）
+
+主线程从不可变 `results/codex-pass-73-audit/snapshot/rknpu_pass.py` 加载接手
+版本作为隔离 Python 模块，未运行执行者正在编辑的候选。输入由真实
+`never_execute.py` 构造：将 SBlockRealize.predicate 改为恒真，只把输出 Y 的
+BufferStore.predicate 设为单 lane bool False。本地 tirx 的 BufferStore API
+明确支持 predicate 字段，其语义为决定哪些 lane 真正写入。
+
+源程序的每个输出 store 都被禁用，因此 Y 应保持调用前值-7。基线编译仍接受，
+生成普通 GEMM 计划 `70d70281d9851e291500a932ee333a4a37f02d94e089769e787b8e2d850a8a2f`；
+合法生成计划经 mock 执行后全部65536元素变为576。
+
+证据：`results/handoff-w01-lead-audit/{baseline_store_mask.py,baseline-store-mask.json,masked-output-source.tir.txt}`。
+重放命令：项目 cwd，
+`PYTHONPATH=$PWD:$PWD/python .venv/bin/python results/handoff-w01-lead-audit/baseline_store_mask.py`，
+退出码0。只执行生成计划的mock，不执行源程序或访问设备；不改容差。
+
+结论：这是接手基线的已确认邻接缺陷，不能只修块predicate而保留叶节点执行
+掩码丢失。已回派同一W01执行条件工作单；BufferLoad.predicate亦须清点。
+此处未对正在编辑的候选作通过或失败声明，最终需要同一冻结版本重放验证。
+
+### 75.3 历史设备证据身份核验
+
+`results/20261105T040000Z-pass-pilot/SHA256SUMS.txt` 22项中20项匹配；
+实际计划、device-pass.json、执行脚本匹配，stage-1-localise.tir.txt与
+stage-2-instantiate.tir.txt存在此前的字节漂移。没有恢复或重写这些文件。
+核验明细：`results/handoff-w01-lead-audit/historical-device-manifest-verification.json`。
+旧摘要不直接证明当前执行等同，仍需最终冻结后的完整C descriptor及源语义核对。
+
+
+## 76. W01b冻结检查点独立审查：旧谓词修复确认，表达式副作用与参数偏移仍丢失（2026-11-03）
+
+结论：**CHANGES_REQUIRED**，当前阶段尚未验收。执行者明确停止写入、无后台任务后，
+主线程核对并保存冻结身份：rknpu_pass.py
+`8863c3133feccba29a9a7c5515935a57598381304e4967d08bc576b4374a4b9d`；
+pass测试 `1b8b98bea1517c4db49c5b075774ddd3ab18faff28802bbf07247a44307fcabf`；
+注册测试 `1dc8099d41ef4af92ddd2c655159df58ebd6a90856557850ef95b2fa5f1b1596`。
+其它接手实现与两host库SHA不变。审核前后清单完全相同，见
+`results/handoff-w01-lead-audit/frozen-r1/identities-{before,after}.json`。
+主线程未改实现、正式测试或配置。
+
+### 76.1 已独立确认的修复与实际验证
+
+- 原§74脚本及fixture在隔离pass-73-audit子目录重放，退出0；direct/engine均准确以
+  SBlockRealize predicate不可证明恒真拒绝。原历史证据未覆盖。
+- `candidate_control_probe.py`检查六类样例，各覆盖direct simplify=False/True与engine：
+  合法基线及恒真写掩码接受；块False、输出写False、A读取False、block init副作用
+  均以对应BackendError准确拒绝；18个结果全部符合预期。
+- 独立pytest过滤 `UnsupportedOperationTests or RegionContractTests`：
+  **5 passed / 69 deselected，4.02秒，exit0**。
+- 实际diff中新增原始输入/localise/instantiate共用预检，块predicate在实例化时再核对；
+  init、iter binding、match_buffers、未知statement明确拒绝。没有调用旧extractor。
+- `git diff --check`通过。未宣称未跑的相关两文件全量或完整Python回归通过。
+
+### 76.2 P1：只查控制表达式，输出索引中的副作用仍被抹去
+
+源为隔离真实never_execute fixture的恒真块版本，仅将输出Y的第0维索引改成
+`old_index + 0 * T.call_extern("int32", "audit_effect")`。该调用的返回值不改变
+索引，但源程序仍需执行调用。未知外部副作用不属于本路径已支持的计算。
+
+direct/engine均ACCEPT，仍生成普通GEMM计划70d70281…，任务里没有承接该调用。
+`_require_pure_control`只核查predicate/If/mask，BufferStore.value/indices等被吸收的
+表达式没有相应副作用契约；算术等价证明不能证明有副作用的求值可以被删去。
+
+本探针只做离线编译，不链接或执行audit_effect、不访问设备；不冒称该外部调用的
+具体数值结果。应对所有会被证明/重写吸收的表达式建立已消费调用位置或纯度契约，
+不能仅给此名字或此处索引补文本特例。
+
+### 76.3 P1：参数buffer的elem_offset被忽略，接口实际读错行
+
+同一真实合法GEMM基线，将参数A的buffer_map及所有对应BufferLoad统一改为
+`elem_offset=576`，dtype、shape、stride、索引不变。源输入backing为257×576，
+第0行为0，其余行为1；源A实际视图从第1行开始，读取256行全1，容量充分。
+B全1，源预期全部输出576。
+
+当前direct/engine均ACCEPT并生成普通计划70d70281…。生成计划mock接收相同
+backing起点的前256行view，读到了源本应跳过的第0行，输出包含0和576，
+**256个元素与源预期不符**。未执行源程序或异常内存访问，mock只执行生成的合法计划。
+
+原因：容器预检只检查alloc_buffers的offset；`_require_operand_contract`检查参数
+类型/stride而没有消费elem_offset。新接口把外部视图基址静默当成零偏移。
+此外alloc_buffers的`_const(symbolic_offset)==None`与字段不存在混淆，不能据此
+声称已证明零偏移；此项是代码契约缺口，未另做数值缺陷声明。
+
+修复须覆盖全部参数/本地声明的layout字段，明确支持、证明可重布局或拒绝；
+对未支持的常量非零及无法证明offset，不得丢字段。
+
+### 76.4 正式测试仍待修正，不能用小子集替代完整回归
+
+本次diff只添加测试但把原NormalisationTests后两个方法移入了新增class，需保持
+原测试身份；新增init测试的单例tuple缺逗号；else-domain测试仅检验已有
+`_prove_under`数学性质，未覆盖容器visitor的else逻辑；unknown条件应有真正不能
+由loop域决定的样例。注册测试基线snapshot实际存在于§69目录且SHA与接手一致，
+无需仅凭hash声称没有对照内容。
+
+### 76.5 证据与后续
+
+`results/handoff-w01-lead-audit/`中：
+`candidate_control_probe.py`及candidate-controls.json、原§74重放子目录、
+`frozen_r1_adjacent.py`及frozen-r1-adjacent.json/两个源TIR、
+冻结快照与region测试日志。两条新反例用同一冻结代码实测，审核后SHA未变。
+已将发现按W01c回派；需完成支持字段/调用位置对应表、正式正反例和稳定回归后再审。
+旧入口、生产默认、数值政策及算子范围未改变；无新设备实验声明。
+
+
+### 76.6 同一冻结快照补查：GEMM clear_accum的恒真表达式被当作False
+
+执行者恢复W01c写入后，主线程只从已保存、SHA为8863c313…的不可变r1快照加载
+Python模块，不运行正在修改的前端。将正常tile GEMM的args[9]改为
+`tirx.EQ(IntImm(0), IntImm(0))`，其它源结构保持原样。这是恒真clear_accum表达式：
+每个K块的GEMM清除Cl再计算，因此A/B全1时最终Acc只保留末块K=64的结果，应全部64。
+
+- direct `simplify=False`：ACCEPT，mock全部576，65536元素不符。
+- direct `simplify=True`：准确以不支持clear_accum拒绝。
+- 此探针未额外运行registered engine，不把direct证据外推为已实测engine结果。
+
+根因仍是字段契约：`_const(non-IntImm)==None`被`if clear_accum`当成False，
+未知值/非字面常量不等于已证明False。transpose、coords等调用字段也必须清点，
+以证明支持值、消费语义或准确拒绝处理，不能用falsy推断。
+
+证据：`results/handoff-w01-lead-audit/{frozen_r1_gemm_flag.py,frozen-r1-gemm-flag.json,
+constant-true-clear-expression.tir.txt}`。脚本只编译源并运行生成的合法mock计划，
+不运行源GPU程序、不访问设备。已加入同一W01c字段/调用位置工作单。
+
+
+### 76.7 偏移反例的结构合法性补核
+
+对不可变r1快照使用本地TVM analysis：原baseline与76.3显式参数偏移反例均
+verify_well_formed=True、verify_ssa=True，确认不是靠未声明view构造的反例。
+另一个只替换load buffer而未声明新view的探索样例well_formed=False；虽然r1
+仍接受它，本轮不将其当作合法源数值反例或独立新增阻断，不以它要求实现通用别名。
+可以通过准确的结构/声明检查拒绝此类未支持输入。证据r1-view-validity.json。
+
+
+### 76.8 历史设备计划与当前主机C/mock ABI的独立兼容检查
+
+W01c写入期间，主线程未调用漂移前端，仅加载已核对字节SHA的历史实际设备计划
+`20261105T040000Z-pass-pilot/plans/pass-pipeline.rkplan.json`（f3eb162f…）。
+当前mock库c9e0d22e…通过PlanCall接收该计划，A/B全1、M/K/N=256/576/3072，
+输出全部576、零不符，退出0。计划字节SHA f83e405b…与历史manifest匹配。
+
+命令：项目cwd，`PYTHONPATH=$PWD:$PWD/python .venv/bin/python
+results/handoff-w01-lead-audit/historical_anchor_mock.py`。
+脚本与原始日志/JSON在同目录。本项只证明历史计划对当前Host C/mock ABI仍可运行，
+不代表正在修改的前端已通过，也不是本轮真机证据；最终仍须冻结后核对完整执行字段。
+
+
+## 77. W01c冻结检查点独立审查：已知语义阻断关闭，正式回归与交付仍待完成（2026-11-03）
+
+**实现语义单元：PASS；当前阶段整体：尚未验收。**
+执行者明确停止写入且无后台后，主线程核对实现SHA
+`ae6c896e3220a7a88f17eeec5a4de6f21558088a9a74efbc5bc8047c2103472f`，
+pass测试`b00937fbee61e187e7b9fab688918303254c7a2557b80c32fbc6d5a3a59c67a1`，
+注册测试`21bd45eb4252609e1954252b7f56c91009f1908952658f1816ca6741d8fdcadc`。
+本次185个Python/测试/能力/C源及host库文件的审核前后身份相同，未改实现。
+证据根为`results/handoff-w01-lead-audit-r2/`。
+
+### 77.1 支持契约落实与具体修复
+
+- 计算调用按实际位置登记consumer：Evaluate中的精确tile-op与region、经证明未使用的
+  launch Bind，以及实例化RK任务。索引/值/域/声明中的其它Call在简化前拒绝。
+- 参数与分配均要求已知零elem_offset、compact stride与支持的layout；每次buffer访问
+  必须唯一解析到声明的data对象并满足同一描述。未知offset不再与字段缺失混淆。
+- GEMM transpose/clear/geometry/barrier/coords/policy各字段不再以None/falsy代表0。
+  call-free静态等价表达式由_known_const简化；True clear准确拒绝，等价False保留。
+- 容器predicate/iter/init/match等既有修复保留；If边界guard继续由完整路径证明与
+  实例化消费，不要求所有If恒真。无旧extractor fallback，无planner/C执行修改。
+
+据本次同一冻结上的独立正反例和代码路径，§74、§75.2、§76.2、§76.3、§76.6
+的具体问题均修复确认；最终冻结必须保持这些规则并防回归。
+
+### 77.2 独立反例与等价正例
+
+- candidate_control_probe：六类样例×direct、simplify、engine，18结果符合预期。
+- candidate_fields：11类均通过TVM well_formed检查，三个入口模式共33结果符合预期。
+  包括等价False/True/unknown clear、transpose、zero coordinate、等价zero offset、
+  nonzero/unknown offset及data-dependent block predicate。
+- 所有接受的等价正例，其完整C执行descriptor、constants与numeric requirements
+  与对应canonical基线一致；没有用plan_hash代替此核对。
+- 未改动原内容的§76两个反例脚本在新目录重放，direct/engine均准确拒绝。
+- 这些是冻结实现的独立结果，不混称执行者此前小样例为主线程验证。
+
+### 77.3 七组历史审核重放
+
+pass-review、pass-recheck-64、current-worktree-acceptance以--full运行；
+frozen-review、pass-69-audit、pass-71-audit、pass-73-audit按原脚本隔离运行。
+脚本和fixture复制字节SHA一致，原历史证据没有覆盖。
+不能只看脚本exit0；主线程另核对39个localise/compile/direct/engine实际状态，
+五个合法基线接受，所有对应反例拒绝，零期望偏差。
+见history-commands-{1,2}.json及history-verdicts.json。
+
+### 77.4 计划接口、尾块与decode的C/mock
+
+独立检查M/K/N=257/576/300与1/576/3072：
+
+- direct、simplify、legacy scheduled-baseline、registered engine及保存加载计划，
+  完整执行descriptor/constants/contracts相同。
+- 清空TB全局lowerings、退出registered上下文并删除局部PrimFunc引用/GC后，仍能从
+  返回artifact提取计划。此描述只对应实际操作，不额外宣称已用weakref证明对象释放。
+- 计划JSON roundtrip完全一致；direct及加载后的engine计划各自用当前mock执行，
+  A/B全1，所有输出576，零不符。stage序列包括localise/instantiate实际transform。
+
+探针第一次漏传legacy compile_tilelang必需的profile而发生setup TypeError；
+原脚本副本及错误日志保留，修正仅补profile参数，没有修改验收断言或容差。
+后续有效运行exit0，见tail-artifact-mock.json及*-rerun.log。
+
+### 77.5 与真实设备记录的可核验执行等同性
+
+当前256/576/3072计划与旧设备实际计划f3eb162f…，逐项展开完整C descriptor：
+values/buffers/views、所有action字段/输入输出/依赖/源偏移/K参数/flags、submits、
+publish、预算、ABI/profile等均相同。唯一descriptor差异为36条action.origin诊断文本。
+C源码仅校验/复制该字符串，不将其用于执行。
+
+constants与数值contract相同。JSON层差异另有kt/source_hints/linear_task_policy记录、
+plan_hash及numeric_requirements.execution.k_tile从旧缺省0记录为256；这些不进入C
+执行编码，当前runtime也不读取它们来改变任务。不要把记录差异误当执行改变，
+也不删掉这些差异以伪造完整Plan相等。
+
+旧计划字节SHA与旧manifest匹配；旧device-pass记录真实权重下旧/新计划输出逐位相同。
+§76.8又证明该旧计划对当前host mock ABI可执行。本次是执行等同性证据，**没有本轮
+真机重测声明**，且不外推到其它算子、target或新的运行结构。
+
+### 77.6 正式测试与文档仍需完成
+
+原pipeline64个及注册25个测试的方法身份/AST均保留，当前分别78/27个；无删除或弱化。
+独立旧op/region子集为4 passed/1 failed/73 deselected，4.39秒：唯一失败是cumsum
+拒绝已从旧localise消息提前到call-position预检，旧字符串断言未迁移；实际仍为
+BackendError且actual.op=tl.tileop.cumsum。不可把本日志重写为通过。
+
+后续W02只完善正式engine字段测试、修正fixture/合法诊断断言、落持久字段契约与
+实施记录并跑相关两文件；实现ae6c896e保持冻结。若确需实现修复，必须先说明证据，
+再重新冻结审查。完整Python回归、最终证据/文档一致性与停止状态仍待后续验收。
+
+
+## 78. 冻结快照补查：显式声明与纯hint的保真缺口（2026-11-03）
+
+**当前阶段结论仍为CHANGES_REQUIRED。** §77确认的具体计算/谓词修复不撤销，
+但“所有显式M/N要求必须消费，unknown rknpu.*准确拒绝”的旧验收条件仍有两个缺口。
+本节只加载不可变r2实现ae6c896e…；模块探针另加载SHA为20a5e5ec…的不可变
+backend快照，并在隔离子进程内绑定对应编译模块。不读取执行者正在改写的测试或前端。
+
+### 78.1 跨scope的同名声明被dict.update覆盖
+
+真实GEMM fixture上增加两条声明：tilelang_root SBlock的rknpu.tile_m=128，
+内部K-loop的rknpu.tile_m=256。源通过verify_well_formed与SSA检查。
+当前编译ACCEPT，actual_tile_m=256，hints没有对外层128的处理记录。
+相同值256/256的对照也ACCEPT，生成同一普通GEMM。
+
+原因是pass_localise的declared.update按遍历顺序覆盖先前值，最后只验证一个字典。
+现有_validate_declarations的契约是every declaration agree with IR，不存在已定义的
+scope shadowing语义；不能事后将覆盖当成实现了合法优先级。
+这不是新的浮点数值缺陷声明，而是已证实的显式编译要求丢失。
+
+证据：r2/duplicate_declarations.py、duplicate-declarations.json及两个TIR。
+修复要求：保序保留每次声明和来源，逐条验证/消费或拒绝；相同值重复仍接受，
+不能用禁止多scope替代。原始请求应保存在编译记录里对最终几何验证；normalized
+声明也应验证，但不以语法多重集完全相等阻止合法常量简化、移动或冗余合并。
+
+### 78.2 IRModule输入的rknpu.*属性在拆包时丢失
+
+公开compile_to_plan接受单函数IRModule。对同一合法源：普通模块ACCEPT；
+IRModule.attrs含rknpu.tile_m=128或rknpu.unimplemented=1时也ACCEPT，仍为tile_m256。
+返回module只有rknpu_plan_*产物属性，源请求未承接。
+
+compile_to_plan先_as_prim_func提取函数，调用编译后重新构造模块，未对源Module属性
+建立契约。此scope可以暂不支持并准确拒绝，但不能接受后丢掉reserved rknpu请求。
+不要求新增模块级调度或将module字典覆盖到函数字典。
+
+证据：r2/module_declarations.py、module-declarations-rerun.json/log及源TIR。
+第一版探针用迭代而非keys读取DictAttrs，报告代码产生KeyError；该版副本/日志/JSON
+已标记setup-error，不能当成候选拒绝证据。有效rerun只修正元数据读取，并保留原判据。
+本节实测公开compile_to_plan接口，未额外宣称此探针已走标准engine；正式回归须补。
+
+### 78.3 当前回派
+
+W02允许rknpu_pass.py仅修改声明收集/逐条验证/消费记录；另明确授权
+ tilelang_backend.py仅处理该输入边界（可拒绝不支持的module rknpu.* scope）。
+仍不碰lowering核心、planner、C、数值标准、生产默认或其它算子。
+执行者选择保序collector与消费记录、模块scope准确拒绝的最小方案，随后补direct/
+engine及保存加载测试，再冻结由主线程独立审查。此前正式测试/文档/完整回归工作保留。
+
+
+### 78.4 接受的纯copy hint没有随计划保存
+
+同一不可变r2快照，将两条accumulator copy的真实TileLang Call.annotations设为
+coalesced_width=8。源well_formed与SSA均为True，编译ACCEPT；但facts.hints、保存
+后的Plan及加载后的explain_plan均没有请求值或未采用原因。这不是数值错误，而是
+既有“接受的调度提示必须有消费/未采用记录”契约的缺口。
+
+证据：r2/copy_hint_record.py、copy-hint-record-rerun.json/log及
+copy-coalesced-hint.tir.txt。第一版误用不存在的Plan.explain接口，其setup-error
+副本/日志保留；有效rerun只改为公开explain_plan，没有放宽判据。
+
+W02-D已纳入最小修复：已知纯hint可记录requested、scope、applied及reason，未知
+annotation准确拒绝；每个被接受的For/SBlock/Call annotation occurrence均须处理，
+不能仅保留最后一次或只看选中的K-loop。不要求实现GPU coalescing或任意调度提示。
+当前候选尚在修改，不能把执行者的计划当作已验证修复。
+
+
+## 79. W02-D/r3冻结独立审核：声明与hint缺口修复，回归断言尚需迁移（2026-11-03）
+
+**实现语义单元PASS；阶段整体仍CHANGES_REQUIRED。** 执行者停止四文件写入及所有
+相关后台命令后，主线程捕获185文件清单；相对r2仅两个授权实现和两个正式测试变化。
+实现e072e45e47d9913fe4913d7c4029a6b872bffb1478bb80aaab92ff24a6e927dd，
+backend471c4e911ac0a25b8ce5f3f15b05cdece2ff9f17bd3d373384ef90fc45ca1463。
+两测试分别78c567f8…/f564bfb3…；完整身份与差异在
+`results/handoff-w02-lead-audit-r3/frozen/`。首次审核后185文件身份相同；后续命令仍需
+结束时复核。主线程只改审计探针和文档，未改实现、正式测试或配置。
+
+### 79.1 新缺口原探针与相邻正例
+
+- 原duplicate探针：matching256/256接受，source/normalized各保留两条独立consumed
+  记录；outer128/inner256准确以声明与证明几何不符拒绝。两源WF/SSA true。
+- 原module探针：普通模块接受，模块tile_m128与unknown rknpu请求准确拒绝。
+  探针只适配到新冻结compiler/backend及对应SHA，不再加载旧backend快照。
+- 原copy hint探针：coalesced_width8接受，source/normalized各有两条copy occurrence，
+  每条含scope/requested/applied=false/reason；保存Plan及加载后的explain均保留。
+- 独立module_engine五变体×public/engine共10结果符合预期：普通、ordinary attrs、
+  internal rknpu_plan_*接受；两种模块rknpu.*准确拒绝，非意外异常。
+
+以上核对实际JSON结果，不把探针exit0当作修复证明。实现按保序collector逐项核验
+原始与规范化声明，未使用语法多重集相同作为门槛；已知纯hint按scope验证并逐次记录，
+其它annotation拒绝。§78三个具体缺口在该冻结上修复确认。
+
+### 79.2 既有语义、产物与执行等同性
+
+- control18与fields33个入口结果符合预期，accepted等价正例完整C descriptor、
+  constants及numeric requirements同canonical。
+- 七组隔离历史脚本39个实际localise/compile/direct/engine状态符合预期，
+  零期望偏差。复制的原脚本/fixtures字节身份可核对，旧证据未覆盖。
+- M/K/N=257/576/300、1/576/3072的direct/simplify/legacy/engine/roundtrip
+  执行描述、常量与contract相等；全局诊断清空并删除局部源引用后仍可读取artifact。
+  四次当前plan mock全1输入均得576，零不符；不称为真机。
+- 当前主样例与历史真实设备计划完整C执行字段相等（排除source_hash及action.origin
+  诊断字段），见descriptor-equivalence.json；本轮未做真机实验，不扩大历史设备结论。
+
+### 79.3 正式两文件回归与来源记录导致的哈希差异
+
+主线程启动完整两文件pytest，当前尚未结束并已有两个F，不能记为通过。独立
+normalisation_identity对raw/materialised/simplified三输入逐项对照：完整C执行描述、
+constants与数值contract相同；Plan字典差异仅为source hint各条depth/ordinal和hash。
+materialised/simplified相对raw均145处差异，144处来源位置及1处plan_hash。
+
+来源记录属于新的持久诊断信息，来源位置随合法规范化改变有据可查；不要求删除
+原始请求来恢复hash。正式跨输入形式断言应保留全部合法变体和既有几何/任务检查，
+并依据完整执行字段、常量、数值约定及来源记录作有针对性的迁移。尚待完整失败
+摘要后由执行者作最小测试修改，再冻结并跑最终完整回归。当前不允许放宽数值容差
+或笼统忽略其它计划差异。本次2F及原始日志永久保留。
+
+
+### 79.4 两文件完整回归结束与测试迁移证据
+
+冻结r3全量退出1：10 failed、111 passed、66 subtests passed，1026.76秒。
+其中6个普通失败、4个子测试失败，不能误写为10个独立测试方法。审核后185文件
+身份与before相同，所有主线程句柄已结束，原始pytest-related.log永久保留。
+
+失败分组与处置：规范化三forms及constant/domain true、clear_false的跨forms比较
+遇到前述source定位/hash变化；三处参考计划固定70d702…哈希变为125905…；strided
+参数仍正确拒绝，但消息提前为noncompact or unknown strides。主线程额外
+reference_anchor.py加载旧70d702完整计划，确认与新125905完整C执行描述、常量和
+contract相同；Plan字典仅三条action新增unapplied_annotations及hash，共四处差异。
+
+据此W02-E仅放行pipeline正式测试的精准迁移：跨规范化形式比较完整Plan字典，
+只排除plan_hash及source hint的depth/ordinal；三个固定哈希更新并保留身份断言；
+stride断言迁移同时加强错误码、阶段与actual字段。实现、backend与注册测试继续
+冻结。没有借失败放宽数值或删除合法/非法变体；最终完整tests必须在迁移后冻结版本
+运行，当前仍不是阶段完成。
+
+
+## 80. guarded-tail FP16 GEMM当前阶段最终独立验收：PASS（2026-11-03）
+
+**当前Goal的验收条件全部满足，没有开放的已确认阻断项或剩余实施任务。**
+本结论仅适用于本阶段支持契约；旧adapter、生产默认、数值政策及算子范围保持。
+主线程未修改实现、正式测试、构建脚本或配置；最终独立审计没有外包。执行者
+已最终停止写入，相关测试与后台任务全部结束。
+
+### 80.1 最终冻结身份
+
+HEAD仍为da4eeabd1c022a6e077bddfef4c36f2c46e6b11f，继承dirty/untracked保留；
+未reset/clean/整文件回退，未暂存或提交未知改动。四文件SHA-256：
+
+| 相对项目路径 | SHA-256 |
+|---|---|
+| python/rknpu_backend/frontend/rknpu_pass.py | e072e45e47d9913fe4913d7c4029a6b872bffb1478bb80aaab92ff24a6e927dd |
+| python/rknpu_backend/frontend/tilelang_backend.py | 471c4e911ac0a25b8ce5f3f15b05cdece2ff9f17bd3d373384ef90fc45ca1463 |
+| tests/test_rknpu_pass_pipeline.py | 5afd2796902035e91d5bf8c902bbfea44b222cfebbb22f48372a01da1e31b35d |
+| tests/test_tilelang_backend_registration.py | f564bfb33a1ec46e88beb9afe7b88011ad92ec4090da1b466a9098c371f9807b |
+
+证据根results/handoff-final-lead-audit-r4。185文件回归前后清单完全相同，
+包含相关Python、能力、正式测试、C源码/配置及两host库。r3→r4只改变pipeline
+正式测试的有证据断言；两个实现与注册测试不变。git diff --check通过。
+
+### 80.2 逐项独立验收
+
+| 要求 | 结果与证据 |
+|---|---|
+| §74与容器/控制字段 | PASS。false/selective/unproven block predicate、init/iter/match等不支持字段准确拒绝；恒真正例接受。§77、§79 control/fields探针。 |
+| 被吸收计算/存储语义 | PASS。未消费Call在简化前拒绝；参数/分配offset、layout、mask与GEMM字段有证明/消费/拒绝契约；§76具体反例关闭。51个独立入口结果符合预期。 |
+| 结构参与lowering | PASS。normalise、localise IR tile-op改写、instantiate逐域展开、task→plan实际运行；无旧extractor fallback。完整路径/覆盖/K partition及def-use参与证明。 |
+| 显式声明/纯hint | PASS。§78冲突声明拒绝、同值重复逐条消费；module rknpu.*准确拒绝；每个接受的hint occurrence记录scope/requested/applied/reason并随Plan保存解释。原探针及module十结果通过。 |
+| 历史反例/合法变体 | PASS。七组隔离历史脚本39实际状态零偏差，control18及fields33符合预期；accepted等价字段的完整执行描述/常量/数值要求相等。 |
+| artifact/尾块/decode | PASS。257/576/300和1/576/3072的direct/simplify/legacy/engine/roundtrip执行描述、常量、contract相等；清空诊断全局并删局部源引用后artifact可读。四次当前plan mock全得576、零不符。 |
+| 正式完整回归 | PASS。最终冻结902 passed、2 skipped、355 subtests passed，exit0；跳过项如实记录。 |
+| C/必要设备证据 | PASS。同一C源码/库独立CTest33/33；主样例与历史实际设备计划完整C执行字段相同、常量/数值contract相同，满足本次拒绝/记录修复的执行等同性门槛。 |
+| 文档/身份/停止状态 | PASS。实施记录、证据JSON、日志和冻结SHA交叉核对；执行者停止全部写入，无后台或剩余实施项。 |
+
+机器检查表requirements-final.json与身份索引final-identities.json在r4证据根。
+独立语义证据在results/handoff-w02-lead-audit-r3，实施SHA与最终一致；测试断言
+迁移没有改变实现，不无故重复相同的实现审计。
+
+### 80.3 完整回归与测试保真
+
+主线程命令：`PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests -q -rs
+-o addopts=''`。pytest-full.log记录902 passed、2 skipped、355 subtests passed，
+1088.58秒；driver记录1089.0038387230015秒、exit0，session86132已结束。
+本全量包含两相关正式文件，无须额外重复两文件长测。
+
+- skip：transformers未安装，test_replay_smollm2_v5.py:57的AutoTokenizer入口未跑。
+- skip：未设置RKNPU_SMOLLM_SLOW_TESTS=1，test_smollm2_host.py:139的包级mock回放未跑。
+
+原64个pass及25个注册测试方法全部保留，当前83/34。六个原pass方法的断言
+变动逐项可审：规范化完整Plan比较只排除hash与source hint定位；三个固定计划
+hash据完整执行等同性更新；stride/cumsum诊断迁移同时加强code/stage/actual。
+新增谓词、偏移、字段、声明与hint正反例保留，未放宽数值容差。r3首次相关回归
+10failed/111passed/66subtests日志保留；§79.4解释6个普通失败与4个子失败，
+没有把历史失败日志改写为通过。
+
+### 80.4 C/设备证据的准确界限
+
+既有build独立CTest33/33、5.64秒；本轮无重建。host库d527fef0…与mock库
+c9e0d22e…同接手，全部C/配置身份未变。mock是主机数值/ABI证据。
+
+当前256/576/3072计划52bf1a4b…与历史实际设备计划f3eb162f…的完整C descriptor
+仅36条action.origin诊断文字不同，执行字段零差异；常量与数值contract相同。
+JSON层kt、linear_task_policy、source_hints、hash及execution.k_tile旧0→256
+的记录差异在device-equivalence-reviewed.json中完整保留，不伪称整个Plan相等。
+历史计划SHA f83e405b…与原manifest一致，旧设备记录、脚本及计划身份可核对。
+旧22项manifest中两份中间TIR的既有漂移保留，未恢复或改写，也未用它们替代
+执行字段证明。本轮无设备重测或设备可用性结论，不外推其它target/算子/数值政策。
+
+### 80.5 支持限制与停止点
+
+仍是受支持guarded-tail FP16 GEMM及逐K块FP16 writeback。动态/选择性block
+predicate、非平凡load/store mask、非空block iter/init/match、非零/未知offset、
+未支持Call/annotation及其它算子按契约拒绝。不承诺通用GPU调度、transpose/clear
+等新能力；合法If边界guard由完整路径证明与实例化消费，不笼统拒绝所有If。
+
+两个可选跳过项未执行；无新构建、性能搜索或本轮真机实验。当前Goal在此阶段
+完成，不自动启动其它算子、生产默认切换、权重复用或性能调优。
+
+
+## 81. 当前工作区复核：未通过；嵌套计算块之外的输出写入被静默丢弃（2026-11-03）
+
+### 81.1 P1：只证明局部语句，却按缓冲区名称删除所有写入
+
+冻结实现 `rknpu_pass.py` SHA-256
+`e072e45e47d9913fe4913d7c4029a6b872bffb1478bb80aaab92ff24a6e927dd`。
+本次未改实现或正式测试。§80的完整回归记录与当前185项源码/库/测试文件逐项相符，
+但新增反例说明“当前阶段全部满足、无剩余阻断”的结论不能继续使用。
+
+实际TileLang源文件：`results/codex-current-final-acceptance/source_extra_output.py`。
+在 `T.Kernel(1,1)` 内，用 `T.sblock("compute")` 包住合法的 guarded-tail GEMM，
+然后在该块之外执行 `Y[0,0] = T.float16(0)`。A/B/Y接口与已支持基线相同，
+M=256、K=576、N=256，K每256块FP16写回。该PrimFunc的
+`tirx.analysis.verify_well_formed(..., False)` 为真。
+
+用A/B全1，源码最后一次写入明确要求Y[0,0]=0。当前结果：
+
+| 检查 | 结果 |
+|---|---|
+| 直接 `compile_guarded_tail` | ACCEPT |
+| 标准 `tilelang.engine.lower(..., target="rknpu")` + artifact恢复 | ACCEPT |
+| 两入口计划hash | 同为 `23c85de55981902063bd9fd377e1874851fced87271bda75d80e5932e9d94295` |
+| 生成计划经C mock实际执行 | Y[0,0]=576，全部65536个输出均为576，finite |
+| 源码应有结果 | Y[0,0]=0，其余元素576 |
+
+这是计算错误，不是数值容差、源码哈希或设备内部顺序问题。没有把异常程序送上设备。
+
+### 81.2 根因及需要修复的规则
+
+1. `_root_sequence`（当前1670–1680行）只返回直接包含K循环的SeqStmt。
+   `_prove_output_store`检查的是这个局部序列；其祖先和兄弟语句中的额外写入未纳入证明。
+2. 容器检查只验证这次BufferStore的谓词、buffer声明等字段，不负责证明它就是已消费的输出写入。
+3. `pass_instantiate`（当前2209–2214、2282–2295行）用
+   `approved_stores={output_name, shared_buffer_names...}` 全局放行并删除BufferStore。
+   同名buffer上的另一条未证明写入因而也被删除。
+
+修复应落实到每个语句发生位置的消费关系：遍历完整PrimFunc，对每条有状态效果的语句
+标明由哪个变换消费，未被消费则拒绝；不能以“目标buffer名字相同”代替“这次写入已经证明”。
+不要求实现额外赋值；在该试点域中明确拒绝即可。保留合法块封装/等价规范化正例，
+并补祖先/兄弟位置、前后附加写入、同一输出与同一shared目标等负例。
+不要仅按 `compute` 块名或本例Y[0,0]加专用判断。
+
+### 81.3 本次复核证据与范围
+
+证据目录：`results/codex-current-final-acceptance/`，完整说明见README。
+`actual_source_probe.py` 可从实际源文件重跑直接入口、标准入口与C mock数值反例。
+还保留独立TIR构造的同类 `grid_sibling_store.py` 和 `outside_grid_store.py`。
+先前§74的false block predicate两入口均拒绝；11组字段探针×3入口全部符合已有预期；
+既有C构建独立CTest 33/33通过。相关正式pytest在新增P1已确认后主动中止，
+仅完成3 passed/3 subtests，不冒称本次重跑了完整902例。
+§80的902 passed/2 skipped/355 subtests日志已经核对文件身份，属于前次冻结回归证据。
+本次无新板测、不改执行代码、不切默认、不扩大算子或数值政策。
+
+补充合法样例本次实测：M/K/N=(257,576,300)与(1,576,3072)两形状的
+direct/simplify/legacy/engine/roundtrip执行描述均相等，清空全局记录后artifact仍可用，
+四次C mock输出576、零不符。该正例结果不消除81.1的额外写入反例。
+
+## 82. §81 的修复：每条有状态效果的语句都要就地被消费（2026-11-03）
+
+§81 的反例在同一 $`T.Kernel$` 内用 $`T.sblock("compute")$` 包住合法 guarded-tail GEMM，
+随后执行 $`Y[0,0] = T.float16(0)$`：两个入口都接受，计划经 C mock 输出 576 而不是 0。
+
+### 82.1 根因
+
+- $`_root_sequence$` 只返回直接含 K 循环的那个 SeqStmt；$`_prove_output_store$` 证明的是这个局部序列，
+  祖先/兄弟序列里的额外写入从未被看见。
+- $`pass_instantiate$` 原先按 **buffer 名字** 放行并删除 $`BufferStore$`
+  （$`approved_stores = {output_name} ∪ shared tile 名$`），所以"同名 buffer 上的另一条写入"也被删掉。
+  "写的是哪个 buffer"被当成了"这次写入已经证明"。
+
+### 82.2 条例与规则
+
+1. **全 PrimFunc 的效果闭合**（$`_require_effect_closure$`）：遍历整个 PrimFunc，任何 $`BufferStore$`
+   或 $`Evaluate$`（调用）都必须与证明阶段消费掉的语句 **按节点身份** 相同，否则拒绝，并给出
+   语句类型、目标 buffer 与下标。祖先、兄弟、块外、grid 外、以及写输入参数的额外写入都因此被发现。
+2. **实例化只消费证明过的 store**：$`LocalFacts.drained$` 记录证明过的 $`BufferStore$` 节点
+   （不进 $`to_dict$`，不改变计划字节），$`pass_instantiate$` 用 $`same_as$` 比对，
+   名字不再放行任何删除。
+3. 合法的块封装（$`T.sblock("compute")$` 包住整条链）仍然接受，任务序列与未封装版本逐项相同。
+
+### 82.3 结果
+
+| 反例 | 直接入口 | 标准 engine 入口 |
+|---|---|---|
+| $`source_extra_output.py$`（§81 P1） | REJECT | REJECT |
+| $`grid_sibling_store.py$`（grid 内兄弟位置） | REJECT | REJECT |
+| $`outside_grid_store.py$`（grid 外兄弟位置） | REJECT | REJECT |
+| $`outer_store.py$`（块内额外写入，对照） | REJECT（既有） | REJECT（既有） |
+
+拒绝信息：$`a statement with a state effect is not consumed by the pass chain; dropping it would change the result$`。
+
+计划不变性：参考程序 hash 仍为 $`12590578f133ecfa…$`（与 $`results/handoff-w02-lead-audit-r3/reference-anchor.json$`
+记录的当前值一致）；三份旧审核脚本的四份合法基线 hash（0229e615 / 10a1995e / a5fe495b / f99f62ca）
+与 $`results/handoff-w02-lead-audit-r3/$` 中的既有记录逐字相同，旧反例仍全部拒绝（2 / 3 / 6 条）。
+
+### 82.4 新增测试与未做
+
+新增 6 条：块封装合法（任务序列与未封装相同）、块后额外写 Y、grid 内兄弟写 Y、grid 外兄弟写 Y、
+写输入参数 A、以及 $`facts.drained$` 恰为三个证明过的 store（As/Bs/Y）。
+
+未做：设备实验（无设备与凭据）；未实现额外赋值（按审核要求明确拒绝）；支持域仍为 guarded-tail
+FP16 GEMM，未切默认、未扩大算子族。
+
+
+## 83. §81修复的独立复核：通过（2026-11-03）
+
+审核对象rknpu_pass.py `65a502dc01bd6f2d2f308ed34e558402efd5159d1d35fab0ad143d396f899c84`，
+正式测试 `9ab554d43f13f65028993246bdbc496657d4c1f95fc849de7c81405039c252b4`。
+本次未改实现或正式测试。§81四个原探针在独立副本中重跑，两入口全部拒绝。
+新增EffectClosureTests独立7/7通过（§82.4写“6条”为计数笔误），包括合法块封装；
+注册与产物相关6项独立通过，engine恢复产物和脱离全局日志的能力保持。
+
+逐段检查确认：证明结束后真正调用了全PrimFunc的效果检查；实例化不再用buffer名字
+批准删除，而是只删除本次证明登记的store。185项冻结文件中仅实现与新增测试两项变化，
+旧测试断言未改；planner、C源码与库、backend注册实现等183项未变。
+执行者完整回归日志909 passed/2 skipped/355 subtests已查阅，本次未重复运行全量。
+本次独立命令、原探针输出、代码快照与差异见`results/codex-pass-81-recheck/README.md`。
+
+额外探查：手工重复带绑定变量的同一个IR节点不通过TVM well-formed检查，因此其接受
+结果不作为合法源码反例，也不将本结论扩大成任意畸形IR均已认证。完整探针保留在证据目录。
+
+结论：关闭§81已确认P1；本次未发现同类合法源码遗漏。通过仅针对该修复及现有
+ guarded-tail FP16 GEMM试点，不代表整体adapter已替换。无新板测、默认切换、算子扩展、
+数值政策或性能结论。历史失败证据保留，handoff当前状态同步该复核结论。

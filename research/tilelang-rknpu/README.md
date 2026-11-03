@@ -33,6 +33,7 @@
 | 查看 MVP 与完整模型验收 | [ACCEPTANCE.md](ACCEPTANCE.md) |
 | 审查 RKIR/RKPlan 是否阻断或丢失上层意图 | [INTENT-FIDELITY-AUDIT.md](INTENT-FIDELITY-AUDIT.md) |
 | 查看当前 TileLang 调度能力、实验结论与回归命令 | [当前汇总](INTENT-FIDELITY-AUDIT.md#current-status) |
+| 以主线程审计、执行代理实施方式长期接手 | [Codex 接手包](handoff/README.md) |
 | 查看当前优化结论与外部对照 | [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md) |
 | 使用模型包与数值政策 | [models/README.md](models/README.md)、[数值验收](models/NUMERIC-ACCEPTANCE.md) |
 | 找原始 campaign 和日志 | [results/README.md](results/README.md) |
