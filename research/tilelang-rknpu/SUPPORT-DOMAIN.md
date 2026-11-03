@@ -96,7 +96,7 @@ checkpoints.
   advantages and long-duration stress are extension validation, not MVP/P8
   blockers.
 - RK1228 is a separate target; no RK3588 recipe or acceptance conclusion is
-  inherited. See `RK1228-TARGET.md`.
+  inherited. See the RK1228 section at the end of this file.
 
 ## Recovery boundary
 
@@ -129,8 +129,8 @@ reported.
 
 ## Next-milestone model bridge
 
-The complete-model milestone is documented in
-[MODEL-MILESTONE-STATUS.md](ACCEPTANCE.md#models).  It adds a learned
+The complete-model milestone package is documented in
+[models/README.md](models/README.md).  It adds a learned
 784→256→128→10 MLP with exact NPU ReLU and bias, and a 16-token/64-wide/4-head
 one-layer image Transformer.  A bounded versioned `rkhybrid` manifest records
 shape/axes, dependencies, numeric contracts and bridge accounting.  Transformer
@@ -173,12 +173,12 @@ device QK/PV workspaces; it is not a generic device-resident KV API. The verifie
 is fail-closed and rejects missing gates, shape broadcasting, non-finite
 observations/thresholds, identity mismatches and incomplete quality evidence.
 
-This closes only the named SmolLM2 geometry. It does not establish arbitrary
-GQA/MQA/MLA geometry, dynamic prefill lengths, beam search, sampling policies,
-quantization, multi-request batching, device-resident KV cache, multi-board
-qualification, post-fault recovery, or RK1228 applicability.
+Only the named SmolLM2 geometry is declared. Arbitrary GQA/MQA/MLA geometry,
+dynamic prefill lengths, beam search, sampling policies, quantization,
+multi-request batching, device-resident KV cache, multi-board qualification,
+post-fault recovery and RK1228 applicability are not admitted.
 
-## Graph-fusion experimental domain (2026-10-28)
+## Graph-fusion experimental domain
 
 - Dependency-ordered mixed-template chains are accepted only when the planner
   proves action-id contiguity and dependency order and the C verifier
@@ -191,27 +191,72 @@ qualification, post-fault recovery, or RK1228 applicability.
   `[0.125, 6.32]`; with `lut_scale=0.75` the corresponding original mean-square
   domain is `[0.1667, 8.43]`, and the calibrated Tiny ViT subrange is
   `[0.17, 6.10]`.  The manifest records the scale, gamma folding and every FP16
-  narrowing point.  `models/rmsnorm_approx_acceptance.json` freezes a disjoint
-  calibration/acceptance operator gate: acceptance max-abs `0.0234375` and
-  RMSE `0.0012227` against gates `0.0390625` / `0.009765625`, PASS.  This gate
+  narrowing point.  `models/rmsnorm_approx_acceptance.json` freezes the
+  calibration/acceptance operator gate for this policy; its thresholds are in
+  that file, and numeric policy is owned by
+  [models/NUMERIC-ACCEPTANCE.md](models/NUMERIC-ACCEPTANCE.md).  This gate
   belongs only to the experimental policy and does not relax default RMSNorm.
 - RoPE remains a mixed Host/NPU prototype in `custom-ops/src/co_rope.c`; it is
   not part of the RKIR default path and does not count as a removed Host
   boundary.
 
-## Stage-3 device-layout and RoPE constraints
+## Device layout and RoPE constraints
 
 - CUBE 16×16 and QK B/WEIGHT 16×16 do not share a legal view.  The required
-  mapping is `dst_weight[n*32+k] = src_cube[(k//8)*128+n*8+k%8]`; the existing
-  fixed p0312 permutation mismatches 255 of 256 logical entries.  QKV→QK remains
+  mapping is `dst_weight[n*32+k] = src_cube[(k//8)*128+n*8+k%8]`, which the
+  existing fixed p0312 permutation does not implement.  QKV→QK therefore remains
   a Host-pack boundary until a real `co.reorder.cube_to_weight.f16.v1` device
   command or an equivalent variable B view exists.
 - Smol device RoPE has an opt-in model path.  Prefill Cos/Sin/P are plan
   constants uploaded once and reused across 30 layers; decode Cos/Sin are runtime
   inputs because there is no dynamic position-indexed device view.  The candidate
-  policy is `models/smollm2_device_rope_policy.json`; it passes an independent
-  prompt acceptance but is not a default-path tolerance.
-- PV→O b8 can execute as eight legal 11-task Submit groups (88 tasks total) in
-  one workspace.  This proves the 64-task single-chain cap is not a blocker, but
-  the current operator shape is slower than the merged Host reference and is not
-  a model-level default.
+  policy is `models/smollm2_device_rope_policy.json`; it is an opt-in policy, not
+  a default-path tolerance.
+- PV→O b8 is admitted as eight 11-task Submit groups (88 tasks total) in one
+  workspace, which keeps the 64-task single-chain cap out of the way for this
+  shape; this operator shape is not a model-level default.
+
+## Formal pass chain domain (opt-in)
+
+The sections above describe the **default adapter path**. The formal pass chain
+(`frontend/rknpu_pass.py`, optionally reached through the registered TileLang backend) is a
+**separate and much narrower domain**; it is not a superset of the forms above and never falls back
+to the adapter, the template extractor or the structured prototype.
+
+It accepts **guarded-tail FP16 GEMM only**, and additionally requires every proof rule in
+[ARCHITECTURE.md](ARCHITECTURE.md) §5.2 to hold:
+
+- 2-D serial grid plus one serial K loop of the form 0..extent with step 1 and a known extent;
+- exactly two shared tiles, one FP16 fragment and one FP32 fragment; A/B/Y and both shared tiles must
+  be FP16 and parameter rows must be contiguous (no symbolic extents, no element offsets);
+- per K iteration: one full zero fill per shared tile, two guarded staging copies (one store each, no
+  else branch), one `T.copy(Acc, Cl)`, one `T.gemm(As, Bs, Cl)`, one `T.copy(Cl, Acc)`;
+- the tile GEMM must be non-transposed, non-clearing, with zero accumulate coordinates, and its three
+  regions must be exactly the two shared tiles and the accumulator fragment (by buffer identity);
+- outside the K loop: one whole-fragment accumulator clear and one epilogue output store whose loop
+  iterates the whole tile;
+- every region of every consumed fill/copy/GEMM must be offset 0 with the full buffer extent;
+- every statement with a state effect must be consumed at the place it occurs (whole-PrimFunc effect
+  closure); a buffer name is not a proof;
+- per-axis output proof: each guard is either consumed as that axis' bound (equal to the logical
+  extent) or provably redundant, otherwise the axis must be covered exactly; K slices and output
+  tiles must partition contiguously;
+- planner limits still apply: M/N tiles at most 256x256, K block size fixed at 256, at most 64 tasks
+  per submit; logical K may span multiple blocks and a shorter tail;
+  `linear_task_order` accepts only `baseline`/`scheduled_baseline` and `linear_group_n_tiles` is
+  rejected.
+
+**Explicitly unsupported in this domain**: multi-node graphs and model packages, multi-block stages,
+broadcast, hybrid manifests, multiple outputs, tile operations outside the exact table (for example
+`T.cumsum`), partial copies or partial regions, extra writes outside or beside the proved sequence,
+non-FP16 parameters, transposed or clearing GEMMs, and any statement form not listed above. Some of
+these are accepted by the default adapter path; they are never accepted implicitly by this chain.
+
+Status vocabulary and what each evidence class may prove: [VALIDATION.md](VALIDATION.md).
+
+## RK1228 independent target
+
+RK1228 is a **separate target**. No device ID, driver ABI, memory layout, register recipe or
+acceptance number has been established, and no RK3588 recipe or conclusion is inherited. Until real
+hardware identification and ABI facts exist, this backend declares no RK1228 support, offers no
+compatibility profile, and does not reinterpret an RK3588 plan as an RK1228 plan.

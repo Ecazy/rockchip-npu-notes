@@ -1,7 +1,8 @@
 # Runtime layer isolation harness
 
 These are experiment tools, not default runtime code. They create the A/B/C/D
-arms used in `RUNTIME-LAYER-ISOLATION.md`.
+arms whose recorded outputs live under `results/` (search for the runtime-layer campaign
+directories); see `results/README.md` for how to find them.
 
 ## Build the case bundles
 

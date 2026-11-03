@@ -1133,7 +1133,7 @@ class _Builder:
         # The previous code additionally pinned M to {1, 256} and K, N to the
         # SmolLM lm_head shape.  That pin recorded where the first board
         # evidence came from, not a property of the lowering; the conditions it
-        # stood in for are the ones listed above (INTENT-FIDELITY-AUDIT.md 24).
+        # stood in for are the ones listed above.
         if policy in {"merged", "interleaved", "interleaved_reuse",
                       "weight_stationary", "weight_stationary_reuse",
                       "grouped_linear"} and \

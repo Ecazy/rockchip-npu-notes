@@ -5226,7 +5226,7 @@ def _detect_k_block(items: list[_Item], tirx: Any, span: str,
                "(<=256 rows/cols)", stage="frontend", source=span,
                actual=[gm, gn])
     if gk != 256:
-        # specific.md section 12.4: the MVP GEMM semantic K block is 256 (the
+        # TILELANG-SCHEDULE.md: the MVP GEMM semantic K block is 256 (the
         # last slice may be shorter).  Any other block size implies a different
         # reduction order / narrowing pattern and must be rejected rather than
         # merged into 256 by the lowering.

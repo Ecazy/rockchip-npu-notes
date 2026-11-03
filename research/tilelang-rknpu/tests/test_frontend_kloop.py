@@ -117,7 +117,7 @@ class KLoopTests(unittest.TestCase):
                              "does not tile the parameter shapes exactly")
 
     def test_source_block_k_must_be_256(self):
-        # specific.md: the MVP semantic K block is 256; any other source block
+        # TILELANG-SCHEDULE.md: the MVP semantic K block is 256; any other source block
         # changes the reduction/narrowing order and must be rejected, not merged.
         diagnostic = self.assert_rejected(self.fixtures.bad_block_k_128(),
                                           RK_E_UNSUPPORTED, "fixed at 256")

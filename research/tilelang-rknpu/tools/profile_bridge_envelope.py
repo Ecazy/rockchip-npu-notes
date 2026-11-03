@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Attribute the RKPlan/Host envelope of a frozen hybrid model profile.
 
-This is the measurement instrument for the first optimisation package in
-``archive/optimization-history.md#plan``:
+This is the measurement instrument for the first optimisation package; the adopted and
+withdrawn decisions are recorded in ``ARCHITECTURE.md`` section 7:
 
 * it runs one frozen ``rkhybrid`` profile (default: Tiny Transformer batch 8)
   over a fixed, deterministic input set;

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Collect the refactor evidence bundle described in refactor-specific.md section 14.
+# Collect the refactor evidence bundle described in VALIDATION.md; the produced bundle is
+# raw evidence and is indexed only by results/README.md.
 #
 #   results/<stamp>-refactor/
 #     manifest.json              source/dependency identity, commands, exit codes

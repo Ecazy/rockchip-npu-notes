@@ -216,7 +216,7 @@ def compile_artifact(prim_func: Any, *, profile: TargetProfile,
     ``carrier`` selects the compute-representation carrier behind the one
     pipeline.  ``"rkir"`` is the production default.  ``"native"`` is the R4
     pilot carrier, which builds a real ``tvm.relax`` graph instead of RKIR; its
-    adoption status is recorded in ``refactor-specific.md`` section 15.3.  Both
+    adoption status is recorded in ``ARCHITECTURE.md`` section 3.2.  Both
     carriers run the same legalizer, planner, storage assignment and encoder, so
     this is not a second backend.
     """

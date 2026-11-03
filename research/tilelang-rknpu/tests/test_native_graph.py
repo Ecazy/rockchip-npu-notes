@@ -9,8 +9,7 @@ Two things are pinned here:
    target contract, and corrupted or unsupported contracts are rejected instead of
    being planned.
 
-Adoption status is a separate question and is recorded in ``refactor-specific.md``
-section 15.3, not asserted here.
+Adoption status is a separate question and is recorded in ``ARCHITECTURE.md`` section 3.2, not asserted here.
 """
 import importlib.util
 import json

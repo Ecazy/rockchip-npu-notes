@@ -1,6 +1,6 @@
 """P1 batch 2: real TileLang M/N-tiled GEMM extraction.
 
-The extractor may re-arrange the M/N tiling (specific.md 12.4) only when it proves
+The extractor may re-arrange the M/N tiling (TILELANG-SCHEDULE.md) only when it proves
 each output element is covered exactly once and no communication is involved.
 These tests pin the coverage proof, the index roles of the block variables and the
 adjacent negatives.

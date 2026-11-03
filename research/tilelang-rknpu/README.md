@@ -1,51 +1,42 @@
 # TileLang → RKNPU
 
-复用 TileLang/TVM，将受支持的静态计算编译到 RK3588，沿用 custom-ops/runtime 执行。离线 compile/validate/explain 不打开设备。
+复用 TileLang/TVM，把受支持的静态计算编译到 RK3588，沿用 `custom-ops`/runtime 执行。
+离线 compile / validate / explain 不打开设备。
 
 ## 当前状态
 
-- 后端 MVP 已在声明支持域内完成；仍是实验性后端，不承诺未知设备故障后的恢复。
-- MNIST MLP 与显式 hybrid Tiny Transformer 完整模型里程碑已关闭，证据统一见 [ACCEPTANCE.md](ACCEPTANCE.md)。
-- SmolLM2-135M-Instruct 固定 revision 的完整 30 层、49152 词表推理链已在 RK3588 上跑通：prefill、持久 KV cache decode、chat template、独立声明参考和官方 FP32 参考均已验收；入口见 [models/README.md](models/README.md#smollm2-135m-instruct)。2026-10-29 的 v5 验收在修复 verifier 漏判、区分 canonical/file hash、密封 calibration/acceptance 观测并重新冻结独立输入后为 **complete PASS**；证据见 [ACCEPTANCE.md](ACCEPTANCE.md#smollm2-v5-acceptance) 和 `results/20261029T120416Z-smollm2-v5/manifest.json`。
-- 默认模型优化、最终 baseline/current 复验及厂商 RKNN 对照统一见 [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md)。不同数值政策及不同 campaign 的性能分开解释。
-- 2026-10-28 的 A 切片打包、共享 packed 权重、KV native 驻留与 SmolLM2 端到端对照见 [LAYOUT-REUSE-REPORT.md](LAYOUT-REUSE-REPORT.md)。
-- 2026-10-30 的 V5 交付收口（可执行重放、首次分叉诊断、Host 权重缓存 A/B、固定验收重跑）见 `results/20261030T013910Z-smollm2-v5-delivery/DELIVERY-REPORT.md` 与 `DELIVERY-MANIFEST.json`。
-- TileLang M/N 调度控制的首个里程碑（`source_schedule` → RKIR → RKPlan、prefill/decode 板端实验）见 [TILELANG-SCHEDULE.md](TILELANG-SCHEDULE.md) 和 `results/20261030T030803Z-tilelang-schedule/SCHEDULE-REPORT.md`。
-- TinyTransformer 图级 Submit 融合、device FFN、残差 Add、RMSNorm 实验与 b1/b8 成对测量见 [GRAPH-FUSION-REPORT.md](GRAPH-FUSION-REPORT.md)。
-- 后端重构主线已完成：编译边界收敛到 codegen，新增 `compile_artifact` 直接实例化入口，旧入口与持久化重放保持；TVM 原生图试点已完成但未采用为默认，计算表示继续使用薄 RKIR。结论与证据见 [refactor-specific.md](refactor-specific.md) 第 15 节。原始设计与重构方案各保留一对 overview/specific，按下面的适用范围阅读。
-
-## 开发规范
-
-| 用途 | 宏观设计 | 实施细则 |
-|---|---|---|
-| 原始后端设计及既有契约 | [overview.md](overview.md) | [specific.md](specific.md) |
-| 当前重构方案与执行要求 | [refactor-overview.md](refactor-overview.md) | [refactor-specific.md](refactor-specific.md) |
-
-重构的接口、工作包、验证与进度只写入 refactor-specific；不再为该任务另建状态、实验报告或交接文档。原始设计不作为重构必须照搬的表示形式。
+- 实验性后端，支持域由 [SUPPORT-DOMAIN.md](SUPPORT-DOMAIN.md) 声明；域外输入 fail closed。
+- TileLang 入口仍走 adapter：`compile_tilelang` 与 `compile_artifact(carrier="rkir")`（PrimFunc 输入）
+  先经 `tilelang_adapter.extract` 识别结构。
+- `compile_rkir` **不经过 adapter**：它直接接收已归一的 RKIR `ir.Module`。
+- 三者共用 `codegen.pipeline.compile_graph`。
+- 正式 pass 试点（`frontend/rknpu_pass.py` + 可选的 TileLang backend 注册）是 **opt-in**：
+  只支持 guarded-tail FP16 GEMM，尚未接入 CLI，也未切为默认。
+- 判断"能做到什么"看支持域，判断"证据能证明什么"看验收方法；两者都不以历史 PASS 计数为依据。
 
 ## 使用与验收
 
-| 要做什么 | 唯一首选入口 |
+| 要做什么 | 唯一入口 |
 |---|---|
-| 判断输入是否支持 | [支持域](SUPPORT-DOMAIN.md) |
-| 理解 BO、fd、并发与失败处理 | [运行时契约](RUNTIME-LIFECYCLE.md) |
+| 判断输入是否支持、为什么被拒 | [SUPPORT-DOMAIN.md](SUPPORT-DOMAIN.md) |
+| 理解架构、模块边界、pass 链契约与产物边界 | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| 判断什么算证据、能证明什么、不能声明什么 | [VALIDATION.md](VALIDATION.md) |
 | 构建、恢复依赖、重放、上板 | [REPLAY.md](REPLAY.md) |
-| 查看 MVP 与完整模型验收 | [ACCEPTANCE.md](ACCEPTANCE.md) |
-| 审查 RKIR/RKPlan 是否阻断或丢失上层意图 | [INTENT-FIDELITY-AUDIT.md](INTENT-FIDELITY-AUDIT.md) |
-| 查看当前 TileLang 调度能力、实验结论与回归命令 | [当前汇总](INTENT-FIDELITY-AUDIT.md#current-status) |
-| 以主线程审计、执行代理实施方式长期接手 | [Codex 接手包](handoff/README.md) |
-| 查看当前优化结论与外部对照 | [OPTIMIZATION-SUMMARY.md](OPTIMIZATION-SUMMARY.md) |
-| 使用模型包与数值政策 | [models/README.md](models/README.md)、[数值验收](models/NUMERIC-ACCEPTANCE.md) |
-| 找原始 campaign 和日志 | [results/README.md](results/README.md) |
-| 研究独立 RK1228 目标 | [RK1228-TARGET.md](RK1228-TARGET.md) |
+| 理解 BO、fd、并发与失败处理 | [RUNTIME-LIFECYCLE.md](RUNTIME-LIFECYCLE.md) |
+| 查看 TileLang M/N 调度契约 | [TILELANG-SCHEDULE.md](TILELANG-SCHEDULE.md) |
+| 使用冻结模型包与数值政策 | [models/README.md](models/README.md)、[数值政策](models/NUMERIC-ACCEPTANCE.md) |
+| 找原始 campaign、日志与哈希清单 | [results/README.md](results/README.md) |
+| 开发算子、runtime、GEMM、量化等实现技能 | [AGENTS.md](AGENTS.md) |
 
-## 历史材料
+## 冻结输入材料
 
-- [开发与需求历史](archive/development-history.md)：合并 MVP 实施、审查与交接、P0 源码锁、已完成模型需求；各节保留来源文件名及稳定锚点。
-- [优化方案与逐轮历史](archive/optimization-history.md)：合并原优化方案与第 1–7 轮结果；不是当前任务清单，最终结论从优化总报告查起。
-
-旧文档原路径不再保留占位文件。历史源码包、provenance 和 campaign 中的原文件名按当时快照解释；本次不修改其内容或哈希。被删除的旧长首页快照与 Git 中原版本重复，可从版本历史追溯。
+`GRAPH-FUSION-REPORT.md` 与 `LAYOUT-REUSE-REPORT.md` 是 SmolLM2 calibration/acceptance 文本窗口的
+声明来源（见 [VALIDATION.md](VALIDATION.md) §4），按**冻结输入材料保留原文**；它们是历史实验报告，
+不是当前技术说明，也不描述当前实现或当前结论。
 
 ## 维护规则
 
-首页只维护导航与简短状态；支持域、运行契约、重放、验收和优化总报告各有一处权威说明。阶段记录归并到对应历史材料，不继续新增逐轮独立报告或重复交接。原始证据按日期保留原位，不移动、不重算旧身份，也不以历史通过代替当前验证。
+- 支持域、架构与契约、验收方法、命令、数值政策各自只有一处权威（上表）。
+- 不新增逐轮报告、交接文档或状态摘要；阶段记录与历史方案通过 Git 历史查看。
+- 证据按日期目录原地保存，不移动、不重算旧身份；文档不复制历史 PASS 表。
+- 未实现的能力不写成现状；未被当前代码验证的结论不写成当前结论。

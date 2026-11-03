@@ -5,7 +5,8 @@ set -euo pipefail
 cat >&2 <<'MESSAGE'
 Board campaign is not implemented and device admission has not passed.
 The previous scaffold did not enforce --core-mask/--mode or deploy input assets.
-See archive/development-history.md#review-2026-10-20 for the historical review;
-this entry point performs no SSH or Submit. Use REPLAY.md for current commands.
+See VALIDATION.md for what evidence may be cited and ARCHITECTURE.md for the
+runtime boundary; historical reviews are in Git history. This entry point performs no SSH or
+Submit. Use REPLAY.md for current commands.
 MESSAGE
 exit 2

@@ -13,7 +13,7 @@ carrier -- and records:
 * the maintenance-cost measurements needed for the adoption decision.
 
 It never writes a pass/fail judgement of its own: the decision and its reasoning
-belong in ``refactor-specific.md`` section 15.3, and this file only supplies the
+belong in ``ARCHITECTURE.md`` section 3.2, and this file only supplies the
 numbers.
 
 Usage:

@@ -1,4 +1,4 @@
-"""Submit failure marks the workspace poisoned (specific.md contract).
+"""Submit failure marks the workspace poisoned (runtime lifecycle contract).
 
 Contract under test, through `rk_workspace_run` only:
   * first unclassified submit failure -> RK_E_DEVICE, output not published,

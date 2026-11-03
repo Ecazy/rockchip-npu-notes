@@ -66,18 +66,10 @@ Current independent evidence:
   train hardware observations used to freeze the policy.
 - `results/20261024T091634Z-numeric/acceptance/observation.npz` — post-freeze
   test hardware observations.
-- `results/20261024T091634Z-numeric/verify-summary.json` — independent verifier
-  PASS, including calibration/acceptance disjointness and the existing full-test
-  raw-logit recheck.
-
-## Historical test envelope v1
-
-`numeric_acceptance.json`, `numeric_golden.npz` and
-`evidence/numeric-calibration/` are retained as a **regression envelope only**.
-They were calibrated from test-split observations and therefore do not satisfy
-the independent calibration requirement.  They remain useful for reproducing the
-first-round model behavior and historical verifier, but cannot be cited as
-independent numerical acceptance.
+- `results/20261024T091634Z-numeric/verify-summary.json` — that campaign's
+  independent verifier result (evidence for that run; not a current claim),
+  including calibration/acceptance disjointness and the full-test raw-logit
+  recheck.
 
 ## MLP hidden layers
 
@@ -100,3 +92,8 @@ the production plan, its single final download, or its timing evidence.
 The numeric limits are an empirical RK3588 envelope for the frozen package,
 weights, plans and execution paths.  They are not a proof for other devices,
 other compilers, dynamic shapes, quantized variants or unseen input distributions.
+
+`numeric_acceptance.json`, `numeric_golden.npz` and `evidence/numeric-calibration/` are retained
+as a **regression envelope only**: they were calibrated from test-split observations and do not
+satisfy the independent calibration requirement. They cannot be cited as independent numerical
+acceptance.

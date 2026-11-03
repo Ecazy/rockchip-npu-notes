@@ -25,9 +25,8 @@ pickled object is stored in a model or RKPlan.
 | `compiled/tiny_vit_bN_rmsnorm.rkhybrid.json` | fused residual+RMSNorm control (no measured default gain) |
 | `compiled/mnist_mlp_bN.rkhybrid.json` | static MLP profiles |
 
-Default vs control attribution and final acceptance are in
-[OPTIMIZATION-SUMMARY.md](../OPTIMIZATION-SUMMARY.md); replay commands are in
-[REPLAY.md](../REPLAY.md).
+Which of these are default, and which directions were withdrawn, is recorded in
+[ARCHITECTURE.md](../ARCHITECTURE.md) §7; replay commands are in [REPLAY.md](../REPLAY.md).
 
 <a id="smollm2-135m-instruct"></a>
 ## SmolLM2-135M-Instruct
@@ -87,60 +86,22 @@ metadata typo; the actual input and bundle contain 6 prompts, and the erratum
 is recorded without changing the frozen spec identity.  The corrected official
 generation tool now always passes an explicit all-ones attention mask.
 
-## Graph-fusion variants (2026-10-28)
+## Opt-in policy artifacts
 
-The frozen default packages under `models/compiled/` are unchanged.  Explicit
-graph-fusion experiments are built into separate directories:
+These artifacts exist for isolated policies and experiments. None of them replaces a default and
+none of them relaxes a default tolerance; their domains are stated in
+[SUPPORT-DOMAIN.md](../SUPPORT-DOMAIN.md) ("实验性 opt-in 策略").
 
-- `models/compiled_graph_fusion/` (default capability profile):
-  - `tiny_vit_bN_deviceffn_fused.rkhybrid.json` — same seven tasks and byte
-    transfers as the device-FFN control, one dependency-ordered Submit;
-  - `tiny_vit_bN_addfused.rkhybrid.json` — device residual Add after attention
-    output and down projection, bitwise equal to the Host add path.
-- `models/compiled_rmsnorm_lut/` (independent profile
-  `rk3588_vendor_co_v1_rmsnorm_lut.json`):
-  - `tiny_vit_bN_rmsnorm_approx.rkhybrid.json` — full-device square, row sum,
-    scaled bounded-rsqrt LUT, gamma expansion and multiply.  This is an
-    independent approximate numeric policy and is not a default replacement.
+| artifact | role |
+|---|---|
+| `compiled_graph_fusion/` | graph-fusion manifests built with the default capability profile (device-FFN chain, device residual add) |
+| `compiled_rmsnorm_lut/` | the same models under the isolated `rk3588_vendor_co_v1_rmsnorm_lut.json` profile |
+| `rmsnorm_approx_acceptance.json` (+ `.sha256`) | frozen calibration/acceptance gates for the isolated approximate RMSNorm policy; verify with `tools/evaluate_rmsnorm_approx.py --mode verify` |
+| `smollm2_device_rope_policy.json` | opt-in prefill/decode candidate policy for the Smol device-RoPE integration |
+| `smollm2_device_rope_policy_cont32.json`, `..._cont32_indexed.json` | 32-step continuous candidate policies (indexed variant uses resident CosW/SinW/P tables plus a one-hot position gather) |
 
-The b1/b8 paired measurements and capability matrix are in
-[GRAPH-FUSION-REPORT.md](../GRAPH-FUSION-REPORT.md).
-
-
-## Stage-2 experimental probes (2026-10-28)
-
-- `rope_device_module` / `tools/evaluate_rope_device.py`: 4-task, one-Submit
-  device RoPE reorder (`X @ P`, then three EW tasks).  Cos/Sin are still runtime
-  inputs, so coefficient residency and Smol integration remain open.
-- `pv_o_device_module` / `tools/evaluate_pv_o_device.py`: 4 PV head matmuls
-  directly feed 4 O-slice matmuls and three EW adds; 11 tasks in one Submit.
-- `models/rmsnorm_approx_acceptance.json`: frozen disjoint calibration/
-  acceptance gates for the isolated approximate RMSNorm policy.  It is not a
-  default-path tolerance.
-
-
-## Stage-3 additions
-
-- `models/rmsnorm_approx_acceptance.json` + `.json.sha256`: frozen calibration
-  spec for the isolated RMSNorm policy; use `evaluate_rmsnorm_approx.py --mode
-  verify` in a separate process for acceptance.
-- `models/smollm2_device_rope_policy.json`: independent prefill/decode candidate
-  numeric policy for the opt-in Smol device-RoPE integration.
-- `rope_device_constant_module`: fixed-prefill Cos/Sin constants, reused across
-  layers; decode still takes runtime coefficients.
-- `pv_o_device_batches_module`: eight legal 11-task PV→O Submit groups in one
-  device workspace for the b8 experiment.
-
-
-## Stage-4 additions
-
-- `models/smollm2_device_rope_policy_cont32.json`: 32-step continuous candidate
-  policy, calibrated on prompt-0 and independently accepted on prompt-1.
-- `rope_decode_indexed_module` / `tools/evaluate_smollm_rope_indexed.py`:
-  resident CosW/SinW/P tables plus one-hot position gather; Host uploads only
-  position metadata, not the coefficient table.
-
-
-- `models/smollm2_device_rope_policy_cont32_indexed.json`: 32-step continuous
-  policy for the position-indexed decode path (resident CosW/SinW/P tables plus
-  one-hot device gather).
+Related modules live in `rknpu_backend` (`rope_device_module`, `rope_device_constant_module`,
+`pv_o_device_module`, `pv_o_device_batches_module`, `rope_decode_indexed_module`) and their
+evaluators in `tools/evaluate_rope_device.py`, `tools/evaluate_pv_o_device.py` and
+`tools/evaluate_smollm_rope_indexed.py`. Measurements from those runs are historical evidence
+(see [VALIDATION.md](../VALIDATION.md) §4), not current claims.

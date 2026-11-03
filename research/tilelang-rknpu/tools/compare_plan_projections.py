@@ -10,7 +10,7 @@ field for field; only these paths are allowed to differ, and only for the reason
 named next to them:
 
   tests may not add entries to this list without a written justification in
-  ``refactor-specific.md`` section 15.
+  ``ARCHITECTURE.md`` section 3.2 and section 6.
 """
 from __future__ import annotations
 
