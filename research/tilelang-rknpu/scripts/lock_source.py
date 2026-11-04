@@ -360,7 +360,12 @@ def main() -> int:
                         "only reads their public Python objects",
         "backends_files_hashed": {
             rel: hashlib.sha256((MODULE / rel).read_bytes()).hexdigest()
-            for rel in ("python/rknpu_backend/frontend/tilelang_adapter.py",
+            for rel in ("python/rknpu_backend/frontend/tir_utils.py",
+                        "python/rknpu_backend/frontend/staged_launch.py",
+                        "python/rknpu_backend/frontend/full_logical_rewrite.py",
+                        "python/rknpu_backend/frontend/logical_schedule.py",
+                        "python/rknpu_backend/frontend/tilelang_lowering.py",
+                        "python/rknpu_backend/passes/dag.py",
                         "scripts/lock_source.py")
             if (MODULE / rel).is_file()
         },

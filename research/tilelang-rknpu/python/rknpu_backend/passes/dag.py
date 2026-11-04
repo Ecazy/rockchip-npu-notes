@@ -7,21 +7,97 @@ import struct
 from dataclasses import dataclass, field, replace
 
 from ..capabilities import TargetProfile
-from ..errors import RK_E_BUDGET, RK_E_SCHEMA, RK_E_SHAPE, RK_E_UNSUPPORTED, \
-    reject
+from ..errors import RK_E_BUDGET, RK_E_NUMERIC_CONTRACT, RK_E_SCHEMA, \
+    RK_E_SHAPE, RK_E_UNSUPPORTED, reject
 from ..ir import Module, NumericContract
 from ..options import CompileOptions
 from ..plan import (Action, Binding, ConstantSpec, LogicalOp,
                     NumericRequirement, Publish, TensorLayout, View)
 from ..serialize import sha256_json
 from .legalize import LegalizedGraph
-from .tile import K_TILE, MN_TILE_ORDERS, TILE_LIMIT, cube_layout, \
-    input_layout, k_slices, lut_chunks, mn_schedule_from_attrs, output_tiles, \
-    round_up, weight_layout
+from .tile import K_TILE, MN_TILE_ORDERS, MNTileSchedule, TILE_LIMIT, \
+    cube_layout, input_layout, k_slices, lut_chunks, mn_schedule_from_attrs, \
+    output_tiles, round_up, weight_layout
 
 CUBE_LAYOUT = "co.cube.f16.v1"
 WEIGHT_LAYOUT = "co.weight.f16.v1"
 LINEAR_LAYOUT = "co.linear.f16.v1"
+
+
+@dataclass(frozen=True)
+class _TaskRect:
+    """One rank-2 rectangle used by the current linear task chain only."""
+
+    row: int
+    col: int
+    rows: int
+    cols: int
+
+    def contains(self, other: "_TaskRect") -> bool:
+        return (self.row <= other.row and self.col <= other.col and
+                self.row + self.rows >= other.row + other.rows and
+                self.col + self.cols >= other.col + other.cols)
+
+    def overlaps(self, other: "_TaskRect") -> bool:
+        return not (self.row + self.rows <= other.row or
+                    other.row + other.rows <= self.row or
+                    self.col + self.cols <= other.col or
+                    other.col + other.cols <= self.col)
+
+
+@dataclass
+class _TaskBufferState:
+    """Actual region/version/producer state for the consumed task stream."""
+
+    zero: _TaskRect | None = None
+    zero_producer: int | None = None
+    value: _TaskRect | None = None
+    value_producer: int | None = None
+    value_version: int = 0
+    value_view: int | None = None
+    value_action: int | None = None
+    value_tile: tuple[int, int, int, int] | None = None
+    source_region: _TaskRect | None = None
+
+    def value_covers(self, region: _TaskRect) -> bool:
+        return self.value is not None and self.value.contains(region)
+
+    def zero_covers(self, region: _TaskRect) -> bool:
+        return self.zero is not None and self.zero.contains(region)
+
+    def covers(self, region: _TaskRect) -> bool:
+        return self.value_covers(region) or self.zero_covers(region)
+
+    def enter_zero(self, area: _TaskRect, producer: int) -> None:
+        self.zero = area
+        self.zero_producer = producer
+        self.value = None
+        self.value_producer = None
+        self.value_view = None
+        self.value_action = None
+        self.value_tile = None
+        self.value_version += 1
+
+    def adopt_value(self, area: _TaskRect, source: "_TaskBufferState") -> None:
+        self.value = area
+        self.value_producer = source.value_producer
+        self.value_view = source.value_view
+        self.value_action = source.value_action
+        self.value_tile = source.value_tile
+        self.source_region = source.source_region
+        self.value_version = source.value_version + 1
+
+    def record_value(self, area: _TaskRect, producer: int,
+                     view: int | None, action: int | None,
+                     tile: tuple[int, int, int, int] | None = None,
+                     source_region: _TaskRect | None = None) -> None:
+        self.value = area
+        self.value_producer = producer
+        self.value_view = view
+        self.value_action = action
+        self.value_tile = tile
+        self.source_region = source_region
+        self.value_version += 1
 
 
 @dataclass
@@ -435,15 +511,18 @@ class _Builder:
                            relu: bool = False,
                            role: str = "workspace",
                            reuse: bool = True,
-                           op_ids: tuple[int, ...] = ()) -> int:
+                           op_ids: tuple[int, ...] = (),
+                           out_view: int | None = None,
+                           extra_attrs: dict[str, Any] | None = None) -> int:
         _, identity_view = self.identity_for(cube_cols)
         identity_upload = self._last_upload_of(identity_view)
         layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols, cube_rows,
                               cube_cols, 8, cube_rows * cube_cols * 2)
-        out_buffer = self.add_buffer(role=role, capacity=layout.bytes,
-                                     layout_id=CUBE_LAYOUT,
-                                     padding_state="finite", reuse=reuse)
-        out_view = self.add_view(out_buffer, 0, layout)
+        if out_view is None:
+            out_buffer = self.add_buffer(role=role, capacity=layout.bytes,
+                                         layout_id=CUBE_LAYOUT,
+                                         padding_state="finite", reuse=reuse)
+            out_view = self.add_view(out_buffer, 0, layout)
         if relu:
             if opcode != "add":
                 reject(RK_E_UNSUPPORTED,
@@ -458,8 +537,812 @@ class _Builder:
             deps=deps + ((identity_upload,) if identity_upload is not None else ()),
             origin=("lowering:dataflow:add_relu" if relu
                     else f"lowering:dataflow:{opcode}"),
-            attrs={"submit_group": group}, op_ids=op_ids)
+            attrs={"submit_group": group, **(extra_attrs or {})},
+            op_ids=op_ids)
         return out_view
+
+    def _consume_multi_op_tasks(self, *, tasks: list[dict[str, Any]],
+                                facts: dict[str, Any]) -> DraftPlan:
+        """Consume token/region tasks with the shared value-state rules.
+
+        The tasks carry actual buffer tokens and source/destination regions.
+        The module supplies binding identity, NumericContract and attribution;
+        execution order and publication come from the ordered tasks.
+        """
+        values = {value.id: value for value in self.module.values}
+        ops = {op.id: op for op in self.module.ops}
+        self._upload_external_values()
+        identity_cols: set[int] = set()
+        for task in tasks:
+            if task["kind"] in {"silu", "sigmoid", "mul", "add"}:
+                region = task["region"]
+                identity_cols.add(cube_layout(region["rows"], region["cols"])[1])
+        for cols in sorted(identity_cols):
+            self.identity_for(cols)
+
+        def rect(raw: dict[str, int]) -> _TaskRect:
+            return _TaskRect(int(raw["row"]), int(raw["col"]),
+                             int(raw["rows"]), int(raw["cols"]))
+
+        states: dict[int, _TaskBufferState] = {}
+        for token, value_id in (facts.get("external_tokens") or {}).items():
+            value = values[int(value_id)]
+            if value.role not in {"input", "constant"}:
+                continue
+            view = self.value_views.get(int(value_id))
+            action = self.value_action.get(int(value_id))
+            if view is None or action is None:
+                reject(RK_E_SHAPE,
+                       "an external token has no upload view", stage="dag",
+                       actual=value_id)
+            tensor = self.views[view].tensor
+            shape = tuple(int(v) for v in value.type.shape)
+            rows, cols = ((shape[0], shape[1]) if len(shape) == 2 else
+                          (tensor.rows, tensor.cols))
+            states[int(token)] = _TaskBufferState(
+                value=_TaskRect(0, 0, rows, cols),
+                value_view=view, value_action=action,
+                value_producer=action, value_version=1)
+
+        def state(token: int, role: str) -> _TaskBufferState:
+            result = states.get(token)
+            if result is None:
+                reject(RK_E_SHAPE, f"{role} token has no established state",
+                       stage="dag", actual=token)
+            return result
+
+        sigmoid_actions: dict[int, int] = {}
+        for task in tasks:
+            kind = str(task["kind"])
+            if kind == "fill":
+                token = int(task["buffer_token"])
+                if int(task["value"]) != 0:
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "a multi-op task-chain fill is not zero", stage="dag",
+                           actual=task)
+                zero = rect(task["region"])
+                current = states.setdefault(token, _TaskBufferState())
+                current.enter_zero(zero, len(self.actions))
+                continue
+            if kind in {"copy", "cast"}:
+                source_token = int(task["source_token"])
+                destination_token = int(task["destination_token"])
+                source_region = rect(task["source_region"])
+                destination_region = rect(task["destination_region"])
+                source = states.get(source_token)
+                if source is None:
+                    source_value = int(task["source_value"])
+                    source_view = self.value_views.get(source_value)
+                    source_action = self.value_action.get(source_value)
+                    if source_view is None or source_action is None:
+                        reject(RK_E_SHAPE,
+                               "a copy source has no device producer",
+                               stage="dag", actual=source_value)
+                    source = _TaskBufferState(
+                        value=source_region, value_view=source_view,
+                        value_action=source_action,
+                        value_producer=source_action, value_version=1)
+                if not source.value_covers(source_region):
+                    reject(RK_E_SCHEMA,
+                           "a copy source region is not covered by its value",
+                           stage="dag", actual=task)
+                if (source_region.rows, source_region.cols) != \
+                        (destination_region.rows, destination_region.cols):
+                    reject(RK_E_SHAPE,
+                           "a fused copy/cast changes the region extent",
+                           stage="dag", actual=task)
+                destination = states.setdefault(
+                    destination_token, _TaskBufferState())
+                destination.adopt_value(destination_region, source)
+                continue
+            if kind == "store":
+                source_token = int(task["source_token"])
+                destination_token = int(task["destination_token"])
+                source_region = rect(task["source_region"])
+                destination_region = rect(task["destination_region"])
+                source = state(source_token, "store source")
+                if not source.value_covers(source_region) or \
+                        source.value_view is None or source.value_action is None:
+                    reject(RK_E_SCHEMA,
+                           "store source has no covered device value",
+                           stage="dag", actual=task)
+                if (source_region.rows, source_region.cols) != \
+                        (destination_region.rows, destination_region.cols):
+                    reject(RK_E_SHAPE,
+                           "the output store changes the region extent",
+                           stage="dag", actual=task)
+                binding_id = self.binding_by_value.get(
+                    int(task["output_value"]))
+                if binding_id is None:
+                    reject(RK_E_SCHEMA,
+                           "store output has no binding identity", stage="dag",
+                           actual=task["output_value"])
+                self.buffers[self.views[source.value_view].buffer_id].role = \
+                    "output"
+                download = self.add_action(
+                    "download", inputs=(source.value_view,),
+                    deps=(source.value_action,), origin="host:download",
+                    attrs={"binding_id": binding_id, "submit_group": None})
+                self.buffers[self.views[source.value_view].buffer_id].last = max(
+                    self.buffers[self.views[source.value_view].buffer_id].last,
+                    download)
+                self.publish.append(Publish(
+                    self.bindings[binding_id].name, binding_id,
+                    source.value_view,
+                    dst_row=destination_region.row,
+                    dst_col=destination_region.col,
+                    rows=destination_region.rows,
+                    cols=destination_region.cols))
+                destination = states.setdefault(
+                    destination_token, _TaskBufferState())
+                destination.adopt_value(destination_region, source)
+                continue
+            op_id = int(task["op_id"])
+            op = ops[op_id]
+            output_id = int(task["output_value"])
+            output_token = int(task["output_token"])
+            region = rect(task["region"])
+            if kind == "gemm":
+                input_tokens = [int(v) for v in task["input_tokens"]]
+                a = state(input_tokens[0], "GEMM A")
+                b = state(input_tokens[1], "GEMM B")
+                a_region = rect(task["a_region"])
+                b_region = rect(task["b_region"])
+                if not a.value_covers(a_region) or \
+                        not b.value_covers(b_region):
+                    reject(RK_E_SCHEMA,
+                           "GEMM operands do not cover their task regions",
+                           stage="dag", actual=task)
+                output = states.setdefault(output_token, _TaskBufferState())
+                if output.zero is None or not output.zero.contains(region):
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "a GEMM target has no consumed zero fill",
+                           stage="dag", actual=output_token)
+                cr, cc, cbytes = cube_layout(region.rows, region.cols)
+                layout = TensorLayout("float16", CUBE_LAYOUT, region.rows,
+                                      region.cols, cr, cc, 8, cbytes)
+                buffer_id = self.add_buffer(role="accumulator",
+                                            capacity=cbytes,
+                                            layout_id=CUBE_LAYOUT,
+                                            padding_state="finite")
+                out_view = self.add_view(buffer_id, 0, layout)
+                deps = tuple(dict.fromkeys(
+                    action for action in (a.value_action, b.value_action)
+                    if action is not None))
+                group = f"mm:dataflow:{op_id}"
+                action = self.add_action(
+                    "npu_task", template_id="co.mm.f16.v1",
+                    inputs=(a.value_view, b.value_view), outputs=(out_view,),
+                    deps=deps, origin=f"lowering:dataflow:matmul:{op_id}",
+                    op_ids=(op_id,),
+                    attrs={"submit_group": group,
+                           "source_k_loop": op.attrs.get("source_k_loop"),
+                           "k0": int(task["k0"]), "kt": int(task["kt"])})
+                output.record_value(region, action, out_view, action)
+                self.value_views[output_id] = out_view
+                self.value_action[output_id] = action
+                continue
+            if kind in {"silu", "sigmoid"}:
+                source = state(int(task["input_tokens"][0]),
+                               "activation input")
+                if not source.value_covers(region) or source.value_view is None:
+                    reject(RK_E_SCHEMA,
+                           "SiLU input does not cover the task region",
+                           stage="dag", actual=task)
+                cr, cc, _ = cube_layout(region.rows, region.cols)
+                group = f"act:dataflow:{op_id}"
+                out_view = self._emit_activation(
+                    activation=("silu" if kind == "silu" else "sigmoid"),
+                    rows=region.rows, cols=region.cols,
+                    cube_rows=cr, cube_cols=cc, input_view=source.value_view,
+                    input_buffer=self.views[source.value_view].buffer_id,
+                    deps=(source.value_action,), group=group,
+                    op_ids=(op_id,))
+                action = self._last_task_of_group(group)
+                if kind == "sigmoid":
+                    sigmoid_actions[output_token] = action
+                output = states.setdefault(output_token, _TaskBufferState())
+                output.record_value(region, action, out_view, action)
+                self.value_views[output_id] = out_view
+                self.value_action[output_id] = action
+                continue
+            if kind in {"mul", "add"}:
+                input_tokens = [int(v) for v in task["input_tokens"]]
+                input_values = [int(v) for v in task.get("input_values", ())]
+                broadcasts = list(task.get("input_broadcasts", ()))
+                if len(input_values) != 2 or len(broadcasts) != 2:
+                    reject(RK_E_SCHEMA,
+                           "a binary task must carry both operand values and "
+                           "their broadcast relation", stage="dag", actual=task)
+                for value_id, broadcast_kind in zip(input_values, broadcasts):
+                    shape = tuple(int(v) for v in values[value_id].type.shape)
+                    if broadcast_kind == "scalar":
+                        valid = shape == ()
+                    elif broadcast_kind == "channel":
+                        valid = shape == (region.cols,)
+                    elif broadcast_kind == "none":
+                        valid = shape == (region.rows, region.cols)
+                    else:
+                        valid = False
+                    if not valid:
+                        reject(RK_E_SHAPE,
+                               "the task broadcast relation does not match the "
+                               "operand's carrier rank/shape", stage="dag",
+                               actual={"value": value_id, "shape": shape,
+                                       "broadcast": broadcast_kind,
+                                       "region": region})
+                left = state(input_tokens[0], "left operand")
+                right = state(input_tokens[1], "right operand")
+                if not left.value_covers(region) or \
+                        not right.value_covers(region) or \
+                        left.value_view is None or right.value_view is None:
+                    reject(RK_E_SCHEMA,
+                           "binary operands do not cover the task region",
+                           stage="dag", actual=task)
+                cr, cc, _ = cube_layout(region.rows, region.cols)
+                group_id = int(task.get("group_op_id", op_id))
+                group_kind = str(task.get("group_kind", "ew"))
+                group = f"{group_kind}:dataflow:{group_id}"
+                if kind == "mul" and group_kind == "act":
+                    # The explicit sigmoid task already depends on the producer
+                    # of its source value.  Keep that direct dependency and let
+                    # the identity upload be added by _emit_binary_views.
+                    deps = tuple(dict.fromkeys(
+                        sigmoid_actions[token] for token in input_tokens
+                        if token in sigmoid_actions))
+                else:
+                    deps = (left.value_action, right.value_action)
+                out_view = self._emit_binary_views(
+                    opcode=kind, rows=region.rows, cols=region.cols,
+                    cube_rows=cr, cube_cols=cc,
+                    left_view=left.value_view, right_view=right.value_view,
+                    deps=deps, group=group, op_ids=(op_id,))
+                action = self._last_task_of_group(group)
+                output = states.setdefault(output_token, _TaskBufferState())
+                output.value = region
+                output.value_view = out_view
+                output.value_action = action
+                output.value_producer = action
+                output.value_version += 1
+                self.value_views[output_id] = out_view
+                self.value_action[output_id] = action
+                continue
+            reject(RK_E_UNSUPPORTED,
+                   f"no shared task consumer for {kind!r}", stage="dag",
+                   actual={"task": task})
+        return DraftPlan(
+            name=self.module.name, profile_hash=self.profile.profile_hash,
+            source_hash=self.module.source_hash, bindings=self.bindings,
+            constants=self.constants, buffers=self.buffers, views=self.views,
+            actions=self.actions, publish=self.publish)
+
+    def build_instantiated_staged(self, *, tasks: list[dict[str, Any]],
+                                  facts: dict[str, Any]) -> DraftPlan:
+        """Consume per-launch tasks in one builder and one global value space."""
+        if tasks:
+            reject(RK_E_SCHEMA,
+                   "staged consumption receives its task streams in facts",
+                   stage="schedule")
+        stages = list(facts.get("staged_stages") or ())
+        if not stages:
+            reject(RK_E_SHAPE, "staged task stream is empty", stage="schedule")
+        staged_scheduled = bool(facts.get("staged_schedule_contract"))
+        stage_op_ids = list(facts.get("staged_op_ids") or range(len(stages)))
+        binding_by_name = {binding.name: binding.id for binding in self.bindings}
+        binding_value = {value.name: value.id for value in self.module.values
+                         if value.role in {"input", "constant", "output"}}
+        global_regions: dict[tuple[str, int, int, int, int], tuple[int, int]] = {}
+        pending_downloads: list[tuple[int, int, int, tuple[int, int, int, int]]] = []
+        upload_cache: dict[tuple[Any, ...], tuple[int, int]] = {}
+        accumulator: dict[tuple[int, int, int], dict[str, Any]] = {}
+
+        def lift_region(raw: dict[str, int]) -> tuple[int, int, int, int]:
+            return (int(raw["row"]), int(raw["col"]),
+                    int(raw["rows"]), int(raw["cols"]))
+
+        def task_region(task: dict[str, Any], key: str | None = None
+                        ) -> tuple[int, int, int, int]:
+            if key is None:
+                return (int(task["m0"]), int(task["n0"]),
+                        int(task["rows"]), int(task["cols"]))
+            raw = task[key]
+            return (int(raw["row"]), int(raw["col"]),
+                    int(raw["rows"]), int(raw["cols"]))
+
+        producers: dict[str, list[tuple[int, tuple[int, int, int, int]]]] = {}
+        consumers: dict[str, list[tuple[int, tuple[int, int, int, int]]]] = {}
+        for stage in stages:
+            index = int(stage["index"])
+            for task in stage["tasks"]:
+                if task.get("kind") == "store":
+                    producers.setdefault(str(task["destination"]), []).append(
+                        (index, task_region(task)))
+                elif task.get("kind") == "copy" and task.get("source") not in binding_by_name:
+                    consumers.setdefault(str(task["source"]), []).append(
+                        (index, task_region(task, "source_region")))
+
+        consumer_composites: dict[
+            tuple[str, int, int, int, int], tuple[int, tuple[tuple[int, int, int, int], ...]]
+        ] = {}
+        producer_composites: dict[
+            tuple[str, int, int, int, int], tuple[str, int, int, int, int]
+        ] = {}
+        stage_out_views: dict[tuple[int, str, int, int], int] = {}
+        producer_subviews: dict[tuple[str, int, int, int, int], int] = {}
+        for name, reads in consumers.items():
+            writes = producers.get(name, [])
+            for _consumer_stage, creg in reads:
+                if (name, *creg) in consumer_composites:
+                    continue
+                exact = [item for item in writes if item[1] == creg]
+                if len(exact) == 1:
+                    continue
+                inside = [item for item in writes
+                          if item[1][0] >= creg[0] and item[1][1] >= creg[1] and
+                          item[1][0] + item[1][2] <= creg[0] + creg[2] and
+                          item[1][1] + item[1][3] <= creg[1] + creg[3]]
+                if not inside:
+                    continue
+                rows, cols = creg[2], creg[3]
+                if any(item[1][2] != rows for item in inside):
+                    reject(RK_E_SHAPE,
+                           "composite producer rows disagree with consumer rows",
+                           stage="dag", actual={"consumer": creg,
+                                                "producers": [i[1] for i in inside]})
+                ordered = sorted(inside, key=lambda item: item[1][1])
+                cursor = creg[1]
+                for _idx, region in ordered:
+                    if region[1] != cursor or region[1] % 8:
+                        reject(RK_E_SHAPE,
+                               "composite producer columns are not aligned or "
+                               "contiguous", stage="dag", actual=region)
+                    cursor += region[3]
+                if cursor != creg[1] + creg[3]:
+                    reject(RK_E_SHAPE,
+                           "composite producers do not fully cover the consumer",
+                           stage="dag", actual={"cursor": cursor,
+                                                "consumer": creg})
+                cr, cc, cbytes = cube_layout(rows, cols)
+                full_layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols,
+                                           cr, cc, 8, cbytes)
+                bid = self.add_buffer(role="workspace", capacity=cbytes,
+                                      layout_id=CUBE_LAYOUT, reuse=False,
+                                      padding_state="finite")
+                full_view = self.add_view(bid, 0, full_layout)
+                key = (name, *creg)
+                consumer_composites[key] = (full_view, tuple(
+                    item[1] for item in ordered))
+                for stage_index, region in ordered:
+                    rel_row = region[0] - creg[0]
+                    rel_col = region[1] - creg[1]
+                    if rel_row % 8:
+                        reject(RK_E_SHAPE,
+                               "composite producer row is not atom-aligned",
+                               stage="dag", actual=region)
+                    pr, pc, _ = cube_layout(region[2], region[3])
+                    if pr != cr:
+                        reject(RK_E_SHAPE,
+                               "composite producer physical rows differ",
+                               stage="dag", actual={"producer": pr,
+                                                    "consumer": cr})
+                    offset = ((rel_col // 8) * cr + rel_row) * 8 * 2
+                    sub_layout = TensorLayout("float16", CUBE_LAYOUT,
+                                              region[2], region[3], pr, pc, 8,
+                                              pr * pc * 2)
+                    sub = self.add_view(bid, offset, sub_layout)
+                    stage_out_views[(stage_index, "", region[0], region[1])] = sub
+                    producer_composites[(name, *region)] = key
+                    producer_subviews[(name, *region)] = sub
+
+        composite_actions: dict[tuple[str, int, int, int, int], list[int]] = {}
+
+        def rect(raw: dict[str, int]) -> tuple[int, int, int, int]:
+            return (int(raw["row"]), int(raw["col"]),
+                    int(raw["rows"]), int(raw["cols"]))
+
+        def upload(source: str, region: dict[str, int], *, weight: bool,
+                   stage: dict[str, Any]) -> tuple[int, int]:
+            if source not in binding_by_name:
+                reject(RK_E_SHAPE,
+                       "only an external binding can create an upload",
+                       stage="schedule", actual=source)
+            binding = binding_by_name[source]
+            key = (binding, rect(region), weight)
+            if key in upload_cache:
+                return upload_cache[key]
+            rows, cols = int(region["rows"]), int(region["cols"])
+            if weight:
+                pr, pc, pbytes = weight_layout(cols, rows)
+                layout = TensorLayout("float16", WEIGHT_LAYOUT, cols, rows,
+                                      pr, pc, 32, pbytes)
+                bid = self.add_buffer(role="weight", capacity=pbytes,
+                                      layout_id=WEIGHT_LAYOUT, reuse=False,
+                                      padding_state="zero")
+                view = self.add_view(bid, 0, layout)
+                action = self.add_action(
+                    "upload", outputs=(view,),
+                    origin="host_pack:staged:weight",
+                    attrs={"source_binding": binding,
+                           "src_row_offset": int(region["row"]),
+                           "src_col_offset": int(region["col"]),
+                           "src_row_stride": int(self.bindings[binding].shape[1]),
+                           "transpose_source": True,
+                           "cache": ("constant" if
+                                     self.bindings[binding].role == "constant"
+                                     else "input")})
+            else:
+                pr, pc, pbytes = input_layout(rows, cols)
+                layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols,
+                                      pr, pc, 8, pbytes)
+                bid = self.add_buffer(role="input_slice", capacity=pbytes,
+                                      layout_id=CUBE_LAYOUT, reuse=False,
+                                      padding_state="zero")
+                view = self.add_view(bid, 0, layout)
+                action = self.add_action(
+                    "upload", outputs=(view,),
+                    origin="host_pack:staged:input",
+                    attrs={"source_binding": binding,
+                           "src_row_offset": int(region["row"]),
+                           "src_col_offset": int(region["col"]),
+                           "src_row_stride": int(self.bindings[binding].shape[1]),
+                           "transpose_source": False, "cache": "input"})
+            upload_cache[key] = (view, action)
+            return upload_cache[key]
+
+        # Uploads are host actions; establish every external pack before any
+        # device task group so a launch cannot contain an interleaved host step.
+        for stage in stages:
+            for task in stage["tasks"]:
+                if task.get("kind") != "copy":
+                    continue
+                source = str(task["source"])
+                if source not in binding_by_name:
+                    continue
+                weight = self.bindings[binding_by_name[source]].role == "constant"
+                upload(source, task["source_region"], weight=weight, stage=stage)
+
+        for stage_index, stage in enumerate(stages):
+            output_shapes = {(int(t["m0"]), int(t["n0"])):
+                             (int(t["rows"]), int(t["cols"]))
+                             for t in stage["tasks"] if t.get("kind") == "store"}
+            local_views: dict[str, tuple[int, int] | None] = {}
+            local_deps: dict[str, tuple[int, ...]] = {}
+            local_sources: dict[str, dict[str, Any]] = {}
+            local_zero: set[str] = set()
+            current_group = None
+            for task in stage["tasks"]:
+                kind = task.get("kind")
+                if kind == "fill":
+                    name = str(task["destination"])
+                    local_views[name] = None
+                    local_zero.add(name)
+                    continue
+                if kind == "copy":
+                    source = str(task["source"])
+                    destination = str(task["destination"])
+                    source_region = task["source_region"]
+                    if source in binding_by_name:
+                        weight = self.bindings[binding_by_name[source]].role == "constant"
+                        uploaded = upload(
+                            source, source_region, weight=weight, stage=stage)
+                        local_views[destination] = uploaded
+                        local_sources[destination] = {
+                            "source": source, "region": dict(source_region),
+                            **{"view": uploaded[0], "action": uploaded[1]}}
+                    elif (source, *rect(source_region)) in consumer_composites:
+                        key = (source, *rect(source_region))
+                        full_view, _regions = consumer_composites[key]
+                        actions = tuple(composite_actions.get(key, ()))
+                        if not actions:
+                            reject(RK_E_SHAPE,
+                                   "composite consumer has no producer actions",
+                                   stage="schedule", actual=key)
+                        local_views[destination] = (full_view, actions[0])
+                        local_deps[destination] = actions
+                        local_sources[destination] = {
+                            "source": source, "region": dict(source_region),
+                            "view": full_view, "action": actions[0]}
+                    elif any(key[0] == source for key in global_regions):
+                        key = (source, *rect(source_region))
+                        found = global_regions.get(key)
+                        if found is None:
+                            reject(RK_E_SHAPE,
+                                   "intermediate copy region has no prior write",
+                                   stage="schedule", actual=key)
+                        local_views[destination] = found
+                        local_sources[destination] = {
+                            "source": source, "region": dict(source_region),
+                            **{"view": found[0], "action": found[1]}}
+                    elif source in local_views:
+                        local_views[destination] = local_views[source]
+                    else:
+                        reject(RK_E_SHAPE,
+                               "copy source is neither external nor staged",
+                               stage="schedule", actual=source)
+                    local_zero.discard(destination)
+                    continue
+                if kind in {"sigmoid", "mul", "add"}:
+                    names = list(task["inputs"])
+                    states = [local_views.get(str(name)) for name in names]
+                    if any(state is None for state in states):
+                        reject(RK_E_SHAPE,
+                               "elementwise inputs have no staged source",
+                               stage="schedule", actual=names)
+                    region_raw = task["region"]
+                    region = (int(region_raw["row"]), int(region_raw["col"]),
+                              int(region_raw["rows"]), int(region_raw["cols"]))
+                    rows, cols = region[2], region[3]
+                    cr, cc, _ = cube_layout(rows, cols)
+                    self.identity_for(cc)
+                    m0, n0 = int(task.get("m0", 0)), int(task.get("n0", 0))
+                    input_offsets = list(task.get("input_offsets") or
+                                         [0] * len(states))
+                    producer_sources = []
+                    for name, state, offset in zip(names, states,
+                                                   input_offsets):
+                        producer_sources.append({
+                            "input": name, "view": state[0],
+                            "action": state[1], "offset": int(offset),
+                            "half": "gate" if int(offset) == 0 else "up"})
+                    extra = {
+                        "source_stage_index": stage_index,
+                        "source_stage_count": len(stages),
+                        "source_stage_boundary": "kernel_launch",
+                        "stage_barrier": "all_previous_submits",
+                        "producer_sources": producer_sources}
+                    if kind == "sigmoid":
+                        extra["gate_source"] = producer_sources[0]
+                    if kind == "mul":
+                        for source in producer_sources:
+                            if source["half"] == "up":
+                                extra["up_source"] = source
+                            else:
+                                extra["gate_source"] = source
+                    marker = "act" if kind == "sigmoid" else "ew"
+                    if len(stages) > 2 and not staged_scheduled:
+                        group = f"{marker}:dataflow_tiled:{stage_index}:{m0}:{n0}"
+                    else:
+                        group = f"{marker}:s{stage_index}:{m0}:{n0}"
+                    if kind == "sigmoid":
+                        out_view = self._emit_activation(
+                            activation="sigmoid", rows=rows, cols=cols,
+                            cube_rows=cr, cube_cols=cc,
+                            input_view=states[0][0],
+                            input_buffer=self.views[states[0][0]].buffer_id,
+                            deps=(states[0][1],), group=group,
+                            op_ids=(stage_op_ids[stage_index],),
+                            extra_attrs=extra)
+                    else:
+                        if len(states) != 2:
+                            reject(RK_E_SCHEMA,
+                                   "staged binary task needs two inputs",
+                                   stage="schedule", actual=task)
+                        store_task = next(
+                            (t for t in stage["tasks"]
+                             if t.get("kind") == "store" and
+                             t.get("source") == task["output"] and
+                             int(t.get("m0", -1)) == m0 and
+                             int(t.get("n0", -1)) == n0), None)
+                        explicit = None
+                        if store_task is not None:
+                            dreg = lift_region(store_task["destination_region"])
+                            explicit = producer_subviews.get(
+                                (str(store_task["destination"]), *dreg))
+                        out_view = self._emit_binary_views(
+                            opcode=kind, rows=rows, cols=cols,
+                            cube_rows=cr, cube_cols=cc,
+                            left_view=states[0][0], right_view=states[1][0],
+                            deps=(states[0][1], states[1][1]),
+                            group=group, op_ids=(stage_op_ids[stage_index],),
+                            out_view=explicit, extra_attrs=extra)
+                    action = self._last_task_of_group(group)
+                    local_views[str(task["output"])] = (out_view, action)
+                    continue
+                if kind != "gemm":
+                    if kind == "store":
+                        source = str(task["source"])
+                        destination = str(task["destination"])
+                        source_state = local_views.get(source)
+                        if source_state is None:
+                            reject(RK_E_SHAPE,
+                                   "store source has no staged value",
+                                   stage="schedule", actual=source)
+                        view, action = source_state
+                        region = (int(task["m0"]), int(task["n0"]),
+                                  int(task["rows"]), int(task["cols"]))
+                        if destination in binding_by_name and                                 self.bindings[binding_by_name[destination]].role == "output":
+                            pending_downloads.append(
+                                (binding_by_name[destination], view,
+                                 action, region))
+                        else:
+                            global_regions[(destination, *region)] = source_state
+                            composite_key = producer_composites.get(
+                                (destination, *region))
+                            if composite_key is not None:
+                                composite_actions.setdefault(
+                                    composite_key, []).append(action)
+                        continue
+                    reject(RK_E_UNSUPPORTED,
+                           f"staged task kind {kind!r} is not consumed",
+                           stage="schedule", actual=task)
+                tiles = task.get("tiles")
+                if not isinstance(tiles, list) or len(tiles) != 3:
+                    reject(RK_E_SCHEMA, "staged GEMM task lacks tile names",
+                           stage="schedule", actual=task)
+                a_state = local_views.get(str(tiles[0]))
+                b_state = local_views.get(str(tiles[1]))
+                a_source = local_sources.get(str(tiles[0]))
+                if a_state is None or b_state is None:
+                    reject(RK_E_SHAPE,
+                           "staged GEMM operands have no source view",
+                           stage="schedule", actual=tiles)
+                m0, n0 = int(task["m0"]), int(task["n0"])
+                rows, cols = output_shapes.get(
+                    (m0, n0), (int(task["rows"]), int(task["cols"])))
+                k0, kt = int(task["k0"]), int(task["kt"])
+                effective_kt = min(kt, int(stage["logical_k"]) - k0)
+                group_key = (stage_index, m0, n0)
+                group = accumulator.get(group_key)
+                if group is None:
+                    cr, cc, cbytes = cube_layout(rows, cols)
+                    layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols,
+                                          cr, cc, 8, cbytes)
+                    group = {"views": [], "layout": layout,
+                             "capacity": (cr, cc, cbytes),
+                             "action": None, "last": None, "count": 0}
+                    accumulator[group_key] = group
+                index = int(group["count"])
+                group["count"] = index + 1
+                slot = index & 1
+                while len(group["views"]) <= slot:
+                    _cr, _cc, _cbytes = group["capacity"]
+                    bid = self.add_buffer(role="accumulator",
+                                          capacity=_cbytes,
+                                          layout_id=CUBE_LAYOUT,
+                                          padding_state="finite")
+                    group["views"].append(
+                        self.add_view(bid, 0, group["layout"]))
+                out_view = group["views"][slot]
+                a_view, a_action = a_state
+                b_view, b_action = b_state
+                cl_state = local_views.get(str(tiles[2]))
+                deps = list(local_deps.get(str(tiles[0]), ()))
+                deps += list(local_deps.get(str(tiles[1]), ()))
+                if not deps:
+                    deps = [a_action, b_action]
+                elif a_action not in deps:
+                    deps.append(a_action)
+                if b_action not in deps:
+                    deps.append(b_action)
+                z_attrs = {}
+                if a_source is not None and a_source["source"] == "Z":
+                    source_region = a_source["region"]
+                    z_attrs["z_source"] = {
+                        "value": "Z",
+                        "producer_view": int(a_view),
+                        "producer_action": int(a_action),
+                        "producer_tile": [int(source_region["row"]),
+                                          int(source_region["col"]),
+                                          int(source_region["rows"]),
+                                          int(source_region["cols"])],
+                        "consumer_region": [int(source_region["row"]),
+                                            int(source_region["col"]),
+                                            int(source_region["rows"]),
+                                            int(source_region["cols"])],
+                        "logical_k": effective_kt,
+                        "physical_cols": effective_kt,
+                        "row_offset": 0,
+                        "padding": "consumer reads valid columns only",
+                    }
+                if cl_state is None:
+                    action = self.add_action(
+                        "npu_task", template_id="co.mm.f16.v1",
+                        inputs=(a_view, b_view), outputs=(out_view,),
+                        deps=tuple(deps), origin=f"lowering:staged:stage{stage_index}:mm:{k0}",
+                        attrs={"submit_group": (
+                            f"mm:s{stage_index}:{stage_index}:{m0}:{n0}"
+                            if len(stages) == 2 else
+                            f"mm:s{stage_index}:{m0}:{n0}"
+                            if staged_scheduled else
+                            f"mm:dataflow_tiled:{stage_index}:{m0}:{n0}"),
+                               "source_k_loop": stage.get("source_k_loop"),
+                               "k0": 0,
+                               "kt": effective_kt,
+                               "k_physical_extent": effective_kt,
+                               "k_padding": 0,
+                               "source_stage_index": stage_index,
+                               "source_stage_count": len(stages),
+                               "source_stage_boundary": "kernel_launch",
+                               "source_stage_schedule_contract":
+                                   "staged_mn_tiles_v1",
+                               "source_schedule": {
+                                   "kind": "mn_tiles_v1",
+                                   "tile_m": int(stage["tile_m"]),
+                                   "tile_n": int(stage["tile_n"]),
+                                   "order": str(stage["order"]),
+                                   "k_tile": 256,
+                                   "accumulation":
+                                       "ordered_ascending_f16_writeback"},
+                               "stage_barrier": "all_previous_submits",
+                               "producer_sources": [
+                                   {"input": "A", "view": a_view,
+                                    "action": a_action,
+                                    "actions": list(local_deps.get(str(tiles[0]), (a_action,)))},
+                                   {"input": "B", "view": b_view,
+                                    "action": b_action,
+                                    "actions": list(local_deps.get(str(tiles[1]), (b_action,)))}],
+                               "activation_sources": [
+                                   {"view": a_view, "action": act}
+                                   for act in local_deps.get(str(tiles[0]),
+                                                             (a_action,))],
+                               **z_attrs},
+                        op_ids=(stage_op_ids[stage_index],))
+                else:
+                    action = self.add_action(
+                        "npu_task", template_id="co.mm_acc.f16.v1",
+                        inputs=(a_view, b_view, cl_state[0]),
+                        outputs=(out_view,),
+                        deps=tuple(deps + [cl_state[1]]),
+                        origin=f"lowering:staged:stage{stage_index}:mm_acc:{k0}",
+                        attrs={"submit_group": (
+                            f"mm:s{stage_index}:{stage_index}:{m0}:{n0}"
+                            if len(stages) == 2 else
+                            f"mm:s{stage_index}:{m0}:{n0}"
+                            if staged_scheduled else
+                            f"mm:dataflow_tiled:{stage_index}:{m0}:{n0}"),
+                               "source_k_loop": stage.get("source_k_loop"),
+                               "k0": k0,
+                               "kt": effective_kt,
+                               "k_physical_extent": effective_kt,
+                               "k_padding": 0,
+                               "source_stage_index": stage_index,
+                               "source_stage_count": len(stages),
+                               "source_stage_boundary": "kernel_launch",
+                               "source_stage_schedule_contract":
+                                   "staged_mn_tiles_v1",
+                               "source_schedule": {
+                                   "kind": "mn_tiles_v1",
+                                   "tile_m": int(stage["tile_m"]),
+                                   "tile_n": int(stage["tile_n"]),
+                                   "order": str(stage["order"]),
+                                   "k_tile": 256,
+                                   "accumulation":
+                                       "ordered_ascending_f16_writeback"},
+                               "stage_barrier": "all_previous_submits",
+                               "producer_sources": [
+                                   {"input": "A", "view": a_view,
+                                    "action": a_action,
+                                    "actions": list(local_deps.get(str(tiles[0]), (a_action,)))},
+                                   {"input": "B", "view": b_view,
+                                    "action": b_action,
+                                    "actions": list(local_deps.get(str(tiles[1]), (b_action,)))}],
+                               "activation_sources": [
+                                   {"view": a_view, "action": act}
+                                   for act in local_deps.get(str(tiles[0]),
+                                                             (a_action,))],
+                               **z_attrs},
+                        op_ids=(stage_op_ids[stage_index],))
+                group["last"] = out_view
+                group["action"] = action
+                local_views[str(tiles[2])] = (out_view, action)
+                local_zero.discard("Acc")
+        for binding, view, producer, region in pending_downloads:
+            download = self.add_action(
+                "download", inputs=(view,), deps=(producer,),
+                origin="host:download:staged",
+                attrs={"binding_id": binding, "submit_group": None})
+            self.buffers[self.views[view].buffer_id].last = max(
+                self.buffers[self.views[view].buffer_id].last, download)
+            self.publish.append(Publish(
+                self.bindings[binding].name, binding, view,
+                dst_row=region[0], dst_col=region[1],
+                rows=region[2], cols=region[3]))
+        return DraftPlan(name=self.module.name,
+                         profile_hash=self.profile.profile_hash,
+                         source_hash=self.module.source_hash,
+                         bindings=self.bindings, constants=self.constants,
+                         buffers=self.buffers, views=self.views,
+                         actions=self.actions, publish=self.publish)
 
     def build_dataflow(self) -> DraftPlan:
         """Lower a legalized per-node SSA graph onto device views.
@@ -1094,7 +1977,7 @@ class _Builder:
             actions=self.actions, publish=self.publish)
 
 
-    def build_scheduled_linear(self) -> DraftPlan:
+    def build_scheduled_linear(self, *, instances=None) -> DraftPlan:
         """A/B/C/D task order and submit grouping for one FP16 matmul."""
         if len(self.module.ops) != 1 or self.module.ops[0].opcode != "matmul":
             reject(RK_E_UNSUPPORTED,
@@ -1145,17 +2028,57 @@ class _Builder:
                    "linear_task_order=baseline",
                    stage="schedule", actual={"k": k, "policy": policy},
                    required={"k_greater_than": K_TILE})
-        declared_schedule = op.attrs.get("source_schedule")
-        schedule = mn_schedule_from_attrs(op.attrs, where="matmul")
-        if declared_schedule is None:
-            tile_m = 1 if m == 1 else 256
-            tile_n = TILE_LIMIT
-            order = "m_major"
+        if instances is not None:
+            # The converted program states the schedule: it is not read from
+            # synthetic op attributes.
+            schedule = MNTileSchedule(tile_m=instances["tile_m"],
+                                      tile_n=instances["tile_n"],
+                                      order=instances["order"])
+            declared_schedule = schedule.to_dict()
         else:
-            tile_m, tile_n, order = (schedule.tile_m, schedule.tile_n,
-                                     schedule.order)
-        tiles = output_tiles(m, n, tile_m=tile_m, tile_n=tile_n, order=order)
-        ktiles = k_slices(k)
+            declared_schedule = op.attrs.get("source_schedule")
+            schedule = mn_schedule_from_attrs(op.attrs, where="matmul")
+            if declared_schedule is None:
+                tile_m = 1 if m == 1 else 256
+                tile_n = TILE_LIMIT
+                order = "m_major"
+            else:
+                tile_m, tile_n, order = (schedule.tile_m, schedule.tile_n,
+                                         schedule.order)
+        if instances is None:
+            tiles = output_tiles(m, n, tile_m=tile_m, tile_n=tile_n, order=order)
+            ktiles = k_slices(k)
+        else:
+            # The instances come from the converted program (one per tile and K
+            # slice, in program order).  The module only supplies binding
+            # identity here, so the geometry is checked for agreement instead of
+            # being re-derived.
+            if a.type.shape != (instances["m"], instances["k"]) or \
+                    y.type.shape != (instances["m"], instances["n"]):
+                reject(RK_E_SHAPE,
+                       "the plan bindings disagree with the instantiated geometry",
+                       stage="schedule",
+                       actual={"a": list(a.type.shape), "y": list(y.type.shape),
+                               "instances": [instances["m"], instances["k"],
+                                             instances["n"]]})
+            tile_m = instances["tile_m"]
+            tile_n = instances["tile_n"]
+            order = instances["order"]
+            tiles = tuple(instances["tiles"])
+            ktiles = tuple(instances["ktiles"])
+            operands = instances.get("task_operands")
+            if operands and (operands[0] != a.name or operands[1] != w.name
+                             or operands[2] != y.name):
+                reject(RK_E_SCHEMA,
+                       "the plan bindings do not match the operands the "
+                       "converted tasks read and write",
+                       stage="schedule",
+                       actual={"tasks": list(operands),
+                               "bindings": [a.name, w.name, y.name]})
+            if not tiles or not ktiles:
+                reject(RK_E_SHAPE,
+                       "the instantiated program produced no task geometry",
+                       stage="schedule")
 
         n_m_tiles = len({tile.m0 for tile in tiles})
         ws_per_n = len(ktiles) * n_m_tiles
@@ -1288,7 +2211,7 @@ class _Builder:
                       if policy in {"baseline", "scheduled_baseline"}
                       else "multi_k_acc_v1")
             attrs = {"submit_group": submit, "submit_recipe": recipe,
-                     "k0": ks.k0, "k_index": kidx,
+                     "k0": ks.k0, "k_index": kidx, "kt": ks.extent,
                      "k_count": len(ktiles),
                      "data_reuse": bool(reuse),
                      "weight_reuse": bool(weight_reuse),
@@ -1298,6 +2221,10 @@ class _Builder:
                 attrs["source_k_rounding"] = op.attrs.get("source_k_rounding")
                 attrs["source_mn_tiling"] = op.attrs.get("source_mn_tiling")
                 attrs["applied_schedule"] = schedule.to_dict()
+            if instances is not None and instances.get("hints"):
+                # Source requests this path did not apply, recorded so they
+                # survive save/load instead of living only in the returned facts.
+                attrs["source_hints"] = dict(instances["hints"])
             if prior is None:
                 tid = self.add_action(
                     "npu_task", template_id="co.mm.f16.v1",
@@ -2305,6 +3232,1026 @@ class _Builder:
                               phys[1], 8, phys[2])
         return self.add_view(buffer_id, 0, layout)
 
+    def build_instantiated_linear(self, *, tasks: list[dict[str, Any]],
+                                  facts: dict[str, Any]) -> DraftPlan:
+        """Assemble a plan directly from the instantiated target task sequence.
+
+        The lowering has already proved the source program and emitted
+        ``rk_fill``/``rk_copy``/``rk_gemm``/``rk_silu``/``rk_store`` calls in
+        execution order.  This method consumes that stream once, in order, as
+        the authority for values, regions, producer/consumer relations and
+        publication.  It only asks the existing _Builder machinery for layout,
+        packing, buffer/view storage, templates, submits and accounting.
+
+        Each actual operation updates or consumes an established value state:
+
+        * fill               -> establish a zero region for a new lifetime;
+        * param -> staging   -> create/reuse upload and attach pack-padding;
+        * running -> Cl      -> record the accumulator load relation;
+        * Cl -> running      -> seal one MM/MM_ACC writeback and value version;
+        * gemm               -> emit MM or MM_ACC from the visible operand and
+                                accumulator states, never by K-index grouping;
+        * silu               -> consume the actual value and emit LUT + multiply;
+        * store              -> consume the actual result value, then emit the
+                                download and published rectangle.
+
+        There is no GEMM-neighborhood search and no collection of requests that
+        are later regrouped into a new execution skeleton.  Dependency
+        finalization may attach known task counts and materialize deferred host
+        downloads, but it never reconstructs tiles, K slices or task order.
+        """
+        if tasks and any("input_tokens" in task or
+                         "buffer_token" in task for task in tasks):
+            return self._consume_multi_op_tasks(tasks=tasks, facts=facts)
+        matmul_ops = [item for item in self.module.ops
+                      if item.opcode == "matmul"]
+        activation_ops = [item for item in self.module.ops
+                          if item.opcode == "silu"]
+        if len(matmul_ops) != 1 or len(activation_ops) > 1 or \
+                len(self.module.ops) != 1 + len(activation_ops):
+            reject(RK_E_UNSUPPORTED,
+                   "task assembly requires one matmul binding op and at most "
+                   "one SiLU op", stage="schedule",
+                   actual=[item.opcode for item in self.module.ops])
+        if not isinstance(tasks, list) or not tasks:
+            reject(RK_E_SHAPE, "the instantiated task sequence is empty",
+                   stage="schedule")
+        op = matmul_ops[0]
+        activation_op = activation_ops[0] if activation_ops else None
+        a_value = self.module.value(op.inputs[0])
+        b_value = self.module.value(op.inputs[1])
+        matmul_out = self.module.value(op.outputs[0])
+        y_value = self.module.value(self.module.outputs[0])
+        m, k = a_value.type.shape
+        n = y_value.type.shape[1]
+        if activation_op is None:
+            if matmul_out.id != y_value.id:
+                reject(RK_E_SHAPE,
+                       "the matmul binding carrier has no final output",
+                       stage="schedule")
+        elif activation_op.inputs != (matmul_out.id,) or \
+                activation_op.outputs != (y_value.id,):
+            reject(RK_E_SHAPE,
+                   "the SiLU binding op does not connect the matmul result to "
+                   "the final output", stage="schedule")
+        if (facts.get("m"), facts.get("k"), facts.get("n")) != (m, k, n):
+            reject(RK_E_SHAPE,
+                   "task facts disagree with the binding carrier",
+                   stage="schedule",
+                   actual={"facts": [facts.get("m"), facts.get("k"),
+                                     facts.get("n")],
+                           "bindings": [m, k, n]})
+        if op.attrs.get("b_layout", "kn") != "kn" or                 b_value.type.shape != (k, n):
+            reject(RK_E_UNSUPPORTED,
+                   "task assembly supports only B=[K,N] in kn layout",
+                   stage="schedule")
+        order = facts.get("order", "m_major")
+        if order not in MN_TILE_ORDERS:
+            reject(RK_E_UNSUPPORTED, f"unknown tile order {order!r}",
+                   stage="schedule", actual=order)
+
+        def integer(field: str, value: Any, where: str) -> int:
+            if type(value) is not int:
+                reject(RK_E_SCHEMA,
+                       f"{where}.{field} must be a static integer",
+                       stage="schedule", actual={field: value})
+            return value
+
+        def region(task: dict[str, Any], key: str, where: str) -> dict[str, int]:
+            raw = task.get(key)
+            if not isinstance(raw, dict):
+                reject(RK_E_SCHEMA, f"{where}.{key} must be an object",
+                       stage="schedule", actual=raw)
+            return {axis: integer(axis, raw.get(axis), where + "." + key)
+                    for axis in ("row", "col", "rows", "cols")}
+
+        def task_rect(task: dict[str, Any], key: str, where: str) -> _TaskRect:
+            raw = region(task, key, where)
+            return _TaskRect(raw["row"], raw["col"], raw["rows"], raw["cols"])
+
+        def local_rect(task: dict[str, Any], where: str) -> _TaskRect:
+            return _TaskRect(0, 0,
+                             integer("rows", task.get("rows"), where),
+                             integer("cols", task.get("cols"), where))
+
+        policy = self.options.linear_task_order
+        if policy not in {"baseline", "scheduled_baseline", "merged",
+                          "interleaved", "interleaved_reuse",
+                          "weight_stationary", "weight_stationary_reuse",
+                          "grouped_linear"}:
+            reject(RK_E_UNSUPPORTED, f"unknown linear task policy {policy!r}",
+                   stage="schedule")
+        if activation_op is not None and policy == "merged":
+            reject(RK_E_UNSUPPORTED,
+                   "merged linear grouping is not admitted for SiLU plans",
+                   stage="schedule")
+        legacy_linear = bool(facts.get("guarded_tail") or
+                             facts.get("linear_k_loop"))
+        compat_records = bool(facts.get("formal_guarded_entry") or
+                              facts.get("linear_k_loop"))
+        schedule = MNTileSchedule(tile_m=facts["tile_m"],
+                                  tile_n=facts["tile_n"], order=order)
+        schedule_dict = schedule.to_dict()
+        a_binding = self.binding_by_value[a_value.id]
+        b_binding = self.binding_by_value[b_value.id]
+        y_binding = self.binding_by_value[y_value.id]
+
+        source_tasks = [dict(task) for task in tasks]
+        for task in source_tasks:
+            if task.get("kind") != "copy":
+                continue
+            source = str(task.get("source"))
+            if source not in (a_value.name, b_value.name):
+                continue
+            task["_upload_spec"] = {
+                "source_region": region(task, "source_region", "copy source"),
+                "weight": source == b_value.name,
+            }
+        tasks = source_tasks
+        # A pack is still a pure function of the actual source region and target
+        # layout.  The cache is only a resource-reuse decision; each task keeps
+        # its explicit upload dependency.
+        input_cache: dict[tuple[Any, ...], tuple[int, int]] = {}
+        weight_cache: dict[tuple[Any, ...], tuple[int, int]] = {}
+
+        def source_upload(source: dict[str, int], binding: int,
+                          *, weight: bool) -> tuple[int, int]:
+            key = (binding, source["row"], source["col"], source["rows"],
+                   source["cols"])
+            cache = weight_cache if weight else input_cache
+            if key in cache:
+                return cache[key]
+            if weight:
+                pr, pc, pbytes = weight_layout(source["cols"], source["rows"])
+                layout = TensorLayout("float16", WEIGHT_LAYOUT, source["cols"],
+                                      source["rows"], pr, pc, 32, pbytes)
+                buffer_id = self.add_buffer(role="weight", capacity=pbytes,
+                                            layout_id=WEIGHT_LAYOUT,
+                                            reuse=False,
+                                            padding_state="zero")
+                view = self.add_view(buffer_id, 0, layout)
+                action = self.add_action(
+                    "upload", outputs=(view,), origin="host_pack:linear:weight",
+                    attrs={"source_binding": binding,
+                           "src_row_offset": source["row"],
+                           "src_col_offset": source["col"],
+                           "src_row_stride": n,
+                           "transpose_source": True,
+                           "cache": ("constant"
+                                     if b_value.role == "constant" else "input")})
+            else:
+                pr, pc, pbytes = input_layout(source["rows"], source["cols"])
+                layout = TensorLayout("float16", CUBE_LAYOUT, source["rows"],
+                                      source["cols"], pr, pc, 8, pbytes)
+                buffer_id = self.add_buffer(role="input_slice", capacity=pbytes,
+                                            layout_id=CUBE_LAYOUT, reuse=False,
+                                            padding_state="zero")
+                view = self.add_view(buffer_id, 0, layout)
+                action = self.add_action(
+                    "upload", outputs=(view,), origin="host_pack:linear:input",
+                    attrs={"source_binding": binding,
+                           "src_row_offset": source["row"],
+                           "src_col_offset": source["col"],
+                           "src_row_stride": k,
+                           "transpose_source": False, "cache": "input"})
+            cache[key] = (view, action)
+            return cache[key]
+
+        # Host pack actions are materialized from the actual A/B copy tasks
+        # before task groups.  This is a dependency/resource decision, not a
+        # GEMM-chain search: each upload is keyed to its concrete copy task.
+        task_uploads: dict[int, tuple[int, int]] = {}
+        baseline_segment_uploads: dict[int, list[int]] = {}
+        current_segment_uploads: list[int] | None = None
+        a_tile_names: set[str] = set()
+        b_tile_names: set[str] = set()
+        c_tile_names: set[str] = set()
+        for task in tasks:
+            if task.get("kind") == "gemm" and \
+                    isinstance(task.get("tiles"), list) and \
+                    len(task["tiles"]) == 3:
+                a_tile_names.add(str(task["tiles"][0]))
+                b_tile_names.add(str(task["tiles"][1]))
+                c_tile_names.add(str(task["tiles"][2]))
+        if legacy_linear and policy == "baseline":
+            segment: list[int] = []
+            for index, task in enumerate(tasks):
+                segment.append(index)
+                if task.get("kind") == "store":
+                    copies = [
+                        item for item in segment
+                        if tasks[item].get("kind") == "copy" and
+                        str(tasks[item].get("source")) in
+                        (a_value.name, b_value.name)]
+                    baseline_segment_uploads[segment[0]] = sorted(
+                        copies, key=lambda item: (
+                            0 if str(tasks[item].get("source")) ==
+                            a_value.name else 1, item))
+                    segment = []
+            if segment:
+                reject(RK_E_SCHEMA,
+                       "the baseline task stream ends without a store",
+                       stage="schedule")
+        else:
+            # Upload actions are materialised in source task order.  Policy
+            # reordering only changes execution order, not the packed upload
+            # identities or their lifetimes.
+            for weight_pass in (False, True):
+                for task in source_tasks:
+                    spec = task.get("_upload_spec")
+                    if spec is None or bool(spec["weight"]) != weight_pass:
+                        continue
+                    source_upload(
+                        spec["source_region"],
+                        b_binding if weight_pass else a_binding,
+                        weight=weight_pass)
+
+
+
+        # Actual region/version/producer state.  A zero fill starts a new zero
+        # lifetime; a value write records the task ordinal, plan action and view
+        # that produced the value.  No GEMM-neighborhood search is performed.
+        states: dict[str, _TaskBufferState] = {
+            a_value.name: _TaskBufferState(
+                value=_TaskRect(0, 0, m, k), value_version=1),
+            b_value.name: _TaskBufferState(
+                value=_TaskRect(0, 0, k, n), value_version=1),
+        }
+        linear_actions: list[dict[str, Any]] = []
+
+        def begin_zero(name: str, area: _TaskRect, task: int) -> _TaskBufferState:
+            state = states.setdefault(name, _TaskBufferState())
+            state.enter_zero(area, task)
+            return state
+
+        def write_value(name: str, area: _TaskRect, task: int,
+                        action: int | None, view: int | None,
+                        tile: tuple[int, int, int, int] | None,
+                        source_region: _TaskRect | None = None) -> None:
+            state = states.setdefault(name, _TaskBufferState())
+            if state.zero is not None and not state.zero.contains(area) and \
+                    not area.contains(state.zero):
+                reject(RK_E_UNSUPPORTED,
+                       "a value write overlaps a zero state that this task "
+                       "stream cannot represent", stage="schedule",
+                       actual={"buffer": name, "write": area,
+                               "zero": state.zero})
+            state.record_value(area, task, view, action, tile, source_region)
+
+        acc_views: dict[tuple[int, int, int, int], list[int]] = {}
+        tile_k_count: dict[tuple[int, int, int, int], int] = {}
+        tile_k_ranges: dict[tuple[int, int, int, int],
+                            list[tuple[int, int]]] = {}
+        mm_task_ids: dict[tuple[int, int, int, int], list[int]] = {}
+        pending_loads: dict[str, dict[str, Any]] = {}
+        pending_gemms: dict[str, dict[str, Any]] = {}
+        publish_records: dict[tuple[int, int, int, int], dict[str, Any]] = {}
+        deferred_publishes: list[tuple[int, int, int, int]] = []
+        silu_count = 0
+        guarded_last_mm: int | None = None
+        # Local pass diagnostics only; this is not a public plan artifact.
+        fusion_records: list[dict[str, Any]] = []
+
+        def accumulator_view(tile: tuple[int, int, int, int],
+                             k_index: int) -> int:
+            pair = acc_views.setdefault(tile, [])
+            slot = k_index & 1
+            if slot >= len(pair):
+                m0, n0, rows, cols = tile
+                cr, cc, cbytes = cube_layout(rows, cols)
+                layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols,
+                                      cr, cc, 8, cbytes)
+                buffer_id = self.add_buffer(role="accumulator", capacity=cbytes,
+                                            layout_id=CUBE_LAYOUT,
+                                            padding_state="finite")
+                pair.append(self.add_view(buffer_id, 0, layout))
+            return pair[slot]
+
+        def materialize_publish(tile: tuple[int, int, int, int]) -> int:
+            record = publish_records[tile]
+            view = record["view"]
+            download = self.add_action(
+                "download", inputs=(view,), deps=(record["action"],),
+                origin="host:download:linear",
+                attrs={"binding_id": y_binding, "submit_group": None})
+            self.buffers[self.views[view].buffer_id].role = "output"
+            self.buffers[self.views[view].buffer_id].last = max(
+                self.buffers[self.views[view].buffer_id].last, download)
+            self.publish.append(Publish(
+                y_value.name, y_binding, view,
+                dst_row=record["m0"], dst_col=record["n0"],
+                rows=record["rows"], cols=record["cols"]))
+            return download
+
+        for index, task in enumerate(tasks):
+            if index in baseline_segment_uploads:
+                current_segment_uploads = []
+                for copy_index in baseline_segment_uploads[index]:
+                    copy_task = tasks[copy_index]
+                    source = str(copy_task.get("source"))
+                    source_region = region(
+                        copy_task, "source_region", "copy source")
+                    task_uploads[copy_index] = source_upload(
+                        source_region,
+                        a_binding if source == a_value.name else b_binding,
+                        weight=source == b_value.name)
+                    current_segment_uploads.append(task_uploads[copy_index][1])
+            kind = task.get("kind")
+            if kind not in {"fill", "copy", "gemm", "silu", "store"}:
+                reject(RK_E_UNSUPPORTED,
+                       "the instantiated task kind is not consumed",
+                       stage="schedule", actual=kind)
+
+            if kind == "fill":
+                destination = str(task.get("destination"))
+                value = task.get("value")
+                if value != 0:
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "a fill consumed by the task chain is not zero",
+                           stage="schedule", actual=task)
+                area = task_rect(task, "region", "fill")
+                state = begin_zero(destination, area, index)
+                fusion_records.append({
+                    "kind": "zero-lifecycle", "task": index,
+                    "buffer": destination, "region": area,
+                    "zero_producer": state.zero_producer,
+                })
+                continue
+
+            if kind == "copy":
+                source = str(task.get("source"))
+                destination = str(task.get("destination"))
+                source_region = task_rect(task, "source_region", "copy source")
+                destination_region = task_rect(
+                    task, "destination_region", "copy destination")
+
+                if source == a_value.name or source == b_value.name:
+                    spec = task.get("_upload_spec")
+                    if spec is not None:
+                        task_uploads[index] = source_upload(
+                            spec["source_region"],
+                            b_binding if spec["weight"] else a_binding,
+                            weight=spec["weight"])
+                    source_state = states.get(source)
+                    if source_state is None or \
+                            not source_state.value_covers(source_region):
+                        reject(RK_E_SCHEMA,
+                               "a staging copy reads an unestablished source "
+                               "region", stage="schedule",
+                               actual={"source": source,
+                                       "region": source_region})
+                    destination_state = states.get(destination)
+                    if destination_state is None or \
+                            not destination_state.zero_covers(destination_region):
+                        reject(RK_E_NUMERIC_CONTRACT,
+                               "an operand staging copy lacks a zero-filled "
+                               "write region", stage="schedule",
+                               actual={"destination": destination,
+                                       "region": destination_region})
+                    view, upload = task_uploads[index]
+                    zero_task = destination_state.zero_producer
+                    write_value(destination, destination_region, index,
+                                upload, view, None,
+                                source_region=source_region)
+                    fusion_records.append({
+                        "kind": "pack-padding", "task": index,
+                        "source": source, "destination": destination,
+                        "zero_task": zero_task, "upload": upload,
+                        "value_version": states[destination].value_version,
+                    })
+                    continue
+
+                if destination in a_tile_names or destination in b_tile_names:
+                    reject(RK_E_SCHEMA,
+                           "a staging task does not copy the bound input into "
+                           "the GEMM tile", stage="schedule",
+                           actual={"source": source,
+                                   "destination": destination})
+                if destination in pending_gemms or source in pending_gemms:
+                    pending = pending_gemms.pop(source, None)
+                    if pending is None:
+                        reject(RK_E_SCHEMA,
+                               "an accumulator writeback has no preceding GEMM",
+                               stage="schedule", actual=task)
+                    if destination not in states:
+                        reject(RK_E_SCHEMA,
+                               "an accumulator writeback has no running state",
+                               stage="schedule", actual=destination)
+                    state = states[destination]
+                    write_value(destination, destination_region, index,
+                                pending["action"], pending["view"],
+                                pending["tile"])
+                    fusion_records.append({
+                        "kind": "mm-writeback", "task": index,
+                        "gemm_task": pending["task"],
+                        "action": pending["action"],
+                        "destination": destination,
+                        "value_version": state.value_version,
+                    })
+                    continue
+
+                source_state = states.get(source)
+                if source_state is None or not (
+                        source_state.value_covers(source_region) or
+                        source_state.zero_covers(source_region)):
+                    if source_state is not None and \
+                            source_state.zero is not None:
+                        reject(RK_E_NUMERIC_CONTRACT,
+                               "the first accumulator load must read the "
+                               "complete zero-filled running state",
+                               stage="schedule",
+                               actual={"source": source,
+                                       "region": source_region,
+                                       "zero": source_state.zero})
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "the accumulator load has no producer state",
+                           stage="schedule",
+                           actual={"source": source,
+                                   "region": source_region})
+                pending_loads[destination] = {
+                    "task": index,
+                    "source": source,
+                    "source_region": source_region,
+                    "destination_region": destination_region,
+                    "prior_value": source_state.value is not None and
+                                   source_state.value_covers(source_region),
+                    "prior_view": source_state.value_view,
+                    "prior_action": source_state.value_action,
+                    "prior_producer": source_state.value_producer,
+                    "prior_tile": source_state.value_tile,
+                    "prior_version": source_state.value_version,
+                    "zero_producer": source_state.zero_producer,
+                }
+                cl_state = states.setdefault(destination, _TaskBufferState())
+                cl_state.zero = (destination_region
+                                 if pending_loads[destination]["prior_value"]
+                                 is False else None)
+                cl_state.zero_producer = source_state.zero_producer
+                cl_state.value = (destination_region
+                                  if pending_loads[destination]["prior_value"]
+                                  else None)
+                cl_state.value_producer = source_state.value_producer
+                cl_state.value_view = source_state.value_view
+                cl_state.value_action = source_state.value_action
+                cl_state.value_tile = source_state.value_tile
+                cl_state.value_version = source_state.value_version
+                fusion_records.append({
+                    "kind": "accumulator-load", "task": index,
+                    "source": source, "destination": destination,
+                    "prior_value": pending_loads[destination]["prior_value"],
+                    "prior_action": pending_loads[destination]["prior_action"],
+                })
+                continue
+
+            if kind == "gemm":
+                if task.get("operands") != [a_value.name, b_value.name,
+                                            matmul_out.name]:
+                    reject(RK_E_SCHEMA,
+                           "a GEMM task names operands the binding carrier does "
+                           "not bind", stage="schedule",
+                           actual={"task": task.get("operands"),
+                                   "bindings": [a_value.name, b_value.name,
+                                                matmul_out.name]})
+                m0 = integer("m0", task.get("m0"), f"task[{index}]")
+                n0 = integer("n0", task.get("n0"), f"task[{index}]")
+                rows = integer("rows", task.get("rows"), f"task[{index}]")
+                cols = integer("cols", task.get("cols"), f"task[{index}]")
+                k0 = integer("k0", task.get("k0"), f"task[{index}]")
+                kt = integer("kt", task.get("kt"), f"task[{index}]")
+                if min(m0, n0, rows, cols, k0, kt) < 0 or \
+                        rows <= 0 or cols <= 0 or kt <= 0:
+                    reject(RK_E_SHAPE, "a GEMM task carries an invalid rectangle",
+                           stage="schedule", actual=task)
+                tiles = task.get("tiles")
+                if not isinstance(tiles, list) or len(tiles) != 3:
+                    reject(RK_E_SCHEMA,
+                           "a GEMM task must name three tile buffers",
+                           stage="schedule", actual=tiles)
+                a_tile, b_tile, c_tile = (str(item) for item in tiles)
+                a_state = states.get(a_tile)
+                b_state = states.get(b_tile)
+                c_state = states.get(c_tile)
+                a_full = _TaskRect(0, 0, rows, kt)
+                b_full = _TaskRect(0, 0, kt, cols)
+                c_full = _TaskRect(0, 0, rows, cols)
+                if a_state is None or not a_state.zero_covers(a_full) or \
+                        a_state.value is None or \
+                        not a_full.contains(a_state.value):
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "GEMM operand A does not have a logical value over "
+                           "a zero-filled physical tile", stage="schedule",
+                           actual={"tile": a_tile, "physical": a_full,
+                                   "state": a_state})
+                if b_state is None or not b_state.zero_covers(b_full) or \
+                        b_state.value is None or \
+                        not b_full.contains(b_state.value):
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "GEMM operand B does not have a logical value over "
+                           "a zero-filled physical tile", stage="schedule",
+                           actual={"tile": b_tile, "physical": b_full,
+                                   "state": b_state})
+                logical_rows = a_state.value.rows
+                logical_cols = b_state.value.cols
+                logical_kt = a_state.value.cols
+                if a_state.source_region is None or b_state.source_region is None:
+                    reject(RK_E_SCHEMA,
+                           "a GEMM staging tile has no actual source region",
+                           stage="schedule")
+                if a_state.source_region.row != m0 or \
+                        a_state.source_region.col != k0 or \
+                        a_state.source_region.rows != logical_rows or \
+                        a_state.source_region.cols != logical_kt:
+                    reject(RK_E_SCHEMA,
+                           "the A staging task does not copy the bound input "
+                           "into the GEMM A tile", stage="schedule",
+                           actual={"source": a_state.source_region,
+                                   "expected": [m0, k0, logical_rows,
+                                                logical_kt]})
+                if b_state.source_region.row != k0 or \
+                        b_state.source_region.col != n0 or \
+                        b_state.source_region.rows != logical_kt or \
+                        b_state.source_region.cols != logical_cols:
+                    reject(RK_E_SCHEMA,
+                           "the B staging task does not copy the bound weight "
+                           "into the GEMM B tile", stage="schedule",
+                           actual={"source": b_state.source_region,
+                                   "expected": [k0, n0, logical_kt,
+                                                logical_cols]})
+                if c_state is None or not (
+                        c_state.value_covers(c_full) or
+                        c_state.zero_covers(c_full)):
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "GEMM has no accumulated Cl state", stage="schedule",
+                           actual={"tile": c_tile, "physical": c_full})
+                if c_tile not in pending_loads:
+                    reject(RK_E_SCHEMA,
+                           "GEMM consumes a Cl tile with no accumulator load",
+                           stage="schedule", actual=c_tile)
+                pending_loads.pop(c_tile, None)
+                tile = (m0, n0, logical_rows, logical_cols)
+                kidx = tile_k_count.get(tile, 0)
+                output_view = accumulator_view(tile, kidx)
+                prior_view = c_state.value_view if c_state.value is not None \
+                    else None
+                prior_action = c_state.value_action if c_state.value is not None \
+                    else None
+                deps = tuple(dict.fromkeys(
+                    action for action in (
+                        a_state.value_action, b_state.value_action, prior_action)
+                    if action is not None))
+                if legacy_linear and policy == "baseline":
+                    if prior_view is None:
+                        deps = tuple(dict.fromkeys(
+                            tuple(current_segment_uploads or ()) + deps +
+                            ((guarded_last_mm,)
+                             if guarded_last_mm is not None else ())))
+                    else:
+                        # The baseline planner pins all uploads for this tile
+                        # group to the first MM task and keeps later K tasks on
+                        # the accumulation dependency only.
+                        deps = (prior_action,)
+                if facts.get("linear_k_loop") and policy == "baseline":
+                    submit_group = f"mm:{tile[0]}:{tile[1]}"
+                elif legacy_linear and policy == "baseline":
+                    submit_group = (
+                        f"mm:{m0 // facts['tile_m']}:"
+                        f"{n0 // facts['tile_n']}")
+                elif policy == "scheduled_baseline":
+                    submit_group = f"mm:{tile[0]}:{tile[1]}"
+                elif policy == "baseline":
+                    submit_group = f"mm:{tile[0]}:{tile[1]}"
+                else:
+                    submit_group = "mk:linear"
+                recipe = ("linear_k_acc_v1"
+                          if policy in {"baseline", "scheduled_baseline"}
+                          else "multi_k_acc_v1")
+                physical_kt = logical_kt
+                if a_state.value_view is not None:
+                    physical_kt = int(
+                        self.views[a_state.value_view].tensor.physical_cols)
+                attrs = {"submit_group": submit_group,
+                         "k0": k0, "k_index": kidx, "kt": logical_kt}
+                if not (legacy_linear and policy == "baseline"):
+                    attrs.update({
+                        "submit_recipe": recipe,
+                        "data_reuse": bool(task.get("policy_data_reuse")),
+                        "weight_reuse": bool(task.get("policy_weight_reuse")),
+                        "linear_task_policy": policy,
+                    })
+                if facts.get("linear_k_loop") and \
+                        not facts.get("schedule_declared"):
+                    attrs["source_schedule"] = None
+                    attrs["source_k_rounding"] = facts.get("rounding")
+                    attrs["source_mn_tiling"] = None
+                    attrs["applied_schedule"] = schedule_dict
+                elif facts.get("schedule_declared") or policy in {
+                        "baseline", "scheduled_baseline"}:
+                    attrs["source_schedule"] = schedule_dict
+                    attrs["source_k_rounding"] = facts.get("rounding")
+                    attrs["source_mn_tiling"] = None
+                    attrs["applied_schedule"] = schedule_dict
+                if facts.get("hints") and not compat_records:
+                    attrs["source_hints"] = dict(facts["hints"])
+                if prior_view is None:
+                    task_id = self.add_action(
+                        "npu_task", template_id="co.mm.f16.v1",
+                        inputs=(a_state.value_view, b_state.value_view),
+                        outputs=(output_view,), deps=deps,
+                        origin=(f"lowering:linear:{policy}:k{kidx}:"
+                                f"n{n0}"),
+                        op_ids=(op.id,), attrs=attrs)
+                else:
+                    task_id = self.add_action(
+                        "npu_task", template_id="co.mm_acc.f16.v1",
+                        inputs=(a_state.value_view, b_state.value_view,
+                                prior_view),
+                        outputs=(output_view,), deps=deps,
+                        origin=(f"lowering:linear:{policy}:k{kidx}:"
+                                f"n{n0}"),
+                        op_ids=(op.id,), attrs=attrs)
+                if legacy_linear:
+                    guarded_last_mm = task_id
+                    linear_actions.append({
+                        "action": task_id, "tile": tile,
+                        "k_index": kidx, "k0": k0, "kt": logical_kt,
+                    })
+                pending_gemms[c_tile] = {
+                    "task": index, "action": task_id, "view": output_view,
+                    "tile": tile, "region": c_full,
+                }
+                write_value(c_tile, c_full, index, task_id, output_view, tile)
+                tile_k_count[tile] = kidx + 1
+                tile_k_ranges.setdefault(tile, []).append((k0, logical_kt))
+                mm_task_ids.setdefault(tile, []).append(task_id)
+                fusion_records.append({
+                    "kind": "mm-chain", "task": index,
+                    "action": task_id, "tile": tile, "k0": k0, "kt": kt,
+                    "prior_action": prior_action,
+                    "operands": [a_state.value_action,
+                                 b_state.value_action],
+                })
+                continue
+
+            if kind == "silu":
+                source = str(task.get("source"))
+                area = local_rect(task, "silu")
+                state = states.get(source)
+                if state is None or not state.value_covers(area) or \
+                        state.value_view is None or state.value_action is None:
+                    reject(RK_E_NUMERIC_CONTRACT,
+                           "SiLU does not consume an established value",
+                           stage="schedule",
+                           actual={"source": source, "region": area})
+                if activation_op is None:
+                    reject(RK_E_SCHEMA,
+                           "a SiLU task has no activation binding carrier",
+                           stage="schedule")
+                tile = state.value_tile
+                if tile is None or tile[2] != area.rows or \
+                        tile[3] != area.cols:
+                    reject(RK_E_SCHEMA,
+                           "SiLU region does not match its value tile",
+                           stage="schedule", actual=tile)
+                input_action = state.value_action
+                input_view = state.value_view
+                input_version = state.value_version
+                cr, cc, _ = cube_layout(area.rows, area.cols)
+                group = f"act:{tile[0]}:{tile[1]}"
+                activated = self._emit_activation(
+                    activation="silu", rows=area.rows, cols=area.cols,
+                    cube_rows=cr, cube_cols=cc, input_view=input_view,
+                    input_buffer=self.views[input_view].buffer_id,
+                    deps=(input_action,), group=group,
+                    op_ids=(activation_op.id,))
+                action_id = self._last_task_of_group(group)
+                write_value(source, area, index, action_id, activated, tile)
+                silu_count += 1
+                fusion_records.append({
+                    "kind": "activation", "task": index,
+                    "input_action": input_action,
+                    "input_view": input_view,
+                    "input_version": input_version,
+                    "output_action": action_id,
+                    "output_view": activated,
+                    "output_version": states[source].value_version,
+                    "tile": tile,
+                })
+                continue
+
+            # rk_store: consume the actual value produced by the preceding
+            # chain, then apply the existing baseline/deferred download policy.
+            source = str(task.get("source"))
+            if str(task.get("destination")) != y_value.name:
+                reject(RK_E_SCHEMA,
+                       "a store task writes a binding other than the output",
+                       stage="schedule", actual=task.get("destination"))
+            area = local_rect(task, "store")
+            m0 = integer("m0", task.get("m0"), f"task[{index}]")
+            n0 = integer("n0", task.get("n0"), f"task[{index}]")
+            tile = (m0, n0, area.rows, area.cols)
+            state = states.get(source)
+            if state is None or not state.value_covers(area) or \
+                    state.value_view is None or state.value_action is None:
+                reject(RK_E_NUMERIC_CONTRACT,
+                       "store does not read an established result value",
+                       stage="schedule",
+                       actual={"source": source, "region": area})
+            if tile in publish_records:
+                reject(RK_E_SCHEMA,
+                       "an instantiated tile has more than one output store",
+                       stage="schedule", actual=tile)
+            if state.value_tile is not None and state.value_tile != tile:
+                reject(RK_E_SCHEMA,
+                       "the store lacks its FP16 accumulator writeback for "
+                       "the published rectangle", stage="schedule",
+                       actual={"store": tile, "value": state.value_tile})
+            publish_records[tile] = {
+                "m0": m0, "n0": n0, "rows": area.rows, "cols": area.cols,
+                "view": state.value_view, "action": state.value_action,
+                "value_version": state.value_version,
+            }
+            if policy == "baseline":
+                materialize_publish(tile)
+                current_segment_uploads = None
+            else:
+                deferred_publishes.append(tile)
+
+        if pending_loads or pending_gemms:
+            reject(RK_E_SCHEMA,
+                   "the task stream ends with an unfinished accumulator chain",
+                   stage="schedule",
+                   actual={"loads": sorted(pending_loads),
+                           "gemms": sorted(pending_gemms)})
+        if bool(silu_count) != (activation_op is not None):
+            reject(RK_E_SCHEMA,
+                   "the SiLU task stream and binding carrier disagree on "
+                   "activation", stage="schedule",
+                   actual={"silu_tasks": silu_count,
+                           "binding_activation": None if activation_op is None
+                                                  else activation_op.opcode})
+        if not publish_records:
+            reject(RK_E_SHAPE, "the task stream publishes no output tile",
+                   stage="schedule")
+        if set(acc_views) != set(publish_records):
+            reject(RK_E_SHAPE,
+                   "every produced tile needs exactly one store",
+                   stage="schedule",
+                   actual={"tiles": sorted(acc_views),
+                           "stores": sorted(publish_records)})
+
+        # Finalization only attaches records already implied by the consumed
+        # stream.  It does not re-group or reconstruct the task sequence.
+        for tile, ranges in tile_k_ranges.items():
+            cursor = 0
+            for k0, kt in ranges:
+                if k0 != cursor or kt <= 0:
+                    reject(RK_E_SHAPE,
+                           "consumed K slices do not form an ordered partition",
+                           stage="schedule",
+                           actual={"tile": tile, "ranges": ranges})
+                cursor += kt
+            if cursor != k:
+                reject(RK_E_SHAPE,
+                       "consumed K slices do not cover the whole reduction",
+                       stage="schedule",
+                       actual={"tile": tile, "covered": cursor, "k": k})
+
+        from dataclasses import replace as _replace_action
+        from ..immutable import thaw as _thaw
+        reference_ranges = next(iter(tile_k_ranges.values()), [])
+        pipeline_hint = dict(
+            (facts.get("hints") or {}).get("pipeline_hint") or {})
+        pipeline_stages = int(pipeline_hint.get("num_stages", 0) or 0)
+        loop_annotations = ({"num_stages": pipeline_stages}
+                            if pipeline_stages > 0 else {})
+        k_blocks = [{"index": index, "k0": k0, "extent": kt}
+                    for index, (k0, kt) in enumerate(reference_ranges)]
+        source_k_loop = {
+            "source_k_block": int(facts.get("block_k", 256)),
+            "source_k_trips": len(reference_ranges),
+            "logical_k": k,
+            "k_blocks": k_blocks,
+            "source_rounding": facts.get("rounding"),
+            "rounding_points": (
+                "after_each_k_block"
+                if facts.get("rounding") == "explicit_per_k_fp16"
+                else "final_output_only"),
+            "lowering_k_tile": 256,
+            "source_loop_annotations": loop_annotations,
+            "source_pipeline_stages": pipeline_stages,
+            "pipeline_hint_dropped": bool(pipeline_stages),
+            "pipeline_not_applied_reason": (
+                "no software pipeline is implemented on this target: the K "
+                "chain is emitted as an ordered accumulation of 256-wide "
+                "tasks, so the request is recorded but not applied"
+                if pipeline_stages else None),
+        }
+        if reference_ranges and                 reference_ranges[-1][1] < int(facts.get("block_k", 256)):
+            source_k_loop["k_tail"] = reference_ranges[-1][1]
+        grid_x = 1 + max((tile[1] // facts["tile_n"]
+                          for tile in publish_records), default=0)
+        grid_y = 1 + max((tile[0] // facts["tile_m"]
+                          for tile in publish_records), default=0)
+        ragged = any(tile[2] < facts["tile_m"] or
+                     tile[3] < facts["tile_n"]
+                     for tile in publish_records)
+        source_mn_tiling = {
+            "block_m": facts["tile_m"], "block_n": facts["tile_n"],
+            "grid_x": grid_x, "grid_y": grid_y,
+            "coverage": "ragged_tail" if ragged else "exact_once",
+        }
+        for tile, task_ids in mm_task_ids.items():
+            for task_id in task_ids:
+                action = self.actions[task_id]
+                attrs = _thaw(action.attrs)
+                attrs["k_count"] = len(task_ids)
+                if compat_records:
+                    attrs.pop("source_mn_tiling", None)
+                    attrs.update({
+                        "k_physical_extent": physical_kt,
+                        "k_padding": max(0, physical_kt - logical_kt),
+                        "source_k_loop": dict(source_k_loop),
+                        "source_mn_tiling": dict(source_mn_tiling),
+                    })
+                self.actions[task_id] = _replace_action(action, attrs=attrs)
+        for tile in deferred_publishes:
+            materialize_publish(tile)
+
+        spans_m = sorted({(tile[0], tile[2]) for tile in publish_records})
+        spans_n = sorted({(tile[1], tile[3]) for tile in publish_records})
+        for spans, logical, label in ((spans_m, m, "M"), (spans_n, n, "N")):
+            cursor = 0
+            for start, extent in spans:
+                if start != cursor or extent <= 0:
+                    reject(RK_E_SHAPE,
+                           f"published {label} tiles do not partition output",
+                           stage="schedule", actual=spans)
+                cursor += extent
+            if cursor != logical:
+                reject(RK_E_SHAPE,
+                       f"published {label} tiles do not cover output",
+                       stage="schedule",
+                       actual={"covered": cursor, "logical": logical})
+
+        if legacy_linear and policy not in {"baseline", "scheduled_baseline"}:
+            tile_order: list[tuple[int, int, int, int]] = []
+            tile_rank: dict[tuple[int, int, int, int], int] = {}
+            tile_meta: dict[tuple[int, int, int, int], dict[str, Any]] = {}
+            for entry in linear_actions:
+                tile = entry["tile"]
+                if tile not in tile_rank:
+                    tile_rank[tile] = len(tile_order)
+                    tile_order.append(tile)
+                tile_meta[tile] = entry
+            m_values = sorted({tile[0] for tile in tile_order})
+            n_values = sorted({tile[1] for tile in tile_order})
+            k_count = max(meta["k_index"] for meta in tile_meta.values()) + 1
+            ws_per_n = len(m_values) * k_count
+            group_n = self.options.linear_group_n_tiles
+            if policy in {"grouped_linear", "weight_stationary",
+                          "weight_stationary_reuse"}:
+                if group_n:
+                    if group_n * ws_per_n > 64:
+                        reject(RK_E_SHAPE,
+                               "linear_group_n_tiles would exceed the 64-task "
+                               "submit bound", stage="schedule",
+                               actual={"n_tiles": group_n,
+                                       "tasks_per_n_tile": ws_per_n},
+                               required={"max_tasks_per_submit": 64})
+                    n_per_group = group_n
+                elif ws_per_n <= 64:
+                    n_per_group = max(1, 64 // ws_per_n)
+                else:
+                    reject(RK_E_SHAPE,
+                           "declared M/N tiling and this linear task policy "
+                           "need more than one submit's 64-task bound",
+                           stage="schedule",
+                           actual={"tasks_per_n_tile": ws_per_n},
+                           required={"max_tasks_per_submit": 64})
+            else:
+                n_per_group = max(1, len(n_values))
+            if policy in {"merged", "interleaved", "interleaved_reuse"} and \
+                    len(tile_order) * k_count > 64:
+                reject(RK_E_SHAPE,
+                       "declared M/N tiling and this linear task policy need "
+                       "more than one submit's 64-task bound", stage="schedule",
+                       actual={"policy": policy,
+                               "output_tiles": len(tile_order),
+                               "k_slices": k_count,
+                               "tasks_per_submit": len(tile_order) * k_count},
+                       required={"max_tasks_per_submit": 64})
+            chunks = [n_values[start:start + n_per_group]
+                      for start in range(0, len(n_values), n_per_group)]
+
+            def tile_group(tile: tuple[int, int, int, int]) -> str:
+                if policy in {"merged", "interleaved", "interleaved_reuse"}:
+                    return "mk:linear"
+                for index, chunk in enumerate(chunks):
+                    if tile[1] in chunk:
+                        return (f"mk:{'grp' if policy == 'grouped_linear' else 'ws'}:"
+                                f"{index}")
+                reject(RK_E_SCHEMA, "a tile has no policy submit group",
+                       stage="schedule", actual=tile)
+
+            def priority(entry: dict[str, Any]):
+                tile = entry["tile"]
+                rank = tile_rank[tile]
+                child = entry["k_index"]
+                group = tile_group(tile)
+                if policy == "merged":
+                    return (rank, child)
+                if policy in {"interleaved", "interleaved_reuse"}:
+                    return (child, rank)
+                if policy == "grouped_linear":
+                    return (group, tile[1], tile[0], child)
+                return (group, child, tile[1], tile[0])
+
+            action_by_id = {action.id: action for action in self.actions}
+            by_action_id = {entry["action"]: entry for entry in linear_actions}
+            npu_ids = set(by_action_id)
+            children: dict[int, list[int]] = {aid: [] for aid in npu_ids}
+            indegree: dict[int, int] = {aid: 0 for aid in npu_ids}
+            for aid in npu_ids:
+                for dep in action_by_id[aid].deps:
+                    if dep in npu_ids:
+                        children[dep].append(aid)
+                        indegree[aid] += 1
+            import heapq
+
+            ready = [(priority(entry), entry["action"])
+                     for entry in linear_actions if indegree[entry["action"]] == 0]
+            heapq.heapify(ready)
+            ordered_ids: list[int] = []
+            while ready:
+                _, aid = heapq.heappop(ready)
+                ordered_ids.append(aid)
+                for child in children[aid]:
+                    indegree[child] -= 1
+                    if indegree[child] == 0:
+                        heapq.heappush(ready, (priority(by_action_id[child]),
+                                               child))
+            if len(ordered_ids) != len(npu_ids):
+                reject(RK_E_SCHEMA,
+                       "the policy order cannot satisfy task dependencies",
+                       stage="schedule", actual=len(ordered_ids),
+                       required=len(npu_ids))
+            attrs_by_id: dict[int, dict[str, Any]] = {}
+            previous_by_group: dict[str, tuple[int | None, int | None]] = {}
+            for aid in ordered_ids:
+                action = action_by_id[aid]
+                entry = by_action_id[aid]
+                group = tile_group(entry["tile"])
+                previous = previous_by_group.get(group)
+                b_view = action.inputs[1] if len(action.inputs) > 1 else None
+                weight_reuse = bool(
+                    policy == "weight_stationary_reuse" and
+                    previous is not None and previous[0] == b_view and
+                    previous[1] == entry["k_index"])
+                data_reuse = bool(
+                    policy == "interleaved_reuse" and
+                    tile_rank[entry["tile"]] != 0)
+                previous_by_group[group] = (b_view, entry["k_index"])
+                attrs = _thaw(action.attrs)
+                attrs.update({
+                    "submit_group": group,
+                    "submit_recipe": "multi_k_acc_v1",
+                    "linear_task_policy": policy,
+                    "weight_reuse": weight_reuse,
+                    "data_reuse": data_reuse,
+                })
+                attrs_by_id[aid] = attrs
+            positions = [index for index, action in enumerate(self.actions)
+                         if action.id in npu_ids]
+            ordered_actions = [action_by_id[aid] for aid in ordered_ids]
+            new_actions = list(self.actions)
+            for position, action in zip(positions, ordered_actions):
+                new_actions[position] = action
+            mapping = {action.id: new_id
+                       for new_id, action in enumerate(new_actions)}
+            final_actions = []
+            for new_id, action in enumerate(new_actions):
+                attrs = attrs_by_id.get(action.id, action.attrs)
+                final_actions.append(replace(
+                    action, id=new_id,
+                    deps=tuple(mapping[dep] for dep in action.deps),
+                    attrs=attrs))
+            self.actions = final_actions
+            for buffer in self.buffers:
+                buffer.first = len(final_actions) + 1
+                buffer.last = -1
+            for action in self.actions:
+                for view_id in action.inputs + action.outputs:
+                    self.touch(self.views[view_id].buffer_id, action.id)
+            self.value_action = {
+                value: mapping[action_id]
+                for value, action_id in self.value_action.items()}
+
+        return DraftPlan(
+            name=self.module.name, profile_hash=self.profile.profile_hash,
+            source_hash=self.module.source_hash, bindings=self.bindings,
+            constants=self.constants, buffers=self.buffers, views=self.views,
+            actions=self.actions, publish=self.publish)
+
     def build(self) -> DraftPlan:
         a_value = self.module.value(self.legalized.matmul_op.inputs[0])
         b_value = self.module.value(self.legalized.matmul_op.inputs[1])
@@ -2660,7 +4607,8 @@ class _Builder:
     def _emit_activation(self, *, activation: str, rows: int, cols: int,
                          cube_rows: int, cube_cols: int, input_view: int,
                          input_buffer: int, deps: tuple[int, ...],
-                         group: str, op_ids: tuple[int, ...] = ()) -> int:
+                         group: str, op_ids: tuple[int, ...] = (),
+                         extra_attrs: dict[str, Any] | None = None) -> int:
         if activation == "relu":
             _, zero_view = self.zero_for(rows, cols)
             zero_upload = self._last_upload_of(zero_view)
@@ -2680,7 +4628,7 @@ class _Builder:
                 inputs=(input_view, zero_view, identity_view),
                 outputs=(out_view,), deps=deps,
                 origin=f"lowering:{activation}",
-                attrs={"submit_group": group}, op_ids=op_ids)
+                attrs={"submit_group": group, **(extra_attrs or {})}, op_ids=op_ids)
             return out_view
 
         chunks = lut_chunks(cube_rows * cube_cols)
@@ -2722,7 +4670,7 @@ class _Builder:
                                  else "co.lut.gelu_gate.f16.v1"),
                     inputs=(src_view,), outputs=(dst_view,), deps=task_deps,
                     origin=f"lowering:{activation}:lut:{index}",
-                    attrs={"submit_group": group, "chunk_index": index},
+                    attrs={"submit_group": group, "chunk_index": index, **(extra_attrs or {})},
                     op_ids=op_ids))
             out_layout = TensorLayout("float16", CUBE_LAYOUT, rows, cols,
                                       cube_rows, cube_cols, 8,
@@ -2738,7 +4686,7 @@ class _Builder:
                 deps=(lut_tasks[-1],) + ((identity_upload,)
                                          if identity_upload is not None else ()),
                 origin=f"lowering:{activation}:mul",
-                attrs={"submit_group": group}, op_ids=op_ids)
+                attrs={"submit_group": group, **(extra_attrs or {})}, op_ids=op_ids)
             return out_view
 
         # Direct sigmoid/HardSigmoid: chunked LUT writes are the final result.
@@ -2773,7 +4721,7 @@ class _Builder:
                 "npu_task", template_id=template, inputs=(src_view,),
                 outputs=(dst_view,), deps=task_deps,
                 origin=f"lowering:{activation}:lut:{index}",
-                attrs={"submit_group": group, "chunk_index": index},
+                attrs={"submit_group": group, "chunk_index": index, **(extra_attrs or {})},
                 op_ids=op_ids))
         return out_cube_view
 
@@ -2924,4 +4872,28 @@ def build_draft(module: Module, legalized: LegalizedGraph, *,
             reject(RK_E_SHAPE,
                    "K tile chain cannot exceed one submit's 64-task limit",
                    stage="dag")
+    return draft
+
+
+def build_from_tasks(module: Module, *, tasks: list[dict[str, Any]],
+                     facts: dict[str, Any],
+                     legalized: LegalizedGraph,
+                     profile: TargetProfile,
+                     options: CompileOptions) -> DraftPlan:
+    """Plan from the instantiated target operations, not a shape summary.
+
+    ``tasks`` is the ordered ``rk_fill``/``rk_copy``/``rk_gemm``/``rk_store``
+    sequence read back from TIR.  The synthetic matmul in ``module`` is only a
+    binding and NumericContract carrier; this function does not use its shape to
+    regenerate tiles, K slices or task order.
+    """
+    builder = _Builder(module, legalized, profile=profile,
+                       options=options)
+    if facts.get("staged_stages"):
+        draft = builder.build_instantiated_staged(tasks=tasks, facts=facts)
+    else:
+        draft = builder.build_instantiated_linear(tasks=tasks, facts=facts)
+    if len(draft.actions) > options.max_actions:
+        reject(RK_E_BUDGET, "max_actions exceeded", stage="dag",
+               actual=len(draft.actions), required=options.max_actions)
     return draft

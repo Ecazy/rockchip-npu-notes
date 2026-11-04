@@ -195,7 +195,7 @@ def cases() -> list[dict[str, Any]]:
     from rknpu_backend import (CompileOptions, activation_module,
                                branch_outputs_module, matmul_module,
                                projection_module, swiglu_module)
-    from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+    from rknpu_backend.frontend.tir_utils import tilelang_available
 
     tiled = dict(numeric_mode="rk_f16_tiled")
     tiled_lut = dict(numeric_mode="rk_f16_tiled", allow_approx_lut=True)
@@ -271,7 +271,7 @@ def cases() -> list[dict[str, Any]]:
 def negatives() -> list[dict[str, Any]]:
     """Cases that must be rejected with the same code, stage and message."""
     from rknpu_backend import CompileOptions, matmul_module
-    from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+    from rknpu_backend.frontend.tir_utils import tilelang_available
 
     out = [
         dict(name="strict_fp32_numeric_reject", kind="rkir",

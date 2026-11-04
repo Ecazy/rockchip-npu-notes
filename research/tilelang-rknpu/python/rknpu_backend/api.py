@@ -79,14 +79,6 @@ def compile_tilelang(prim_func: Any, *, profile: TargetProfile,
     TileLang is an optional import.  Without the pinned dependency this function
     rejects immediately; it never falls back to a string parser or a fake IR.
     """
-    from .frontend import tilelang_adapter
-
-    if not tilelang_adapter.tilelang_available():
-        reject(RK_E_UNSUPPORTED,
-               "TileLang is not installed in this Python environment",
-               stage="frontend",
-               alternative="install the pinned optional TileLang dependency from "
-                           "provenance.json")
     # JIT wrappers are accepted only by unwrapping a real PrimFunc, never by
     # executing a GPU pipeline or guessing from names.
     if not hasattr(prim_func, "buffer_map"):
@@ -95,10 +87,42 @@ def compile_tilelang(prim_func: Any, *, profile: TargetProfile,
             if candidate is not None and hasattr(candidate, "buffer_map"):
                 prim_func = candidate
                 break
-    graph = codegen.normalize_tilelang(prim_func, profile=profile,
-                                       options=options, b_is_input=b_is_input)
-    return _result(codegen.compile_graph(graph, profile=profile, options=options,
-                                         stage="frontend"))
+    from .frontend import tilelang_lowering
+
+    if tilelang_lowering.is_logical_gemm_candidate(prim_func):
+        compilation = tilelang_lowering.compile_logical_gemm_compilation(
+            prim_func, profile=profile, options=options,
+            b_is_input=b_is_input, name="rknpu-logical-task")
+        return _result(compilation.compilation)
+
+    if tilelang_lowering.is_staged_candidate(prim_func):
+        compilation = tilelang_lowering.compile_staged_compilation(
+            prim_func, profile=profile, options=options,
+            name="rknpu-staged")
+        return _result(compilation)
+
+    if tilelang_lowering.is_ffn_candidate(prim_func):
+        compilation = tilelang_lowering.compile_ffn_compilation(
+            prim_func, profile=profile, options=options,
+            name="rknpu-ffn-dataflow")
+        return _result(compilation)
+
+    if tilelang_lowering.is_k_loop_candidate(prim_func):
+        compilation = tilelang_lowering.compile_k_loop_compilation(
+            prim_func, profile=profile, options=options, b_is_input=b_is_input,
+            name="rknpu-kloop-task")
+        return _result(compilation)
+
+    if tilelang_lowering.is_guarded_tail_candidate(
+            prim_func, options=options):
+        compilation = tilelang_lowering.compile_guarded_tail_compilation(
+            prim_func, profile=profile, options=options,
+            name="rknpu-guarded-task", b_is_input=b_is_input)
+        return _result(compilation)
+
+    reject(RK_E_UNSUPPORTED,
+           "no migrated TileLang lowering owns this source; the adapter "
+           "fallback is retired", stage="frontend")
 
 
 def load_plan(path: str) -> Plan:

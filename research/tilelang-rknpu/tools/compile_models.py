@@ -236,25 +236,24 @@ def main() -> int:
         # Capture-only trace plan: same extracted graph and primitive tasks, but
         # exports the intermediates that the frozen numeric layer gates require.
         # It is never executed in the measured production path.
-        from rknpu_backend.frontend.tilelang_adapter import extract
-        trace_module = extract(ffn_kernel, options=ffn_options,
-                               profile_hash=profile.profile_hash)
-        trace_names = {4: "gate", 5: "up", 7: "act", 8: "ffn"}
-        trace_outputs = tuple(trace_names)
-        # Drop the final residual add/Y from the trace module: the production
-        # plan owns h2, while the frozen FFN layer gates describe the down
-        # projection before that residual add.
+        from rknpu_backend.frontend.full_logical_rewrite import rewrite_ffn_tir
+        trace_module = rewrite_ffn_tir(ffn_kernel).module
+        trace_names = {"gate32": "gate", "up32": "up",
+                       "mul16": "act", "proj32": "ffn"}
+        by_name = {value.name: value.id for value in trace_module.values}
+        trace_outputs = tuple(by_name[name] for name in trace_names)
+        output_ids = set(trace_outputs)
         trace_values = tuple(
-            replace(value,
-                    id=9 if value.id == 10 else value.id,
-                    name=trace_names.get(value.id, value.name),
-                    role="output" if value.id in trace_names else value.role)
-            for value in trace_module.values if value.id != 9)
-        trace_ops = tuple(op for op in trace_module.ops if op.id != 5)
+            replace(value, name=trace_names.get(value.name, value.name),
+                    role="output" if value.id in output_ids else value.role)
+            for value in trace_module.values)
+        trace_ops = tuple(op for op in trace_module.ops
+                          if op.opcode != "add")
         trace_module = replace(trace_module,
                                name=f"{trace_module.name}:trace",
                                values=trace_values, ops=trace_ops,
-                               inputs=(0, 9), outputs=trace_outputs)
+                               inputs=trace_module.inputs,
+                               outputs=trace_outputs)
         trace_plan = compile_rkir(trace_module, profile=profile,
                                   options=ffn_options).plan
         write(trace_plan, f"tiny_vit_b{batch}_ffn_trace")

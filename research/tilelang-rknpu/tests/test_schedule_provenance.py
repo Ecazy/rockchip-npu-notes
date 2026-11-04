@@ -9,7 +9,7 @@ from rknpu_backend import (CompileOptions, RK_E_NUMERIC_CONTRACT,
                            default_profile, matmul_module)
 from rknpu_backend.codegen.pipeline import normalize_tilelang
 from rknpu_backend.errors import BackendError
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 PROFILE = default_profile()
 
@@ -139,7 +139,8 @@ class TileLangProvenanceTests(unittest.TestCase):
         self.assertIsNone(source["source_schedule_origin"])
         self.assertEqual(source["mn_grid_source"], "default_grid")
         self.assertEqual(source["source_k_rounding"], "single_k_tile_fp16")
-        self.assertEqual(rectangles(result.plan), [(256, 256)])
+        self.assertEqual(rectangles(result.plan), [(128, 256)])
+        self.assertEqual(result.plan.accounting.task_count, 2)
 
     def test_annotation_conflicting_with_the_proven_rounding_is_refused(self):
         with self.assertRaises(BackendError) as caught:

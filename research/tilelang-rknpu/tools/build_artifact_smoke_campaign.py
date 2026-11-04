@@ -184,6 +184,7 @@ def main(argv: list[str] | None = None) -> int:
     from rknpu_backend import (CompileOptions, compile_artifact, default_profile,
                                explain_plan)
     from rknpu_backend.codegen import pipeline
+    from rknpu_backend.frontend import tilelang_lowering
     from rknpu_backend.serialize import canonical_json
 
     if not (ROOT / "python" / "rknpu_backend").is_dir():
@@ -220,8 +221,9 @@ def main(argv: list[str] | None = None) -> int:
         options = CompileOptions(**options_kwargs)
         artifact = compile_artifact(prim_a, profile=profile, options=options,
                                     b_is_input=False)
-        graph = pipeline.normalize_tilelang(prim_a, profile=profile,
-                                           options=options)
+        task_chain = tilelang_lowering.is_logical_gemm_candidate(prim_a)
+        graph = None if task_chain else pipeline.normalize_tilelang(
+            prim_a, profile=profile, options=options)
         report = artifact.explain()
         # explain() must describe the same plan without touching a device.
         if report["plan_hash"] != artifact.plan_hash:
@@ -237,8 +239,9 @@ def main(argv: list[str] | None = None) -> int:
         (case_dir / "reference").mkdir(parents=True, exist_ok=True)
 
         artifact.export_plan(str(case_dir / "plan.json"))
-        (case_dir / "rkir.json").write_text(
-            canonical_json(graph.to_dict()) + "\n", encoding="utf-8")
+        if graph is not None:
+            (case_dir / "rkir.json").write_text(
+                canonical_json(graph.to_dict()) + "\n", encoding="utf-8")
         for binding, array in data_a.items():
             np.save(case_dir / "inputs" / f"a_{binding}.npy", array)
         for binding, array in data_b.items():
@@ -250,9 +253,21 @@ def main(argv: list[str] | None = None) -> int:
         for binding, array in reference_b.items():
             np.save(case_dir / "reference" / f"b_{binding}.npy", array)
 
-        tolerance = _contract_tolerance(graph)
+        if graph is not None:
+            tolerance = _contract_tolerance(graph)
+        else:
+            contracts = [requirement.to_dict()["contract"]
+                         for requirement in artifact.plan.numeric_requirements]
+            tolerances = [(float(contract["tolerance"]["atol"]),
+                           float(contract["tolerance"]["rtol"]))
+                          for contract in contracts if contract.get("tolerance")]
+            if not tolerances or len(set(tolerances)) != 1:
+                raise SystemExit(f"{name}: plan declares no single tolerance")
+            atol, rtol = tolerances[0]
+            tolerance = {"atol": atol, "rtol": rtol}
         meta = {
             "name": name,
+            "entry": "task-chain" if task_chain else "adapter-graph",
             "tolerance": tolerance,
             "options": {"numeric_mode": options.numeric_mode,
                         "allow_approx_lut": options.allow_approx_lut,
@@ -282,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
         (case_dir / "meta.json").write_text(
             canonical_json(meta) + "\n", encoding="utf-8")
         manifest["cases"].append({"name": name, "dir": f"cases/{name}",
+                                  "entry": meta["entry"],
                                   "plan_hash": artifact.plan_hash,
                                   "tolerance": tolerance,
                                   "tasks": meta["tasks"],

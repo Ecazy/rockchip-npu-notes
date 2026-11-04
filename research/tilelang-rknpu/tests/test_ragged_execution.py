@@ -115,11 +115,16 @@ class RaggedExecutionTests(unittest.TestCase):
         self.assertEqual((plan.publish[0].rows, plan.publish[0].cols), (13, 33))
 
     def test_multi_grid_ragged_tail_assembly_matches_reference(self):
+        # Source-faithful task assembly keeps all nine 128x128 tiles.  The old
+        # unannotated final-only adapter path re-tiled this source to the
+        # historical 256x256 default; that difference is reported separately.
         plan = self.run_case(257, 257, 300, 128, 128)
-        self.assertEqual(plan.accounting.task_count, 8)
-        self.assertEqual(len(plan.publish), 4)
+        self.assertEqual(plan.accounting.task_count, 18)
+        self.assertEqual(len(plan.publish), 9)
         self.assertEqual(sorted((p.rows, p.cols) for p in plan.publish),
-                         [(1, 1), (1, 256), (256, 1), (256, 256)])
+                         [(1, 1), (1, 128), (1, 128),
+                          (128, 1), (128, 1), (128, 128), (128, 128),
+                          (128, 128), (128, 128)])
 
     def test_explicit_k576_tail_matches_reference_over_alternating_inputs(self):
         plan = self.run_case(13, 33, 576, 16, 64, rounds=3, explicit=True)

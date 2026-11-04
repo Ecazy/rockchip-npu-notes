@@ -13,7 +13,8 @@ from rknpu_backend import (CompileOptions, Module, RK_E_SCHEMA, RK_E_SHAPE,
 from rknpu_backend.errors import BackendError
 import jsonschema
 
-from rknpu_backend.frontend.tilelang_adapter import extract, tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
+from rknpu_backend.frontend.full_logical_rewrite import rewrite_ffn_tir
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -37,29 +38,29 @@ class BroadcastFrontendTests(unittest.TestCase):
         self.options = CompileOptions(numeric_mode="rk_f16_tiled")
 
     def test_scalar_add_extracts_rank0_constant(self):
-        module = extract(self.fixture.scalar_add(m=8, k=64, n=33),
-                         options=self.options,
-                         profile_hash=self.profile.profile_hash)
+        module = rewrite_ffn_tir(
+            self.fixture.scalar_add(m=8, k=64, n=33)).module
         self.assertEqual([op.opcode for op in module.ops], ["matmul", "add"])
         self.assertEqual([(v.name, v.type.shape, v.role)
                           for v in module.values],
                          [("X", (8, 64), "input"),
                           ("W", (64, 33), "constant"),
-                          ("Z", (8, 33), "temporary"),
                           ("B", (), "constant"),
-                          ("Y", (8, 33), "output")])
-        self.assertEqual(module.ops[1].inputs, (2, 3))
+                          ("Y", (8, 33), "output"),
+                          ("acc", (8, 33), "temporary")])
+        self.assertEqual(module.ops[1].inputs,
+                         (module.ops[0].outputs[0], 2))
         schema = json.loads(
             (ROOT / "schema" / "rkir.v1.json").read_text())
         jsonschema.validate(module.to_dict(), schema)
 
     def test_channel_mul_extracts_rank1_constant_and_unaligned_tail(self):
-        module = extract(self.fixture.channel_mul(m=8, k=64, n=33),
-                         options=self.options,
-                         profile_hash=self.profile.profile_hash)
+        module = rewrite_ffn_tir(
+            self.fixture.channel_mul(m=8, k=64, n=33)).module
         self.assertEqual([op.opcode for op in module.ops], ["matmul", "mul"])
-        self.assertEqual(module.value(3).type.shape, (33,))
-        self.assertEqual(module.ops[1].inputs, (2, 3))
+        self.assertEqual(module.value(2).type.shape, (33,))
+        self.assertEqual(module.ops[1].inputs,
+                         (module.ops[0].outputs[0], 2))
 
     def test_plan_expands_constants_once_and_accounts_for_the_tile(self):
         cases = ((self.fixture.scalar_add, "scalar", ()),
@@ -115,12 +116,11 @@ class BroadcastFrontendTests(unittest.TestCase):
         jsonschema.validate(obj, schema)
 
     def test_wrong_channel_length_is_rejected(self):
-        module = extract(self.fixture.channel_mul(m=8, k=64, n=33),
-                         options=self.options,
-                         profile_hash=self.profile.profile_hash)
+        module = rewrite_ffn_tir(
+            self.fixture.channel_mul(m=8, k=64, n=33)).module
         values = list(module.values)
-        values[3] = replace(
-            values[3],
+        values[2] = replace(
+            values[2],
             type=TensorType("float16", (34,), axes=("col",)))
         with self.assertRaises(BackendError) as ctx:
             # The frozen IR rejects the inconsistent broadcast shape while the
@@ -128,6 +128,13 @@ class BroadcastFrontendTests(unittest.TestCase):
             replace(module, values=tuple(values))
         self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_SHAPE)
         self.assertIn("column count", ctx.exception.diagnostics[0].message)
+
+    def test_actual_wrong_channel_length_is_rejected(self):
+        with self.assertRaises(BackendError) as ctx:
+            compile_tilelang(
+                self.fixture.channel_mul(m=8, k=64, n=33, bias_n=32),
+                profile=self.profile, options=self.options)
+        self.assertEqual(ctx.exception.diagnostics[0].code, RK_E_SHAPE)
 
     def test_runtime_scalar_input_cannot_pretend_to_be_a_constant(self):
         with self.assertRaises(BackendError) as ctx:

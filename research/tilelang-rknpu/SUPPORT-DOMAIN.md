@@ -184,7 +184,16 @@ post-fault recovery and RK1228 applicability are not admitted.
   proves action-id contiguity and dependency order and the C verifier
   re-proves it.  The current device-evidence domain is the seven-task staged
   FP16 SwiGLU FFN (gate/up MM, sigmoid LUT, EW multiply, down MM, residual EW
-  add) and the two-task MM + EW_ADD residual chain.
+  add) and the two-task MM + EW_ADD residual chain.  The two real SwiGLU FFN
+  inputs, the `silu_proj` projection chain, the two-output `branch_outputs`
+  source and scalar/column broadcast tails now enter through the source dataflow
+  rewrite and the same ordered task consumer; explicit sigmoid and multiply
+  retain separate op attribution, each real output copy drives its own
+  store/download/publish, and broadcast mapping comes from the actual rank-0 or
+  column-indexed read rather than parameter rank alone. Multi-launch staged sources
+  are segmented by actual `T.Kernel` scopes so stage contracts and cross-launch
+  materialised values remain explicit; the official entries do not fall back to
+  the adapter.
 - `co.lut.rsqrt.f16.v1` is not in the default capability profile.  The isolated
   profile `capabilities/rk3588_vendor_co_v1_rmsnorm_lut.json` admits the
   approximate RMSNorm composition.  Its declared table domain is
@@ -216,14 +225,47 @@ post-fault recovery and RK1228 applicability are not admitted.
   workspace, which keeps the 64-task single-chain cap out of the way for this
   shape; this operator shape is not a model-level default.
 
-## Formal pass chain domain (opt-in)
+## Formal lowering domain
 
-The sections above describe the **default adapter path**. The formal pass chain
-(`frontend/rknpu_pass.py`, optionally reached through the registered TileLang backend) is a
-**separate and much narrower domain**; it is not a superset of the forms above and never falls back
-to the adapter, the template extractor or the structured prototype.
+The sections above describe the **remaining adapter forms**. The formal lowering
+(`frontend/logical_schedule.py`, `frontend/rknpu_pass.py`, optionally reached through the registered
+TileLang backend via `frontend/tilelang_lowering.py`) is a **separate and much narrower domain**;
+it is not a superset of the forms above and never falls back to the adapter, the template extractor
+or the structured prototype.
 
-It accepts **guarded-tail FP16 GEMM only**, and additionally requires every proof rule in
+It accepts three explicit forms: a **closed full-logical FP16 GEMM**, a **guarded-tail FP16
+GEMM**, and the unguarded **final-only / explicit round-trip K loop**.  The no-activation
+full-logical form (including the real QKV input) is selected by the official
+`compile_tilelang`/`compile_artifact(carrier="rkir")` entries and uses the source-operation
+rewrite chain.  The guarded form includes guarded single-trip, three-buffer final-only,
+explicit round-trip and the existing source-order and weight-stationary/grouped/merged task
+policies.  The unguarded K-loop forms are lowered along their actual loop, copy and GEMM
+relations into the same ordered task chain.  Explicit M/N annotations are applied to the
+K-loop source TIR before task instantiation; forms whose declared tile cannot exactly cover
+M/N/K are rejected instead of being recorded as an unapplied annotation.  The legacy
+guarded-tail and K-loop adapter branches have been removed; unrelated source families use
+their separate remaining adapter paths.
+
+The no-activation full-logical form is lowered by rewriting the real source tile-op
+nodes: producer movement and region changes are checked against the original statement sequence,
+then the scheduled operations are lowered item-by-item to target `rk_*` TIR.  The result reuses the
+same task instantiation and task-consumer planner as guarded-tail.  The SiLU store is matched and
+lowered locally to `rk_silu`, reusing the existing sigmoid-LUT and EW-multiply tasks.  The official
+`compile_tilelang` and `compile_artifact(carrier="rkir")`
+entries select this path by structure, not by buffer names or a fixed QKV shape; other forms still
+use the adapter path.  The admitted form requires one unconditional execution: exactly one launch
+scope with a 1x1 block grid, and no enclosing TIR condition on any GEMM, copy or other state effect.
+It requires
+exactly one `T.gemm`, one zero `T.fill` of its accumulator, three `T.copy`s (A, B,
+accumulator-to-output), three distinct FP16 rank-2 row-contiguous parameters, full-region copies
+with zero offsets, non-transposed/non-clearing GEMM, and no other call/store beyond the optional
+SiLU accumulator update, which must be exactly `acc = acc * sigmoid(acc)`. Its logical M/N/K is in
+1..4096; target
+tiling is not read from the source.  Launch-thread metadata is recorded as an unapplied hint; the
+single launch/grid structure is checked and is not an ignorable hint.  Extra calls, guarded
+operations, partial regions, serial tile loops and mismatched parameters are rejected.
+
+The guarded-tail form additionally requires every proof rule in
 [ARCHITECTURE.md](ARCHITECTURE.md) §5.2 to hold:
 
 - 2-D serial grid plus one serial K loop of the form 0..extent with step 1 and a known extent;
@@ -231,6 +273,9 @@ It accepts **guarded-tail FP16 GEMM only**, and additionally requires every proo
   be FP16 and parameter rows must be contiguous (no symbolic extents, no element offsets);
 - per K iteration: one full zero fill per shared tile, two guarded staging copies (one store each, no
   else branch), one `T.copy(Acc, Cl)`, one `T.gemm(As, Bs, Cl)`, one `T.copy(Cl, Acc)`;
+- the lowering emits ordered target operations for staging loads, accumulator round-trips,
+  GEMM and output store; planner consumes those operations and their source/destination regions,
+  not a shape summary reconstructed after extraction;
 - the tile GEMM must be non-transposed, non-clearing, with zero accumulate coordinates, and its three
   regions must be exactly the two shared tiles and the accumulator fragment (by buffer identity);
 - outside the K loop: one whole-fragment accumulator clear and one epilogue output store whose loop
@@ -249,8 +294,10 @@ It accepts **guarded-tail FP16 GEMM only**, and additionally requires every proo
 **Explicitly unsupported in this domain**: multi-node graphs and model packages, multi-block stages,
 broadcast, hybrid manifests, multiple outputs, tile operations outside the exact table (for example
 `T.cumsum`), partial copies or partial regions, extra writes outside or beside the proved sequence,
-non-FP16 parameters, transposed or clearing GEMMs, and any statement form not listed above. Some of
-these are accepted by the default adapter path; they are never accepted implicitly by this chain.
+non-FP16 parameters, transposed or clearing GEMMs, dynamic-B QK/PV plans, and any statement form not
+listed above. The full-logical branch also rejects programs that already spell out a serial tile/K
+loop; those must use the guarded-tail branch. Some forms are accepted by the default adapter path;
+they are never accepted implicitly by this pilot.
 
 Status vocabulary and what each evidence class may prove: [VALIDATION.md](VALIDATION.md).
 

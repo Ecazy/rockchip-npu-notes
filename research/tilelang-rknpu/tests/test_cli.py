@@ -12,7 +12,7 @@ from rknpu_backend import (BackendError, CompileOptions, RK_E_DEVICE,
                            RK_E_INVALID, RK_E_NUMERIC_CONTRACT,
                            RK_E_POISONED, compile_rkir, default_profile,
                            matmul_module, save_plan)
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 from rknpu_backend.serialize import canonical_json
 
 ROOT = Path(__file__).resolve().parents[1]

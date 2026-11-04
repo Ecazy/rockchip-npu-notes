@@ -2,16 +2,11 @@
 """The compute-graph access protocol shared by the planner and its carriers.
 
 The planner is written against a handful of read-only attributes rather than a
-concrete graph class, so the same legalization/draft/storage code can run over
-different carriers without copying the algorithm:
-
-* the internal RKIR :class:`rknpu_backend.ir.Module` (legacy and default), and
-* the experimental native TVM graph view in
-  :mod:`rknpu_backend.frontend.native_graph`.
-
-A carrier must expose ``name``, ``source_hash``, ``values``, ``ops``, ``inputs``,
-``outputs`` and ``value(id)``.  It must not accumulate a second copy of the graph:
-these are projections over the carrier's own storage.
+concrete graph class.  The remaining adapter graph form is the internal RKIR
+:class:`rknpu_backend.ir.Module`; migrated paths pass an ordered target-task
+sequence to the task consumer instead.  A graph view must expose ``name``,
+``source_hash``, ``values``, ``ops``, ``inputs``, ``outputs`` and ``value(id)``
+and must not accumulate a second copy of the graph.
 
 This module has no imports from the rest of the package, so both ``passes`` and
 ``codegen`` can depend on it without a cycle.

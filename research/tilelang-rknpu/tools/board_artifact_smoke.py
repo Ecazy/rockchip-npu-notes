@@ -90,6 +90,8 @@ def _task_report(workspace) -> dict:
 def run_case(name: str, case_dir: Path, out_dir: Path, *, fd: int) -> dict:
     from rknpu_backend import (CompileOptions, compile_artifact, default_profile,
                                load_plan)
+    from rknpu_backend.artifact import CompiledArtifact
+    from rknpu_backend.codegen.pipeline import Compilation, CompileSnapshot
     from rknpu_backend.ir import Module
     from rknpu_backend.runtime.bindings import Workspace
     from rknpu_backend.serialize import canonical_json, load_json_safe
@@ -104,9 +106,20 @@ def run_case(name: str, case_dir: Path, out_dir: Path, *, fd: int) -> dict:
     profile = default_profile()
     options = CompileOptions(**meta["options"])
 
-    # 1. artifact path, compiled on the board from the normalized graph.
-    graph = Module.from_dict(load_json_safe(case_dir / "rkir.json"))
-    artifact = compile_artifact(graph, profile=profile, options=options)
+    # 1. artifact path.  Task-chain cases carry the authoritative plan; adapter
+    # cases still recompile from their normalized RKIR graph on the board.
+    if meta.get("entry") == "task-chain":
+        plan = load_plan(str(case_dir / "plan.json"))
+        compilation = Compilation(
+            plan=plan,
+            snapshot=CompileSnapshot(profile=profile, options=options),
+            report={"source": {"entry": "task-chain",
+                               "source_hash": plan.source_hash}},
+            diagnostics=())
+        artifact = CompiledArtifact.from_compilation(compilation)
+    else:
+        graph = Module.from_dict(load_json_safe(case_dir / "rkir.json"))
+        artifact = compile_artifact(graph, profile=profile, options=options)
     report = artifact.explain()
     result["plan_hash_board"] = artifact.plan_hash
     result["plan_hash_match"] = artifact.plan_hash == meta["plan_hash"]

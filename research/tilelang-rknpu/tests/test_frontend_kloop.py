@@ -14,7 +14,7 @@ from pathlib import Path
 from rknpu_backend import (CompileOptions, RK_E_NUMERIC_CONTRACT, RK_E_SHAPE,
                            RK_E_UNSUPPORTED, compile_tilelang, default_profile)
 from rknpu_backend.errors import BackendError
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -135,11 +135,9 @@ class KLoopTests(unittest.TestCase):
                              "unexpected tile operations outside the K loop")
 
     def test_extra_copy_outside_loop_is_rejected(self):
-        # Rejected by the "exactly one accumulator-to-output copy" rule; either
-        # diagnostic is acceptable as long as the extra node is not dropped.
         self.assert_rejected(self.fixtures.bad_extra_copy_outside_loop(),
                              RK_E_UNSUPPORTED,
-                             "exactly once outside the loop")
+                             "tile operation inside a serial/pipelined loop")
 
     def test_loop_variable_must_step_the_k_axis(self):
         self.assert_rejected(self.fixtures.bad_both_k_axes_shifted(),
@@ -147,7 +145,8 @@ class KLoopTests(unittest.TestCase):
 
     def test_clear_inside_loop_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_clear_inside_loop(),
-                             RK_E_NUMERIC_CONTRACT, "outside the loop")
+                             RK_E_UNSUPPORTED,
+                             "tile operation inside a serial/pipelined loop")
 
     def test_clear_accum_in_loop_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_clear_accum_in_loop(),
@@ -155,7 +154,7 @@ class KLoopTests(unittest.TestCase):
 
     def test_two_gemms_in_loop_are_rejected(self):
         self.assert_rejected(self.fixtures.bad_two_gemms(), RK_E_UNSUPPORTED,
-                             "exactly one GEMM")
+                             "tile operation inside a serial/pipelined loop")
 
     def test_activation_inside_loop_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_activation_in_loop(),
@@ -168,11 +167,13 @@ class KLoopTests(unittest.TestCase):
 
     def test_tile_to_tile_copy_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_copy_from_shared(),
-                             RK_E_UNSUPPORTED, "slice copies")
+                             RK_E_UNSUPPORTED,
+                             "tile operation inside a serial/pipelined loop")
 
     def test_output_written_inside_loop_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_output_copy_inside_loop(),
-                             RK_E_UNSUPPORTED, "not inside it")
+                             RK_E_UNSUPPORTED,
+                             "tile operation inside a serial/pipelined loop")
 
 
 if __name__ == "__main__":

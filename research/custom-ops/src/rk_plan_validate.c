@@ -142,6 +142,35 @@ static int upload_cube_slice_covers(const rk_action_desc *writer_action,
     return 1;
 }
 
+/* A device writer may materialise one atom-aligned column slice of a larger
+ * CUBE value when the physical row geometry is identical.  The slice is a
+ * contiguous byte range in the canonical [K/8, Mphysical, 8] layout; coverage
+ * still must be completed by other declared writers. */
+static int device_cube_slice_covers(const rk_action_desc *writer_action,
+                                    const rk_view_desc *writer,
+                                    const rk_view_desc *reader) {
+    if (!writer_action || writer_action->kind == RK_ACTION_UPLOAD ||
+        !writer || !reader) return 0;
+    const rk_tensor_desc *w = &writer->tensor;
+    const rk_tensor_desc *r = &reader->tensor;
+    if (w->layout != RK_LAYOUT_CUBE_F16 || r->layout != RK_LAYOUT_CUBE_F16 ||
+        w->atom != 8 || r->atom != 8) return 0;
+    if (w->physical_rows != r->physical_rows || w->rows != r->rows)
+        return 0;
+    if (writer->offset_bytes < reader->offset_bytes) return 0;
+    uint64_t reader_end = reader->offset_bytes + r->bytes;
+    uint64_t writer_end = writer->offset_bytes + w->bytes;
+    if (writer_end > reader_end) return 0;
+    uint64_t row_stride = (uint64_t)w->physical_rows * 2u;
+    uint64_t delta = writer->offset_bytes - reader->offset_bytes;
+    if (!row_stride || delta % row_stride) return 0;
+    uint64_t column = delta / row_stride;
+    if (column % 8u || column > r->cols) return 0;
+    if (w->cols > (uint64_t)r->cols - column) return 0;
+    if (writer->offset_bytes % 16u) return 0;
+    return 1;
+}
+
 static const rk_value_desc *value_at(const rk_plan_desc *desc, uint32_t id) {
     if (!desc || id >= desc->nvalues || !desc->values) return NULL;
     return &desc->values[id];
@@ -778,6 +807,8 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
                     wv->tensor.layout == RK_LAYOUT_LINEAR_F16 ||
                     (ws == need_start && same_addressing(&wv->tensor, &rd->tensor)) ||
                     upload_cube_slice_covers(
+                        action_at(desc, writer_action), wv, rd) ||
+                    device_cube_slice_covers(
                         action_at(desc, writer_action), wv, rd);
                 if (!contributes) continue;
                 if (seq[writer_action] >= seq[i]) continue; /* not yet executed */
@@ -807,6 +838,8 @@ static int validate_execution_order(const rk_plan_desc *desc, rk_diag *diag) {
                         wv->tensor.layout == RK_LAYOUT_LINEAR_F16 ||
                         (ws == need_start && same_addressing(&wv->tensor, &rd->tensor)) ||
                         upload_cube_slice_covers(
+                            action_at(desc, writer_action), wv, rd) ||
+                        device_cube_slice_covers(
                             action_at(desc, writer_action), wv, rd);
                     if (!contributes) continue;
                     if (seq[writer_action] >= seq[i]) continue;

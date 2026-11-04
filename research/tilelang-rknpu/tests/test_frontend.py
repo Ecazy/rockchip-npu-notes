@@ -7,7 +7,7 @@ from rknpu_backend import (CompileOptions, RK_E_NUMERIC_CONTRACT,
                            RK_E_UNSUPPORTED, compile_tilelang,
                            default_profile)
 from rknpu_backend.errors import BackendError
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 ROOT = Path(__file__).resolve().parents[1]
 

@@ -9,7 +9,7 @@ def _tail_kernel(*, m, k, n, op, bias_shape):
     if bias_shape == ():
         bias_ty = T.Tensor((), "float16")
     else:
-        bias_ty = T.Tensor((n,), "float16")
+        bias_ty = T.Tensor(bias_shape, "float16")
 
     @T.prim_func
     def kernel(X: T.Tensor((m, k), "float16"),

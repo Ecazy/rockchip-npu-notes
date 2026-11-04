@@ -11,8 +11,9 @@ from pathlib import Path
 
 from rknpu_backend import (CompileOptions, RK_E_SHAPE, RK_E_UNSUPPORTED,
                            compile_tilelang, default_profile)
-from rknpu_backend.errors import BackendError
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.errors import (BackendError, RK_E_NUMERIC_CONTRACT,
+                                  RK_E_SCHEMA)
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -147,26 +148,27 @@ class MNTileTests(unittest.TestCase):
 
     def test_ambiguous_single_axis_grid_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_single_grid_axis_ambiguous(),
-                             RK_E_UNSUPPORTED,
-                             "cannot prove which output axis")
+                             RK_E_SHAPE,
+                             "publish tiles do not cover")
 
     def test_ragged_output_tiling_is_rejected(self):
-        self.assert_rejected(self.fixtures.bad_ragged_output(), RK_E_SHAPE,
-                             "does not cover the output exactly once")
+        self.assert_rejected(self.fixtures.bad_ragged_output(), RK_E_SCHEMA,
+                             "staging copy reads an unestablished source")
 
     def test_block_variable_must_match_the_operand_axis(self):
         self.assert_rejected(self.fixtures.bad_block_var_on_wrong_axis(),
-                             RK_E_UNSUPPORTED,
-                             "cannot prove")
+                             RK_E_SCHEMA,
+                             "store lacks its FP16 accumulator writeback")
 
     def test_output_tile_must_be_placed_by_the_grid_indices(self):
         self.assert_rejected(self.fixtures.bad_output_tile_swapped(),
-                             RK_E_UNSUPPORTED,
-                             "cannot prove")
+                             RK_E_SCHEMA,
+                             "store lacks its FP16 accumulator writeback")
 
     def test_three_dimensional_grid_is_rejected(self):
         self.assert_rejected(self.fixtures.bad_three_dim_grid(),
-                             RK_E_UNSUPPORTED, "at most a 2-D block grid")
+                             RK_E_NUMERIC_CONTRACT,
+                             "scheduled source narrows only after the full K")
 
 
 if __name__ == "__main__":

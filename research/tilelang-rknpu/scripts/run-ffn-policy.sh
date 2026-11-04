@@ -62,8 +62,16 @@ manifest = {
     'interleaved': True,
     'source_hashes': {
         'python/rknpu_backend/hybrid.py': sha(here / 'python/rknpu_backend/hybrid.py'),
-        'python/rknpu_backend/frontend/tilelang_adapter.py':
-            sha(here / 'python/rknpu_backend/frontend/tilelang_adapter.py'),
+        'python/rknpu_backend/frontend/tir_utils.py':
+            sha(here / 'python/rknpu_backend/frontend/tir_utils.py'),
+        'python/rknpu_backend/frontend/full_logical_rewrite.py':
+            sha(here / 'python/rknpu_backend/frontend/full_logical_rewrite.py'),
+        'python/rknpu_backend/frontend/logical_schedule.py':
+            sha(here / 'python/rknpu_backend/frontend/logical_schedule.py'),
+        'python/rknpu_backend/frontend/tilelang_lowering.py':
+            sha(here / 'python/rknpu_backend/frontend/tilelang_lowering.py'),
+        'python/rknpu_backend/passes/dag.py':
+            sha(here / 'python/rknpu_backend/passes/dag.py'),
         'models/tilelang_matmul.py': sha(here / 'models/tilelang_matmul.py'),
         'tools/build_hybrid_manifests.py':
             sha(here / 'tools/build_hybrid_manifests.py'),

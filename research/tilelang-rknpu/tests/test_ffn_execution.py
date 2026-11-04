@@ -15,7 +15,7 @@ import numpy as np
 
 from rknpu_backend import (CompileOptions, compile_rkir, compile_tilelang,
                            default_profile, swiglu_module)
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 ROOT = Path(__file__).resolve().parents[1]
 MOCK_LIB = os.environ.get("RKNPU_PLAN_MOCK_LIB") or str(

@@ -199,7 +199,8 @@ def _unwrap_prim_func(prim_func: Any) -> Any:
     return prim_func
 
 
-CARRIERS = ("rkir", "native")
+CARRIERS = ("rkir",)
+RETIRED_CARRIERS = {"native": "the native Relax carrier is retired; use carrier=\"rkir\" with the task-chain lowering"}
 
 
 def compile_artifact(prim_func: Any, *, profile: TargetProfile,
@@ -220,38 +221,83 @@ def compile_artifact(prim_func: Any, *, profile: TargetProfile,
     carriers run the same legalizer, planner, storage assignment and encoder, so
     this is not a second backend.
     """
+    if carrier in RETIRED_CARRIERS:
+        reject(RK_E_UNSUPPORTED, RETIRED_CARRIERS[carrier],
+               stage="artifact", actual=carrier, required=list(CARRIERS))
     if carrier not in CARRIERS:
         reject(RK_E_UNSUPPORTED, f"unknown compute carrier {carrier!r}",
                stage="artifact", actual=carrier, required=list(CARRIERS))
     if isinstance(prim_func, Module):
-        if carrier == "native":
-            reject(RK_E_UNSUPPORTED,
-                   "the native carrier compiles a real PrimFunc, not RKIR",
-                   stage="artifact")
         compilation = codegen.compile_graph(prim_func, profile=profile,
                                            options=options, stage="api")
         return CompiledArtifact.from_compilation(compilation)
 
-    from .frontend import tilelang_adapter
-
-    if not tilelang_adapter.tilelang_available():
-        reject(RK_E_UNSUPPORTED,
-               "TileLang is not installed in this Python environment",
-               stage="frontend",
-               alternative="install the pinned optional TileLang dependency from "
-                           "provenance.json")
     target = _unwrap_prim_func(prim_func)
-    if carrier == "native":
-        graph = codegen.normalize_tilelang_native(target, profile=profile,
-                                                  options=options,
-                                                  b_is_input=b_is_input)
-    else:
-        graph = codegen.normalize_tilelang(target, profile=profile,
-                                           options=options,
-                                           b_is_input=b_is_input)
-    compilation = codegen.compile_graph(graph, profile=profile, options=options,
-                                        stage="frontend")
-    artifact = CompiledArtifact.from_compilation(compilation)
-    if retain_graph:
-        artifact = artifact.with_retained_graph(graph)
-    return artifact
+    from .frontend import tilelang_lowering
+
+    if carrier == "rkir" and \
+            tilelang_lowering.is_logical_gemm_candidate(target):
+        lowering = tilelang_lowering.compile_logical_gemm_compilation(
+            target, profile=profile, options=options,
+            b_is_input=b_is_input, name="rknpu-logical-task")
+        artifact = CompiledArtifact.from_compilation(lowering.compilation)
+        if retain_graph:
+            artifact = artifact.with_retained_graph({
+                "kind": "instantiated-target-tasks",
+                "tasks": list(lowering.tasks),
+                "facts": lowering.facts.to_dict(),
+            })
+        return artifact
+
+    if tilelang_lowering.is_staged_candidate(target):
+        compilation = tilelang_lowering.compile_staged_compilation(
+            target, profile=profile, options=options,
+            name="rknpu-staged")
+        artifact = CompiledArtifact.from_compilation(compilation)
+        if retain_graph:
+            artifact = artifact.with_retained_graph({
+                "kind": "staged-launch-boundaries",
+                "source": compilation.report.get("source", {}),
+            })
+        return artifact
+
+    if tilelang_lowering.is_ffn_candidate(target):
+        compilation = tilelang_lowering.compile_ffn_compilation(
+            target, profile=profile, options=options,
+            name="rknpu-ffn-dataflow")
+        artifact = CompiledArtifact.from_compilation(compilation)
+        if retain_graph:
+            artifact = artifact.with_retained_graph({
+                "kind": "ffn-source-dataflow",
+                "source": compilation.report.get("source", {}),
+            })
+        return artifact
+
+    if tilelang_lowering.is_k_loop_candidate(target):
+        compilation = tilelang_lowering.compile_k_loop_compilation(
+            target, profile=profile, options=options, b_is_input=b_is_input,
+            name="rknpu-kloop-task")
+        artifact = CompiledArtifact.from_compilation(compilation)
+        if retain_graph:
+            artifact = artifact.with_retained_graph({
+                "kind": "k-loop-source-rewrite",
+                "source": compilation.report.get("source", {}),
+            })
+        return artifact
+
+    if tilelang_lowering.is_guarded_tail_candidate(
+            target, options=options):
+        compilation = tilelang_lowering.compile_guarded_tail_compilation(
+            target, profile=profile, options=options,
+            name="rknpu-guarded-task", b_is_input=b_is_input)
+        artifact = CompiledArtifact.from_compilation(compilation)
+        if retain_graph:
+            artifact = artifact.with_retained_graph({
+                "kind": "guarded-tail-source",
+                "source": compilation.report.get("source", {}),
+            })
+        return artifact
+
+    reject(RK_E_UNSUPPORTED,
+           "no migrated TileLang lowering owns this source; the adapter "
+           "fallback is retired", stage="frontend")

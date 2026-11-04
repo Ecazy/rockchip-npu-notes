@@ -13,9 +13,9 @@ from pathlib import Path
 from rknpu_backend import (CompileOptions, RK_E_NUMERIC_CONTRACT,
                            RK_E_UNSUPPORTED, compile_tilelang, default_profile)
 from rknpu_backend.errors import BackendError
-from rknpu_backend.frontend.tilelang_adapter import (FFN_NARROWING_NAMES,
-                                                     extract,
+from rknpu_backend.frontend.tir_utils import (FFN_NARROWING_NAMES,
                                                      tilelang_available)
+from rknpu_backend.frontend.full_logical_rewrite import rewrite_ffn_tir
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -52,16 +52,15 @@ class FFNExtractionTests(unittest.TestCase):
 
         options = CompileOptions(numeric_mode="rk_f16_tiled",
                                  allow_approx_lut=True)
-        module = extract(kernel, options=options,
-                         profile_hash=self.profile.profile_hash)
+        module = rewrite_ffn_tir(kernel).module
         self.assertEqual([op.opcode for op in module.ops],
                          ["matmul", "matmul", "silu", "mul", "matmul", "add"])
         self.assertEqual([(v.name, v.type.shape) for v in module.values],
                          [("X", (8, 64)), ("Wg", (64, 32)),
                           ("Wu", (64, 32)), ("Wd", (32, 64)),
-                          ("Zg", (8, 32)), ("Zu", (8, 32)),
-                          ("S", (8, 32)), ("A", (8, 32)),
-                          ("H", (8, 64)), ("Y", (8, 64))])
+                          ("Y", (8, 64)), ("gate32", (8, 32)),
+                          ("up32", (8, 32)), ("proj32", (8, 64)),
+                          ("silu16", (8, 32)), ("mul16", (8, 32))])
         self.assertEqual(module.ops[2].inputs, (module.ops[0].outputs[0],))
         self.assertEqual(module.ops[3].inputs,
                          (module.ops[2].outputs[0], module.ops[1].outputs[0]))

@@ -15,7 +15,7 @@ import tilelang.language as T
 
 from rknpu_backend import (CompileOptions, compile_tilelang, default_profile,
                            load_plan, save_plan)
-from rknpu_backend.frontend.tilelang_adapter import PIPELINE_NOT_APPLIED_REASON
+from rknpu_backend.frontend.tir_utils import PIPELINE_NOT_APPLIED_REASON
 
 PROFILE = default_profile()
 M, K, N, BM, BN = 256, 576, 3072, 256, 256

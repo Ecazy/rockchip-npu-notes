@@ -11,7 +11,7 @@ from pathlib import Path
 from rknpu_backend import (CompileOptions, RK_E_UNSUPPORTED, compile_tilelang,
                            default_profile)
 from rknpu_backend.errors import BackendError
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -66,7 +66,7 @@ class SemanticGuardTests(unittest.TestCase):
 
     def test_k_loop_must_start_at_zero(self):
         self.assert_rejected(self.fixtures.k_loop_min_one(),
-                             "K loop must start at zero")
+                             "loops that run 0..extent with step 1")
 
     def test_unhandled_call_is_rejected(self):
         with self.assertRaises(BackendError) as ctx:
@@ -84,7 +84,7 @@ class SemanticGuardTests(unittest.TestCase):
 
     def test_k_loop_must_step_by_one(self):
         self.assert_rejected(self.fixtures.k_loop_step_two(),
-                             "K loop must step by one")
+                             "loops that run 0..extent with step 1")
 
 
 if __name__ == "__main__":

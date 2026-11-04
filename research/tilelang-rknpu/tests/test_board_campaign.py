@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 ROOT = Path(__file__).resolve().parents[1]
 MOCK_LIB = os.environ.get("RKNPU_PLAN_MOCK_LIB") or str(

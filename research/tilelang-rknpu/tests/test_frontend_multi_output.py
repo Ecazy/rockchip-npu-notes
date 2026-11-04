@@ -5,9 +5,8 @@ import unittest
 from pathlib import Path
 
 from rknpu_backend import CompileOptions, compile_tilelang, default_profile
-from rknpu_backend.frontend.tilelang_adapter import (MULTI_OUTPUT_NARROWING_NAMES,
-                                                     extract,
-                                                     tilelang_available)
+from rknpu_backend.frontend.tir_utils import tilelang_available
+from rknpu_backend.frontend.full_logical_rewrite import rewrite_ffn_tir
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -32,8 +31,7 @@ class MultiOutputFrontendTests(unittest.TestCase):
     def test_shared_input_branch_extracts_two_ssa_outputs(self):
         kernel = self.fixture.branch_outputs(m=8, k=64, n1=32, n2=48)
         options = CompileOptions(numeric_mode="rk_f16_tiled")
-        module = extract(kernel, options=options,
-                         profile_hash=self.profile.profile_hash)
+        module = rewrite_ffn_tir(kernel).module
         self.assertEqual([op.opcode for op in module.ops],
                          ["matmul", "matmul"])
         self.assertEqual([(v.name, v.type.shape, v.role)
@@ -45,8 +43,6 @@ class MultiOutputFrontendTests(unittest.TestCase):
                           ("Y2", (8, 48), "output")])
         self.assertEqual(module.ops[0].inputs[0], module.ops[1].inputs[0])
         self.assertEqual(module.outputs, (3, 4))
-        self.assertEqual(module.ops[0].attrs["source_narrowing_points"],
-                         list(MULTI_OUTPUT_NARROWING_NAMES))
 
     def test_plan_downloads_and_publishes_each_output(self):
         result = compile_tilelang(

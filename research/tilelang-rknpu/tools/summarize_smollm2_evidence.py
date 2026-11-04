@@ -327,7 +327,7 @@ def main(argv=None) -> int:
             "code_sha256": {
                 str(path): sha(Path(path)) for path in (
                     "models/tilelang_matmul.py",
-                    "python/rknpu_backend/frontend/tilelang_adapter.py",
+                    "python/rknpu_backend/frontend/tir_utils.py",
                     "python/rknpu_backend/hybrid.py",
                     "python/rknpu_backend/models.py",
                     "python/rknpu_backend/smollm.py",

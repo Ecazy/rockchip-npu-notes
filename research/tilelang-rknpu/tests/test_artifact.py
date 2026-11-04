@@ -27,7 +27,7 @@ import numpy as np
 from rknpu_backend import (CompiledArtifact, CompileOptions, compile_artifact,
                            compile_rkir, compile_tilelang, default_profile,
                            load_plan, matmul_module)
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 from rknpu_backend.runtime import ffi
 from rknpu_backend.runtime.bindings import Workspace
 

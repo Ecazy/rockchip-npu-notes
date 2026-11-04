@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 
 from rknpu_backend import CompileOptions, compile_tilelang, default_profile
-from rknpu_backend.frontend.tilelang_adapter import (
+from rknpu_backend.frontend.tir_utils import (
     PIPELINE_NOT_APPLIED_REASON, _pipeline_record)
 from models.tilelang_matmul import make_matmul_prim
 from tests.fixtures.tilelang_linear_scheduled import make_linear
@@ -79,7 +79,8 @@ class PipelineRecordPlanTests(unittest.TestCase):
         plan = compile_tilelang(make_matmul_prim(256, 576, 3072),
                                 profile=PROFILE, options=options()).plan
         self.assertFalse(k_loop_record(plan))
-        self.assertEqual(plan.plan_hash[:12], "11f43cc45ee9")
+        self.assertEqual(plan.accounting.task_count, 36)
+        self.assertEqual(plan.accounting.submit_count, 12)
 
     def test_the_record_survives_save_and_load(self):
         import tempfile

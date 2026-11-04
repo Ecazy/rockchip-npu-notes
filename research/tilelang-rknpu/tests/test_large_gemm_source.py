@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from rknpu_backend import CompileOptions, compile_tilelang, default_profile
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 
 @unittest.skipUnless(tilelang_available(), "pinned TileLang optional dependency absent")

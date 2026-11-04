@@ -144,9 +144,8 @@ class ProductionSourceTests(unittest.TestCase):
 
         with self.assertRaises(BackendError) as caught:
             compile_plan(source())
-        # The adapter compares the declared rounding with the rounding points it
-        # proved from the source text; a final-only claim cannot match a K loop.
-        self.assertIn("does not match the proven rounding points",
+        # The formal lowering owns the semantic check for the selected source.
+        self.assertIn("schedule declaration disagrees with the proven geometry",
                       caught.exception.diagnostics[0].message)
 
 

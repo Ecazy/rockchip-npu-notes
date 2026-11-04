@@ -1,0 +1,663 @@
+{
+ "case": "matmul_silu",
+ "kind": "rknpu-frozen-plan-reference",
+ "legacy_implementation": {
+  "entry": "rknpu_backend.frontend.logical_gemm.compile_logical_gemm",
+  "head": "89e58bd",
+  "logical_gemm_sha256": "3c6330bd3db5a0f2fb235c93becf9cc82800419dd17e2a2925012fd877afdad7",
+  "tilelang_adapter_sha256": "47c2a74be2030b2de9e35ae44f9cc700bd2552aff9e3a7402ae82a08b0c0dc7e"
+ },
+ "options": {
+  "allow_approx_lut": true,
+  "fallback": "error",
+  "linear_task_order": "baseline",
+  "numeric_mode": "rk_f16_tiled",
+  "submit_mode": "chain"
+ },
+ "plan": {
+  "accounting": {
+   "command_workspace_bytes": 32768,
+   "data_bo_count": 6,
+   "device_request_bytes": 259456,
+   "host_bytes": 118252,
+   "peak_payload_bytes": 29696,
+   "reserved_bytes": 226688,
+   "submit_count": 2,
+   "task_count": 3,
+   "transfers": 4
+  },
+  "actions": [
+   {
+    "attrs": {
+     "cache": "input",
+     "source_binding": 0,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 256,
+     "transpose_source": false
+    },
+    "deps": [],
+    "id": 0,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:input",
+    "outputs": [
+     0
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "cache": "constant",
+     "source_binding": 1,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 16,
+     "transpose_source": true
+    },
+    "deps": [],
+    "id": 1,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:weight",
+    "outputs": [
+     1
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "k0": 0,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "source_k_loop": null,
+     "source_k_rounding": "single_k_tile_fp16",
+     "source_mn_tiling": null,
+     "source_schedule": null,
+     "submit_group": "mm:0:0"
+    },
+    "deps": [
+     0,
+     1
+    ],
+    "id": 2,
+    "inputs": [
+     0,
+     1
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:matmul:0",
+    "outputs": [
+     2
+    ],
+    "template_id": "co.mm.f16.v1"
+   },
+   {
+    "attrs": {
+     "cache": "constant",
+     "source_binding": 3,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 32,
+     "transpose_source": false
+    },
+    "deps": [],
+    "id": 3,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "lowering:identity",
+    "outputs": [
+     3
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "chunk_index": 0,
+     "submit_group": "act:0:0"
+    },
+    "deps": [
+     2
+    ],
+    "id": 4,
+    "inputs": [
+     5
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:silu:lut:0",
+    "outputs": [
+     6
+    ],
+    "template_id": "co.lut.sigmoid.f16.v1"
+   },
+   {
+    "attrs": {
+     "submit_group": "act:0:0"
+    },
+    "deps": [
+     4,
+     3
+    ],
+    "id": 5,
+    "inputs": [
+     2,
+     4,
+     3
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:silu:mul",
+    "outputs": [
+     7
+    ],
+    "template_id": "co.ew_mul.f16.v1"
+   },
+   {
+    "attrs": {
+     "binding_id": 2,
+     "submit_group": null
+    },
+    "deps": [
+     5
+    ],
+    "id": 6,
+    "inputs": [
+     7
+    ],
+    "kind": "download",
+    "origin": "host:download",
+    "outputs": [],
+    "template_id": null
+   }
+  ],
+  "bindings": [
+   {
+    "dtype": "float16",
+    "id": 0,
+    "name": "A",
+    "role": "input",
+    "shape": [
+     16,
+     256
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 1,
+    "name": "B",
+    "role": "constant",
+    "shape": [
+     256,
+     16
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 2,
+    "name": "Y",
+    "role": "output",
+    "shape": [
+     16,
+     16
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 3,
+    "name": "__identity_32",
+    "role": "constant",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  ],
+  "budget_policy": {
+   "device_budget_bytes": 268435456,
+   "host_budget_bytes": 268435456,
+   "schema_version": 1
+  },
+  "buffers": [
+   {
+    "alignment": 16,
+    "capacity": 8192,
+    "id": 0,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     0,
+     2
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "input_slice",
+    "slot_id": 0
+   },
+   {
+    "alignment": 16,
+    "capacity": 16384,
+    "id": 1,
+    "layout_id": "co.weight.f16.v1",
+    "lifetime": [
+     1,
+     2
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "weight",
+    "slot_id": 1
+   },
+   {
+    "alignment": 16,
+    "capacity": 1024,
+    "id": 2,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     2,
+     5
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "accumulator",
+    "slot_id": 2
+   },
+   {
+    "alignment": 16,
+    "capacity": 2048,
+    "id": 3,
+    "layout_id": "co.weight.f16.v1",
+    "lifetime": [
+     3,
+     5
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "identity",
+    "slot_id": 3
+   },
+   {
+    "alignment": 16,
+    "capacity": 1024,
+    "id": 4,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     4,
+     5
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "gate",
+    "slot_id": 4
+   },
+   {
+    "alignment": 16,
+    "capacity": 1024,
+    "id": 5,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     5,
+     6
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "output",
+    "slot_id": 5
+   }
+  ],
+  "constants": [
+   {
+    "binding_id": 1,
+    "dtype": "float16",
+    "name": "B",
+    "nbytes": 8192,
+    "pack_key": "f16:host-contract:256x16:v1",
+    "sha256": "7a8aa98a0b75890fd9caf669e66828eb1c8405179afb68caf178fdf8ed16863b",
+    "shape": [
+     256,
+     16
+    ]
+   },
+   {
+    "binding_id": 3,
+    "dtype": "float16",
+    "generator": "identity",
+    "name": "__identity_32",
+    "nbytes": 2048,
+    "pack_key": "identity:f16:32:v1",
+    "sha256": "9ee513848c4e750ecce55e9ea0d63efda24b034fa5bec1d50028d323c5fdb5c1",
+    "shape": [
+     32,
+     32
+    ]
+   }
+  ],
+  "kind": "rkplan",
+  "logical_ops": [
+   {
+    "auxiliary": false,
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "index": 0,
+    "inputs": [
+     "A",
+     "B"
+    ],
+    "opcode": "matmul",
+    "outputs": [
+     "Z"
+    ],
+    "tasks": [
+     2
+    ]
+   },
+   {
+    "auxiliary": false,
+    "contract": null,
+    "index": 1,
+    "inputs": [
+     "Z"
+    ],
+    "opcode": "silu",
+    "outputs": [
+     "Y"
+    ],
+    "tasks": [
+     4,
+     5
+    ]
+   }
+  ],
+  "name": "tilelang:kernel",
+  "numeric_requirements": [
+   {
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "execution": {
+     "approximated": false,
+     "attributed": true,
+     "k_chain": [
+      0
+     ],
+     "k_tile": 256,
+     "output_dtypes": [
+      "float16"
+     ],
+     "templates": [
+      "co.mm.f16.v1"
+     ]
+    },
+    "inputs": [
+     "A",
+     "B"
+    ],
+    "op_index": 0,
+    "opcode": "matmul",
+    "outputs": [
+     "Z"
+    ],
+    "tasks": [
+     2
+    ]
+   }
+  ],
+  "plan_hash": "bd1320cbdeea592353dfd7c368142ac3e3b8b2f39d34b95afdccd720285632a8",
+  "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+  "publish": [
+   {
+    "binding_id": 2,
+    "cols": 16,
+    "dst_col": 0,
+    "dst_row": 0,
+    "name": "Y",
+    "rows": 16,
+    "view_id": 7
+   }
+  ],
+  "schema_version": 2,
+  "source_hash": "Span(SourceName(tests/fixtures/tilelang_semantics.py#sha256:668a3997ab33f7e8, 0x0), 219, 219, 1, 1048576)",
+  "submits": [
+   {
+    "core_policy": "single_core_per_submit",
+    "deps": [],
+    "id": 0,
+    "mode": "chain",
+    "recipe_id": "linear_k_acc_v1",
+    "task_ids": [
+     2
+    ]
+   },
+   {
+    "core_policy": "single_core_per_submit",
+    "deps": [
+     0
+    ],
+    "id": 1,
+    "mode": "chain",
+    "recipe_id": "gate_ew_v1",
+    "task_ids": [
+     4,
+     5
+    ]
+   }
+  ],
+  "views": [
+   {
+    "buffer_id": 0,
+    "id": 0,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 8192,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 16,
+     "rows": 16
+    },
+    "valid_region": [
+     0,
+     16,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 1,
+    "id": 1,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 32,
+     "bytes": 16384,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.weight.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 32,
+     "rows": 16
+    },
+    "valid_region": [
+     0,
+     16,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 2,
+    "id": 2,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 1024,
+     "cols": 16,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 32,
+     "physical_rows": 16,
+     "rows": 16
+    },
+    "valid_region": [
+     0,
+     16,
+     0,
+     16
+    ]
+   },
+   {
+    "buffer_id": 3,
+    "id": 3,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 32,
+     "bytes": 2048,
+     "cols": 32,
+     "dtype": "float16",
+     "layout": "co.weight.f16.v1",
+     "physical_cols": 32,
+     "physical_rows": 32,
+     "rows": 32
+    },
+    "valid_region": [
+     0,
+     32,
+     0,
+     32
+    ]
+   },
+   {
+    "buffer_id": 4,
+    "id": 4,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 1024,
+     "cols": 16,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 32,
+     "physical_rows": 16,
+     "rows": 16
+    },
+    "valid_region": [
+     0,
+     16,
+     0,
+     16
+    ]
+   },
+   {
+    "buffer_id": 2,
+    "id": 5,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 1,
+     "bytes": 1024,
+     "cols": 512,
+     "dtype": "float16",
+     "layout": "co.linear.f16.v1",
+     "physical_cols": 512,
+     "physical_rows": 1,
+     "rows": 1
+    },
+    "valid_region": [
+     0,
+     1,
+     0,
+     512
+    ]
+   },
+   {
+    "buffer_id": 4,
+    "id": 6,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 1,
+     "bytes": 1024,
+     "cols": 512,
+     "dtype": "float16",
+     "layout": "co.linear.f16.v1",
+     "physical_cols": 512,
+     "physical_rows": 1,
+     "rows": 1
+    },
+    "valid_region": [
+     0,
+     1,
+     0,
+     512
+    ]
+   },
+   {
+    "buffer_id": 5,
+    "id": 7,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 1024,
+     "cols": 16,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 32,
+     "physical_rows": 16,
+     "rows": 16
+    },
+    "valid_region": [
+     0,
+     16,
+     0,
+     16
+    ]
+   }
+  ]
+ },
+ "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+ "schema_version": 1,
+ "source": {
+  "args": [
+   16,
+   256,
+   16
+  ],
+  "factory": "tests.fixtures.tilelang_semantics._silu_kernel",
+  "path": "tests/fixtures/tilelang_semantics.py",
+  "source_hash": "Span(SourceName(tests/fixtures/tilelang_semantics.py#sha256:668a3997ab33f7e8, 0x0), 219, 219, 1, 1048576)"
+ }
+}

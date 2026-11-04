@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The one compile pipeline: normalize -> plan -> verify -> encode.
 
-Every entry point in the package funnels through :func:`compile_graph`:
+Every frontend entry point in the package funnels through ``compile_graph``.
+compile_from_tasks is the pass-chain sibling: it takes the ordered instantiated
+target operations plus a module that supplies binding identity and the numeric
+contract, skips lazy normalisation and multi-node dispatch, and shares submits,
+records, storage and the verifier:
 
 * ``api.compile_tilelang`` / ``api.compile_rkir`` / ``artifact.compile_artifact``
 * the CLI ``compile-*`` subcommands
@@ -24,9 +28,8 @@ has no way to obtain a BO or an fd.
 
 The *compute representation* is a duck-typed graph access protocol (``values``,
 ``ops``, ``value(id)``, ``inputs``, ``outputs``, ``name``, ``source_hash``,
-``profile_hash``) so that the same planner runs over more than one carrier.  The
-two implemented carriers are the internal RKIR ``Module`` and the experimental
-native TVM graph view in :mod:`rknpu_backend.frontend.native_graph`.
+``profile_hash``).  The remaining adapter forms use the internal RKIR
+``Module``; migrated full-logical and guarded-tail forms use task records.
 """
 from __future__ import annotations
 
@@ -262,30 +265,13 @@ def normalize_tilelang(prim_func: Any, *, profile: TargetProfile,
                        b_is_input: bool = False) -> Any:
     """Normalize a real TileLang PrimFunc into the compute representation.
 
-    TileLang stays an optional import: this is the only place the adapter is
-    entered, and the caller has already checked availability.
+    The adapter extractor is retired; every supported source form has a formal
+    task-chain entry above this function.  Unknown forms are rejected instead of
+    being routed through a hidden graph fallback.
     """
-    from ..frontend import tilelang_adapter
-
-    return tilelang_adapter.extract(prim_func, options=options,
-                                    profile_hash=profile.profile_hash,
-                                    b_is_input=b_is_input)
-
-
-def normalize_tilelang_native(prim_func: Any, *, profile: TargetProfile,
-                              options: CompileOptions,
-                              b_is_input: bool = False) -> Any:
-    """Normalize a real TileLang PrimFunc into a native TVM graph view.
-
-    This is the R4 pilot carrier.  It never instantiates RKIR values or modules;
-    the recognition records go straight to native ``tvm.relax`` nodes and the
-    result is a read-only view over them.
-    """
-    from ..frontend import native_graph
-
-    return native_graph.build(prim_func, options=options,
-                              profile_hash=profile.profile_hash,
-                              b_is_input=b_is_input)
+    reject(RK_E_UNSUPPORTED,
+           "the generic TileLang adapter extractor is retired; use a formal "
+           "source-operation entry", stage="normalize")
 
 
 def _effective_geometry(plan: Plan) -> dict[str, Any]:
@@ -307,6 +293,15 @@ def _effective_geometry(plan: Plan) -> dict[str, Any]:
         "publish_rects": [[rows, cols] for rows, cols in rectangles],
         "clipped_from_declared": clipped,
     }
+
+
+def _execution_value(plan: Plan, key: str) -> Any:
+    """The numeric execution record the plan itself carries, when it has one."""
+    for requirement in getattr(plan, "numeric_requirements", ()) or ():
+        execution = requirement.to_dict().get("execution") or {}
+        if key in execution:
+            return execution[key]
+    return None
 
 
 def explain_plan(plan: Plan) -> dict[str, Any]:
@@ -418,6 +413,12 @@ def explain_plan(plan: Plan) -> dict[str, Any]:
                 if action.kind == "npu_task" and
                 action.attrs.get("applied_schedule") is not None
             }),
+            "source_hints": sorted({
+                json.dumps(action.attrs.get("source_hints"), sort_keys=True)
+                for action in plan.actions
+                if action.kind == "npu_task" and
+                action.attrs.get("source_hints") is not None
+            }),
             "linear_task_policy": sorted({
                 str(action.attrs.get("linear_task_policy"))
                 for action in plan.actions
@@ -431,8 +432,8 @@ def explain_plan(plan: Plan) -> dict[str, Any]:
             # M/N strategy the declared one, and if not, what changed.
             "reblocked": bool(declared_schedules) and
                          declared_schedules != applied_schedules,
-            "k_tile": 256,
-            "accumulation": "ordered_ascending_f16_writeback",
+            "k_tile": _execution_value(plan, "k_tile"),
+            "accumulation": _execution_value(plan, "k_chain"),
         },
         "policy": {
             "numeric_mode": "rk_f16_tiled",
@@ -440,3 +441,33 @@ def explain_plan(plan: Plan) -> dict[str, Any]:
             "device_access": "none (compile/explain)",
         },
     }
+
+
+def compile_from_tasks(module: Any, tasks: list[dict[str, Any]],
+                       facts: dict[str, Any], *,
+                       profile: TargetProfile,
+                       options: CompileOptions) -> Compilation:
+    """Compile a plan from the instantiated target operation sequence.
+
+    ``module`` supplies binding identity and the NumericContract only.  The
+    ordered ``rk_*`` task records are the authority for operand, region, tile,
+    K-slice, accumulation order and publication.  Normalize() (the TileLang
+    frontend) and the multi-node dispatch of build_draft are not re-entered;
+    submits, records, storage and verification remain the same planner stages.
+    """
+    from ..passes.dag import build_from_tasks
+
+    snapshot = CompileSnapshot(profile=profile, options=options)
+    profile.validate_environment()
+    legalized = legalize(module, profile=profile, options=options)
+    draft = build_from_tasks(module, tasks=tasks, facts=facts,
+                             legalized=legalized,
+                             profile=profile, options=options)
+    submits = build_submits(draft, options=options)
+    draft = attach_plan_records(module, draft, options)
+    result = assign_storage(draft, profile=profile, options=options,
+                            submits=submits)
+    plan = verify_plan(result)
+    report = explain_plan(plan)
+    return Compilation(plan=plan, snapshot=snapshot, report=report,
+                       diagnostics=())

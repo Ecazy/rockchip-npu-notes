@@ -16,7 +16,7 @@ import numpy as np
 from rknpu_backend import (CompileOptions, Module, Op, TensorType, Value,
                            compile_rkir, compile_tilelang, default_profile,
                            matmul_module)
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 from rknpu_backend.runtime.ffi import LibRKPlan, RKBinding
 
 ROOT = Path(__file__).resolve().parents[1]

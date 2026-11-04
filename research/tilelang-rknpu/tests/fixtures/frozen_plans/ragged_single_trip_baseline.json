@@ -1,0 +1,491 @@
+{
+ "case": "ragged_single_trip_baseline",
+ "kind": "rknpu-frozen-plan-reference",
+ "legacy_implementation": {
+  "entry": "compile_tilelang -> tilelang_adapter._extract_ragged_tail",
+  "head": "89e58bd",
+  "tilelang_adapter_sha256": "5f59ba80985bdc8653f2fb7bf302865389f2eace70427350e423bfe5153690fe"
+ },
+ "options": {
+  "allow_approx_lut": false,
+  "b_is_input": false,
+  "fallback": "error",
+  "linear_group_n_tiles": 0,
+  "linear_task_order": "baseline",
+  "numeric_mode": "rk_f16_tiled",
+  "submit_mode": "chain"
+ },
+ "plan": {
+  "accounting": {
+   "command_workspace_bytes": 16384,
+   "data_bo_count": 3,
+   "device_request_bytes": 377024,
+   "host_bytes": 409852,
+   "peak_payload_bytes": 262144,
+   "reserved_bytes": 360640,
+   "submit_count": 1,
+   "task_count": 1,
+   "transfers": 3
+  },
+  "actions": [
+   {
+    "attrs": {
+     "cache": "input",
+     "source_binding": 0,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 256,
+     "transpose_source": false
+    },
+    "deps": [],
+    "id": 0,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:input",
+    "outputs": [
+     0
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "cache": "constant",
+     "source_binding": 1,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 256,
+     "transpose_source": true
+    },
+    "deps": [],
+    "id": 1,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:weight",
+    "outputs": [
+     1
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "applied_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "k0": 0,
+     "k_padding": 0,
+     "k_physical_extent": 256,
+     "kt": 256,
+     "source_k_loop": {
+      "k_blocks": [
+       {
+        "extent": 256,
+        "index": 0,
+        "k0": 0
+       }
+      ],
+      "k_tail": 256,
+      "logical_k": 256,
+      "lowering_k_tile": 256,
+      "narrowing_base": "explicit FP16 after each K block",
+      "pipeline_hint_dropped": true,
+      "pipeline_not_applied_reason": "no software pipeline is implemented on this target: the K chain is emitted as an ordered accumulation of 256-wide tasks, so the request is recorded but not applied",
+      "rounding_points": "after_each_k_block",
+      "source_k_block": 256,
+      "source_k_trips": 1,
+      "source_loop_annotations": {
+       "num_stages": 2
+      },
+      "source_pipeline_stages": 2,
+      "source_rounding": "explicit_per_k_fp16",
+      "tail_contract": {
+       "form": "guarded_rect_tail_v1",
+       "grid": {
+        "x": 1,
+        "y": 1
+       },
+       "guarded_reads": {
+        "A": [
+         128,
+         256
+        ],
+        "B": [
+         256,
+         256
+        ]
+       },
+       "guarded_write": [
+        128,
+        256
+       ],
+       "k_blocks": [
+        {
+         "extent": 256,
+         "index": 0,
+         "k0": 0
+        }
+       ],
+       "k_trips": 1,
+       "physical_k_tile": 256,
+       "physical_padding": "zero",
+       "rounding_points": "after_each_k_block",
+       "tail_physical_extent": 256,
+       "tails": {
+        "K": 256,
+        "M": 128,
+        "N": 256
+       },
+       "tiles": {
+        "K": 256,
+        "M": 256,
+        "N": 256
+       },
+       "zero_fill": [
+        "A_tile_each_k_iteration",
+        "B_tile_each_k_iteration"
+       ]
+      }
+     },
+     "source_k_rounding": "explicit_per_k_fp16",
+     "source_mn_tiling": {
+      "block_m": 256,
+      "block_n": 256,
+      "coverage": "ragged_tail",
+      "grid_x": 1,
+      "grid_y": 1,
+      "m_tail": 128,
+      "n_tail": 256
+     },
+     "source_schedule": {
+      "accumulation": "ordered_ascending_f16_writeback",
+      "k_tile": 256,
+      "kind": "mn_tiles_v1",
+      "order": "m_major",
+      "tile_m": 256,
+      "tile_n": 256
+     },
+     "submit_group": "mm:0:0"
+    },
+    "deps": [
+     0,
+     1
+    ],
+    "id": 2,
+    "inputs": [
+     0,
+     1
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:matmul:0",
+    "outputs": [
+     2
+    ],
+    "template_id": "co.mm.f16.v1"
+   },
+   {
+    "attrs": {
+     "binding_id": 2,
+     "submit_group": null
+    },
+    "deps": [
+     2
+    ],
+    "id": 3,
+    "inputs": [
+     2
+    ],
+    "kind": "download",
+    "origin": "host:download",
+    "outputs": [],
+    "template_id": null
+   }
+  ],
+  "bindings": [
+   {
+    "dtype": "float16",
+    "id": 0,
+    "name": "A",
+    "role": "input",
+    "shape": [
+     128,
+     256
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 1,
+    "name": "B",
+    "role": "constant",
+    "shape": [
+     256,
+     256
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 2,
+    "name": "C",
+    "role": "output",
+    "shape": [
+     128,
+     256
+    ]
+   }
+  ],
+  "budget_policy": {
+   "device_budget_bytes": 268435456,
+   "host_budget_bytes": 268435456,
+   "schema_version": 1
+  },
+  "buffers": [
+   {
+    "alignment": 16,
+    "capacity": 65536,
+    "id": 0,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     0,
+     2
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "input_slice",
+    "slot_id": 0
+   },
+   {
+    "alignment": 16,
+    "capacity": 131072,
+    "id": 1,
+    "layout_id": "co.weight.f16.v1",
+    "lifetime": [
+     1,
+     2
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "weight",
+    "slot_id": 1
+   },
+   {
+    "alignment": 16,
+    "capacity": 65536,
+    "id": 2,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     2,
+     3
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "output",
+    "slot_id": 2
+   }
+  ],
+  "constants": [
+   {
+    "binding_id": 1,
+    "dtype": "float16",
+    "name": "B",
+    "nbytes": 131072,
+    "pack_key": "f16:host-contract:256x256:v1",
+    "sha256": "c090357d5104c769bfa4d55c58ccc4b26a83e8973af207e5dde2b21af84dcf65",
+    "shape": [
+     256,
+     256
+    ]
+   }
+  ],
+  "kind": "rkplan",
+  "logical_ops": [
+   {
+    "auxiliary": false,
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "index": 0,
+    "inputs": [
+     "A",
+     "B"
+    ],
+    "opcode": "matmul",
+    "outputs": [
+     "C"
+    ],
+    "tasks": [
+     2
+    ]
+   }
+  ],
+  "name": "tilelang:kernel",
+  "numeric_requirements": [
+   {
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "execution": {
+     "approximated": false,
+     "attributed": true,
+     "k_chain": [
+      0
+     ],
+     "k_tile": 256,
+     "output_dtypes": [
+      "float16"
+     ],
+     "templates": [
+      "co.mm.f16.v1"
+     ]
+    },
+    "inputs": [
+     "A",
+     "B"
+    ],
+    "op_index": 0,
+    "opcode": "matmul",
+    "outputs": [
+     "C"
+    ],
+    "tasks": [
+     2
+    ]
+   }
+  ],
+  "plan_hash": "b33814efe1b40c811472551305cb11f7504ceceda7ea72db226ac39619038ffa",
+  "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+  "publish": [
+   {
+    "binding_id": 2,
+    "cols": 256,
+    "dst_col": 0,
+    "dst_row": 0,
+    "name": "C",
+    "rows": 128,
+    "view_id": 2
+   }
+  ],
+  "schema_version": 2,
+  "source_hash": "Span(SourceName(tests/fixtures/tilelang_linear_scheduled.py#sha256:0fa468429c396b1e, 0x0), 19, 19, 1, 1048576)",
+  "submits": [
+   {
+    "core_policy": "single_core_per_submit",
+    "deps": [],
+    "id": 0,
+    "mode": "chain",
+    "recipe_id": "linear_k_acc_v1",
+    "task_ids": [
+     2
+    ]
+   }
+  ],
+  "views": [
+   {
+    "buffer_id": 0,
+    "id": 0,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 65536,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 128,
+     "rows": 128
+    },
+    "valid_region": [
+     0,
+     128,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 1,
+    "id": 1,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 32,
+     "bytes": 131072,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.weight.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 256,
+     "rows": 256
+    },
+    "valid_region": [
+     0,
+     256,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 2,
+    "id": 2,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 65536,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 128,
+     "rows": 128
+    },
+    "valid_region": [
+     0,
+     128,
+     0,
+     256
+    ]
+   }
+  ]
+ },
+ "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+ "schema_version": 1,
+ "source": {
+  "args": [
+   128,
+   256,
+   256
+  ],
+  "factory": "make_linear",
+  "kwargs": {
+   "bm": 256,
+   "bn": 256
+  },
+  "path": "tests/fixtures/tilelang_linear_scheduled.py",
+  "source_hash": "Span(SourceName(tests/fixtures/tilelang_linear_scheduled.py#sha256:0fa468429c396b1e, 0x0), 19, 19, 1, 1048576)"
+ }
+}

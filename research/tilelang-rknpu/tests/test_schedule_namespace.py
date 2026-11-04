@@ -63,14 +63,16 @@ class ScheduleNamespaceTests(unittest.TestCase):
                 with self.assertRaises(BackendError) as caught:
                     compile_with({key: value}, m=128, k=256, n=256, bm=256, bn=256)
                 diagnostic = caught.exception.diagnostics[0]
-                self.assertIn("unsupported TileLang schedule annotation",
+                self.assertIn("not supported by the pass chain",
                               diagnostic.message)
-                self.assertEqual(diagnostic.to_dict().get("actual"), key)
+                self.assertEqual(
+                    diagnostic.to_dict().get("actual", {}).get("key"), key)
 
     def test_bad_values_of_declared_annotations_are_refused(self):
         for extra, needle in (({"rknpu.mn_order": "diagonal"},
-                               "unsupported M/N traversal order"),
-                              ({"rknpu.tile_m": 512}, "within 1..256")):
+                               "must declare one admitted traversal order"),
+                              ({"rknpu.tile_m": 512},
+                               "disagrees with the proven geometry")):
             with self.subTest(extra=extra):
                 with self.assertRaises(BackendError) as caught:
                     compile_with(extra, m=128, k=256, n=256, bm=256, bn=256)

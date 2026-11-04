@@ -1,0 +1,1564 @@
+{
+ "case": "ffn_model_f16",
+ "kind": "rknpu-frozen-plan-reference",
+ "legacy_implementation": {
+  "entry": "compile_tilelang -> tilelang_adapter._extract_ffn_branch",
+  "head": "89e58bd",
+  "tilelang_adapter_sha256": "93661fd61759819c9d19ff2849d62ef25f7f619d03ada675c6218d3c9a44bd4d"
+ },
+ "options": {
+  "allow_approx_lut": true,
+  "fallback": "error",
+  "linear_task_order": "baseline",
+  "numeric_mode": "rk_f16_tiled",
+  "submit_mode": "chain"
+ },
+ "plan": {
+  "accounting": {
+   "command_workspace_bytes": 32768,
+   "data_bo_count": 13,
+   "device_request_bytes": 1016640,
+   "host_bytes": 590316,
+   "peak_payload_bytes": 557056,
+   "reserved_bytes": 983872,
+   "submit_count": 5,
+   "task_count": 7,
+   "transfers": 8
+  },
+  "actions": [
+   {
+    "attrs": {
+     "cache": "input",
+     "source_binding": 0,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 256,
+     "transpose_source": false
+    },
+    "deps": [],
+    "id": 0,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:dataflow",
+    "outputs": [
+     0
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "cache": "constant",
+     "source_binding": 1,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 128,
+     "transpose_source": true
+    },
+    "deps": [],
+    "id": 1,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:dataflow",
+    "outputs": [
+     1
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "cache": "constant",
+     "source_binding": 2,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 128,
+     "transpose_source": true
+    },
+    "deps": [],
+    "id": 2,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:dataflow",
+    "outputs": [
+     2
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "cache": "constant",
+     "source_binding": 3,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 256,
+     "transpose_source": true
+    },
+    "deps": [],
+    "id": 3,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:dataflow",
+    "outputs": [
+     3
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "cache": "input",
+     "source_binding": 5,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 256,
+     "transpose_source": false
+    },
+    "deps": [],
+    "id": 4,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "host_pack:dataflow",
+    "outputs": [
+     4
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "cache": "constant",
+     "source_binding": 6,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 128,
+     "transpose_source": false
+    },
+    "deps": [],
+    "id": 5,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "lowering:identity",
+    "outputs": [
+     5
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "cache": "constant",
+     "source_binding": 7,
+     "src_col_offset": 0,
+     "src_row_offset": 0,
+     "src_row_stride": 256,
+     "transpose_source": false
+    },
+    "deps": [],
+    "id": 6,
+    "inputs": [],
+    "kind": "upload",
+    "origin": "lowering:identity",
+    "outputs": [
+     6
+    ],
+    "template_id": null
+   },
+   {
+    "attrs": {
+     "k0": 0,
+     "kt": 256,
+     "source_k_loop": null,
+     "submit_group": "mm:dataflow:0"
+    },
+    "deps": [
+     0,
+     1
+    ],
+    "id": 7,
+    "inputs": [
+     0,
+     1
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:dataflow:matmul:0",
+    "outputs": [
+     7
+    ],
+    "template_id": "co.mm.f16.v1"
+   },
+   {
+    "attrs": {
+     "k0": 0,
+     "kt": 256,
+     "source_k_loop": null,
+     "submit_group": "mm:dataflow:1"
+    },
+    "deps": [
+     0,
+     2
+    ],
+    "id": 8,
+    "inputs": [
+     0,
+     2
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:dataflow:matmul:1",
+    "outputs": [
+     8
+    ],
+    "template_id": "co.mm.f16.v1"
+   },
+   {
+    "attrs": {
+     "chunk_index": 0,
+     "submit_group": "act:dataflow:2"
+    },
+    "deps": [
+     7
+    ],
+    "id": 9,
+    "inputs": [
+     10
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:silu:lut:0",
+    "outputs": [
+     11
+    ],
+    "template_id": "co.lut.sigmoid.f16.v1"
+   },
+   {
+    "attrs": {
+     "submit_group": "act:dataflow:2"
+    },
+    "deps": [
+     9,
+     5
+    ],
+    "id": 10,
+    "inputs": [
+     7,
+     9,
+     5
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:silu:mul",
+    "outputs": [
+     12
+    ],
+    "template_id": "co.ew_mul.f16.v1"
+   },
+   {
+    "attrs": {
+     "submit_group": "ew:dataflow:3"
+    },
+    "deps": [
+     10,
+     8,
+     5
+    ],
+    "id": 11,
+    "inputs": [
+     12,
+     8,
+     5
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:dataflow:mul",
+    "outputs": [
+     13
+    ],
+    "template_id": "co.ew_mul.f16.v1"
+   },
+   {
+    "attrs": {
+     "k0": 0,
+     "kt": 128,
+     "source_k_loop": null,
+     "submit_group": "mm:dataflow:4"
+    },
+    "deps": [
+     11,
+     3
+    ],
+    "id": 12,
+    "inputs": [
+     13,
+     3
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:dataflow:matmul:4",
+    "outputs": [
+     14
+    ],
+    "template_id": "co.mm.f16.v1"
+   },
+   {
+    "attrs": {
+     "submit_group": "ew:dataflow:5"
+    },
+    "deps": [
+     12,
+     4,
+     6
+    ],
+    "id": 13,
+    "inputs": [
+     14,
+     4,
+     6
+    ],
+    "kind": "npu_task",
+    "origin": "lowering:dataflow:add",
+    "outputs": [
+     15
+    ],
+    "template_id": "co.ew_add.f16.v1"
+   },
+   {
+    "attrs": {
+     "binding_id": 4,
+     "submit_group": null
+    },
+    "deps": [
+     13
+    ],
+    "id": 14,
+    "inputs": [
+     15
+    ],
+    "kind": "download",
+    "origin": "host:download",
+    "outputs": [],
+    "template_id": null
+   }
+  ],
+  "bindings": [
+   {
+    "dtype": "float16",
+    "id": 0,
+    "name": "X",
+    "role": "input",
+    "shape": [
+     64,
+     256
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 1,
+    "name": "Wg",
+    "role": "constant",
+    "shape": [
+     256,
+     128
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 2,
+    "name": "Wu",
+    "role": "constant",
+    "shape": [
+     256,
+     128
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 3,
+    "name": "Wd",
+    "role": "constant",
+    "shape": [
+     128,
+     256
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 4,
+    "name": "Y",
+    "role": "output",
+    "shape": [
+     64,
+     256
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 5,
+    "name": "H",
+    "role": "input",
+    "shape": [
+     64,
+     256
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 6,
+    "name": "__identity_128",
+    "role": "constant",
+    "shape": [
+     128,
+     128
+    ]
+   },
+   {
+    "dtype": "float16",
+    "id": 7,
+    "name": "__identity_256",
+    "role": "constant",
+    "shape": [
+     256,
+     256
+    ]
+   }
+  ],
+  "budget_policy": {
+   "device_budget_bytes": 268435456,
+   "host_budget_bytes": 268435456,
+   "schema_version": 1
+  },
+  "buffers": [
+   {
+    "alignment": 16,
+    "capacity": 32768,
+    "id": 0,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     0,
+     8
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "input_slice",
+    "slot_id": 0
+   },
+   {
+    "alignment": 16,
+    "capacity": 65536,
+    "id": 1,
+    "layout_id": "co.weight.f16.v1",
+    "lifetime": [
+     1,
+     7
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "weight",
+    "slot_id": 1
+   },
+   {
+    "alignment": 16,
+    "capacity": 65536,
+    "id": 2,
+    "layout_id": "co.weight.f16.v1",
+    "lifetime": [
+     2,
+     8
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "weight",
+    "slot_id": 2
+   },
+   {
+    "alignment": 16,
+    "capacity": 65536,
+    "id": 3,
+    "layout_id": "co.weight.f16.v1",
+    "lifetime": [
+     3,
+     12
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "weight",
+    "slot_id": 3
+   },
+   {
+    "alignment": 16,
+    "capacity": 32768,
+    "id": 4,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     4,
+     13
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "input_slice",
+    "slot_id": 4
+   },
+   {
+    "alignment": 16,
+    "capacity": 32768,
+    "id": 5,
+    "layout_id": "co.weight.f16.v1",
+    "lifetime": [
+     5,
+     11
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "identity",
+    "slot_id": 5
+   },
+   {
+    "alignment": 16,
+    "capacity": 131072,
+    "id": 6,
+    "layout_id": "co.weight.f16.v1",
+    "lifetime": [
+     6,
+     13
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "zero",
+    "role": "identity",
+    "slot_id": 6
+   },
+   {
+    "alignment": 16,
+    "capacity": 16384,
+    "id": 7,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     7,
+     10
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "accumulator",
+    "slot_id": 7
+   },
+   {
+    "alignment": 16,
+    "capacity": 16384,
+    "id": 8,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     8,
+     11
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "accumulator",
+    "slot_id": 8
+   },
+   {
+    "alignment": 16,
+    "capacity": 16384,
+    "id": 9,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     9,
+     10
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "gate",
+    "slot_id": 9
+   },
+   {
+    "alignment": 16,
+    "capacity": 16384,
+    "id": 10,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     10,
+     11
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "workspace",
+    "slot_id": 10
+   },
+   {
+    "alignment": 16,
+    "capacity": 16384,
+    "id": 11,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     11,
+     12
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "workspace",
+    "slot_id": 7
+   },
+   {
+    "alignment": 16,
+    "capacity": 32768,
+    "id": 12,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     12,
+     13
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "accumulator",
+    "slot_id": 11
+   },
+   {
+    "alignment": 16,
+    "capacity": 32768,
+    "id": 13,
+    "layout_id": "co.cube.f16.v1",
+    "lifetime": [
+     13,
+     14
+    ],
+    "must_not_share_bo": [],
+    "offset": 0,
+    "padding_state": "finite",
+    "role": "output",
+    "slot_id": 12
+   }
+  ],
+  "constants": [
+   {
+    "binding_id": 1,
+    "dtype": "float16",
+    "name": "Wg",
+    "nbytes": 65536,
+    "pack_key": "f16:host-contract:256x128:v1",
+    "sha256": "4c8be4f700b9e3c2af5fe373010e91892f3c8f05debbf16726289670216cd8a5",
+    "shape": [
+     256,
+     128
+    ]
+   },
+   {
+    "binding_id": 2,
+    "dtype": "float16",
+    "name": "Wu",
+    "nbytes": 65536,
+    "pack_key": "f16:host-contract:256x128:v1",
+    "sha256": "eff64491ed464ff2e8f967d65ba5607f09ddd1140782756d2252f41b06f22c33",
+    "shape": [
+     256,
+     128
+    ]
+   },
+   {
+    "binding_id": 3,
+    "dtype": "float16",
+    "name": "Wd",
+    "nbytes": 65536,
+    "pack_key": "f16:host-contract:128x256:v1",
+    "sha256": "9fb55aa68e89e99626f2db9182278d077f137b0260840a98c251b130da58703f",
+    "shape": [
+     128,
+     256
+    ]
+   },
+   {
+    "binding_id": 6,
+    "dtype": "float16",
+    "generator": "identity",
+    "name": "__identity_128",
+    "nbytes": 32768,
+    "pack_key": "identity:f16:128:v1",
+    "sha256": "0734244c8b50be0dc6c5cc8a2db2613f064270f16ebd28f35c741855191514e6",
+    "shape": [
+     128,
+     128
+    ]
+   },
+   {
+    "binding_id": 7,
+    "dtype": "float16",
+    "generator": "identity",
+    "name": "__identity_256",
+    "nbytes": 131072,
+    "pack_key": "identity:f16:256:v1",
+    "sha256": "135f0a0f0a4a0cde0300b67f5070eb8f10d7390e81b7271f8f0d852403efcf99",
+    "shape": [
+     256,
+     256
+    ]
+   }
+  ],
+  "kind": "rkplan",
+  "logical_ops": [
+   {
+    "auxiliary": false,
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "gate_accumulator"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "index": 0,
+    "inputs": [
+     "X",
+     "Wg"
+    ],
+    "opcode": "matmul",
+    "outputs": [
+     "Zg"
+    ],
+    "tasks": [
+     7
+    ]
+   },
+   {
+    "auxiliary": false,
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "up_accumulator"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "index": 1,
+    "inputs": [
+     "X",
+     "Wu"
+    ],
+    "opcode": "matmul",
+    "outputs": [
+     "Zu"
+    ],
+    "tasks": [
+     8
+    ]
+   },
+   {
+    "auxiliary": false,
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "silu"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "index": 2,
+    "inputs": [
+     "Zg"
+    ],
+    "opcode": "silu",
+    "outputs": [
+     "S"
+    ],
+    "tasks": [
+     9,
+     10
+    ]
+   },
+   {
+    "auxiliary": false,
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "act_mul"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "index": 3,
+    "inputs": [
+     "S",
+     "Zu"
+    ],
+    "opcode": "mul",
+    "outputs": [
+     "A"
+    ],
+    "tasks": [
+     11
+    ]
+   },
+   {
+    "auxiliary": false,
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "projection_accumulator"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "index": 4,
+    "inputs": [
+     "A",
+     "Wd"
+    ],
+    "opcode": "matmul",
+    "outputs": [
+     "H"
+    ],
+    "tasks": [
+     12
+    ]
+   },
+   {
+    "auxiliary": false,
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "residual_add"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "index": 5,
+    "inputs": [
+     "H",
+     "H"
+    ],
+    "opcode": "add",
+    "outputs": [
+     "Y"
+    ],
+    "tasks": [
+     13
+    ]
+   }
+  ],
+  "name": "tilelang:swiglu_ffn_f16",
+  "numeric_requirements": [
+   {
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "gate_accumulator"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "execution": {
+     "approximated": false,
+     "attributed": true,
+     "k_chain": [
+      0
+     ],
+     "k_tile": 256,
+     "output_dtypes": [
+      "float16"
+     ],
+     "templates": [
+      "co.mm.f16.v1"
+     ]
+    },
+    "inputs": [
+     "X",
+     "Wg"
+    ],
+    "op_index": 0,
+    "opcode": "matmul",
+    "outputs": [
+     "Zg"
+    ],
+    "tasks": [
+     7
+    ]
+   },
+   {
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "up_accumulator"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "execution": {
+     "approximated": false,
+     "attributed": true,
+     "k_chain": [
+      0
+     ],
+     "k_tile": 256,
+     "output_dtypes": [
+      "float16"
+     ],
+     "templates": [
+      "co.mm.f16.v1"
+     ]
+    },
+    "inputs": [
+     "X",
+     "Wu"
+    ],
+    "op_index": 1,
+    "opcode": "matmul",
+    "outputs": [
+     "Zu"
+    ],
+    "tasks": [
+     8
+    ]
+   },
+   {
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "silu"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "execution": {
+     "approximated": true,
+     "attributed": true,
+     "k_chain": [],
+     "k_tile": 0,
+     "output_dtypes": [
+      "float16"
+     ],
+     "templates": [
+      "co.ew_mul.f16.v1",
+      "co.lut.sigmoid.f16.v1"
+     ]
+    },
+    "inputs": [
+     "Zg"
+    ],
+    "op_index": 2,
+    "opcode": "silu",
+    "outputs": [
+     "S"
+    ],
+    "tasks": [
+     9,
+     10
+    ]
+   },
+   {
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "act_mul"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "execution": {
+     "approximated": false,
+     "attributed": true,
+     "k_chain": [],
+     "k_tile": 0,
+     "output_dtypes": [
+      "float16"
+     ],
+     "templates": [
+      "co.ew_mul.f16.v1"
+     ]
+    },
+    "inputs": [
+     "S",
+     "Zu"
+    ],
+    "op_index": 3,
+    "opcode": "mul",
+    "outputs": [
+     "A"
+    ],
+    "tasks": [
+     11
+    ]
+   },
+   {
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "projection_accumulator"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "execution": {
+     "approximated": false,
+     "attributed": true,
+     "k_chain": [
+      0
+     ],
+     "k_tile": 128,
+     "output_dtypes": [
+      "float16"
+     ],
+     "templates": [
+      "co.mm.f16.v1"
+     ]
+    },
+    "inputs": [
+     "A",
+     "Wd"
+    ],
+    "op_index": 4,
+    "opcode": "matmul",
+    "outputs": [
+     "H"
+    ],
+    "tasks": [
+     12
+    ]
+   },
+   {
+    "contract": {
+     "accumulation": "ordered_k_tiles_with_f16_writeback",
+     "accumulator_dtype": "float16",
+     "approximate": false,
+     "input_dtype": "float16",
+     "narrowing_points": [
+      "k_tile_boundary",
+      "residual_add"
+     ],
+     "output_dtype": "float16",
+     "tolerance": {
+      "atol": 0.008,
+      "rtol": 0.008
+     }
+    },
+    "execution": {
+     "approximated": false,
+     "attributed": true,
+     "k_chain": [],
+     "k_tile": 0,
+     "output_dtypes": [
+      "float16"
+     ],
+     "templates": [
+      "co.ew_add.f16.v1"
+     ]
+    },
+    "inputs": [
+     "H",
+     "H"
+    ],
+    "op_index": 5,
+    "opcode": "add",
+    "outputs": [
+     "Y"
+    ],
+    "tasks": [
+     13
+    ]
+   }
+  ],
+  "plan_hash": "19aba0567de2285b89c59ed27f9eceb0c6221ee9156e3f03120f87b62d9df803",
+  "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+  "publish": [
+   {
+    "binding_id": 4,
+    "cols": 256,
+    "dst_col": 0,
+    "dst_row": 0,
+    "name": "Y",
+    "rows": 64,
+    "view_id": 15
+   }
+  ],
+  "schema_version": 2,
+  "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:968bcda5af93d0d1, 0x0), 200, 200, 1, 1048576)",
+  "submits": [
+   {
+    "core_policy": "single_core_per_submit",
+    "deps": [],
+    "id": 0,
+    "mode": "chain",
+    "recipe_id": "linear_k_acc_v1",
+    "task_ids": [
+     7
+    ]
+   },
+   {
+    "core_policy": "single_core_per_submit",
+    "deps": [
+     0
+    ],
+    "id": 1,
+    "mode": "chain",
+    "recipe_id": "linear_k_acc_v1",
+    "task_ids": [
+     8
+    ]
+   },
+   {
+    "core_policy": "single_core_per_submit",
+    "deps": [
+     1
+    ],
+    "id": 2,
+    "mode": "chain",
+    "recipe_id": "gate_ew_v1",
+    "task_ids": [
+     9,
+     10
+    ]
+   },
+   {
+    "core_policy": "single_core_per_submit",
+    "deps": [
+     2
+    ],
+    "id": 3,
+    "mode": "chain",
+    "recipe_id": "gate_ew_v1",
+    "task_ids": [
+     11
+    ]
+   },
+   {
+    "core_policy": "single_core_per_submit",
+    "deps": [
+     3
+    ],
+    "id": 4,
+    "mode": "chain",
+    "recipe_id": "linear_epilogue_v1",
+    "task_ids": [
+     12,
+     13
+    ]
+   }
+  ],
+  "views": [
+   {
+    "buffer_id": 0,
+    "id": 0,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 32768,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 1,
+    "id": 1,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 32,
+     "bytes": 65536,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.weight.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 128,
+     "rows": 128
+    },
+    "valid_region": [
+     0,
+     128,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 2,
+    "id": 2,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 32,
+     "bytes": 65536,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.weight.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 128,
+     "rows": 128
+    },
+    "valid_region": [
+     0,
+     128,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 3,
+    "id": 3,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 32,
+     "bytes": 65536,
+     "cols": 128,
+     "dtype": "float16",
+     "layout": "co.weight.f16.v1",
+     "physical_cols": 128,
+     "physical_rows": 256,
+     "rows": 256
+    },
+    "valid_region": [
+     0,
+     256,
+     0,
+     128
+    ]
+   },
+   {
+    "buffer_id": 4,
+    "id": 4,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 32768,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 5,
+    "id": 5,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 32,
+     "bytes": 32768,
+     "cols": 128,
+     "dtype": "float16",
+     "layout": "co.weight.f16.v1",
+     "physical_cols": 128,
+     "physical_rows": 128,
+     "rows": 128
+    },
+    "valid_region": [
+     0,
+     128,
+     0,
+     128
+    ]
+   },
+   {
+    "buffer_id": 6,
+    "id": 6,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 32,
+     "bytes": 131072,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.weight.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 256,
+     "rows": 256
+    },
+    "valid_region": [
+     0,
+     256,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 7,
+    "id": 7,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 16384,
+     "cols": 128,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 128,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     128
+    ]
+   },
+   {
+    "buffer_id": 8,
+    "id": 8,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 16384,
+     "cols": 128,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 128,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     128
+    ]
+   },
+   {
+    "buffer_id": 9,
+    "id": 9,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 16384,
+     "cols": 128,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 128,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     128
+    ]
+   },
+   {
+    "buffer_id": 7,
+    "id": 10,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 1,
+     "bytes": 16384,
+     "cols": 8192,
+     "dtype": "float16",
+     "layout": "co.linear.f16.v1",
+     "physical_cols": 8192,
+     "physical_rows": 1,
+     "rows": 1
+    },
+    "valid_region": [
+     0,
+     1,
+     0,
+     8192
+    ]
+   },
+   {
+    "buffer_id": 9,
+    "id": 11,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 1,
+     "bytes": 16384,
+     "cols": 8192,
+     "dtype": "float16",
+     "layout": "co.linear.f16.v1",
+     "physical_cols": 8192,
+     "physical_rows": 1,
+     "rows": 1
+    },
+    "valid_region": [
+     0,
+     1,
+     0,
+     8192
+    ]
+   },
+   {
+    "buffer_id": 10,
+    "id": 12,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 16384,
+     "cols": 128,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 128,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     128
+    ]
+   },
+   {
+    "buffer_id": 11,
+    "id": 13,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 16384,
+     "cols": 128,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 128,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     128
+    ]
+   },
+   {
+    "buffer_id": 12,
+    "id": 14,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 32768,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     256
+    ]
+   },
+   {
+    "buffer_id": 13,
+    "id": 15,
+    "offset_bytes": 0,
+    "tensor": {
+     "atom": 8,
+     "bytes": 32768,
+     "cols": 256,
+     "dtype": "float16",
+     "layout": "co.cube.f16.v1",
+     "physical_cols": 256,
+     "physical_rows": 64,
+     "rows": 64
+    },
+    "valid_region": [
+     0,
+     64,
+     0,
+     256
+    ]
+   }
+  ]
+ },
+ "profile_hash": "7ef710bb19372e71f15994f363bd2542b4ef39b1ad35a36fa6ec787e61461dd1",
+ "schema_version": 1,
+ "source": {
+  "args": [
+   64,
+   256,
+   128
+  ],
+  "factory": "make_swiglu_ffn_f16",
+  "kwargs": {},
+  "path": "models/tilelang_matmul.py",
+  "source_hash": "Span(SourceName(models/tilelang_matmul.py#sha256:968bcda5af93d0d1, 0x0), 200, 200, 1, 1048576)"
+ }
+}

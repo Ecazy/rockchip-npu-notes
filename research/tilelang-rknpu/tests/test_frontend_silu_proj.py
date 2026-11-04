@@ -12,9 +12,9 @@ from pathlib import Path
 from rknpu_backend import (CompileOptions, RK_E_NUMERIC_CONTRACT,
                            RK_E_UNSUPPORTED, compile_tilelang, default_profile)
 from rknpu_backend.errors import BackendError
-from rknpu_backend.frontend.tilelang_adapter import (F16_NARROWING_NAMES,
-                                                     extract,
+from rknpu_backend.frontend.tir_utils import (F16_NARROWING_NAMES,
                                                      tilelang_available)
+from rknpu_backend.frontend.full_logical_rewrite import rewrite_ffn_tir
 from rknpu_backend.ir import NumericContract
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,22 +53,23 @@ class SiluProjKernelTests(unittest.TestCase):
         self.assertIn("float16", text)
 
     def test_multi_gemm_program_extracts_to_ssa_rkir(self):
-        module = extract(self.fixtures.silu_proj(), options=options(),
-                         profile_hash=self.profile.profile_hash)
+        module = rewrite_ffn_tir(self.fixtures.silu_proj()).module
         self.assertEqual([op.opcode for op in module.ops],
-                         ["matmul", "silu", "matmul", "add"])
+                         ["matmul", "sigmoid", "mul", "matmul", "add"])
         self.assertEqual([(v.name, v.type.shape) for v in module.values],
                          [("X", (13, 64)), ("W1", (64, 32)),
-                          ("W2", (32, 64)), ("Z", (13, 32)),
-                          ("S", (13, 32)), ("P", (13, 64)),
-                          ("Y", (13, 64))])
-        # The second GEMM consumes the first matmul's activation value, not a
-        # branch and not a host-visible copy.
+                          ("W2", (32, 64)), ("Y", (13, 64)),
+                          ("acc1", (13, 32)), ("acc2", (13, 64)),
+                          ("g16", (13, 32)), ("s16", (13, 32))])
+        # The explicit sigmoid and multiply stay separate; the second GEMM
+        # consumes the actual s16 value.
         self.assertEqual(module.ops[1].inputs, (module.ops[0].outputs[0],))
-        self.assertEqual(module.ops[2].inputs[0], module.ops[1].outputs[0])
-        self.assertEqual(module.ops[3].inputs,
-                         (module.ops[2].outputs[0], module.inputs[0]))
-        self.assertEqual(module.outputs, (module.ops[3].outputs[0],))
+        self.assertEqual(module.ops[2].inputs,
+                         (module.ops[0].outputs[0], module.ops[1].outputs[0]))
+        self.assertEqual(module.ops[3].inputs[0], module.ops[2].outputs[0])
+        self.assertEqual(module.ops[4].inputs,
+                         (module.ops[3].outputs[0], module.inputs[0]))
+        self.assertEqual(module.outputs, (module.ops[4].outputs[0],))
 
         points: set[str] = set()
         for op in module.ops:
@@ -125,7 +126,8 @@ class SiluProjKernelTests(unittest.TestCase):
                              profile=self.profile, options=options())
         diagnostic = ctx.exception.diagnostics[0]
         self.assertEqual(diagnostic.code, RK_E_UNSUPPORTED)
-        self.assertIn("wrong branch", diagnostic.message)
+        self.assertIn("does not contribute to any exported value",
+                      diagnostic.message)
 
     def test_missing_fp16_narrowing_is_rejected(self):
         with self.assertRaises(BackendError) as ctx:

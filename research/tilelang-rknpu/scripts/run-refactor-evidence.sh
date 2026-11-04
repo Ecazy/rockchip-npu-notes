@@ -9,7 +9,6 @@
 #     baseline/projection.json   representative plan+descriptor projection at BASE_REF
 #     current/projection.json    the same projection for the working tree
 #     comparison.json            field-by-field diff, explicit ignore list
-#     native-ir-evaluation.json  native carrier coverage, contracts, adoption numbers
 #     logs/                      raw command output
 #
 # The baseline is a throw-away git worktree of the recorded base commit, so the
@@ -83,13 +82,6 @@ python3 "$HERE/tools/compare_plan_projections.py" \
   --current "$OUT_ROOT/current/projection.json" \
   --out "$OUT_ROOT/comparison.json" >"$LOG/comparison.log" 2>&1
 record comparison $?
-
-# --- 3. native carrier evaluation ------------------------------------------
-( cd "$HERE" && PYTHONPATH="$HERE/python:$DEPS:$HERE" \
-    python3 "$HERE/tools/evaluate_native_graph.py" \
-      --out "$OUT_ROOT/native-ir-evaluation.json" ) \
-    >"$LOG/native_ir_evaluation.log" 2>&1
-record native_ir_evaluation $?
 
 # --- 3b. optional: full model-package regeneration --------------------------
 # Off by default because it rewrites tracked files under models/compiled (the

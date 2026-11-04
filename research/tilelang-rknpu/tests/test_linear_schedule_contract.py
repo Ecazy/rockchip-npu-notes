@@ -10,7 +10,7 @@ from rknpu_backend import (CompileOptions, RK_E_NUMERIC_CONTRACT, RK_E_SHAPE,
                            default_profile, load_plan, matmul_module, save_plan)
 from rknpu_backend.passes.verify import verify_plan
 from rknpu_backend.errors import BackendError
-from rknpu_backend.frontend.tilelang_adapter import tilelang_available
+from rknpu_backend.frontend.tir_utils import tilelang_available
 
 PROFILE = default_profile()
 M, K, N = 256, 576, 3072

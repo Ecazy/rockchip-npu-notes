@@ -335,7 +335,7 @@ class Value:
 
 # Attributes the lowering really reads from a matmul op: the operand layout,
 # the numeric contract, and the schedule/source metadata the TileLang adapter
-# stamps (``tilelang_adapter.matmul_attrs``).  Anything else - ``transpose_a``,
+# stamps recorded by the source rewrites.  Anything else - ``transpose_a``,
 # ``k_pad``, a typo - has no consumer in the pipeline, so accepting it would
 # silently drop a requirement the writer believed in.
 # Two families are recognized on a matmul op:

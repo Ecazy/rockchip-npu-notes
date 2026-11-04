@@ -243,18 +243,19 @@ def add_case(campaign: Path, manifest: dict, *, name: str, prim_func,
              bad_constants: dict | None = None, compile_fn=None,
              tolerance: dict | None = None):
     from rknpu_backend import compile_rkir, compile_tilelang, save_plan
-    from rknpu_backend.frontend.tilelang_adapter import extract
-    from rknpu_backend.ir import NumericContract
-    if tolerance is None:
-        module = extract(prim_func, options=options,
-                         profile_hash=manifest["_profile"].profile_hash)
-        matmul_op = next(op for op in module.ops if op.opcode == "matmul")
-        contract = NumericContract.from_dict(
-            matmul_op.attrs["numeric_contract"])
-        tolerance = contract.tolerance
     result = (compile_fn or compile_tilelang)(
         prim_func, profile=manifest["_profile"], options=options)
     plan = result.plan
+    if tolerance is None:
+        tolerances = []
+        for requirement in plan.numeric_requirements:
+            contract = requirement.to_dict()["contract"]
+            value = contract.get("tolerance")
+            if value:
+                tolerances.append((float(value["atol"]), float(value["rtol"])))
+        if len(set(tolerances)) != 1:
+            raise RuntimeError(f"{name}: plan declares no single tolerance")
+        tolerance = {"atol": tolerances[0][0], "rtol": tolerances[0][1]}
     if tolerance.get("atol") != 8e-3 or tolerance.get("rtol") != 8e-3:
         raise RuntimeError(f"unexpected plan tolerance for {name}: {tolerance}")
     plans_dir = campaign / "plans"

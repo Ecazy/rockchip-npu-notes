@@ -38,9 +38,34 @@ PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m rknpu_backend.cli run --help
 `run` is the only entry that opens a device; it accepts `--fd` to use a caller-owned descriptor.
 See the CLI contract in [SUPPORT-DOMAIN.md](SUPPORT-DOMAIN.md).
 
-## Formal pass chain (opt-in)
+## Formal lowering conversion
 
-Direct entry:
+The official QKV full-logical entry uses `schedule_full_logical_source` →
+`lower_scheduled_full_logical` → `pass_instantiate` → `compile_from_tasks`.  The direct
+entry below prints the resulting stage names.  The supported SiLU accumulator store
+uses the same source-operation rewrite and local lowering path.  Behaviour references
+are frozen under `tests/fixtures/frozen_plans/`.
+
+Direct full-logical entry:
+
+```bash
+PYTHONPATH=$PWD:$PWD/python .venv/bin/python - <<'PY'
+import tilelang
+from rknpu_backend import CompileOptions, default_profile
+from rknpu_backend.frontend import logical_schedule as L
+from models.tilelang_matmul import make_matmul_prim
+
+plan, stages, facts, tasks = L.compile_logical_gemm_tasks(
+    make_matmul_prim(1, 576, 960), profile=default_profile(),
+    options=CompileOptions(numeric_mode="rk_f16_tiled", allow_approx_lut=False))
+print(plan.plan_hash)
+print([stage.name for stage in stages])
+PY
+```
+
+Official K-loop entries lower unguarded final-only and explicit round-trip forms through
+the source-operation task chain.  Official guarded-tail entries use the same pass/task
+chain for `baseline` and `scheduled_baseline`.  Direct guarded-tail entry:
 
 ```bash
 PYTHONPATH=$PWD:$PWD/python .venv/bin/python - <<'PY'
@@ -76,6 +101,8 @@ PY
 Targeted tests:
 
 ```bash
+PYTHONPATH=$PWD:$PWD/python:$PWD/tests/fixtures .venv/bin/python -m pytest tests/test_logical_gemm_lowering.py -q -o addopts=""
+PYTHONPATH=$PWD:$PWD/python:$PWD/tests/fixtures .venv/bin/python -m pytest tests/test_logical_schedule_tasks.py -q -o addopts=""
 PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_rknpu_pass_pipeline.py -q -o addopts=""
 PYTHONPATH=$PWD:$PWD/python .venv/bin/python -m pytest tests/test_tilelang_backend_registration.py -q -o addopts=""
 ```
