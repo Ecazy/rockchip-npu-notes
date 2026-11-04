@@ -201,6 +201,30 @@ class TwoStageScheduleTests(unittest.TestCase):
         self.assert_rejected(with_global_schedule_attr(base), RK_E_UNSUPPORTED,
                              "single global schedule attribute")
 
+    def test_equal_m_and_n_grids_still_use_the_output_m_axis(self):
+        plan = self.compile(m=256, bm0=128, bm1=128).plan
+        self.assertEqual(plan.accounting.task_count, 30)
+
+    def test_declared_mn_order_changes_task_traversal(self):
+        from rknpu_backend.frontend import staged_launch
+        from rknpu_backend import CompileOptions
+
+        def traversal(order):
+            prim = self.fixture.make_two_stage(m=512, bm0=128, bm1=128,
+                                               order0=order)
+            chain = staged_launch.two_stage_chain(
+                prim, options=CompileOptions(numeric_mode="rk_f16_tiled"),
+                schedules=staged_launch.schedules_from_attrs(prim, 2))
+            return [(task["m0"], task["n0"])
+                    for task in chain["stages"][0]["tasks"]
+                    if task.get("kind") == "gemm"][:12]
+
+        self.assertNotEqual(traversal("m_major"), traversal("n_major"))
+        self.assert_rejected(
+            self.fixture.make_two_stage(m=512, bm0=128, bm1=128,
+                                        order0="bogus"),
+            RK_E_UNSUPPORTED, "unknown staged mn_order")
+
     def test_stage_outside_source_is_rejected(self):
         self.assert_rejected(self.fixture.make_two_stage(
             extra_stage_attr=True), RK_E_UNSUPPORTED,

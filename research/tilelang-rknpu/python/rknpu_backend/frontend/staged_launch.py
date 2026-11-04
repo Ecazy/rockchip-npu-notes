@@ -648,7 +648,8 @@ def two_stage_chain(prim_func: Any, *, options: Any,
                         source_m = _source_block_m(
                             launch, logical_m=logical_m,
                             logical_n=int(shape[1]),
-                            applied_n=int(schedule.get("tile_n", shape[1])))
+                            applied_n=int(schedule.get("tile_n", shape[1])),
+                            params=params)
                         target_m = int(schedule.get("tile_m", source_m))
                         if target_m != source_m:
                             launch = _retile_launch_source(
@@ -737,10 +738,12 @@ def two_stage_chain(prim_func: Any, *, options: Any,
                     }
         declared = schedules[index] if index < len(schedules) else None
         if declared is not None:
+            _apply_stage_order(stage, str(declared.get("order", "m_major")))
             actual = (int(stage.get("tile_m", 0)),
-                      int(stage.get("tile_n", 0)))
+                      int(stage.get("tile_n", 0)), stage.get("order"))
             expected = (int(declared.get("tile_m", 0)),
-                        int(declared.get("tile_n", 0)))
+                        int(declared.get("tile_n", 0)),
+                        str(declared.get("order", "m_major")))
             if actual != expected:
                 reject(RK_E_UNSUPPORTED,
                        "a declared staged schedule was not applied to its "
@@ -819,19 +822,70 @@ def _launch_output_shape(launch: Any, params: list[Any]):
     return None
 
 
+def _apply_stage_order(stage: dict[str, Any], order: str) -> None:
+    tasks = list(stage["tasks"])
+    groups = []
+    current = []
+    for task in tasks:
+        current.append(task)
+        if task.get("kind") == "store" and task.get("m0") is not None                 and task.get("n0") is not None:
+            groups.append(current)
+            current = []
+    if current:
+        groups.append(current)
+    spatial = [group for group in groups if group and
+               group[-1].get("kind") == "store" and
+               group[-1].get("m0") is not None]
+    if not spatial or len(spatial) != len(groups):
+        reject(RK_E_UNSUPPORTED,
+               "the declared task traversal is not applicable to this "
+               "staged launch", stage="frontend", actual=len(groups))
+    if order == "n_major":
+        groups.sort(key=lambda group: (int(group[-1]["m0"]),
+                                       int(group[-1]["n0"])))
+    else:
+        groups.sort(key=lambda group: (int(group[-1]["n0"]),
+                                       int(group[-1]["m0"])))
+    stage["tasks"] = [task for group in groups for task in group]
+    stage["order"] = order
+    stage["global_writes"] = [dict(t) for t in stage["tasks"]
+                              if t.get("kind") == "store"]
+    stage["global_reads"] = [dict(t) for t in stage["tasks"]
+                             if t.get("kind") == "copy"]
+
+
 def _source_block_m(launch: Any, *, logical_m: int, logical_n: int,
-                    applied_n: int) -> int:
+                    applied_n: int, params: list[Any] = ()) -> int:
     from . import rknpu_pass
-    extents = [int(loop.extent) for _, loop in rknpu_pass._walk(launch)
-               if type(loop).__name__ == "For" and
-               loop.thread_binding is not None]
-    n_grid = (logical_n + applied_n - 1) // applied_n
-    m_grids = [value for value in extents if value != n_grid]
-    if len(m_grids) != 1 or m_grids[0] <= 0:
-        reject(RK_E_SHAPE,
-                     "cannot derive the source M block grid",
-                     stage="frontend", actual=extents)
-    return (logical_m + m_grids[0] - 1) // m_grids[0]
+    loops = [loop for _, loop in rknpu_pass._walk(launch)
+             if type(loop).__name__ == "For" and
+             loop.thread_binding is not None]
+    indices = []
+    for _, node in rknpu_pass._walk(launch):
+        if type(node).__name__ == "BufferStore" and any(
+                _same_buffer(node.buffer, param) for param in params):
+            indices.append(node.indices[0])
+        elif type(node).__name__ == "Evaluate" and                 rknpu_pass._op_name(node.value) == "tl.tileop.copy":
+            regs = rknpu_pass._region_exprs(node.value)
+            for param in params:
+                if _same_buffer(param, regs[1]["buffer"]):
+                    indices.append(regs[1]["offsets"][0])
+    for expr in indices:
+        found = []
+        for _, inner in rknpu_pass._walk(expr):
+            if type(inner).__name__ != "Var":
+                continue
+            for loop in loops:
+                if _same_var(inner, loop.loop_var) and not any(
+                        _same_var(inner, item.loop_var) for item in found):
+                    found.append(loop)
+        if len(found) == 1:
+            grid = int(found[0].extent)
+            if grid > 0:
+                return (logical_m + grid - 1) // grid
+    reject(RK_E_SHAPE,
+           "cannot prove the source M block grid from the output index",
+           stage="frontend", actual=[str(expr) for expr in indices])
 
 
 def schedules_from_attrs(prim_func: Any, count: int) -> list[Any]:
@@ -861,11 +915,15 @@ def schedules_from_attrs(prim_func: Any, count: int) -> list[Any]:
             schedules.append(None)
             continue
         found = True
+        order = str(attrs.get(prefix + "mn_order", "m_major"))
+        if order not in {"m_major", "n_major"}:
+            reject(RK_E_UNSUPPORTED, "unknown staged mn_order",
+                   stage="frontend", actual=order)
         schedules.append({
             "kind": "mn_tiles_v1",
             "tile_m": int(attrs[prefix + "tile_m"]),
             "tile_n": int(attrs[prefix + "tile_n"]),
-            "order": str(attrs.get(prefix + "mn_order", "m_major")),
+            "order": order,
             "k_tile": 256,
             "accumulation": "ordered_ascending_f16_with_writeback",
             "source_k_rounding": attrs.get(prefix + "source_k_rounding"),
