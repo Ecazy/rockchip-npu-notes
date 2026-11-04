@@ -981,6 +981,39 @@ class _Builder:
             upload_cache[key] = (view, action)
             return upload_cache[key]
 
+        # Resolve the pack of each copied value from its actual consumers.
+        # A binding's input/constant identity controls ownership/cache only.
+        copy_uses: dict[int, set[str]] = {}
+        for stage in stages:
+            current_copies: dict[str, dict[str, Any]] = {}
+            for task in stage["tasks"]:
+                kind = task.get("kind")
+                if kind == "fill":
+                    current_copies.pop(str(task["destination"]), None)
+                elif kind == "copy":
+                    source, destination = str(task["source"]), str(task["destination"])
+                    current_copies[destination] = current_copies.get(source, task)
+                elif kind == "gemm":
+                    for tile, use in zip(task["tiles"][:2], ("A", "B")):
+                        producer = current_copies.get(str(tile))
+                        if producer is not None:
+                            copy_uses.setdefault(id(producer), set()).add(use)
+                    current_copies.pop(str(task["tiles"][2]), None)
+                elif kind in {"sigmoid", "mul", "add"}:
+                    for name in task["inputs"]:
+                        producer = current_copies.get(str(name))
+                        if producer is not None:
+                            copy_uses.setdefault(id(producer), set()).add("elementwise")
+                    current_copies.pop(str(task["output"]), None)
+
+        def weight_copy(task: dict[str, Any]) -> bool:
+            uses = copy_uses.get(id(task), set())
+            if "B" in uses and uses != {"B"}:
+                reject(RK_E_UNSUPPORTED,
+                       "one copied value needs incompatible staged operand layouts",
+                       stage="schedule", actual=sorted(uses))
+            return uses == {"B"}
+
         # Uploads are host actions; establish every external pack before any
         # device task group so a launch cannot contain an interleaved host step.
         for stage in stages:
@@ -990,7 +1023,7 @@ class _Builder:
                 source = str(task["source"])
                 if source not in binding_by_name:
                     continue
-                weight = self.bindings[binding_by_name[source]].role == "constant"
+                weight = weight_copy(task)
                 upload(source, task["source_region"], weight=weight, stage=stage)
 
         for stage_index, stage in enumerate(stages):
@@ -1056,7 +1089,7 @@ class _Builder:
                     local_deps.pop(destination, None)
                     local_sources.pop(destination, None)
                     if source in binding_by_name:
-                        weight = self.bindings[binding_by_name[source]].role == "constant"
+                        weight = weight_copy(task)
                         uploaded = upload(
                             source, source_region, weight=weight, stage=stage)
                         local_views[destination] = uploaded
@@ -1258,10 +1291,25 @@ class _Builder:
                            "staged GEMM operands have no source view",
                            stage="schedule", actual=tiles)
                 m0, n0 = int(task["m0"]), int(task["n0"])
-                rows, cols = output_shapes.get(
-                    (m0, n0), (int(task["rows"]), int(task["cols"])))
-                k0, kt = int(task["k0"]), int(task["kt"])
-                effective_kt = min(kt, int(stage["logical_k"]) - k0)
+                regions = task.get("gemm_regions")
+                if regions is not None:
+                    # Simple launches carry their proved full local regions.
+                    # Neither publication geometry nor carrier K defines this MM.
+                    a_area, b_area, c_area = (area(regions[key]) for key in ("a", "b", "c"))
+                    rows, cols, effective_kt = c_area.rows, c_area.cols, a_area.cols
+                    k0, kt = int(task["k0"]), effective_kt
+                else:
+                    # Existing guarded/K-loop lowering has proved this clipping.
+                    rows, cols = output_shapes.get(
+                        (m0, n0), (int(task["rows"]), int(task["cols"])))
+                    k0, kt = int(task["k0"]), int(task["kt"])
+                    effective_kt = min(kt, int(stage["logical_k"]) - k0)
+                    a_area = _TaskRect(0, 0, int(task["rows"]), kt)
+                    b_area = _TaskRect(0, 0, kt, int(task["cols"]))
+                    c_area = _TaskRect(0, 0, int(task["rows"]), int(task["cols"]))
+                if self.views[a_state[0]].tensor.layout != CUBE_LAYOUT or self.views[b_state[0]].tensor.layout != WEIGHT_LAYOUT:
+                    reject(RK_E_UNSUPPORTED, "staged GEMM views do not match actual A/B operand layouts",
+                           stage="schedule")
                 group_key = (stage_index, m0, n0)
                 group = accumulator.get(group_key)
                 if group is None:
@@ -1287,7 +1335,6 @@ class _Builder:
                 a_view, a_action = a_state
                 b_view, b_action = b_state
                 c_name = str(tiles[2])
-                c_area = _TaskRect(0, 0, int(task["rows"]), int(task["cols"]))
                 c_state = state_for(c_name)
                 if c_state.value is None:
                     if not c_state.zero_covers(c_area):
@@ -1298,8 +1345,7 @@ class _Builder:
                 else:
                     require_value(c_name, c_area)
                     cl_state = (c_state.value_view, c_state.value_action)
-                for name, needed in ((str(tiles[0]), _TaskRect(0, 0, int(task["rows"]), kt)),
-                                     (str(tiles[1]), _TaskRect(0, 0, kt, int(task["cols"])))):
+                for name, needed in ((str(tiles[0]), a_area), (str(tiles[1]), b_area)):
                     operand = state_for(name)
                     if operand.value is None or not operand.covers(needed):
                         reject(RK_E_SHAPE, "GEMM operand region is not established or zero padded",

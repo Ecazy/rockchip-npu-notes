@@ -302,6 +302,12 @@ M/N tile 不超过 256×256、K 分块大小固定为 256 的约束；逻辑 K �
   不再由 opcode/参数/tile 摘要补建整段任务。fill 的实际零值、区域及 producer 与缺失值
   分开保存；copy 仅在区域核验成立时继承值/view/producer，零初始化融合到首个 MM，
   writeback copy 建立下一次 MM_ACC 的输入。launch 内外未承接的调用直接拒绝。
+  简单 staged GEMM 逐项核定 launch 的原始效果，未支持的 BufferStore、guard 或循环
+  不得被 tile-call 筛选丢弃。它复用 K-loop 的完整 GEMM 字段校验及 whole-region 证明，
+  将实际 A/B/C 区域和当前 copy producer 传入任务；计算 M/N/K 由这些区域决定，store
+  只发布已证明对应的完整结果，不据 store 或 carrier 的 logical K 裁剪计算。
+  A/B 用途由 GEMM 的实际读取关联到当时的 copy producer；上传 pack 按该值的 consumer
+  用途选择，外部 binding 的 input/constant 身份只影响所有权与缓存，不决定设备布局。
   CLI 和模型构建调用尚未整体切换。
 - 已知迁移差异：无注解三 buffer final-only 多 grid 源现在保留源码实际 tile
   （例如 128×128 的 9 个输出 tile），不再被旧 adapter 按历史 256×256 默认网格重排。

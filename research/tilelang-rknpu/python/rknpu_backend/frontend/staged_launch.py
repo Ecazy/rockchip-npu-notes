@@ -365,122 +365,172 @@ def _simple_gemm_stage_tasks(stage_index: int, stage_items: list[Any],
     import itertools
     import tvm.tirx.stmt_functor as stmt_functor
 
-    blocks = list(stage_items[0].blocks) if stage_items else []
-    extents = [int(loop.extent) for loop in blocks]
-    calls = [item for item in stage_items if item.kind == "call" and
-             _op_name(item.node).startswith("tl.tileop.")]
+    # Every effect in this launch needs a consumer.  Do not extract tile calls
+    # from a program containing stores, guards or other unmodelled execution.
+    for item in stage_items:
+        if item.guards or item.loops:
+            reject(RK_E_UNSUPPORTED, "simple staged GEMM does not lower conditional or looped effects",
+                   stage="frontend", source=span, actual=str(item.node))
+        if item.kind != "call" or _op_name(item.node) not in ALLOWED_TILEOPS:
+            reject(RK_E_UNSUPPORTED, "unconsumed source effect in simple staged GEMM",
+                   stage="frontend", source=span, actual=str(item.node))
+    if sum(_op_name(item.node) == "tl.tileop.gemm" for item in stage_items) != 1:
+        reject(RK_E_UNSUPPORTED, "simple staged launch requires one actual GEMM",
+               stage="frontend", source=span)
+    blocks = list(stage_items[0].blocks)
+    extents = [rknpu_pass._loop_domain(loop, role="simple staged block") for loop in blocks]
 
     def eval_expr(expr: Any, values: dict[Any, Any]) -> int:
         if type(expr) is int:
             return expr
         reduced = stmt_functor.substitute(expr, values) if values else expr
-        reduced = rknpu_pass._arith().simplify(reduced)
-        value = rknpu_pass._const(reduced)
+        value = rknpu_pass._known_const(reduced)
         if value is None:
-            reject(RK_E_UNSUPPORTED,
-                         "simple staged region is not static after block binding",
-                         stage="frontend", actual=str(reduced))
+            reject(RK_E_UNSUPPORTED, "simple staged region is not static after block binding",
+                   stage="frontend", actual=str(reduced))
         return int(value)
 
-    tasks: list[dict[str, Any]] = []
-    gemm_info = None
-    copy_sources: list[str] = []
-    output_name = None
-    last_gemm_task = None
+    def concrete(region, values):
+        area = dict(zip(("row", "col", "rows", "cols"),
+                        [eval_expr(x, values) for x in
+                         (*region["offsets"], *region["extents"])]))
+        shape = [int(v) for v in region["buffer"].shape]
+        if (len(shape) != 2 or area["row"] < 0 or area["col"] < 0 or
+                area["rows"] <= 0 or area["cols"] <= 0 or
+                area["row"] + area["rows"] > shape[0] or
+                area["col"] + area["cols"] > shape[1]):
+            reject(RK_E_SHAPE, "simple staged region is outside its actual buffer; implicit tail clipping is not supported",
+                   stage="frontend", actual=area, required=shape)
+        return area
+
+    def parameter(buffer):
+        return next((p for p in params if _same_buffer(p, buffer)), None)
+
+    tasks = []
+    gemm_info = output_name = input_a = input_b = None
     for combo in itertools.product(*[range(e) for e in extents]):
-        last_gemm_task = None
         values = {loop.loop_var: tirx.IntImm("int32", idx)
                   for loop, idx in zip(blocks, combo)}
-        for item in calls:
-            name = _op_name(item.node)
-            regions = rknpu_pass._region_exprs(item.node)
+        # Identity -> current source producer, updated at the actual effect.
+        producers = {}
+        for item in stage_items:
+            call = item.node
+            name = _op_name(call)
+            if name in {"tl.tileop.fill", "tl.tileop.copy"} and len(call.args) != 2:
+                reject(RK_E_UNSUPPORTED, "simple staged fill/copy has an unsupported signature",
+                       stage="frontend", actual=str(call))
+            masks = ({"tl.tileop.fill": (2,), "tl.tileop.copy": (1, 2),
+                      "tl.tileop.gemm": (1, 1, 3)})[name]
+            fields = (rknpu_pass._validate_gemm_call_fields(call)
+                      if name == "tl.tileop.gemm" else None)
+            # Reuse mask, predicate, rank and static-extent checks on the real
+            # argument positions, then the common whole-tile proof locally.
+            for arg, mask in zip(call.args, masks):
+                _region(arg, tirx, "simple staged tile region", expect_mask=mask)
+            regions = rknpu_pass._region_exprs(call)
+            if len(regions) != len(masks):
+                reject(RK_E_UNSUPPORTED, "simple staged operation has unconsumed regions",
+                       stage="frontend", actual=str(call))
+            areas = [concrete(reg, values) for reg in regions]
             if name == "tl.tileop.fill":
                 reg = regions[0]
-                tasks.append({
-                    "kind": "fill",
-                    "destination": str(reg["buffer"].name),
-                    "value": eval_expr(item.node.args[1], values),
-                    "region": {"row": eval_expr(reg["offsets"][0], values),
-                               "col": eval_expr(reg["offsets"][1], values),
-                               "rows": eval_expr(reg["extents"][0], values),
-                               "cols": eval_expr(reg["extents"][1], values)},
-                })
+                if parameter(reg["buffer"]) is not None:
+                    reject(RK_E_UNSUPPORTED, "simple staged fill cannot update a global parameter",
+                           stage="frontend", actual=str(reg["buffer"].name))
+                rknpu_pass._require_whole_region(reg, reg["buffer"], role="simple fill")
+                tasks.append({"kind": "fill", "ordinal": len(tasks),
+                              "destination": str(reg["buffer"].name),
+                              "value": eval_expr(call.args[1], values), "region": areas[0]})
+                producers.pop(reg["buffer"], None)
             elif name == "tl.tileop.copy":
-                src_reg, dst_reg = regions[0], regions[1]
+                src_reg, dst_reg = regions
                 src, dst = src_reg["buffer"], dst_reg["buffer"]
-                source_region = {"row": eval_expr(src_reg["offsets"][0], values),
-                                 "col": eval_expr(src_reg["offsets"][1], values),
-                                 "rows": eval_expr(src_reg["extents"][0], values),
-                                 "cols": eval_expr(src_reg["extents"][1], values)}
-                destination_region = {
-                    "row": eval_expr(dst_reg["offsets"][0], values),
-                    "col": eval_expr(dst_reg["offsets"][1], values),
-                    "rows": eval_expr(dst_reg["extents"][0], values),
-                    "cols": eval_expr(dst_reg["extents"][1], values)}
-                dest_param = next((p for p in params if _same_buffer(p, dst)), None)
-                if dest_param is not None:
+                sr, dr = areas
+                if (sr["rows"], sr["cols"]) != (dr["rows"], dr["cols"]):
+                    reject(RK_E_SHAPE, "staged copy region extents differ", stage="frontend")
+                for reg in regions:
+                    if parameter(reg["buffer"]) is None:
+                        rknpu_pass._require_whole_region(reg, reg["buffer"], role="simple local copy")
+                task = {"kind": "copy", "ordinal": len(tasks), "source": str(src.name),
+                        "destination": str(dst.name), "source_region": sr, "destination_region": dr}
+                if parameter(dst) is not None:
+                    origin = producers.get(src)
+                    if origin is None or origin["kind"] != "gemm":
+                        reject(RK_E_SHAPE, "simple staged store has no current GEMM producer",
+                               stage="frontend", actual=str(src.name))
+                    computation = origin["task"]
+                    # A store publishes this value; it cannot shrink or relocate
+                    # the computation implicitly.  No tail/subview fusion here.
+                    if (dr["row"], dr["col"], dr["rows"], dr["cols"]) != (
+                            computation["m0"], computation["n0"], computation["rows"], computation["cols"]):
+                        reject(RK_E_UNSUPPORTED, "simple staged store does not publish the proved GEMM region",
+                               stage="frontend", actual=dr)
                     output_name = str(dst.name)
-                    if last_gemm_task is not None:
-                        last_gemm_task["m0"] = destination_region["row"]
-                        last_gemm_task["n0"] = destination_region["col"]
-                    tasks.append({"kind": "store", "source": str(src.name),
-                                  "destination": str(dst.name),
-                                  "source_region": source_region,
-                                  "destination_region": destination_region,
-                                  "m0": destination_region["row"],
-                                  "n0": destination_region["col"],
-                                  "rows": destination_region["rows"],
-                                  "cols": destination_region["cols"]})
+                    task.update(kind="store", m0=dr["row"], n0=dr["col"],
+                                rows=dr["rows"], cols=dr["cols"])
+                elif parameter(src) is not None:
+                    producers[dst] = {"kind": "copy", "task": task, "buffer": src}
                 else:
-                    source_param = next((p for p in params
-                                         if _same_buffer(p, src)), None)
-                    if source_param is not None:
-                        copy_sources.append(str(src.name))
-                    tasks.append({"kind": "copy", "source": str(src.name),
-                                  "destination": str(dst.name),
-                                  "source_region": source_region,
-                                  "destination_region": destination_region})
-            elif name == "tl.tileop.gemm":
-                a_reg, b_reg, c_reg = regions[0], regions[1], regions[2]
-                gemm_info = {
-                    "tiles": [str(a_reg["buffer"].name),
-                              str(b_reg["buffer"].name),
-                              str(c_reg["buffer"].name)],
-                    "m0": eval_expr(a_reg["offsets"][0], values),
-                    "n0": eval_expr(b_reg["offsets"][1], values),
-                    "rows": eval_expr(c_reg["extents"][0], values),
-                    "cols": eval_expr(c_reg["extents"][1], values),
-                    "k0": eval_expr(a_reg["offsets"][1], values),
-                    "kt": eval_expr(a_reg["extents"][1], values),
-                }
-                last_gemm_task = {"kind": "gemm", **gemm_info}
-                tasks.append(last_gemm_task)
+                    origin = producers.get(src)
+                    if origin is not None:
+                        producers[dst] = origin
+                    else:
+                        producers.pop(dst, None)  # The consumer proves zero-copy states.
+                tasks.append(task)
+            else:
+                for reg in regions:
+                    rknpu_pass._require_whole_region(reg, reg["buffer"], role="simple GEMM")
+                ar, br, cr = areas
+                if [str(reg["buffer"].dtype) for reg in regions] != ["float16", "float16", "float32"]:
+                    reject(RK_E_NUMERIC_CONTRACT, "simple staged GEMM requires FP16 operands and an FP32 accumulator",
+                           stage="frontend")
+                m, n, k = fields["shape"]
+                if (ar["rows"], ar["cols"], br["rows"], br["cols"], cr["rows"], cr["cols"]) != (m, k, k, n, m, n):
+                    reject(RK_E_SHAPE, "simple staged GEMM fields disagree with A/B/C regions",
+                           stage="frontend", actual=areas, required=fields["shape"])
+                if not (0 < m <= 256 and 0 < n <= 256 and 0 < k <= 256):
+                    reject(RK_E_UNSUPPORTED, "simple staged GEMM requires one supported tile",
+                           stage="frontend", actual=fields["shape"])
+                origins = [producers.get(reg["buffer"]) for reg in regions[:2]]
+                if any(origin is None or origin["kind"] != "copy" for origin in origins):
+                    reject(RK_E_SHAPE, "simple GEMM operand has no current parameter copy producer",
+                           stage="frontend")
+                for use, origin in zip(("A", "B"), origins):
+                    producer = origin["task"]
+                    uses = producer.setdefault("operand_uses", [])
+                    if uses and use not in uses:
+                        reject(RK_E_UNSUPPORTED, "one staging copy cannot supply incompatible GEMM layouts",
+                               stage="frontend")
+                    if use not in uses:
+                        uses.append(use)
+                a_copy, b_copy = [origin["task"] for origin in origins]
+                a_source, b_source = a_copy["source_region"], b_copy["source_region"]
+                input_a, input_b = [origin["buffer"] for origin in origins]
+                if (a_source["col"] != 0 or b_source["row"] != 0 or
+                        int(input_a.shape[1]) != k or int(input_b.shape[0]) != k):
+                    reject(RK_E_UNSUPPORTED, "simple staged GEMM requires the copied full K region",
+                           stage="frontend")
+                gemm_info = {"kind": "gemm", "ordinal": len(tasks),
+                             "tiles": [str(reg["buffer"].name) for reg in regions],
+                             "gemm_regions": dict(zip(("a", "b", "c"), areas)),
+                             "gemm_fields": fields,
+                             "operand_producers": [a_copy["ordinal"], b_copy["ordinal"]],
+                             "m0": a_source["row"], "n0": b_source["col"],
+                             "rows": m, "cols": n, "k0": 0, "kt": k}
+                tasks.append(gemm_info)
+                producers[regions[2]["buffer"]] = {"kind": "gemm", "task": gemm_info}
     if gemm_info is None or output_name is None:
-        reject(RK_E_SHAPE,
-                     "simple staged GEMM has no GEMM/output store",
-                     stage="frontend")
-    output_value = next(v for v in params if str(v.name) == output_name)
-    input_name = copy_sources[0] if copy_sources else ""
-    input_value = next(v for v in params if str(v.name) == input_name)
-    constants = []
-    for name in copy_sources[1:]:
-        if name not in constants:
-            constants.append(name)
-    writes = [t for t in tasks if t.get("kind") == "store"]
-    return {
-        "index": stage_index, "source_nodes": len(stage_items),
-        "operand_a": input_name, "operand_b": constants[0] if constants else "",
-        "opcode": "matmul",
-        "op_inputs": [input_name] + ([constants[0]] if constants else []),
-        "output_name": output_name,
-        "logical_m": int(output_value.shape[0]),
-        "logical_k": int(input_value.shape[1]),
-        "logical_n": int(output_value.shape[1]),
-        "tile_m": gemm_info["rows"], "tile_n": gemm_info["cols"],
-        "order": "m_major", "tasks": tasks, "global_writes": writes,
-        "global_reads": [t for t in tasks if t.get("kind") == "copy"],
-        "boundary": "kernel_launch",
-    }
+        reject(RK_E_SHAPE, "simple staged GEMM has no GEMM/output store", stage="frontend")
+    output_value = next(p for p in params if str(p.name) == output_name)
+    return {"index": stage_index, "source_nodes": len(stage_items),
+            "operand_a": str(input_a.name), "operand_b": str(input_b.name),
+            "opcode": "matmul", "op_inputs": [str(input_a.name), str(input_b.name)],
+            "output_name": output_name, "logical_m": int(output_value.shape[0]),
+            "logical_k": int(input_a.shape[1]), "logical_n": int(output_value.shape[1]),
+            "tile_m": gemm_info["rows"], "tile_n": gemm_info["cols"], "order": "m_major",
+            "tasks": tasks, "global_writes": [t for t in tasks if t["kind"] == "store"],
+            "global_reads": [t for t in tasks if t["kind"] == "copy"],
+            "boundary": "kernel_launch"}
 
 
 launch_map: dict[int, dict[Any, Any]] = {}

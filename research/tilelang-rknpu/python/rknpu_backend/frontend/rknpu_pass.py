@@ -1184,6 +1184,70 @@ def _validate_declarations(declared: list[dict], *, tile_m: int, tile_n: int,
     return consumed
 
 
+def _validate_gemm_call_fields(call: Any) -> dict[str, Any]:
+    """Consume the existing non-transposed accumulating GEMM call contract."""
+    if len(call.args) != 13:
+        reject(RK_E_UNSUPPORTED,
+               "the tile GEMM call must use its complete consumed "
+               "argument signature", stage="pass",
+               actual=len(call.args), required=13)
+    transpose_a = _known_const(call.args[3])
+    transpose_b = _known_const(call.args[4])
+    if transpose_a not in (0, 1) or transpose_b not in (0, 1):
+        reject(RK_E_UNSUPPORTED,
+               "tile GEMM transpose flags must be statically known",
+               stage="pass",
+               actual={"transpose_a": str(call.args[3]),
+                       "transpose_b": str(call.args[4])})
+    if transpose_a or transpose_b:
+        reject(RK_E_UNSUPPORTED,
+               "tile GEMM transposition is not supported",
+               stage="pass",
+               actual={"transpose_a": transpose_a,
+                       "transpose_b": transpose_b})
+    gemm_shape = tuple(_known_const(call.args[index])
+                       for index in (5, 6, 7))
+    if any(value is None for value in gemm_shape):
+        reject(RK_E_UNSUPPORTED,
+               "tile GEMM geometry must be statically known",
+               stage="pass",
+               actual=[str(call.args[index]) for index in (5, 6, 7)])
+    clear_accum = _known_const(call.args[9])
+    if clear_accum not in (0, 1):
+        reject(RK_E_UNSUPPORTED,
+               "tile GEMM clear_accum must be statically known",
+               stage="pass", actual=str(call.args[9]))
+    if clear_accum:
+        reject(RK_E_UNSUPPORTED,
+               "tile GEMM clear_accum is not supported: the pass "
+               "chain proves one accumulating K chain",
+               stage="pass", actual={"clear_accum": clear_accum})
+    barrier = call.args[10]
+    barrier_value = None if barrier is None else _known_const(barrier)
+    if barrier is not None and barrier_value != 0:
+        reject(RK_E_UNSUPPORTED,
+               "a tile GEMM barrier argument is not supported",
+               stage="pass", actual=str(barrier))
+    coords = tuple(_known_const(call.args[index]) for index in (11, 12))
+    if any(value is None for value in coords):
+        reject(RK_E_UNSUPPORTED,
+               "tile GEMM accumulate coordinates must be "
+               "statically known", stage="pass",
+               actual=[str(call.args[index]) for index in (11, 12)])
+    if any(value != 0 for value in coords):
+        reject(RK_E_UNSUPPORTED,
+               "tile GEMM accumulate coordinates are not supported",
+               stage="pass", actual=list(coords))
+    policy = _known_const(call.args[8])
+    if policy != 0:
+        reject(RK_E_UNSUPPORTED,
+               "tile GEMM policy is not the supported default",
+               stage="pass", actual=str(call.args[8]), required=0)
+    return {"shape": gemm_shape, "relaxed": {"policy": policy, "coords": coords},
+            "transpose_a": transpose_a, "transpose_b": transpose_b,
+            "clear_accum": clear_accum, "barrier": barrier_value}
+
+
 def pass_localise(prim_func: Any, *,
                   source_declarations: list[dict] | None = None,
                   source_hints: list[dict] | None = None
@@ -1287,66 +1351,8 @@ def pass_localise(prim_func: Any, *,
                 if gemm is not None:
                     reject(RK_E_SHAPE, "one tile GEMM per K iteration",
                            stage="pass")
-                if len(call.args) != 13:
-                    reject(RK_E_UNSUPPORTED,
-                           "the tile GEMM call must use its complete consumed "
-                           "argument signature", stage="pass",
-                           actual=len(call.args), required=13)
-                transpose_a = _known_const(call.args[3])
-                transpose_b = _known_const(call.args[4])
-                if transpose_a not in (0, 1) or transpose_b not in (0, 1):
-                    reject(RK_E_UNSUPPORTED,
-                           "tile GEMM transpose flags must be statically known",
-                           stage="pass",
-                           actual={"transpose_a": str(call.args[3]),
-                                   "transpose_b": str(call.args[4])})
-                if transpose_a or transpose_b:
-                    reject(RK_E_UNSUPPORTED,
-                           "tile GEMM transposition is not supported",
-                           stage="pass",
-                           actual={"transpose_a": transpose_a,
-                                   "transpose_b": transpose_b})
-                gemm_shape = tuple(_known_const(call.args[index])
-                                   for index in (5, 6, 7))
-                if any(value is None for value in gemm_shape):
-                    reject(RK_E_UNSUPPORTED,
-                           "tile GEMM geometry must be statically known",
-                           stage="pass",
-                           actual=[str(call.args[index]) for index in (5, 6, 7)])
-                clear_accum = _known_const(call.args[9])
-                if clear_accum not in (0, 1):
-                    reject(RK_E_UNSUPPORTED,
-                           "tile GEMM clear_accum must be statically known",
-                           stage="pass", actual=str(call.args[9]))
-                if clear_accum:
-                    reject(RK_E_UNSUPPORTED,
-                           "tile GEMM clear_accum is not supported: the pass "
-                           "chain proves one accumulating K chain",
-                           stage="pass", actual={"clear_accum": clear_accum})
-                barrier = call.args[10]
-                barrier_value = None if barrier is None else _known_const(barrier)
-                if barrier is not None and barrier_value != 0:
-                    reject(RK_E_UNSUPPORTED,
-                           "a tile GEMM barrier argument is not supported",
-                           stage="pass", actual=str(barrier))
-                coords = tuple(_known_const(call.args[index]) for index in (11, 12))
-                if any(value is None for value in coords):
-                    reject(RK_E_UNSUPPORTED,
-                           "tile GEMM accumulate coordinates must be "
-                           "statically known", stage="pass",
-                           actual=[str(call.args[index]) for index in (11, 12)])
-                if any(value != 0 for value in coords):
-                    reject(RK_E_UNSUPPORTED,
-                           "tile GEMM accumulate coordinates are not supported",
-                           stage="pass", actual=list(coords))
-                policy = _known_const(call.args[8])
-                if policy != 0:
-                    reject(RK_E_UNSUPPORTED,
-                           "tile GEMM policy is not the supported default",
-                           stage="pass", actual=str(call.args[8]), required=0)
-                gemm = {"regions": regions, "position": position,
-                        "shape": gemm_shape,
-                        "relaxed": {"policy": policy, "coords": coords}}
+                fields = _validate_gemm_call_fields(call)
+                gemm = {"regions": regions, "position": position, **fields}
             elif role == "fill":
                 if len(call.args) != 2:
                     reject(RK_E_UNSUPPORTED,
