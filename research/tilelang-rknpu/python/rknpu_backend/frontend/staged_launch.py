@@ -738,7 +738,8 @@ def two_stage_chain(prim_func: Any, *, options: Any,
                     }
         declared = schedules[index] if index < len(schedules) else None
         if declared is not None:
-            _apply_stage_order(stage, str(declared.get("order", "m_major")))
+            _apply_stage_order(stage, str(declared.get("order", "m_major")),
+                               params)
             actual = (int(stage.get("tile_m", 0)),
                       int(stage.get("tile_n", 0)), stage.get("order"))
             expected = (int(declared.get("tile_m", 0)),
@@ -822,7 +823,8 @@ def _launch_output_shape(launch: Any, params: list[Any]):
     return None
 
 
-def _apply_stage_order(stage: dict[str, Any], order: str) -> None:
+def _apply_stage_order(stage: dict[str, Any], order: str,
+                       params: list[Any]) -> None:
     tasks = list(stage["tasks"])
     groups = []
     current = []
@@ -840,6 +842,8 @@ def _apply_stage_order(stage: dict[str, Any], order: str) -> None:
         reject(RK_E_UNSUPPORTED,
                "the declared task traversal is not applicable to this "
                "staged launch", stage="frontend", actual=len(groups))
+    stage["reorder_proof"] = _prove_stage_group_reorder(
+        stage, groups, params)
     if order == "n_major":
         groups.sort(key=lambda group: (int(group[-1]["m0"]),
                                        int(group[-1]["n0"])))
@@ -852,6 +856,93 @@ def _apply_stage_order(stage: dict[str, Any], order: str) -> None:
                               if t.get("kind") == "store"]
     stage["global_reads"] = [dict(t) for t in stage["tasks"]
                              if t.get("kind") == "copy"]
+
+
+def _prove_stage_group_reorder(stage: dict[str, Any],
+                               groups: list[list[dict[str, Any]]],
+                               params: list[Any]) -> dict[str, Any]:
+    """Prove that the task groups are closed and can be reordered.
+
+    This is intentionally local to the already-lowered task stream: no source
+    alias analysis is introduced.  A group is one output tile; all local values
+    it reads must be established inside that same group, and no group may read a
+    global value written by another group of the same launch.
+    """
+    if not groups or any(not group for group in groups):
+        reject(RK_E_UNSUPPORTED, "staged reorder has an empty task group",
+               stage="frontend")
+    param_names = {str(param.name) for param in params}
+    stores = []
+    global_writes = set()
+    for group in groups:
+        ends = [task for task in group if task.get("kind") == "store"]
+        if len(ends) != 1 or ends[0] is not group[-1]:
+            reject(RK_E_UNSUPPORTED,
+                   "a reorderable task group must end in exactly one store",
+                   stage="frontend", actual=len(ends))
+        store = ends[0]
+        if any(store.get(key) is None for key in ("m0", "n0", "rows", "cols")):
+            reject(RK_E_UNSUPPORTED,
+                   "a reorderable store needs a static tile region",
+                   stage="frontend")
+        destination = str(store.get("destination"))
+        global_writes.add(destination)
+        stores.append((destination, int(store["m0"]), int(store["n0"]),
+                       int(store["rows"]), int(store["cols"])))
+    for index, first in enumerate(stores):
+        for second in stores[index + 1:]:
+            if first[0] != second[0]:
+                continue
+            if not (first[1] + first[3] <= second[1] or
+                    second[1] + second[3] <= first[1] or
+                    first[2] + first[4] <= second[2] or
+                    second[2] + second[4] <= first[2]):
+                reject(RK_E_UNSUPPORTED,
+                       "staged output tile groups overlap", stage="frontend",
+                       actual={"first": list(first),
+                               "second": list(second)})
+    local_names = set()
+    for group in groups:
+        established = set()
+        for task in group:
+            kind = task.get("kind")
+            if kind == "fill":
+                destination = str(task.get("destination"))
+                if destination not in param_names:
+                    local_names.add(destination)
+                    established.add(destination)
+            elif kind == "copy":
+                source = str(task.get("source"))
+                destination = str(task.get("destination"))
+                if source in global_writes:
+                    reject(RK_E_UNSUPPORTED,
+                           "a staged group reads a global written by another "
+                           "group", stage="frontend",
+                           actual={"source": source})
+                if source not in param_names and source not in established:
+                    reject(RK_E_UNSUPPORTED,
+                           "a staged group reads a local value before it is "
+                           "established", stage="frontend",
+                           actual={"source": source})
+                if destination not in param_names:
+                    local_names.add(destination)
+                    established.add(destination)
+            elif kind in {"sigmoid", "mul", "add", "silu", "gemm"}:
+                output = task.get("output")
+                if output is not None and str(output) not in param_names:
+                    local_names.add(str(output))
+                    established.add(str(output))
+            elif kind == "store":
+                source = str(task.get("source"))
+                if source not in param_names and source not in established:
+                    reject(RK_E_UNSUPPORTED,
+                           "a staged group stores an unestablished local "
+                           "value", stage="frontend", actual={"source": source})
+    return {"groups": len(groups), "local_buffers": sorted(local_names),
+            "global_writes": sorted(global_writes),
+            "store_regions_disjoint": True,
+            "local_values_group_local": True,
+            "launch_local": True}
 
 
 def _source_block_m(launch: Any, *, logical_m: int, logical_n: int,

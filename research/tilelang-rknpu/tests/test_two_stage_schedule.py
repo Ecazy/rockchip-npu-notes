@@ -205,6 +205,21 @@ class TwoStageScheduleTests(unittest.TestCase):
         plan = self.compile(m=256, bm0=128, bm1=128).plan
         self.assertEqual(plan.accounting.task_count, 30)
 
+    def test_reorder_groups_are_closed_and_launch_local(self):
+        from rknpu_backend.frontend import staged_launch
+        from rknpu_backend import CompileOptions
+
+        prim = self.fixture.make_two_stage(m=512, bm0=128, bm1=128,
+                                           order0="n_major")
+        chain = staged_launch.two_stage_chain(
+            prim, options=CompileOptions(numeric_mode="rk_f16_tiled"),
+            schedules=staged_launch.schedules_from_attrs(prim, 2))
+        proof = chain["stages"][0]["reorder_proof"]
+        self.assertEqual(proof["groups"], 12)
+        self.assertTrue(proof["store_regions_disjoint"])
+        self.assertTrue(proof["local_values_group_local"])
+        self.assertTrue(proof["launch_local"])
+
     def test_declared_mn_order_changes_task_traversal(self):
         from rknpu_backend.frontend import staged_launch
         from rknpu_backend import CompileOptions
