@@ -455,7 +455,7 @@ def _validate_call_positions(prim_func: Any) -> dict[str, Any]:
                 if not _op_name(child).endswith("sigmoid"):
                     reject(RK_E_UNSUPPORTED,
                            "a store value contains a call expression with no "
-                           "lowering consumer", stage="pass",
+                           "lowering consumer: " + _op_name(child), stage="pass",
                            actual={"call": str(child)})
             allowed.extend(nested)
 

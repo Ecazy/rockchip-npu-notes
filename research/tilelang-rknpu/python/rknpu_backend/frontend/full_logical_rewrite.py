@@ -401,7 +401,34 @@ def _statement_effects(node: Any) -> tuple[tuple[Any, ...], tuple[Any, ...]]:
 
 def locate_full_logical_source(prim_func: Any) -> LocatedFullLogical:
     """Return actual ordered statements, GEMM anchor and read/write relations."""
+    from . import rknpu_pass
+    rknpu_pass._validate_call_positions(prim_func)
+    rknpu_pass._validate_container_semantics(prim_func)
     nodes = _source_tile_nodes(prim_func)
+    gemm_regions = _region_exprs(nodes["gemm"].value)
+    if len(gemm_regions) != 3:
+        reject(RK_E_SHAPE, "a GEMM must name three regions", stage="rewrite")
+    for role, region in zip(("A", "B", "C"), gemm_regions):
+        shape = tuple(int(v) for v in region["buffer"].shape)
+        if tuple(int(v) for v in region["extents"]) != shape:
+            reject(RK_E_SHAPE,
+                   "the original GEMM region must cover its full tile buffer",
+                   stage="rewrite", actual={"operand": role,
+                                            "region": list(region["extents"]),
+                                            "buffer": list(shape)})
+    fill_region = _region_exprs(nodes["fill"].value)[0]
+    fill_shape = tuple(int(v) for v in fill_region["buffer"].shape)
+    if tuple(int(v) for v in fill_region["extents"]) != fill_shape:
+        reject(RK_E_SHAPE,
+               "the original accumulator fill must cover the full tile",
+               stage="rewrite", actual={"region": list(fill_region["extents"]),
+                                        "buffer": list(fill_shape)})
+    if not _same_buffer(fill_region["buffer"],
+                        gemm_regions[2]["buffer"]):
+        reject(RK_E_SHAPE,
+               "the original fill and GEMM accumulator must be the same buffer",
+               stage="rewrite")
+    rknpu_pass._validate_gemm_call_fields(nodes["gemm"].value)
     statements = _ordered_statements(nodes["root"].body)
     gemm_index = next((index for index, statement in enumerate(statements)
                        if statement.same_as(nodes["gemm"])), None)
@@ -1378,11 +1405,15 @@ def rewrite_k_loop_tir(prim_func: Any, *, options: Any,
                "the K-loop lowering does not apply submit regrouping",
                stage="frontend", actual=options.linear_group_n_tiles)
     _validate_policy(prim_func, options)
+    from . import rknpu_pass
+    rknpu_pass._validate_call_positions(prim_func)
+    rknpu_pass._validate_container_semantics(prim_func)
     structure = _k_loop_structure(prim_func)
     if structure is None:
         reject(RK_E_SHAPE,
                "the source is not one of the migrated unguarded K-loop forms",
                stage="frontend")
+    rknpu_pass._validate_gemm_call_fields(structure["gemm"].value)
     if any(type(inner).__name__ == "BufferStore"
            for _, inner in _walk(prim_func.body)):
         reject(RK_E_UNSUPPORTED,
@@ -1947,10 +1978,69 @@ def _prove_loop_store(prim_func: Any, store: Any) -> tuple[dict[str, int], list[
             variables)
 
 
+def _validate_local_buffer(buffer: Any, *, require_f16: bool = False) -> None:
+    shape = tuple(int(v) for v in buffer.shape)
+    dtype = str(buffer.dtype)
+    if len(shape) != 2 or dtype not in {"float16", "float32"} or             (require_f16 and dtype != "float16"):
+        reject(RK_E_NUMERIC_CONTRACT,
+               "local dataflow requires rank-2 FP16/FP32 accumulator buffers",
+               stage="rewrite", actual={"name": str(buffer.name),
+                                        "shape": shape,
+                                        "dtype": str(buffer.dtype)})
+    strides = getattr(buffer, "strides", None)
+    if strides:
+        compact = (shape[1], 1)
+        values = tuple(_const(v) for v in strides)
+        if values != compact:
+            reject(RK_E_UNSUPPORTED,
+                   "local dataflow requires compact rank-2 strides",
+                   stage="rewrite", actual={"name": str(buffer.name),
+                                            "strides": list(values),
+                                            "expected": list(compact)})
+    elem_offset = getattr(buffer, "elem_offset", None)
+    if elem_offset is not None and _const(elem_offset) not in (0, None):
+        reject(RK_E_UNSUPPORTED,
+               "local dataflow requires zero elem_offset",
+               stage="rewrite", actual={"name": str(buffer.name),
+                                        "elem_offset": str(elem_offset)})
+
+
+def _validate_local_source(prim_func: Any) -> None:
+    from . import rknpu_pass
+    attrs = dict(getattr(prim_func, "attrs", {}) or {})
+    if any(str(key).startswith("rknpu.") for key in attrs):
+        reject(RK_E_UNSUPPORTED,
+               "local dataflow does not apply rknpu schedule declarations",
+               stage="rewrite", actual=sorted(attrs))
+    rknpu_pass._validate_call_positions(prim_func)
+    allowed = {"tl.tileop.fill", "tl.tileop.copy", "tl.tileop.gemm"}
+    for _, node in _walk(prim_func.body):
+        kind = type(node).__name__
+        if kind == "IfThenElse":
+            reject(RK_E_UNSUPPORTED,
+                   "conditional execution is not consumed by local dataflow",
+                   stage="rewrite")
+        if kind == "Evaluate":
+            name = _op_name(node.value)
+            if name not in allowed and not name.endswith("call_extern"):
+                reject(RK_E_UNSUPPORTED,
+                       "local dataflow has no consumer for this call",
+                       stage="rewrite", actual=name)
+        if kind in {"BufferLoad", "BufferStore"}:
+            if not _predicate_true(getattr(node, "predicate", None)):
+                reject(RK_E_UNSUPPORTED,
+                       "predicated loads/stores are not consumed by local "
+                       "dataflow", stage="rewrite")
+            _validate_local_buffer(node.buffer)
+    for param in (getattr(prim_func, "buffer_map", None) or {}).values():
+        _validate_local_buffer(param, require_f16=True)
+
+
 def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
                     name: str = "rknpu-ffn-dataflow") -> DataflowRewrite:
     """Rewrite actual statements into region-carrying ordered target calls."""
     from .. import ir
+    _validate_local_source(prim_func)
     params = list((getattr(prim_func, "buffer_map", None) or {}).values())
     gemms = [node for _, node in _walk(prim_func.body)
              if type(node).__name__ == "Evaluate" and
@@ -2247,6 +2337,8 @@ def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
                          destination_region["rows"], destination_region["cols"])
                 continue
             if name == "tl.tileop.gemm":
+                from . import rknpu_pass
+                rknpu_pass._validate_gemm_call_fields(call)
                 regions = _region_exprs(call)
                 a_token = token_for(regions[0]["buffer"])
                 b_token = token_for(regions[1]["buffer"])
@@ -2380,6 +2472,11 @@ def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
             if len(loads) != 2:
                 reject(RK_E_UNSUPPORTED, "add must read two values",
                        stage="rewrite")
+            if str(store.buffer.dtype) != "float16" or any(
+                    str(load.buffer.dtype) != "float16" for load in loads):
+                reject(RK_E_NUMERIC_CONTRACT,
+                       "add must consume and produce FP16 without an implicit "
+                       "narrowing", stage="rewrite")
             load_kinds = [_classify_store_load(load, [region["rows"],
                                                       region["cols"]],
                                                loop_vars)

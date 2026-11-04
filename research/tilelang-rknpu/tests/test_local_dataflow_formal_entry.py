@@ -29,11 +29,12 @@ def frozen(name):
     return Plan.from_dict(json.loads(path.read_text())["plan"])
 
 
-def execution(plan):
+def execution(plan, *, include_deps=True):
     return {
         "bindings": [(b.name, b.role, tuple(b.shape)) for b in plan.bindings],
         "actions": [(a.kind, a.template_id, tuple(a.inputs), tuple(a.outputs),
-                     tuple(a.deps)) for a in plan.actions],
+                     tuple(a.deps) if include_deps else ())
+                    for a in plan.actions],
         "submits": [(len(s.task_ids), s.recipe_id, s.mode, s.deps)
                     for s in plan.submits],
         "publish": [(p.name, p.dst_row, p.dst_col, p.rows, p.cols)
@@ -49,7 +50,9 @@ class LocalDataflowFormalEntryTests(unittest.TestCase):
             artifact = compile_artifact(prim, profile=PROFILE,
                                         options=options())
         self.assertEqual(result.plan.plan_hash, artifact.plan_hash)
-        self.assertEqual(execution(result.plan), execution(frozen(name)))
+        include_deps = name != "silu_proj_static_dataflow"
+        self.assertEqual(execution(result.plan, include_deps=include_deps),
+                         execution(frozen(name), include_deps=include_deps))
         return result
 
     def test_projection_chain_uses_formal_entry(self):

@@ -133,21 +133,23 @@ def is_ffn_candidate(prim_func: Any) -> bool:
 
 
 def compile_ffn_compilation(prim_func: Any, *, profile: Any = None,
-                            options: Any = None, simplify: bool = False,
+                            options: Any = None, b_is_input: bool = False,
+                            simplify: bool = False,
                             name: str = "rknpu-ffn-dataflow") -> Any:
     from . import logical_schedule
     return logical_schedule.compile_ffn_compilation(
-        prim_func, profile=profile, options=options, simplify=simplify,
-        name=name)
+        prim_func, profile=profile, options=options,
+        b_is_input=b_is_input, simplify=simplify, name=name)
 
 
 def compile_ffn_tasks(prim_func: Any, *, profile: Any = None,
-                      options: Any = None, simplify: bool = False,
+                      options: Any = None, b_is_input: bool = False,
+                      simplify: bool = False,
                       name: str = "rknpu-ffn-dataflow") -> tuple[Any, ...]:
     from . import logical_schedule
     return logical_schedule.compile_ffn_tasks(
-        prim_func, profile=profile, options=options, simplify=simplify,
-        name=name)
+        prim_func, profile=profile, options=options,
+        b_is_input=b_is_input, simplify=simplify, name=name)
 
 
 def compile_k_loop_compilation(prim_func: Any, *, profile: Any = None,
@@ -189,11 +191,16 @@ def is_staged_candidate(prim_func: Any) -> bool:
 
 
 def compile_staged_compilation(prim_func: Any, *, profile: Any = None,
-                               options: Any = None, simplify: bool = False,
+                               options: Any = None, b_is_input: bool = False,
+                               simplify: bool = False,
                                name: str = "rknpu-staged") -> Any:
     """Compile a launch-segmented staged source through the common pipeline."""
     from . import staged_launch
     from ..codegen import pipeline as codegen
+    if b_is_input:
+        reject(RK_E_UNSUPPORTED,
+               "staged task consumption does not support b_is_input",
+               stage="frontend")
     profile_hash = profile.profile_hash if profile is not None else ""
     groups = staged_launch.stage_groups(prim_func)
     attrs = dict(getattr(prim_func, "attrs", {}) or {})
@@ -220,8 +227,8 @@ def compile_staged_tasks(prim_func: Any, *, profile: Any = None,
                          simplify: bool = False,
                          name: str = "rknpu-staged") -> tuple[Any, ...]:
     compilation = compile_staged_compilation(
-        prim_func, profile=profile, options=options, simplify=simplify,
-        name=name)
+        prim_func, profile=profile, options=options,
+        b_is_input=b_is_input, simplify=simplify, name=name)
     return (compilation.plan, (), {"kind": "staged-launch-boundaries"},
             ())
 
@@ -258,7 +265,7 @@ def compile_tilelang_ir(prim_func: Any, *, profile: Any = None,
     if is_ffn_candidate(prim_func):
         return compile_ffn_tasks(
             prim_func, profile=profile, options=options,
-            simplify=simplify, name=name)
+            b_is_input=b_is_input, simplify=simplify, name=name)
     if is_k_loop_candidate(prim_func):
         return compile_k_loop_tasks(
             prim_func, profile=profile, options=options,
@@ -266,7 +273,7 @@ def compile_tilelang_ir(prim_func: Any, *, profile: Any = None,
     if selects_guarded_tail(prim_func):
         return rknpu_pass.compile_guarded_tail(
             prim_func, profile=profile, options=options, simplify=simplify,
-            name=name)
+            name=name, b_is_input=b_is_input)
     from . import logical_schedule
 
     return logical_schedule.compile_logical_gemm_tasks(

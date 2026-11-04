@@ -205,8 +205,13 @@ def _annotate_provenance(lowering: Any, result: Any) -> None:
 
 
 def compile_ffn_tasks(prim_func: Any, *, profile: Any = None,
-                     options: Any = None, simplify: bool = False,
+                     options: Any = None, b_is_input: bool = False,
+                     simplify: bool = False,
                      name: str = "rknpu-ffn-dataflow") -> tuple[Any, ...]:
+    if b_is_input:
+        reject(RK_E_UNSUPPORTED,
+               "local dataflow does not support b_is_input",
+               stage="frontend")
     """Compile the local SwiGLU dataflow from ordered target tasks."""
     if simplify:
         reject(RK_E_UNSUPPORTED,
@@ -235,8 +240,13 @@ def compile_ffn_tasks(prim_func: Any, *, profile: Any = None,
 
 
 def compile_ffn_compilation(prim_func: Any, *, profile: Any = None,
-                            options: Any = None, simplify: bool = False,
+                            options: Any = None, b_is_input: bool = False,
+                            simplify: bool = False,
                             name: str = "rknpu-ffn-dataflow") -> Any:
+    if b_is_input:
+        reject(RK_E_UNSUPPORTED,
+               "local dataflow does not support b_is_input",
+               stage="frontend")
     """Return the task-chain Compilation for the local SwiGLU dataflow."""
     if simplify:
         reject(RK_E_UNSUPPORTED,

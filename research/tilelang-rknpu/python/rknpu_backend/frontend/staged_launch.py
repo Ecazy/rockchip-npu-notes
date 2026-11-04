@@ -653,7 +653,8 @@ def two_stage_chain(prim_func: Any, *, options: Any,
                         if target_m != source_m:
                             launch = _retile_launch_source(
                                 launch, logical_m=logical_m,
-                                old_tile_m=source_m, new_tile_m=target_m)
+                                old_tile_m=source_m, new_tile_m=target_m,
+                                params=params)
                 buffer_map = launch_map[id(launches[index])]
                 sub = tvm_tirx.PrimFunc(
                     list(buffer_map.keys()), launch, prim_func.ret_type,
@@ -823,6 +824,23 @@ def _source_block_m(launch: Any, *, logical_m: int, logical_n: int,
 
 def schedules_from_attrs(prim_func: Any, count: int) -> list[Any]:
     attrs = dict(getattr(prim_func, "attrs", {}) or {})
+    marker = attrs.get("rknpu.staged_schedule")
+    stage_keys = [str(key) for key in attrs
+                  if str(key).startswith("rknpu.stage") and
+                  str(key)[len("rknpu.stage"):len("rknpu.stage") + 1].isdigit()]
+    if marker is not None and str(marker) != "staged_mn_tiles_v1":
+        reject(RK_E_UNSUPPORTED, "unknown staged schedule marker",
+               stage="frontend", actual=str(marker))
+    if marker is None and stage_keys:
+        reject(RK_E_UNSUPPORTED,
+               "stage schedule attributes require rknpu.staged_schedule",
+               stage="frontend")
+    allowed_suffixes = {"tile_m", "tile_n", "mn_order", "source_k_rounding"}
+    for key in stage_keys:
+        parts = key.split(".", 2)
+        if len(parts) != 3 or parts[2] not in allowed_suffixes:
+            reject(RK_E_UNSUPPORTED, "unknown staged schedule attribute",
+                   stage="frontend", actual=key)
     schedules = []
     found = False
     for index in range(count):
@@ -840,6 +858,18 @@ def schedules_from_attrs(prim_func: Any, count: int) -> list[Any]:
             "accumulation": "ordered_ascending_f16_with_writeback",
             "source_k_rounding": attrs.get(prefix + "source_k_rounding"),
         })
+    if marker is not None and not found:
+        reject(RK_E_UNSUPPORTED,
+               "staged schedule marker has no per-stage declaration",
+               stage="frontend")
+    if found and any(item is None for item in schedules):
+        reject(RK_E_UNSUPPORTED,
+               "every launch needs a declared staged schedule",
+               stage="frontend", actual=schedules)
+    if found and any(item["tile_m"] <= 0 or item["tile_n"] <= 0
+                      for item in schedules):
+        reject(RK_E_SHAPE, "staged tile dimensions must be positive",
+               stage="frontend")
     return schedules if found else [None] * count
 
 
@@ -949,7 +979,8 @@ def carrier_from_chain(prim_func: Any, chain: dict[str, Any], *,
 
 
 def _retile_launch_source(launch: Any, *, logical_m: int,
-                          old_tile_m: int, new_tile_m: int) -> Any:
+                          old_tile_m: int, new_tile_m: int,
+                          params: list[Any] = ()) -> Any:
     """Apply an explicit M tile to the actual guarded launch TIR."""
     if old_tile_m == new_tile_m:
         return launch
@@ -957,24 +988,101 @@ def _retile_launch_source(launch: Any, *, logical_m: int,
     import tvm.tirx.stmt_functor as stmt_functor
     from . import rknpu_pass
 
-    m_var = None
+    block_loops = [node for _, node in rknpu_pass._walk(launch)
+                   if type(node).__name__ == "For" and
+                   node.thread_binding is not None]
+    roles = {f"b{index}": loop.loop_var
+             for index, loop in enumerate(block_loops)}
+    output_indices = []
     for _, node in rknpu_pass._walk(launch):
-        if type(node).__name__ == "For" and node.thread_binding is not None:
-            extent = rknpu_pass._const(node.extent)
-            if extent == (logical_m + old_tile_m - 1) // old_tile_m:
-                m_var = node.loop_var
-                break
+        if type(node).__name__ == "BufferStore":
+            output_indices.append(node.indices[0])
+        elif type(node).__name__ == "Evaluate" and                 rknpu_pass._op_name(node.value) == "tl.tileop.copy":
+            regs = rknpu_pass._region_exprs(node.value)
+            for param in (getattr(launch, "buffer_map", None) or {}).values():
+                if _same_buffer(param, regs[1]["buffer"]):
+                    output_indices.append(regs[1]["offsets"][0])
+    m_var = None
+    for expr in output_indices:
+        parsed = _affine_expr(expr, tir, roles)
+        if parsed is not None:
+            for role, coeff in parsed[0].items():
+                if coeff == old_tile_m:
+                    m_var = roles[role]
+                    break
+        if m_var is None:
+            for _, inner in rknpu_pass._walk(expr):
+                if type(inner).__name__ == "Var":
+                    for role, candidate in roles.items():
+                        if _same_var(inner, candidate):
+                            m_var = candidate
+                            break
+                if m_var is not None:
+                    break
+        if m_var is not None:
+            break
     if m_var is None:
         reject(RK_E_SHAPE,
-                     "cannot identify the launch M block variable",
-                     stage="frontend")
+               "cannot identify the launch M axis from output indices",
+               stage="frontend")
+    m_buffers = []
+    for _, node in rknpu_pass._walk(launch):
+        if type(node).__name__ == "Evaluate" and                 rknpu_pass._op_name(node.value) == "tl.tileop.gemm":
+            regs = rknpu_pass._region_exprs(node.value)
+            m_buffers.extend([regs[0]["buffer"], regs[2]["buffer"]])
+    changed = True
+    while changed:
+        changed = False
+        for _, node in rknpu_pass._walk(launch):
+            if type(node).__name__ != "Evaluate" or                     rknpu_pass._op_name(node.value) not in {
+                        "tl.tileop.copy", "tl.tileop.fill"}:
+                continue
+            regs = rknpu_pass._region_exprs(node.value)
+            if any(any(_same_buffer(region["buffer"], known)
+                       for known in m_buffers) for region in regs):
+                for region in regs:
+                    if not any(_same_buffer(region["buffer"], known)
+                               for known in m_buffers):
+                        m_buffers.append(region["buffer"])
+                        changed = True
+    output_buffers = []
+    for _, node in rknpu_pass._walk(launch):
+        if type(node).__name__ == "BufferStore" and any(
+                _same_buffer(node.buffer, param) for param in params):
+            output_buffers.append(node.buffer)
+        elif type(node).__name__ == "Evaluate" and                 rknpu_pass._op_name(node.value) == "tl.tileop.copy":
+            regs = rknpu_pass._region_exprs(node.value)
+            for param in params:
+                if _same_buffer(param, regs[1]["buffer"]):
+                    output_buffers.append(regs[1]["buffer"])
+    m_loop_buffers = list(m_buffers) + [
+        buffer for buffer in output_buffers
+        if not any(_same_buffer(buffer, known) for known in m_buffers)]
+
+    def uses_var(expr, var):
+        for _, inner in rknpu_pass._walk(expr):
+            if type(inner).__name__ == "Var" and _same_var(inner, var):
+                return True
+        return False
+
+    def drives_m_axis(loop):
+        for _, inner in rknpu_pass._walk(loop.body):
+            if type(inner).__name__ != "BufferStore" or not inner.indices:
+                continue
+            if not any(_same_buffer(inner.buffer, known)
+                       for known in m_loop_buffers):
+                continue
+            if uses_var(inner.indices[0], loop.loop_var):
+                return True
+        return False
+
     replacements = {}
     for _, node in rknpu_pass._walk(launch):
         if type(node).__name__ != "SBlock":
             continue
         for buffer in list(getattr(node, "alloc_buffers", ()) or ()):
             shape = tuple(int(v) for v in buffer.shape)
-            if len(shape) == 2 and shape[0] == old_tile_m:
+            if len(shape) == 2 and shape[0] == old_tile_m and                     any(_same_buffer(buffer, known) for known in m_buffers):
                 replacements[buffer] = tir.decl_buffer(
                     (new_tile_m, shape[1]), buffer.dtype,
                     name=str(buffer.name), data=buffer.data,
@@ -1000,7 +1108,8 @@ def _retile_launch_source(launch: Any, *, logical_m: int,
             if node.loop_var.same_as(m_var):
                 extent = tir.IntImm("int32", new_m_grid)
             elif node.thread_binding is None and \
-                    rknpu_pass._const(extent) == old_tile_m:
+                    rknpu_pass._const(extent) == old_tile_m and \
+                    drives_m_axis(node):
                 extent = tir.IntImm("int32", new_tile_m)
             return tir.For(node.loop_var, node.min, extent, node.kind,
                            node.body, node.thread_binding,
@@ -1011,12 +1120,16 @@ def _retile_launch_source(launch: Any, *, logical_m: int,
             buffer = mapped(node.buffer)
             if buffer is node.buffer:
                 return None
-            return tir.BufferLoad(buffer, list(node.indices))
+            return tir.BufferLoad(
+                buffer, list(node.indices), getattr(node, "span", None),
+                getattr(node, "predicate", None))
         if kind == "BufferStore":
             buffer = mapped(node.buffer)
             if buffer is node.buffer:
                 return None
-            return tir.BufferStore(buffer, node.value, list(node.indices))
+            return tir.BufferStore(
+                buffer, node.value, list(node.indices),
+                getattr(node, "predicate", None), getattr(node, "span", None))
         if kind == "Evaluate" and _op_name(node.value).startswith("tl.tileop."):
             call = node.value
             name = _op_name(call)
@@ -1028,9 +1141,11 @@ def _retile_launch_source(launch: Any, *, logical_m: int,
                 if type(parts[0]).__name__ == "BufferLoad":
                     parts[0] = tir.BufferLoad(mapped(parts[0].buffer),
                                               list(parts[0].indices))
-                ex0 = rknpu_pass._const(parts[2])
-                if ex0 == old_tile_m:
-                    parts[2] = tir.IntImm("int32", new_tile_m)
+                region_buffer = parts[0].buffer
+                if mapped(region_buffer) is not region_buffer:
+                    ex0 = rknpu_pass._const(parts[2])
+                    if ex0 == old_tile_m:
+                        parts[2] = tir.IntImm("int32", new_tile_m)
                 return tir.Call(arg.dtype, arg.op, parts,
                                 dict(getattr(arg, "annotations", None) or {}))
             if name == "tl.tileop.fill":
@@ -1078,6 +1193,8 @@ def _elementwise_stage_tasks(stage_index: int, stage_items: list[Any],
                                      tirx=tirx, span=span)
     rows, cols = proof["tile"]
     blocks = list(proof["store"].blocks)
+    for loop in blocks:
+        rknpu_pass._loop_domain(loop, role=f"stage{stage_index}:block")
 
     def evaluate(expr, env):
         if type(expr) is int:

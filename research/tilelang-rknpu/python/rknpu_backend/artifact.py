@@ -252,7 +252,7 @@ def compile_artifact(prim_func: Any, *, profile: TargetProfile,
     if tilelang_lowering.is_staged_candidate(target):
         compilation = tilelang_lowering.compile_staged_compilation(
             target, profile=profile, options=options,
-            name="rknpu-staged")
+            b_is_input=b_is_input, name="rknpu-staged")
         artifact = CompiledArtifact.from_compilation(compilation)
         if retain_graph:
             artifact = artifact.with_retained_graph({
@@ -264,7 +264,7 @@ def compile_artifact(prim_func: Any, *, profile: TargetProfile,
     if tilelang_lowering.is_ffn_candidate(target):
         compilation = tilelang_lowering.compile_ffn_compilation(
             target, profile=profile, options=options,
-            name="rknpu-ffn-dataflow")
+            b_is_input=b_is_input, name="rknpu-ffn-dataflow")
         artifact = CompiledArtifact.from_compilation(compilation)
         if retain_graph:
             artifact = artifact.with_retained_graph({

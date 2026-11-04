@@ -98,13 +98,13 @@ def compile_tilelang(prim_func: Any, *, profile: TargetProfile,
     if tilelang_lowering.is_staged_candidate(prim_func):
         compilation = tilelang_lowering.compile_staged_compilation(
             prim_func, profile=profile, options=options,
-            name="rknpu-staged")
+            b_is_input=b_is_input, name="rknpu-staged")
         return _result(compilation)
 
     if tilelang_lowering.is_ffn_candidate(prim_func):
         compilation = tilelang_lowering.compile_ffn_compilation(
             prim_func, profile=profile, options=options,
-            name="rknpu-ffn-dataflow")
+            b_is_input=b_is_input, name="rknpu-ffn-dataflow")
         return _result(compilation)
 
     if tilelang_lowering.is_k_loop_candidate(prim_func):

@@ -603,6 +603,7 @@ class _Builder:
                 zero = rect(task["region"])
                 current = states.setdefault(token, _TaskBufferState())
                 current.enter_zero(zero, len(self.actions))
+                sigmoid_actions.pop(token, None)
                 continue
             if kind in {"copy", "cast"}:
                 source_token = int(task["source_token"])
@@ -634,6 +635,7 @@ class _Builder:
                 destination = states.setdefault(
                     destination_token, _TaskBufferState())
                 destination.adopt_value(destination_region, source)
+                sigmoid_actions.pop(destination_token, None)
                 continue
             if kind == "store":
                 source_token = int(task["source_token"])
@@ -676,6 +678,7 @@ class _Builder:
                 destination = states.setdefault(
                     destination_token, _TaskBufferState())
                 destination.adopt_value(destination_region, source)
+                sigmoid_actions.pop(destination_token, None)
                 continue
             op_id = int(task["op_id"])
             op = ops[op_id]
@@ -694,6 +697,11 @@ class _Builder:
                            "GEMM operands do not cover their task regions",
                            stage="dag", actual=task)
                 output = states.setdefault(output_token, _TaskBufferState())
+                if output.value is not None:
+                    reject(RK_E_UNSUPPORTED,
+                           "the GEMM target already has a live accumulator "
+                           "value; this accumulating form is not supported",
+                           stage="dag", actual=output_token)
                 if output.zero is None or not output.zero.contains(region):
                     reject(RK_E_NUMERIC_CONTRACT,
                            "a GEMM target has no consumed zero fill",
@@ -719,6 +727,7 @@ class _Builder:
                            "source_k_loop": op.attrs.get("source_k_loop"),
                            "k0": int(task["k0"]), "kt": int(task["kt"])})
                 output.record_value(region, action, out_view, action)
+                sigmoid_actions.pop(output_token, None)
                 self.value_views[output_id] = out_view
                 self.value_action[output_id] = action
                 continue
@@ -743,6 +752,7 @@ class _Builder:
                     sigmoid_actions[output_token] = action
                 output = states.setdefault(output_token, _TaskBufferState())
                 output.record_value(region, action, out_view, action)
+                sigmoid_actions.pop(output_token, None)
                 self.value_views[output_id] = out_view
                 self.value_action[output_id] = action
                 continue
@@ -784,12 +794,10 @@ class _Builder:
                 group_kind = str(task.get("group_kind", "ew"))
                 group = f"{group_kind}:dataflow:{group_id}"
                 if kind == "mul" and group_kind == "act":
-                    # The explicit sigmoid task already depends on the producer
-                    # of its source value.  Keep that direct dependency and let
-                    # the identity upload be added by _emit_binary_views.
                     deps = tuple(dict.fromkeys(
-                        sigmoid_actions[token] for token in input_tokens
-                        if token in sigmoid_actions))
+                        [left.value_action, right.value_action] +
+                        [sigmoid_actions[token] for token in input_tokens
+                         if token in sigmoid_actions]))
                 else:
                     deps = (left.value_action, right.value_action)
                 out_view = self._emit_binary_views(
