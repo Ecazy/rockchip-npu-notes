@@ -567,7 +567,8 @@ def two_stage_chain(prim_func: Any, *, options: Any,
 
     attrs_map = dict(getattr(prim_func, "attrs", {}) or {})
     if any(key in attrs_map for key in
-           ("rknpu.schedule", "rknpu.tile_m", "rknpu.tile_n")):
+           ("rknpu.schedule", "rknpu.tile_m", "rknpu.tile_n",
+            "rknpu.mn_order", "rknpu.source_k_rounding")):
         reject(RK_E_UNSUPPORTED,
                      "a single global schedule attribute cannot describe "
                      "multiple launches", stage="frontend")

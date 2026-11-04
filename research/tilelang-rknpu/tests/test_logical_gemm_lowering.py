@@ -40,6 +40,23 @@ def _duplicate_output_copy(prim_func):
         prim_func.body, None, change))
 
 
+def _shrink_b_copy_destination(prim_func):
+    def change(node):
+        if type(node).__name__ != "Evaluate" or                 _op_name(node.value) != "tl.tileop.copy":
+            return None
+        call = node.value
+        args = list(call.args)
+        destination = args[1]
+        if str(destination.args[0].buffer.name) != "Bs":
+            return None
+        region_args = list(destination.args)
+        region_args[2] = tirx.IntImm("int32", 1)
+        args[1] = tirx.Call(destination.dtype, destination.op, region_args)
+        return tirx.Evaluate(tirx.Call(call.dtype, call.op, args))
+    return prim_func.with_body(tirx.stmt_functor.ir_transform(
+        prim_func.body, None, change))
+
+
 def _shift_output_copy(prim_func):
     def change(node):
         if type(node).__name__ != "Evaluate" or \
@@ -62,6 +79,12 @@ def _shift_output_copy(prim_func):
 
 
 class ConversionTests(unittest.TestCase):
+    def test_shrunken_copy_destination_is_rejected_before_rewrite(self):
+        prim = _shrink_b_copy_destination(tmm.make_matmul_prim(M, K, N))
+        with self.assertRaises(BackendError):
+            S.compile_logical_gemm_tasks(
+                prim, profile=default_profile(), options=options())
+
     def test_the_dispatcher_selects_the_task_chain(self):
         prim = tmm.make_matmul_prim(M, K, N)
         self.assertFalse(TL.selects_guarded_tail(prim))

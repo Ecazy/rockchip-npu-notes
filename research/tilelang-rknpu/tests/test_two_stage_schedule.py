@@ -222,6 +222,13 @@ class TwoStageScheduleTests(unittest.TestCase):
         self.assertTrue({"As", "Bs", "Cl"}.issubset(proof["compute_reads"]))
         self.assertIn("Cl", proof["compute_writes"])
 
+    def test_global_mn_order_is_rejected_for_staged(self):
+        prim = self.fixture.make_two_stage(m=256, bm0=128, bm1=128)
+        prim = prim.with_attrs({**dict(prim.attrs),
+                                "rknpu.mn_order": "n_major"})
+        self.assert_rejected(prim, RK_E_UNSUPPORTED,
+                             "single global schedule")
+
     def test_declared_mn_order_changes_task_traversal(self):
         from rknpu_backend.frontend import staged_launch
         from rknpu_backend import CompileOptions

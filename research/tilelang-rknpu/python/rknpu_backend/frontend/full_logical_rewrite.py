@@ -431,6 +431,65 @@ def _prove_gemm_geometry(fields: dict[str, Any], regions: list[dict[str, Any]],
                                             "buffer": list(buffer_shape)})
 
 
+def _prove_full_copy_geometry(copies: list[Any],
+                              gemm_regions: list[dict[str, Any]]) -> None:
+    """Prove copy destinations match staging buffers and GEMM reads."""
+    if len(copies) != 3:
+        reject(RK_E_SHAPE, "the full-logical source must have three copies",
+               stage="rewrite")
+    a_region, b_region, c_region = gemm_regions
+    for copy in copies:
+        regions = _region_exprs(copy.value)
+        if len(regions) != 2:
+            reject(RK_E_SHAPE, "a source copy must name two regions",
+                   stage="rewrite")
+        source, destination = regions
+        dshape = tuple(int(v) for v in destination["buffer"].shape)
+        doff = tuple(int(v) for v in destination["offsets"])
+        dext = tuple(int(v) for v in destination["extents"])
+        if doff != (0, 0) or dext != dshape:
+            reject(RK_E_SHAPE,
+                   "a source copy destination must be the whole staging tile",
+                   stage="rewrite",
+                   actual={"destination": str(destination["buffer"].name),
+                           "offset": list(doff), "extent": list(dext),
+                           "shape": list(dshape)})
+        if tuple(int(v) for v in source["offsets"]) != (0, 0) or                 tuple(int(v) for v in source["extents"]) != dext:
+            reject(RK_E_SHAPE,
+                   "a source copy must read the same full tile shape as its "
+                   "destination", stage="rewrite",
+                   actual={"source": str(source["buffer"].name),
+                           "offset": list(source["offsets"]),
+                           "extent": list(source["extents"]),
+                           "destination": list(dext)})
+        for label, operand in (("A", a_region), ("B", b_region)):
+            if _same_buffer(destination["buffer"], operand["buffer"]):
+                if tuple(operand["offsets"]) != doff or                         tuple(operand["extents"]) != dext:
+                    reject(RK_E_SHAPE,
+                           "a source copy destination does not match its GEMM "
+                           "operand region", stage="rewrite",
+                           actual={"operand": label,
+                                   "copy": [list(doff), list(dext)],
+                                   "gemm": [list(operand["offsets"]),
+                                            list(operand["extents"])]})
+    for label, operand in (("A", a_region), ("B", b_region)):
+        matches = [copy for copy in copies
+                   if _same_buffer(_region_exprs(copy.value)[1]["buffer"],
+                                   operand["buffer"])]
+        if len(matches) != 1:
+            reject(RK_E_SHAPE,
+                   "the GEMM operand needs exactly one staging copy",
+                   stage="rewrite", actual={"operand": label,
+                                            "copies": len(matches)})
+    c_matches = [copy for copy in copies
+                 if _same_buffer(_region_exprs(copy.value)[0]["buffer"],
+                                 c_region["buffer"])]
+    if len(c_matches) != 1:
+        reject(RK_E_SHAPE,
+               "the accumulator result needs exactly one output copy",
+               stage="rewrite", actual=len(c_matches))
+
+
 def locate_full_logical_source(prim_func: Any) -> LocatedFullLogical:
     """Return actual ordered statements, GEMM anchor and read/write relations."""
     from . import rknpu_pass
@@ -454,6 +513,7 @@ def locate_full_logical_source(prim_func: Any) -> LocatedFullLogical:
         reject(RK_E_SHAPE,
                "the original fill and GEMM accumulator must be the same buffer",
                stage="rewrite")
+    _prove_full_copy_geometry(nodes["copies"], gemm_regions)
     statements = _ordered_statements(nodes["root"].body)
     gemm_index = next((index for index, statement in enumerate(statements)
                        if statement.same_as(nodes["gemm"])), None)
@@ -2044,6 +2104,26 @@ def _validate_local_source(prim_func: Any) -> None:
                stage="rewrite", actual=sorted(attrs))
     rknpu_pass._validate_call_positions(prim_func)
     rknpu_pass._validate_container_semantics(prim_func)
+    tir = _tir()
+    for _, loop in _walk(prim_func.body):
+        if type(loop).__name__ != "For" or loop.thread_binding is not None:
+            continue
+        try:
+            kind = int(loop.kind)
+        except Exception:
+            kind = -1
+        if kind == int(tir.ForKind.PARALLEL):
+            continue
+        effects = any(
+            (type(inner).__name__ == "Evaluate" and
+             _op_name(inner.value).startswith("tl.tileop.")) or
+            type(inner).__name__ == "BufferStore"
+            for _, inner in _walk(loop.body))
+        if effects:
+            reject(RK_E_UNSUPPORTED,
+                   "a serial loop around a source effect is not consumed by "
+                   "local dataflow", stage="rewrite",
+                   actual={"loop": str(loop.loop_var), "kind": kind})
     allowed = {"tl.tileop.fill", "tl.tileop.copy", "tl.tileop.gemm"}
     for _, node in _walk(prim_func.body):
         kind = type(node).__name__

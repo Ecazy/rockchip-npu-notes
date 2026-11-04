@@ -8,11 +8,16 @@ from unittest import mock
 import unittest
 
 import numpy as np
+import tilelang
+import tvm
+from tvm import tirx
 
 from rknpu_backend import CompileOptions, compile_tilelang, default_profile
 from rknpu_backend.artifact import compile_artifact
 from rknpu_backend.frontend import tilelang_lowering
+from rknpu_backend.frontend.rknpu_pass import _op_name
 from rknpu_backend.plan import Plan
+from models.tilelang_matmul import make_swiglu_ffn_f16
 from tests.fixtures import tilelang_multi_output, tilelang_silu_proj
 
 PROFILE = default_profile()
@@ -44,6 +49,16 @@ def execution(plan, *, projection=False):
     }
 
 
+def _serial_wrap_first_fill(prim_func):
+    def change(node):
+        if type(node).__name__ == "Evaluate" and                 _op_name(node.value) == "tl.tileop.fill":
+            return tirx.For(tirx.Var("z", "int32"), 0, 2,
+                            tirx.ForKind.SERIAL, node)
+        return None
+    return prim_func.with_body(tirx.stmt_functor.ir_transform(
+        prim_func.body, None, change))
+
+
 class LocalDataflowFormalEntryTests(unittest.TestCase):
     def compile(self, prim, name):
         if True:
@@ -62,6 +77,13 @@ class LocalDataflowFormalEntryTests(unittest.TestCase):
             self.assertTrue(set(old_mul.deps).issubset(new_mul.deps))
             self.assertEqual(set(new_mul.deps) - set(old_mul.deps), {5})
         return result
+
+    def test_serial_loop_around_local_effect_is_rejected(self):
+        prim = _serial_wrap_first_fill(
+            make_swiglu_ffn_f16(m=13, d=64, h=32))
+        with self.assertRaises(Exception) as ctx:
+            compile_tilelang(prim, profile=PROFILE, options=options())
+        self.assertIn("serial loop", str(ctx.exception))
 
     def test_projection_chain_uses_formal_entry(self):
         result = self.compile(tilelang_silu_proj.silu_proj(13, 64, 32),
