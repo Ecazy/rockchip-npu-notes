@@ -2013,6 +2013,7 @@ def _validate_local_source(prim_func: Any) -> None:
                "local dataflow does not apply rknpu schedule declarations",
                stage="rewrite", actual=sorted(attrs))
     rknpu_pass._validate_call_positions(prim_func)
+    rknpu_pass._validate_container_semantics(prim_func)
     allowed = {"tl.tileop.fill", "tl.tileop.copy", "tl.tileop.gemm"}
     for _, node in _walk(prim_func.body):
         kind = type(node).__name__
