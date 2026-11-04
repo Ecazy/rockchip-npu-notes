@@ -902,6 +902,8 @@ def _prove_stage_group_reorder(stage: dict[str, Any],
                        actual={"first": list(first),
                                "second": list(second)})
     local_names = set()
+    compute_reads = set()
+    compute_writes = set()
     for group in groups:
         established = set()
         for task in group:
@@ -927,19 +929,65 @@ def _prove_stage_group_reorder(stage: dict[str, Any],
                 if destination not in param_names:
                     local_names.add(destination)
                     established.add(destination)
-            elif kind in {"sigmoid", "mul", "add", "silu", "gemm"}:
+            elif kind == "gemm":
+                tiles = task.get("tiles")
+                if not isinstance(tiles, (list, tuple)) or len(tiles) < 3:
+                    reject(RK_E_UNSUPPORTED,
+                           "a staged GEMM task must name its A/B/C tiles",
+                           stage="frontend", actual=tiles)
+                for role, name in zip(("A", "B", "C"), tiles[:3]):
+                    name = str(name)
+                    if name not in param_names:
+                        compute_reads.add(name)
+                    if name not in param_names and name not in established:
+                        reject(RK_E_UNSUPPORTED,
+                               "a staged GEMM reads an unestablished local "
+                               "tile", stage="frontend",
+                               actual={"role": role, "tile": name})
+                output = str(tiles[2])
+                if output not in param_names:
+                    compute_writes.add(output)
+                    local_names.add(output)
+                    established.add(output)
+            elif kind in {"sigmoid", "mul", "add", "silu"}:
+                inputs = task.get("inputs")
+                if not isinstance(inputs, (list, tuple)) or not inputs:
+                    reject(RK_E_UNSUPPORTED,
+                           "a staged elementwise task must name its inputs",
+                           stage="frontend", actual=inputs)
+                for name in inputs:
+                    name = str(name)
+                    if name not in param_names:
+                        compute_reads.add(name)
+                    if name not in param_names and name not in established:
+                        reject(RK_E_UNSUPPORTED,
+                               "a staged elementwise task reads an "
+                               "unestablished local value", stage="frontend",
+                               actual={"input": name})
                 output = task.get("output")
-                if output is not None and str(output) not in param_names:
-                    local_names.add(str(output))
-                    established.add(str(output))
+                if output is None:
+                    reject(RK_E_UNSUPPORTED,
+                           "a staged elementwise task must name its output",
+                           stage="frontend")
+                output = str(output)
+                if output not in param_names:
+                    compute_writes.add(output)
+                    local_names.add(output)
+                    established.add(output)
             elif kind == "store":
                 source = str(task.get("source"))
                 if source not in param_names and source not in established:
                     reject(RK_E_UNSUPPORTED,
                            "a staged group stores an unestablished local "
                            "value", stage="frontend", actual={"source": source})
+            else:
+                reject(RK_E_UNSUPPORTED,
+                       "unknown task kind in a reorderable staged group",
+                       stage="frontend", actual=kind)
     return {"groups": len(groups), "local_buffers": sorted(local_names),
             "global_writes": sorted(global_writes),
+            "compute_reads": sorted(compute_reads),
+            "compute_writes": sorted(compute_writes),
             "store_regions_disjoint": True,
             "local_values_group_local": True,
             "launch_local": True}

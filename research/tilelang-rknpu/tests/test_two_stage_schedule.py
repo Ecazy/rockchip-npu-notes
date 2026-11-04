@@ -219,6 +219,8 @@ class TwoStageScheduleTests(unittest.TestCase):
         self.assertTrue(proof["store_regions_disjoint"])
         self.assertTrue(proof["local_values_group_local"])
         self.assertTrue(proof["launch_local"])
+        self.assertTrue({"As", "Bs", "Cl"}.issubset(proof["compute_reads"]))
+        self.assertIn("Cl", proof["compute_writes"])
 
     def test_declared_mn_order_changes_task_traversal(self):
         from rknpu_backend.frontend import staged_launch
