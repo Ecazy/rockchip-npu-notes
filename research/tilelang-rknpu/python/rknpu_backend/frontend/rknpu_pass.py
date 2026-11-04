@@ -2755,6 +2755,10 @@ def tasks_from_module(prim_func: Any) -> list[dict]:
                 "operands": [_name_of(args[0]), _name_of(args[1])],
                 "source": _name_of(args[0]),
                 "destination": _name_of(args[1]),
+                "source_region": {"row": 0, "col": 0,
+                                  "rows": _const(args[4]), "cols": _const(args[5])},
+                "destination_region": {"row": _const(args[2]), "col": _const(args[3]),
+                                       "rows": _const(args[4]), "cols": _const(args[5])},
                 "m0": _const(args[2]), "n0": _const(args[3]),
                 "rows": _const(args[4]), "cols": _const(args[5]),
             })

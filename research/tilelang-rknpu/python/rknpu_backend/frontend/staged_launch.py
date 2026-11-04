@@ -29,6 +29,11 @@ def stage_groups(prim_func: Any) -> list[list[Any]]:
     items: list[Any] = []
     _scan(prim_func.body, tirx, items, [0], (),
                 _source_span(prim_func))
+    for item in items:
+        if item.kind == "call" and _op_name(item.node) not in ALLOWED_TILEOPS:
+            reject(RK_E_UNSUPPORTED, "unconsumed source call in staged program",
+                   stage="frontend", source=_source_span(prim_func),
+                   actual=str(item.node))
     active = [item for item in items
               if item.kind == "store" or
               (item.kind == "call" and
@@ -68,9 +73,13 @@ def is_staged_candidate(prim_func: Any) -> bool:
 
 
 
-def _parse_elementwise_stage(stage_index: int, stage_items: list[_Item],
-                             params: list[Any], *, tirx: Any,
-                             span: str) -> dict[str, Any]:
+def _prove_elementwise_stage(stage_index: int, stage_items: list[_Item],
+                              params: list[Any], *, tirx: Any,
+                              span: str) -> dict[str, Any]:
+    """Prove local loop/region contracts without generating an execution chain."""
+    if any(item.guards for item in stage_items):
+        reject(RK_E_UNSUPPORTED, "conditional staged elementwise effects are not lowered",
+               stage="frontend", source=span)
     calls = [item for item in stage_items if item.kind == "call"]
     tile_calls = [item for item in calls
                   if _op_name(item.node) in ALLOWED_TILEOPS]
@@ -96,7 +105,7 @@ def _parse_elementwise_stage(stage_index: int, stage_items: list[_Item],
         return None
 
     store_item = stores[0]
-    target, target_shape, expr = _check_elementwise_store(
+    target, target_shape, _ = _check_elementwise_store(
         store_item, tirx, params, span)
     writes = []
     for copy_item in copies:
@@ -127,50 +136,22 @@ def _parse_elementwise_stage(stage_index: int, stage_items: list[_Item],
                actual={"published": list(pub_dst.physical),
                        "tile": list(target_shape)})
     out_shape = tuple(int(x) for x in params[out_pid].shape)
-    origins: list[tuple[Any, int, _Region]] = []
+    source_regions: list[_Region] = []
     for copy_item in copies:
         if copy_item is publish_item:
             continue
         csrc = _region(copy_item.node.args[0], tirx, "copy source",
                        expect_mask=1)
-        cdst = _region(copy_item.node.args[1], tirx, "copy destination",
-                       expect_mask=2)
+        _region(copy_item.node.args[1], tirx, "copy destination", expect_mask=2)
         src_pid = pidx(csrc.buffer)
         if src_pid is not None:
-            origins.append((cdst.buffer, src_pid, csrc))
-    def origin_of(buffer: Any) -> int | None:
-        direct = pidx(buffer)
-        if direct is not None:
-            return direct
-        for candidate, pid, _ in origins:
-            if _same_buffer(candidate, buffer):
-                return pid
-        return None
-    def arg_pid(arg: _Expr, label: str) -> int:
-        if arg.kind != "load" or arg.buffer is None:
-            reject(RK_E_UNSUPPORTED,
-                   f"stage {stage_index} {label} is not a simple tile load",
-                   stage="frontend", source=span)
-        pid = origin_of(arg.buffer)
-        if pid is None:
-            reject(RK_E_UNSUPPORTED,
-                   f"stage {stage_index} {label} does not resolve to a "
-                   "parameter", stage="frontend", source=span,
-                   actual=_buffer_name(arg.buffer))
-        return pid
-    inner = _strip_expr_casts(expr)
-    if inner.kind == "sigmoid" and len(inner.args) == 1:
-        opcode = "sigmoid"
-        inputs = (arg_pid(inner.args[0], "sigmoid input"),)
-    elif inner.kind in {"mul", "add"} and len(inner.args) == 2:
-        opcode = inner.kind
-        inputs = (arg_pid(inner.args[0], f"{opcode} lhs"),
-                  arg_pid(inner.args[1], f"{opcode} rhs"))
-    else:
-        reject(RK_E_UNSUPPORTED,
-               f"stage {stage_index} elementwise operation must be sigmoid, "
-               "mul or add", stage="frontend", source=span,
-               actual=inner.kind)
+            source_regions.append(csrc)
+    from .tir_utils import _match_local_elementwise
+    opcode, _ = _match_local_elementwise(store_item.node.value,
+                                          store_cast=True)
+    if opcode not in {"sigmoid", "mul", "add"}:
+        reject(RK_E_UNSUPPORTED, "unsupported staged elementwise operation",
+               stage="frontend", actual=opcode)
     # Prove copy source bases exactly against the output tile indices.
     block_roles = {f"b{i}": loop.loop_var
                    for i, loop in enumerate(store_item.blocks)}
@@ -198,12 +179,7 @@ def _parse_elementwise_stage(stage_index: int, stage_items: list[_Item],
                actual={"grid": [row_grid, col_grid],
                        "tile": list(target_shape),
                        "output": list(out_shape)})
-    mapping = {"tile_rows": target_shape[0], "tile_cols": target_shape[1],
-               "row_grid": row_grid, "col_grid": col_grid,
-               "extents": block_extents,
-               "roles": dict(block_roles)}
-    sources: dict[int, list[int]] = {}
-    for _, pid, csrc in origins:
+    for csrc in source_regions:
         parsed_row = _affine_expr(csrc.raw_indices[0], tirx, block_roles)
         parsed_col = _affine_expr(csrc.raw_indices[1], tirx, block_roles)
         if parsed_row is None or parsed_col is None:
@@ -226,10 +202,10 @@ def _parse_elementwise_stage(stage_index: int, stage_items: list[_Item],
                    f"stage {stage_index} copy source does not cover the tile",
                    stage="frontend", source=span,
                    actual=list(csrc.physical))
-        sources.setdefault(pid, []).append(parsed_col[1])
-    return {"stage": stage_index, "opcode": opcode, "inputs": inputs,
-            "output": out_pid, "mapping": mapping,
-            "sources": sources, "tile": target_shape}
+    return {"opcode": opcode, "store": store_item,
+            "publish": publish_item, "output": out_pid,
+            "tile": target_shape}
+
 
 
 # Shared expression/region validators migrated with the stage parsers.
@@ -1041,69 +1017,110 @@ def _retile_launch_source(launch: Any, *, logical_m: int,
 def _elementwise_stage_tasks(stage_index: int, stage_items: list[Any],
                             params: list[Any], *, tirx: Any,
                             span: str) -> dict[str, Any]:
-    info = _parse_elementwise_stage(stage_index, stage_items, params,
-                                    tirx=tirx, span=span)
-    mapping = info["mapping"]
-    rows, cols = info["tile"]
-    inputs = list(info["inputs"])
-    offsets = {pid: list(info["sources"].get(pid, [0]))
-               for pid in set(inputs)}
-    used = {pid: 0 for pid in offsets}
-    if info["opcode"] == "mul":
-        for operand_index, pid in enumerate(inputs):
-            if operand_index == 0:
-                continue
-            logical_n = int(params[info["output"]].shape[1])
-            if len(params[pid].shape) == 2 and                     int(params[pid].shape[1]) == 2 * logical_n and                     offsets[pid] and int(offsets[pid][0]) == 0:
-                reject(RK_E_UNSUPPORTED,
-                             "packed second multiply operand must read the "
-                             "up half at column H", stage="frontend",
-                             actual={"stage": stage_index, "input": operand_index})
+    # Proof constrains the accepted source geometry.  Task order and operands
+    # below come from each original copy/store, never from a stage summary.
+    from . import rknpu_pass
+    from .tir_utils import _match_local_elementwise
+    import itertools
+    import tvm.tirx.stmt_functor as stmt_functor
+
+    proof = _prove_elementwise_stage(stage_index, stage_items, params,
+                                     tirx=tirx, span=span)
+    rows, cols = proof["tile"]
+    blocks = list(proof["store"].blocks)
+
+    def evaluate(expr, env):
+        if type(expr) is int:
+            return expr
+        value = rknpu_pass._const(rknpu_pass._arith().simplify(
+            stmt_functor.substitute(expr, env)))
+        if value is None:
+            reject(RK_E_UNSUPPORTED, "staged copy region is not static",
+                   stage="frontend", actual=str(expr))
+        return int(value)
+
+    def region(raw, env):
+        return dict(zip(("row", "col", "rows", "cols"),
+                        [evaluate(x, env) for x in
+                         (*raw["offsets"], *raw["extents"])]))
+
     tasks = []
-    for ri in range(int(mapping["row_grid"])):
-        for ci in range(int(mapping["col_grid"])):
-            local_inputs = []
-            input_offsets = []
-            for pid in inputs:
-                choices = offsets[pid]
-                off = choices[min(used[pid], len(choices) - 1)]
-                used[pid] += 1
-                local = f"in{stage_index}_{pid}_{off}"
-                local_inputs.append(local)
-                input_offsets.append(off)
-                tasks.append({"kind": "copy", "source": _buffer_name(params[pid]),
-                              "destination": local,
-                              "source_region": {"row": ri * rows,
-                                                "col": ci * cols + off,
-                                                "rows": rows, "cols": cols},
-                              "destination_region": {"row": 0, "col": 0,
-                                                     "rows": rows, "cols": cols}})
-            out_local = f"out{stage_index}_{ri}_{ci}"
-            tasks.append({"kind": info["opcode"], "inputs": local_inputs,
-                          "input_offsets": input_offsets, "output": out_local,
-                          "m0": ri * rows, "n0": ci * cols,
-                          "region": {"row": 0, "col": 0,
-                                     "rows": rows, "cols": cols},
-                          "rows": rows, "cols": cols})
-            tasks.append({"kind": "store", "source": out_local,
-                          "destination": _buffer_name(params[info["output"]]),
-                          "source_region": {"row": 0, "col": 0,
-                                            "rows": rows, "cols": cols},
-                          "destination_region": {"row": ri * rows,
-                                                 "col": ci * cols,
-                                                 "rows": rows, "cols": cols},
-                          "m0": ri * rows, "n0": ci * cols,
-                          "rows": rows, "cols": cols})
+    op_inputs = input_offsets = None
+    for combo in itertools.product(*[range(int(loop.extent)) for loop in blocks]):
+        env = {loop.loop_var: tirx.IntImm("int32", index)
+               for loop, index in zip(blocks, combo)}
+        # Origins are updated at the actual copy, so a store reads the version
+        # visible at that point, including a later overwrite of the same tile.
+        origins = {}
+        established = set()
+        pub = rknpu_pass._region_exprs(proof["publish"].node)[1]
+        output_region = region(pub, env)
+        for item in stage_items:
+            if item.kind == "call":
+                regs = rknpu_pass._region_exprs(item.node)
+                if _op_name(item.node) != "tl.tileop.copy":
+                    reject(RK_E_UNSUPPORTED, "unconsumed elementwise call",
+                           stage="frontend", actual=str(item.node))
+                src, dst = regs
+                sn, dn = str(src["buffer"].name), str(dst["buffer"].name)
+                sr, dr = region(src, env), region(dst, env)
+                src_param = next((p for p in params
+                                  if _same_buffer(p, src["buffer"])), None)
+                dst_param = next((p for p in params
+                                  if _same_buffer(p, dst["buffer"])), None)
+                if src_param is None and sn not in established:
+                    reject(RK_E_SHAPE, "copy reads an unestablished local value",
+                           stage="frontend", actual=sn)
+                task = {"kind": "store" if dst_param is not None else "copy",
+                        "source": sn, "destination": dn,
+                        "source_region": sr, "destination_region": dr}
+                if dst_param is not None:
+                    task.update(m0=dr["row"], n0=dr["col"],
+                                rows=dr["rows"], cols=dr["cols"])
+                else:
+                    origins[dn] = ((sn, sr["col"] - output_region["col"])
+                                   if src_param is not None else origins.get(sn))
+                    established.add(dn)
+                tasks.append(task)
+            elif item.kind == "store":
+                opcode, loads = _match_local_elementwise(item.node.value,
+                                                        store_cast=True)
+                names = [str(load.buffer.name) for load in loads]
+                if any(name not in established or origins.get(name) is None
+                       for name in names):
+                    reject(RK_E_SHAPE, "elementwise reads an unestablished value",
+                           stage="frontend", actual=names)
+                op_inputs = [origins[name][0] for name in names]
+                input_offsets = [origins[name][1] for name in names]
+                if opcode == "mul":
+                    logical_n = int(params[proof["output"]].shape[1])
+                    for operand_index, (name, off) in enumerate(
+                            zip(op_inputs, input_offsets)):
+                        param = next(p for p in params if str(p.name) == name)
+                        if operand_index and int(param.shape[1]) == 2 * logical_n and off == 0:
+                            reject(RK_E_UNSUPPORTED,
+                                   "packed second multiply operand must read the up half at column H",
+                                   stage="frontend")
+                local_region = {"row": 0, "col": 0, "rows": rows, "cols": cols}
+                destination = str(item.node.buffer.name)
+                tasks.append({"kind": opcode, "inputs": names,
+                              "input_offsets": list(input_offsets),
+                              "input_regions": [dict(local_region) for _ in names],
+                              "output": destination, "region": local_region,
+                              "m0": output_region["row"], "n0": output_region["col"],
+                              "rows": rows, "cols": cols})
+                established.add(destination)
+                origins[destination] = None
+            else:
+                reject(RK_E_UNSUPPORTED, "unconsumed staged elementwise effect",
+                       stage="frontend", actual=item.kind)
     return {"index": stage_index, "source_nodes": len(stage_items),
-            "operand_a": None, "operand_b": None,
-            "opcode": info["opcode"],
-            "op_inputs": [_buffer_name(params[pid]) for pid in inputs],
-            "op_offsets": list(input_offsets),
-            "output_name": _buffer_name(params[info["output"]]),
-            "logical_m": rows * int(mapping["row_grid"]), "logical_k": 0,
-            "logical_n": cols * int(mapping["col_grid"]),
-            "tile_m": rows, "tile_n": cols, "order": "m_major",
-            "tasks": tasks,
-            "global_writes": [t for t in tasks if t.get("kind") == "store"],
-            "global_reads": [t for t in tasks if t.get("kind") == "copy"],
+            "operand_a": None, "operand_b": None, "opcode": proof["opcode"],
+            "op_inputs": op_inputs, "op_offsets": input_offsets,
+            "output_name": str(params[proof["output"]].name),
+            "logical_m": int(params[proof["output"]].shape[0]), "logical_k": 0,
+            "logical_n": int(params[proof["output"]].shape[1]),
+            "tile_m": rows, "tile_n": cols, "order": "m_major", "tasks": tasks,
+            "global_writes": [t for t in tasks if t["kind"] == "store"],
+            "global_reads": [t for t in tasks if t["kind"] == "copy"],
             "boundary": "kernel_launch", "elementwise": True}

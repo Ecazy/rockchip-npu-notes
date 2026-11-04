@@ -659,3 +659,47 @@ def _pipeline_record(annotations):
             "pipeline_hint_dropped": bool(stages),
             "pipeline_not_applied_reason":
                 PIPELINE_NOT_APPLIED_REASON if stages else None}
+
+
+def _match_local_elementwise(node: Any, *, store_cast: bool = False
+                             ) -> tuple[str, tuple[Any, ...]]:
+    """Match one supported scalar operation, preserving its exact operands.
+
+    A store cast is permitted only for an already-FP16 expression.  Arithmetic
+    below a load operand is never discarded or flattened into a load list.
+    """
+    if store_cast and type(node).__name__ == "Cast" and \
+            str(node.dtype) == "float16" and str(node.value.dtype) == "float16":
+        node = node.value
+
+    def load(expr: Any) -> bool:
+        return type(expr).__name__ == "BufferLoad"
+
+    def sigmoid(expr: Any) -> Any:
+        if type(expr).__name__ == "Call" and \
+                _op_name(expr) == "tirx.sigmoid" and len(expr.args) == 1 and \
+                load(expr.args[0]):
+            return expr.args[0]
+        return None
+
+    operand = sigmoid(node)
+    if operand is not None:
+        return "sigmoid", (operand,)
+    kind = type(node).__name__
+    if kind in {"Add", "Mul"}:
+        if load(node.a) and load(node.b):
+            return kind.lower(), (node.a, node.b)
+        if kind == "Mul":
+            for direct, call in ((node.a, node.b), (node.b, node.a)):
+                arg = sigmoid(call)
+                if load(direct) and arg is not None and \
+                        _same_buffer(direct.buffer, arg.buffer) and \
+                        len(direct.indices) == len(arg.indices) and \
+                        all(_same_var(a, b) or str(a) == str(b)
+                            for a, b in zip(direct.indices, arg.indices)):
+                    return "silu", (direct,)
+    reject(RK_E_UNSUPPORTED,
+           "unsupported nested elementwise expression " + (_op_name(node) or kind) +
+           "; expected direct "
+           "load Add/Mul, sigmoid(load), or load * sigmoid(the same load)",
+           stage="rewrite", actual=str(node))

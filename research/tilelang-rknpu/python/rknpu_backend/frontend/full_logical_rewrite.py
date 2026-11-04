@@ -1707,11 +1707,6 @@ def _store_loads(node: Any) -> list[Any]:
             if type(inner).__name__ == "BufferLoad"]
 
 
-def _has_sigmoid(node: Any) -> bool:
-    return any("sigmoid" in str(inner) for _, inner in _walk(node)
-               if type(inner).__name__ == "Call")
-
-
 def is_local_dataflow_candidate(prim_func: Any) -> bool:
     """Structural gate for the admitted local 2/3-GEMM dataflow forms."""
     tir = _tir()
@@ -2309,8 +2304,14 @@ def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
                  region["row"], region["col"],
                  region["rows"], region["cols"])
             continue
-        if type(value).__name__ == "Call" and "sigmoid" in str(value):
-            loads = _store_loads(value)
+        if type(value).__name__ == "Add" and str(store.buffer.dtype) == "float32":
+            reject(RK_E_NUMERIC_CONTRACT,
+                   "FP32 residual must be explicitly narrowed to FP16 before "
+                   "the residual add and final T.copy", stage="rewrite")
+        from .tir_utils import _match_local_elementwise
+        opcode, operands = _match_local_elementwise(value)
+        if opcode == "sigmoid":
+            loads = list(operands)
             if len(loads) != 1:
                 reject(RK_E_UNSUPPORTED,
                        "sigmoid store must read exactly one value",
@@ -2331,9 +2332,9 @@ def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
                  region["row"], region["col"],
                  region["rows"], region["cols"])
             continue
-        if type(value).__name__ == "Mul":
-            loads = _store_loads(value)
-            if len(loads) != 2:
+        if opcode in {"mul", "silu"}:
+            loads = list(operands)
+            if len(loads) != (1 if opcode == "silu" else 2):
                 reject(RK_E_UNSUPPORTED, "multiply must read two values",
                        stage="rewrite")
             load_kinds = [_classify_store_load(load, [region["rows"],
@@ -2346,7 +2347,7 @@ def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
             out_id = add_value(store.buffer, "temporary", None)
             token_values[dest_token] = out_id
             broadcast = any(kind != "none" for kind in load_kinds)
-            if _has_sigmoid(value):
+            if opcode == "silu":
                 op_id = add_op("silu", (source_ids[0],), out_id,
                                ("k_tile_boundary", "silu"))
                 emit("rk_silu", op_id, source_tokens[0], out_id, dest_token,
@@ -2374,8 +2375,8 @@ def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
                      region["rows"], region["cols"],
                      _string(load_kinds[0]), _string(load_kinds[1]))
             continue
-        if type(value).__name__ == "Add":
-            loads = _store_loads(value)
+        if opcode == "add":
+            loads = list(operands)
             if len(loads) != 2:
                 reject(RK_E_UNSUPPORTED, "add must read two values",
                        stage="rewrite")

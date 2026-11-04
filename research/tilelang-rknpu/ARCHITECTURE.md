@@ -296,6 +296,12 @@ M/N tile 不超过 256×256、K 分块大小固定为 256 的约束；逻辑 K �
   staged 图提取及 `extract_staged → compile_graph` 旁路已删除。基础 TIR、表达式和
   契约工具迁入 `tir_utils`，生产代码不再导入 `tilelang_adapter`；正式 compile/
   artifact/直调入口不再回退 adapter。
+  elementwise 的 Add/Mul 只接受直接 load 操作数，sigmoid 必须直接读取一个值；SiLU
+  必须是同一次读取与其 sigmoid 的乘积。未支持的嵌套表达式直接拒绝。staged 的
+  elementwise 逐个承接原 copy/store 顺序及双方区域，读取消费时的值版本与 producer，
+  不再由 opcode/参数/tile 摘要补建整段任务。fill 的实际零值、区域及 producer 与缺失值
+  分开保存；copy 仅在区域核验成立时继承值/view/producer，零初始化融合到首个 MM，
+  writeback copy 建立下一次 MM_ACC 的输入。launch 内外未承接的调用直接拒绝。
   CLI 和模型构建调用尚未整体切换。
 - 已知迁移差异：无注解三 buffer final-only 多 grid 源现在保留源码实际 tile
   （例如 128×128 的 9 个输出 tile），不再被旧 adapter 按历史 256×256 默认网格重排。

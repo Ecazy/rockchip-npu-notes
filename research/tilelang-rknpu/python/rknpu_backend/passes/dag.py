@@ -831,7 +831,7 @@ class _Builder:
         binding_by_name = {binding.name: binding.id for binding in self.bindings}
         binding_value = {value.name: value.id for value in self.module.values
                          if value.role in {"input", "constant", "output"}}
-        global_regions: dict[tuple[str, int, int, int, int], tuple[int, int]] = {}
+        global_regions: dict[tuple[str, int, int, int, int], _TaskBufferState] = {}
         pending_downloads: list[tuple[int, int, int, tuple[int, int, int, int]]] = []
         upload_cache: dict[tuple[Any, ...], tuple[int, int]] = {}
         accumulator: dict[tuple[int, int, int], dict[str, Any]] = {}
@@ -864,10 +864,6 @@ class _Builder:
         consumer_composites: dict[
             tuple[str, int, int, int, int], tuple[int, tuple[tuple[int, int, int, int], ...]]
         ] = {}
-        producer_composites: dict[
-            tuple[str, int, int, int, int], tuple[str, int, int, int, int]
-        ] = {}
-        stage_out_views: dict[tuple[int, str, int, int], int] = {}
         producer_subviews: dict[tuple[str, int, int, int, int], int] = {}
         for name, reads in consumers.items():
             writes = producers.get(name, [])
@@ -930,11 +926,7 @@ class _Builder:
                                               region[2], region[3], pr, pc, 8,
                                               pr * pc * 2)
                     sub = self.add_view(bid, offset, sub_layout)
-                    stage_out_views[(stage_index, "", region[0], region[1])] = sub
-                    producer_composites[(name, *region)] = key
                     producer_subviews[(name, *region)] = sub
-
-        composite_actions: dict[tuple[str, int, int, int, int], list[int]] = {}
 
         def rect(raw: dict[str, int]) -> tuple[int, int, int, int]:
             return (int(raw["row"]), int(raw["col"]),
@@ -1005,22 +997,64 @@ class _Builder:
             output_shapes = {(int(t["m0"]), int(t["n0"])):
                              (int(t["rows"]), int(t["cols"]))
                              for t in stage["tasks"] if t.get("kind") == "store"}
-            local_views: dict[str, tuple[int, int] | None] = {}
+            local_views: dict[str, tuple[int, int]] = {}
             local_deps: dict[str, tuple[int, ...]] = {}
             local_sources: dict[str, dict[str, Any]] = {}
-            local_zero: set[str] = set()
-            current_group = None
-            for task in stage["tasks"]:
+            local_states: dict[str, _TaskBufferState] = {}
+
+            def state_for(name: str) -> _TaskBufferState:
+                return local_states.setdefault(name, _TaskBufferState())
+
+            def area(raw: dict[str, int]) -> _TaskRect:
+                return _TaskRect(*rect(raw))
+
+            def require_value(name: str, requested: _TaskRect) -> _TaskBufferState:
+                state = state_for(name)
+                if not state.value_covers(requested) or state.value_view is None:
+                    reject(RK_E_SHAPE, "staged read has no covering value",
+                           stage="schedule", actual={"buffer": name,
+                                                     "region": requested})
+                return state
+
+            def adopt_copy(name: str, destination: _TaskRect,
+                           source: _TaskBufferState, source_area: _TaskRect) -> None:
+                state = state_for(name)
+                previous_version = state.value_version
+                state.adopt_value(destination, source)
+                state.value_version = max(previous_version + 1, state.value_version)
+                state.source_region = source_area
+
+            ordinal_base = sum(len(previous["tasks"]) for previous in stages[:stage_index])
+            for ordinal, task in enumerate(stage["tasks"], start=ordinal_base):
                 kind = task.get("kind")
                 if kind == "fill":
                     name = str(task["destination"])
-                    local_views[name] = None
-                    local_zero.add(name)
+                    if task["value"] != 0:
+                        reject(RK_E_NUMERIC_CONTRACT,
+                               "staged fill requires the actual zero initial value",
+                               stage="schedule", actual=task["value"])
+                    state_for(name).enter_zero(area(task["region"]), ordinal)
+                    state_for(name).source_region = None
+                    local_views.pop(name, None)
+                    local_deps.pop(name, None)
+                    local_sources.pop(name, None)
                     continue
                 if kind == "copy":
                     source = str(task["source"])
                     destination = str(task["destination"])
                     source_region = task["source_region"]
+                    src_area = area(source_region)
+                    dst_area = area(task["destination_region"])
+                    if (src_area.rows, src_area.cols) != (dst_area.rows, dst_area.cols):
+                        reject(RK_E_SHAPE, "staged copy region extents differ",
+                               stage="schedule", actual=task)
+                    if dst_area.row != 0 or dst_area.col != 0:
+                        reject(RK_E_UNSUPPORTED,
+                               "staged copy fusion requires a tile-local destination",
+                               stage="schedule", actual=task)
+                    inherited_state = None
+                    local_deps.pop(destination, None)
+                    local_sources.pop(destination, None)
                     if source in binding_by_name:
                         weight = self.bindings[binding_by_name[source]].role == "constant"
                         uploaded = upload(
@@ -1031,8 +1065,12 @@ class _Builder:
                             **{"view": uploaded[0], "action": uploaded[1]}}
                     elif (source, *rect(source_region)) in consumer_composites:
                         key = (source, *rect(source_region))
-                        full_view, _regions = consumer_composites[key]
-                        actions = tuple(composite_actions.get(key, ()))
+                        full_view, regions = consumer_composites[key]
+                        parts = [global_regions.get((source, *region)) for region in regions]
+                        if any(part is None for part in parts):
+                            reject(RK_E_SHAPE, "composite read has an unestablished producer region",
+                                   stage="schedule", actual=key)
+                        actions = tuple(dict.fromkeys(part.value_action for part in parts))
                         if not actions:
                             reject(RK_E_SHAPE,
                                    "composite consumer has no producer actions",
@@ -1049,22 +1087,51 @@ class _Builder:
                             reject(RK_E_SHAPE,
                                    "intermediate copy region has no prior write",
                                    stage="schedule", actual=key)
-                        local_views[destination] = found
+                        inherited_state = found
+                        local_views[destination] = (found.value_view, found.value_action)
                         local_sources[destination] = {
                             "source": source, "region": dict(source_region),
-                            **{"view": found[0], "action": found[1]}}
-                    elif source in local_views:
+                            "view": found.value_view, "action": found.value_action}
+                    elif source in local_states:
+                        source_state = state_for(source)
+                        if source_state.value is None and source_state.zero_covers(src_area):
+                            zero_producer = source_state.zero_producer
+                            destination_state = state_for(destination)
+                            destination_state.enter_zero(dst_area, ordinal)
+                            destination_state.zero_producer = zero_producer
+                            destination_state.source_region = src_area
+                            local_views.pop(destination, None)
+                            continue
+                        require_value(source, src_area)
+                        if source_state.value != src_area:
+                            reject(RK_E_UNSUPPORTED,
+                                   "staged local copy subregion needs a layout conversion",
+                                   stage="schedule", actual=task)
+                        adopt_copy(destination, dst_area, source_state, src_area)
                         local_views[destination] = local_views[source]
+                        local_deps[destination] = local_deps.get(source, (source_state.value_action,))
+                        if source in local_sources:
+                            local_sources[destination] = dict(local_sources[source])
+                        continue
                     else:
                         reject(RK_E_SHAPE,
                                "copy source is neither external nor staged",
                                stage="schedule", actual=source)
-                    local_zero.discard(destination)
+                    view, producer = local_views[destination]
+                    if inherited_state is not None:
+                        adopt_copy(destination, dst_area, inherited_state, src_area)
+                    else:
+                        state_for(destination).record_value(
+                            dst_area, ordinal, view, producer, source_region=src_area)
+                    local_deps.setdefault(destination, (producer,))
                     continue
                 if kind in {"sigmoid", "mul", "add"}:
                     names = list(task["inputs"])
-                    states = [local_views.get(str(name)) for name in names]
-                    if any(state is None for state in states):
+                    regions = task.get("input_regions") or [task["region"]] * len(names)
+                    input_states = [require_value(str(name), area(raw))
+                                    for name, raw in zip(names, regions)]
+                    states = [(state.value_view, state.value_action) for state in input_states]
+                    if len(states) != len(names) or any(state[0] is None for state in states):
                         reject(RK_E_SHAPE,
                                "elementwise inputs have no staged source",
                                stage="schedule", actual=names)
@@ -1109,7 +1176,7 @@ class _Builder:
                             cube_rows=cr, cube_cols=cc,
                             input_view=states[0][0],
                             input_buffer=self.views[states[0][0]].buffer_id,
-                            deps=(states[0][1],), group=group,
+                            deps=local_deps.get(str(names[0]), (states[0][1],)), group=group,
                             op_ids=(stage_op_ids[stage_index],),
                             extra_attrs=extra)
                     else:
@@ -1132,16 +1199,33 @@ class _Builder:
                             opcode=kind, rows=rows, cols=cols,
                             cube_rows=cr, cube_cols=cc,
                             left_view=states[0][0], right_view=states[1][0],
-                            deps=(states[0][1], states[1][1]),
+                            deps=tuple(dict.fromkeys(
+                                dep for name, state in zip(names, states)
+                                for dep in local_deps.get(str(name), (state[1],)))),
                             group=group, op_ids=(stage_op_ids[stage_index],),
                             out_view=explicit, extra_attrs=extra)
                     action = self._last_task_of_group(group)
-                    local_views[str(task["output"])] = (out_view, action)
+                    output = str(task["output"])
+                    state_for(output).record_value(area(task["region"]), ordinal,
+                                                   out_view, action)
+                    local_views[output] = (out_view, action)
+                    local_deps[output] = (action,)
+                    local_sources.pop(output, None)
                     continue
                 if kind != "gemm":
                     if kind == "store":
                         source = str(task["source"])
                         destination = str(task["destination"])
+                        src_area = area(task["source_region"])
+                        dst_area = area(task["destination_region"])
+                        if (src_area.rows, src_area.cols) != (dst_area.rows, dst_area.cols):
+                            reject(RK_E_SHAPE, "staged store region extents differ",
+                                   stage="schedule", actual=task)
+                        require_value(source, src_area)
+                        if src_area.row or src_area.col:
+                            reject(RK_E_UNSUPPORTED,
+                                   "staged store subregion needs a layout conversion",
+                                   stage="schedule", actual=task)
                         source_state = local_views.get(source)
                         if source_state is None:
                             reject(RK_E_SHAPE,
@@ -1155,12 +1239,9 @@ class _Builder:
                                 (binding_by_name[destination], view,
                                  action, region))
                         else:
-                            global_regions[(destination, *region)] = source_state
-                            composite_key = producer_composites.get(
-                                (destination, *region))
-                            if composite_key is not None:
-                                composite_actions.setdefault(
-                                    composite_key, []).append(action)
+                            global_regions[(destination, *region)] = replace(
+                                state_for(source), value=dst_area, source_region=src_area,
+                                value_version=state_for(source).value_version + 1)
                         continue
                     reject(RK_E_UNSUPPORTED,
                            f"staged task kind {kind!r} is not consumed",
@@ -1205,7 +1286,24 @@ class _Builder:
                 out_view = group["views"][slot]
                 a_view, a_action = a_state
                 b_view, b_action = b_state
-                cl_state = local_views.get(str(tiles[2]))
+                c_name = str(tiles[2])
+                c_area = _TaskRect(0, 0, int(task["rows"]), int(task["cols"]))
+                c_state = state_for(c_name)
+                if c_state.value is None:
+                    if not c_state.zero_covers(c_area):
+                        reject(RK_E_SHAPE,
+                               "staged GEMM accumulator has neither a value nor a proven zero",
+                               stage="schedule", actual=c_name)
+                    cl_state = None
+                else:
+                    require_value(c_name, c_area)
+                    cl_state = (c_state.value_view, c_state.value_action)
+                for name, needed in ((str(tiles[0]), _TaskRect(0, 0, int(task["rows"]), kt)),
+                                     (str(tiles[1]), _TaskRect(0, 0, kt, int(task["cols"])))):
+                    operand = state_for(name)
+                    if operand.value is None or not operand.covers(needed):
+                        reject(RK_E_SHAPE, "GEMM operand region is not established or zero padded",
+                               stage="schedule", actual=name)
                 deps = list(local_deps.get(str(tiles[0]), ()))
                 deps += list(local_deps.get(str(tiles[1]), ()))
                 if not deps:
@@ -1324,8 +1422,10 @@ class _Builder:
                         op_ids=(stage_op_ids[stage_index],))
                 group["last"] = out_view
                 group["action"] = action
-                local_views[str(tiles[2])] = (out_view, action)
-                local_zero.discard("Acc")
+                c_state.record_value(c_area, ordinal, out_view, action)
+                local_views[c_name] = (out_view, action)
+                local_deps[c_name] = (action,)
+                local_sources.pop(c_name, None)
         for binding, view, producer, region in pending_downloads:
             download = self.add_action(
                 "download", inputs=(view,), deps=(producer,),
