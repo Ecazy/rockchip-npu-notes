@@ -29,11 +29,12 @@ def frozen(name):
     return Plan.from_dict(json.loads(path.read_text())["plan"])
 
 
-def execution(plan, *, include_deps=True):
+def execution(plan, *, projection=False):
     return {
         "bindings": [(b.name, b.role, tuple(b.shape)) for b in plan.bindings],
         "actions": [(a.kind, a.template_id, tuple(a.inputs), tuple(a.outputs),
-                     tuple(a.deps) if include_deps else ())
+                     () if projection and
+                     a.template_id == "co.ew_mul.f16.v1" else tuple(a.deps))
                     for a in plan.actions],
         "submits": [(len(s.task_ids), s.recipe_id, s.mode, s.deps)
                     for s in plan.submits],
@@ -50,9 +51,16 @@ class LocalDataflowFormalEntryTests(unittest.TestCase):
             artifact = compile_artifact(prim, profile=PROFILE,
                                         options=options())
         self.assertEqual(result.plan.plan_hash, artifact.plan_hash)
-        include_deps = name != "silu_proj_static_dataflow"
-        self.assertEqual(execution(result.plan, include_deps=include_deps),
-                         execution(frozen(name), include_deps=include_deps))
+        projection = name == "silu_proj_static_dataflow"
+        self.assertEqual(execution(result.plan, projection=projection),
+                         execution(frozen(name), projection=projection))
+        if projection:
+            new_mul = next(a for a in result.plan.actions if
+                           a.template_id == "co.ew_mul.f16.v1")
+            old_mul = next(a for a in frozen(name).actions if
+                           a.template_id == "co.ew_mul.f16.v1")
+            self.assertTrue(set(old_mul.deps).issubset(new_mul.deps))
+            self.assertEqual(set(new_mul.deps) - set(old_mul.deps), {5})
         return result
 
     def test_projection_chain_uses_formal_entry(self):

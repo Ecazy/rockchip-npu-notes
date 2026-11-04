@@ -399,6 +399,38 @@ def _statement_effects(node: Any) -> tuple[tuple[Any, ...], tuple[Any, ...]]:
     return reads, writes
 
 
+def _prove_gemm_geometry(fields: dict[str, Any], regions: list[dict[str, Any]],
+                         *, whole: bool) -> None:
+    if len(regions) != 3:
+        reject(RK_E_SHAPE, "a GEMM must name three regions", stage="rewrite")
+    a, b, c = regions
+    shape = tuple(int(v) for v in fields["shape"])
+    actual = (int(a["extents"][0]), int(b["extents"][1]),
+              int(a["extents"][1]))
+    if actual != shape:
+        reject(RK_E_SHAPE,
+               "the GEMM call geometry must match its actual operand regions",
+               stage="rewrite", actual={"call": list(shape),
+                                        "regions": list(actual)})
+    if int(b["extents"][0]) != int(a["extents"][1]) or             int(c["extents"][0]) != int(a["extents"][0]) or             int(c["extents"][1]) != int(b["extents"][1]):
+        reject(RK_E_SHAPE,
+               "GEMM A/B/C regions do not form one MxK * KxN -> MxN operation",
+               stage="rewrite")
+    if not whole:
+        return
+    for label, region in zip(("A", "B", "C"), regions):
+        offset = tuple(int(v) for v in region["offsets"])
+        extents = tuple(int(v) for v in region["extents"])
+        buffer_shape = tuple(int(v) for v in region["buffer"].shape)
+        if offset != (0, 0) or extents != buffer_shape:
+            reject(RK_E_SHAPE,
+                   "the original GEMM region must be the whole tile buffer",
+                   stage="rewrite", actual={"operand": label,
+                                            "offset": list(offset),
+                                            "region": list(extents),
+                                            "buffer": list(buffer_shape)})
+
+
 def locate_full_logical_source(prim_func: Any) -> LocatedFullLogical:
     """Return actual ordered statements, GEMM anchor and read/write relations."""
     from . import rknpu_pass
@@ -406,29 +438,22 @@ def locate_full_logical_source(prim_func: Any) -> LocatedFullLogical:
     rknpu_pass._validate_container_semantics(prim_func)
     nodes = _source_tile_nodes(prim_func)
     gemm_regions = _region_exprs(nodes["gemm"].value)
-    if len(gemm_regions) != 3:
-        reject(RK_E_SHAPE, "a GEMM must name three regions", stage="rewrite")
-    for role, region in zip(("A", "B", "C"), gemm_regions):
-        shape = tuple(int(v) for v in region["buffer"].shape)
-        if tuple(int(v) for v in region["extents"]) != shape:
-            reject(RK_E_SHAPE,
-                   "the original GEMM region must cover its full tile buffer",
-                   stage="rewrite", actual={"operand": role,
-                                            "region": list(region["extents"]),
-                                            "buffer": list(shape)})
+    gemm_fields = rknpu_pass._validate_gemm_call_fields(
+        nodes["gemm"].value)
+    _prove_gemm_geometry(gemm_fields, gemm_regions, whole=True)
     fill_region = _region_exprs(nodes["fill"].value)[0]
     fill_shape = tuple(int(v) for v in fill_region["buffer"].shape)
-    if tuple(int(v) for v in fill_region["extents"]) != fill_shape:
+    if tuple(int(v) for v in fill_region["offsets"]) != (0, 0) or             tuple(int(v) for v in fill_region["extents"]) != fill_shape:
         reject(RK_E_SHAPE,
-               "the original accumulator fill must cover the full tile",
-               stage="rewrite", actual={"region": list(fill_region["extents"]),
+               "the original accumulator fill must be the whole tile",
+               stage="rewrite", actual={"offset": list(fill_region["offsets"]),
+                                        "region": list(fill_region["extents"]),
                                         "buffer": list(fill_shape)})
     if not _same_buffer(fill_region["buffer"],
                         gemm_regions[2]["buffer"]):
         reject(RK_E_SHAPE,
                "the original fill and GEMM accumulator must be the same buffer",
                stage="rewrite")
-    rknpu_pass._validate_gemm_call_fields(nodes["gemm"].value)
     statements = _ordered_statements(nodes["root"].body)
     gemm_index = next((index for index, statement in enumerate(statements)
                        if statement.same_as(nodes["gemm"])), None)
@@ -1413,7 +1438,10 @@ def rewrite_k_loop_tir(prim_func: Any, *, options: Any,
         reject(RK_E_SHAPE,
                "the source is not one of the migrated unguarded K-loop forms",
                stage="frontend")
-    rknpu_pass._validate_gemm_call_fields(structure["gemm"].value)
+    gemm_fields = rknpu_pass._validate_gemm_call_fields(
+        structure["gemm"].value)
+    _prove_gemm_geometry(gemm_fields, _region_exprs(structure["gemm"].value),
+                         whole=False)
     if any(type(inner).__name__ == "BufferStore"
            for _, inner in _walk(prim_func.body)):
         reject(RK_E_UNSUPPORTED,
@@ -1981,15 +2009,17 @@ def _prove_loop_store(prim_func: Any, store: Any) -> tuple[dict[str, int], list[
 def _validate_local_buffer(buffer: Any, *, require_f16: bool = False) -> None:
     shape = tuple(int(v) for v in buffer.shape)
     dtype = str(buffer.dtype)
-    if len(shape) != 2 or dtype not in {"float16", "float32"} or             (require_f16 and dtype != "float16"):
+    if len(shape) > 2 or dtype not in {"float16", "float32"} or             (require_f16 and dtype != "float16"):
         reject(RK_E_NUMERIC_CONTRACT,
-               "local dataflow requires rank-2 FP16/FP32 accumulator buffers",
+               "local dataflow requires <=rank-2 FP16/FP32 buffers",
                stage="rewrite", actual={"name": str(buffer.name),
                                         "shape": shape,
                                         "dtype": str(buffer.dtype)})
     strides = getattr(buffer, "strides", None)
     if strides:
-        compact = (shape[1], 1)
+        compact = tuple(
+            [1] * 0 + [int(__import__("math").prod(shape[i + 1:]))
+                       for i in range(len(shape))])
         values = tuple(_const(v) for v in strides)
         if values != compact:
             reject(RK_E_UNSUPPORTED,
@@ -2339,8 +2369,9 @@ def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
                 continue
             if name == "tl.tileop.gemm":
                 from . import rknpu_pass
-                rknpu_pass._validate_gemm_call_fields(call)
+                fields = rknpu_pass._validate_gemm_call_fields(call)
                 regions = _region_exprs(call)
+                _prove_gemm_geometry(fields, regions, whole=False)
                 a_token = token_for(regions[0]["buffer"])
                 b_token = token_for(regions[1]["buffer"])
                 a_value = token_value(a_token, "GEMM A")
@@ -2430,6 +2461,11 @@ def rewrite_ffn_tir(prim_func: Any, *, profile_hash: str = "",
             if len(loads) != (1 if opcode == "silu" else 2):
                 reject(RK_E_UNSUPPORTED, "multiply must read two values",
                        stage="rewrite")
+            if str(store.buffer.dtype) != "float16" or any(
+                    str(load.buffer.dtype) != "float16" for load in loads):
+                reject(RK_E_NUMERIC_CONTRACT,
+                       "silu/multiply must consume and produce FP16 without "
+                       "an implicit narrowing", stage="rewrite")
             load_kinds = [_classify_store_load(load, [region["rows"],
                                                       region["cols"]],
                                                loop_vars)

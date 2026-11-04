@@ -735,6 +735,18 @@ def two_stage_chain(prim_func: Any, *, options: Any,
                                          if t.get("kind") == "copy"],
                         "boundary": "kernel_launch",
                     }
+        declared = schedules[index] if index < len(schedules) else None
+        if declared is not None:
+            actual = (int(stage.get("tile_m", 0)),
+                      int(stage.get("tile_n", 0)))
+            expected = (int(declared.get("tile_m", 0)),
+                        int(declared.get("tile_n", 0)))
+            if actual != expected:
+                reject(RK_E_UNSUPPORTED,
+                       "a declared staged schedule was not applied to its "
+                       "actual launch tile", stage="frontend",
+                       actual={"stage": index, "declared": list(expected),
+                               "actual": list(actual)})
         stages.append(stage)
 
     produced = {}
@@ -1121,15 +1133,17 @@ def _retile_launch_source(launch: Any, *, logical_m: int,
             if buffer is node.buffer:
                 return None
             return tir.BufferLoad(
-                buffer, list(node.indices), getattr(node, "span", None),
-                getattr(node, "predicate", None))
+                buffer, list(node.indices),
+                predicate=getattr(node, "predicate", None),
+                span=getattr(node, "span", None))
         if kind == "BufferStore":
             buffer = mapped(node.buffer)
             if buffer is node.buffer:
                 return None
             return tir.BufferStore(
                 buffer, node.value, list(node.indices),
-                getattr(node, "predicate", None), getattr(node, "span", None))
+                predicate=getattr(node, "predicate", None),
+                span=getattr(node, "span", None))
         if kind == "Evaluate" and _op_name(node.value).startswith("tl.tileop."):
             call = node.value
             name = _op_name(call)
@@ -1139,8 +1153,10 @@ def _retile_launch_source(launch: Any, *, logical_m: int,
                     return arg
                 parts = list(arg.args)
                 if type(parts[0]).__name__ == "BufferLoad":
-                    parts[0] = tir.BufferLoad(mapped(parts[0].buffer),
-                                              list(parts[0].indices))
+                    parts[0] = tir.BufferLoad(
+                        mapped(parts[0].buffer), list(parts[0].indices),
+                        predicate=getattr(parts[0], "predicate", None),
+                        span=getattr(parts[0], "span", None))
                 region_buffer = parts[0].buffer
                 if mapped(region_buffer) is not region_buffer:
                     ex0 = rknpu_pass._const(parts[2])
